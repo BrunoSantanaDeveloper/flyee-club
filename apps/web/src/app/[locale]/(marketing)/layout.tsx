@@ -10,7 +10,8 @@ import MarketingFooter from "@/components/marketing/marketing-footer";
 import MarketingHeader from "@/components/marketing/marketing-header";
 import SiteJsonLd from "@/components/marketing/site-json-ld";
 import SupportWidget from "@/components/support/support-widget";
-import { getSupportChannels } from "@/lib/platform-settings";
+import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
+import { getLegalEntity, getSupportChannels } from "@/lib/platform-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("marketing");
@@ -28,15 +29,22 @@ export async function generateMetadata(): Promise<Metadata> {
  * addresses), which is also what makes the middleware treat it as public.
  */
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
-  const support = await getSupportChannels();
+  const [t, support, stage, legalEntity] = await Promise.all([
+    getTranslations("marketing"),
+    getSupportChannels(),
+    getLaunchStage(),
+    getLegalEntity(),
+  ]);
+  const cta = primaryCtaFor(stage);
+  const primaryCta = { label: t(cta.labelKey), href: cta.href };
   return (
     <div className="bg-background flex min-h-[100dvh] flex-col">
       {/* Site-wide identity for search + AI engines; rebrands with @flyee/content. */}
       <SiteJsonLd />
       <LanguageSuggestion />
-      <MarketingHeader />
+      <MarketingHeader primaryCta={primaryCta} />
       <main className="flex flex-1 flex-col">{children}</main>
-      <MarketingFooter />
+      <MarketingFooter primaryCta={primaryCta} legalEntity={legalEntity} />
       <SupportWidget support={support} />
       <CookieConsent />
       {/* SSR Pixel/GA4 (opt-out) + SPA pageviews. docs/TRACKING.md (phase 7.3)

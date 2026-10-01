@@ -1,5 +1,6 @@
 "use client";
 
+import { LaunchAdmin, LegalEntityAdmin } from "./components/site-admin";
 import SupportAdmin from "./components/support-admin";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -10,8 +11,9 @@ import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
 
 /**
- * Superadmin quick-support console (platform_settings). RLS is the real
- * gate; the client-side check only improves UX.
+ * Superadmin console for the public settings of the site (platform_settings):
+ * the launch stage, the operating company in the footer and the quick-support
+ * channels. RLS is the real gate; the client-side check only improves UX.
  */
 export default function AdminSupport() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
@@ -40,14 +42,14 @@ export default function AdminSupport() {
     <Grid container spacing={5}>
       <Grid size={12}>
         <Typography variant="h1" component="h1" className="mb-0">
-          Suporte
+          Site e suporte
         </Typography>
         <Breadcrumbs>
           <Link color="inherit" href="/inicio">
             Início
           </Link>
           <Typography variant="body2">Admin</Typography>
-          <Typography variant="body2">Suporte</Typography>
+          <Typography variant="body2">Site e suporte</Typography>
         </Breadcrumbs>
       </Grid>
 
@@ -60,13 +62,29 @@ export default function AdminSupport() {
       )}
 
       {allowed && (
-        <Grid size={12}>
-          <Card component="section">
-            <CardContent>
-              <SupportAdmin />
-            </CardContent>
-          </Card>
-        </Grid>
+        <>
+          <Grid size={{ xs: 12, lg: 6 }}>
+            <Card component="section" className="h-full">
+              <CardContent>
+                <LaunchAdmin />
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, lg: 6 }}>
+            <Card component="section" className="h-full">
+              <CardContent>
+                <LegalEntityAdmin />
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={12}>
+            <Card component="section">
+              <CardContent>
+                <SupportAdmin />
+              </CardContent>
+            </Card>
+          </Grid>
+        </>
       )}
     </Grid>
   );

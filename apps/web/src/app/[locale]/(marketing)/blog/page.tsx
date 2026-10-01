@@ -8,6 +8,7 @@ import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import { TONE, toneAt } from "@/components/marketing/tone";
+import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { listBlogPosts } from "@/lib/public-content";
 import { publicPageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function BlogPage() {
   const t = await getTranslations("marketing");
   const locale = await getLocale();
-  const posts = await listBlogPosts(locale);
+  const [posts, stage] = await Promise.all([listBlogPosts(locale), getLaunchStage()]);
+  const cta = primaryCtaFor(stage);
 
   const formatDate = (iso: string | null) =>
     iso ? new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" }) : "";
@@ -118,11 +120,7 @@ export default async function BlogPage() {
         </Section>
       )}
 
-      <Cta
-        title={t("cta-title")}
-        subtitle={t("cta-subtitle")}
-        cta={{ label: t("cta-primary"), href: "/auth/sign-up" }}
-      />
+      <Cta title={t("cta-title")} subtitle={t("cta-subtitle")} cta={{ label: t(cta.labelKey), href: cta.href }} />
     </>
   );
 }

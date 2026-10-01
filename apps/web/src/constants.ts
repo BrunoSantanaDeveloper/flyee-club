@@ -61,6 +61,10 @@ export const COOKIE_KEYS = {
   // credited to the campaign that brought it. httpOnly; 14 days, the same
   // window the billing webhook accepts (migration 0113).
   lastCampaign: `${storagePrefix}-campanha`,
+  // The waitlist confirmation token, moved out of the e-mail link by the
+  // middleware (a URL is what analytics scripts and Referer headers carry).
+  // httpOnly, 15 minutes, consumed by the confirm action.
+  leadConfirm: `${storagePrefix}-confirmacao`,
 };
 
 export const SESSION_STORAGE_KEYS = {

@@ -303,3 +303,23 @@ export async function getBlogPost(locale: string, slug: string): Promise<Content
 
 /** Every published post in every language — sitemap entries. */
 export const listBlogForSitemap = () => listForSitemap("blog_posts");
+
+// ---------- Catalog (public metadata) ----------
+
+export type PublicTrail = { slug: string; name: string };
+
+/**
+ * The catalog trails in a language, in their order (`catalog_trails`,
+ * migration 0008; anon reads them). Empty without Supabase: callers hide what
+ * they would have drawn rather than inventing names or counts.
+ */
+export async function listCatalogTrails(locale: string): Promise<PublicTrail[]> {
+  const supabase = createAnonClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("catalog_trails").select("slug, name, sort").order("sort");
+  if (error || !data) return [];
+  return data.map((row) => {
+    const names = (row.name ?? {}) as Record<string, string>;
+    return { slug: row.slug as string, name: names[locale] ?? names["pt-BR"] ?? (row.slug as string) };
+  });
+}

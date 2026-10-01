@@ -23,8 +23,11 @@ const NAV_LINKS = [
 /**
  * Public site top navigation: logo, page links, sign-in + primary CTA,
  * collapsing into a drawer on mobile. Reuses the single <Logo> component.
+ *
+ * The primary CTA comes from the layout, which knows the launch stage
+ * (lib/launch.ts): the waitlist until the site opens, sign-up after.
  */
-export default function MarketingHeader() {
+export default function MarketingHeader({ primaryCta }: { primaryCta: { label: string; href: string } }) {
   const t = useTranslations("marketing");
   const [open, setOpen] = useState(false);
 
@@ -52,8 +55,8 @@ export default function MarketingHeader() {
           <Button variant="text" color="text-primary" href="/auth/sign-in" LinkComponent={Link}>
             {t("nav-sign-in")}
           </Button>
-          <Button variant="contained" color="primary" href="/auth/sign-up" LinkComponent={Link}>
-            {t("cta-primary")}
+          <Button variant="contained" color="primary" href={primaryCta.href} LinkComponent={Link}>
+            {primaryCta.label}
           </Button>
         </Box>
 
@@ -107,8 +110,8 @@ export default function MarketingHeader() {
               <LanguageSwitch fullWidth className="justify-start" />
             </ListItem>
           </List>
-          <Button variant="contained" color="primary" href="/auth/sign-up" LinkComponent={Link}>
-            {t("cta-primary")}
+          <Button variant="contained" color="primary" href={primaryCta.href} LinkComponent={Link}>
+            {primaryCta.label}
           </Button>
         </Box>
       </Drawer>

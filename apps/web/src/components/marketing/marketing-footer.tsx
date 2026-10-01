@@ -5,6 +5,8 @@ import Logo from "@/components/logo/logo";
 import Container from "@/components/marketing/container";
 import LanguageSwitch from "@/components/marketing/language-switch";
 import Link from "@/components/marketing/locale-link";
+import type { LegalEntity } from "@/lib/platform-settings";
+import { formatCnpj } from "@flyee/fields";
 
 // Only routes that exist. Phase 7.2 of docs/PLANO-IMPLEMENTACAO.md adds
 // "Como funciona", "Catálogo", "Sobre" and "Lista de espera" as those pages
@@ -20,7 +22,6 @@ const COLUMNS = [
   {
     titleKey: "footer-account",
     links: [
-      { key: "cta-primary", href: "/auth/sign-up" },
       { key: "nav-sign-in", href: "/auth/sign-in" },
       { key: "footer-help", href: "/ajuda" },
     ],
@@ -36,11 +37,21 @@ const COLUMNS = [
   },
 ] as const;
 
-export default function MarketingFooter() {
+/**
+ * The site closes on the dark primary band. `legalEntity` is the operating
+ * company the terms and the privacy policy point at ("identified in the site
+ * footer"); `primaryCta` follows the launch stage like the header.
+ */
+export default function MarketingFooter({
+  primaryCta,
+  legalEntity,
+}: {
+  primaryCta: { label: string; href: string };
+  legalEntity: LegalEntity | null;
+}) {
   const t = useTranslations("marketing");
 
   return (
-    // The site closes on the dark primary band.
     <footer className="bg-primary-dark text-text-contrast w-full">
       <Container className="flex flex-col gap-10 py-12 md:py-16">
         <div className="flex flex-col gap-10 md:flex-row md:justify-between">
@@ -57,6 +68,14 @@ export default function MarketingFooter() {
                 <p className="text-text-contrast/80 text-sm font-semibold tracking-wide uppercase">
                   {t(column.titleKey)}
                 </p>
+                {column.titleKey === "footer-account" && (
+                  <Link
+                    href={primaryCta.href}
+                    className="text-text-contrast/60 hover:text-text-contrast text-base leading-6 transition-colors"
+                  >
+                    {primaryCta.label}
+                  </Link>
+                )}
                 {column.links.map((link) => (
                   <Link
                     key={link.key}
@@ -72,9 +91,24 @@ export default function MarketingFooter() {
         </div>
 
         <div className="border-text-contrast/15 flex flex-col gap-2 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-text-contrast/60 text-sm">
-            © {new Date().getFullYear()} {BRAND.name}. {t("footer-rights")}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-text-contrast/60 text-sm">
+              © {new Date().getFullYear()} {BRAND.name}. {t("footer-rights")}
+            </p>
+            {legalEntity && (
+              <p className="text-text-contrast/60 text-sm">
+                {[
+                  legalEntity.name,
+                  legalEntity.document
+                    ? t("footer-legal-document", { document: formatCnpj(legalEntity.document) })
+                    : null,
+                  legalEntity.city,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
+          </div>
           <LanguageSwitch
             color="inherit"
             className="text-text-contrast/80 hover:text-text-contrast -mx-2 self-start sm:self-auto"

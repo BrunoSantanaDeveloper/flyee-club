@@ -100,6 +100,21 @@ describe("middleware: locale routing of the public site", () => {
     expect(response.cookies.get(COOKIE_KEYS.locale)).toBeUndefined();
   });
 
+  it("moves the waitlist confirmation token out of the address", async () => {
+    for (const [from, to] of [
+      ["/espera/confirmar?t=TOKEN_1234567890_abcdefghij", "/espera/confirmar"],
+      ["/en/waitlist/confirm?t=TOKEN_1234567890_abcdefghij", "/en/waitlist/confirm"],
+    ]) {
+      const response = await middleware(request(from));
+      const location = new URL(response.headers.get("location") ?? "", "http://localhost");
+      expect(location.pathname, from).toBe(to);
+      expect(location.search, from).toBe("");
+      const cookie = response.cookies.get(COOKIE_KEYS.leadConfirm);
+      expect(cookie?.value, from).toBe("TOKEN_1234567890_abcdefghij");
+      expect(cookie?.httpOnly, from).toBe(true);
+    }
+  });
+
   it("still detects a first visit to the app, flagged as automatic", async () => {
     session.user = { id: "member" };
     const response = await middleware(

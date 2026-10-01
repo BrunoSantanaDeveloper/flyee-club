@@ -3,9 +3,10 @@ import { Resend } from "resend";
 
 import AdminAccountsDigestEmail, { type AdminAccountsDigestEmailProps } from "./templates/admin-accounts-digest";
 import ContactFormEmail, { ContactFormEmailProps } from "./templates/contact-form";
+import LeadConfirmEmail, { LEAD_CONFIRM_COPY, type LeadConfirmLocale } from "./templates/lead-confirm";
 import SubscriptionActiveEmail, { type SubscriptionActiveEmailProps } from "./templates/subscription-active";
 
-export type { AdminAccountsDigestEmailProps, SubscriptionActiveEmailProps };
+export type { AdminAccountsDigestEmailProps, LeadConfirmLocale, SubscriptionActiveEmailProps };
 
 /** True when transactional email is configured (server-only env var). */
 export const isEmailConfigured = Boolean(process.env.RESEND_API_KEY);
@@ -94,6 +95,37 @@ export async function sendContactFormEmail(props: ContactFormEmailProps): Promis
     replyTo: props.email,
     subject: `Contact form: ${props.name}`,
     react: createElement(ContactFormEmail, props),
+  });
+  if (error) {
+    return { sent: false, error: error.message };
+  }
+  return { sent: true };
+}
+
+/**
+ * The waitlist's double opt-in link, in the language the person signed up in.
+ * Returns { sent: false } without failing when RESEND_API_KEY is absent; the
+ * caller decides what the visitor is told (the address stays unconfirmed and
+ * is erased after 7 days).
+ */
+export async function sendLeadConfirmationEmail({
+  to,
+  locale,
+  confirmUrl,
+}: {
+  to: string;
+  locale: LeadConfirmLocale;
+  confirmUrl: string;
+}): Promise<SendResult> {
+  if (!isEmailConfigured) {
+    return { sent: false };
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: DEFAULT_FROM,
+    to,
+    subject: LEAD_CONFIRM_COPY[locale].subject,
+    react: createElement(LeadConfirmEmail, { locale, confirmUrl }),
   });
   if (error) {
     return { sent: false, error: error.message };

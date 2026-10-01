@@ -12,8 +12,8 @@ import { absoluteUrl, everyLanguage, languageAlternates, sectionTranslations, ty
  * Declared in src/i18n/routing.ts but deliberately absent (noindex):
  * /espera/confirmar (a one-time confirmation link), /verificar/[ref] (a
  * checksum lookup) and /fundadores (a campaign offer). Pages not built yet
- * (/como-funciona, /catalogo, /sobre, /espera) join this list together with
- * their page in phase 7.2.
+ * (/como-funciona, /catalogo, /sobre) join this list together with their page
+ * in phase 7.2.
  */
 const INDEXED_PAGES = [
   "/",
@@ -21,6 +21,7 @@ const INDEXED_PAGES = [
   "/contato",
   "/ajuda",
   "/blog",
+  "/espera",
   "/legal/termos",
   "/legal/privacidade",
   "/legal/cookies",

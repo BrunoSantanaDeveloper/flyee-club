@@ -11,6 +11,7 @@ import Faq from "@/components/marketing/faq";
 import PricingSection from "@/components/marketing/pricing-section";
 import { COOKIE_KEYS } from "@/constants";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
+import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
 import { publicPageMetadata } from "@/lib/seo";
 import { resolvePublicCoupon } from "@flyee/billing/public";
@@ -29,7 +30,14 @@ export default async function PricingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [t, params, cookieStore] = await Promise.all([getTranslations("marketing"), searchParams, cookies()]);
+  const [t, params, cookieStore, stage] = await Promise.all([
+    getTranslations("marketing"),
+    searchParams,
+    cookies(),
+    getLaunchStage(),
+  ]);
+  // Before the site opens the plans are shown, and every button leads to the waitlist.
+  const cta = primaryCtaFor(stage);
 
   /**
    * The campaign code, straight from the followed link or from the cookie the
@@ -51,7 +59,8 @@ export default async function PricingPage({
         title={t("pricing-page-title")}
         subtitle={t("pricing-page-subtitle")}
         plans={plans}
-        ctaLabel={t("cta-primary")}
+        ctaLabel={t(cta.labelKey)}
+        ctaHref={cta.href}
         headingAs="h1"
         decor="glow"
         // A code that did not resolve is named, not ignored: the visitor must
@@ -94,11 +103,7 @@ export default async function PricingPage({
         }))}
       />
 
-      <Cta
-        title={t("cta-title")}
-        subtitle={t("cta-subtitle")}
-        cta={{ label: t("cta-primary"), href: "/auth/sign-up" }}
-      />
+      <Cta title={t("cta-title")} subtitle={t("cta-subtitle")} cta={{ label: t(cta.labelKey), href: cta.href }} />
     </>
   );
 }

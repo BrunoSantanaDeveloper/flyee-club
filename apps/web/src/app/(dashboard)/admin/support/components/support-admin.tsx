@@ -65,6 +65,9 @@ export default function SupportAdmin() {
 
   return (
     <div className="flex max-w-xl flex-col gap-4">
+      <Typography variant="h6" component="h2">
+        Suporte rápido
+      </Typography>
       <Typography variant="body1" className="text-text-secondary">
         Canais do botão flutuante de suporte rápido (site público + área logada). Deixe os dois em branco para esconder
         o widget. Esses valores são públicos.

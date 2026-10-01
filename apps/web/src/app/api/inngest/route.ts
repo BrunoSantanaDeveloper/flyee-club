@@ -4,6 +4,7 @@
 export const maxDuration = 60;
 
 import { billingFunctions } from "@/lib/billing-jobs";
+import { leadFunctions } from "@/lib/lead-jobs";
 import { backupFunctions } from "@flyee/backup/jobs";
 import { inngest } from "@flyee/jobs";
 import { serve } from "@flyee/jobs/next";
@@ -14,5 +15,5 @@ import { serve } from "@flyee/jobs/next";
 // of docs/PLANO-IMPLEMENTACAO.md brings it back as the weekly segment digest.
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [...billingFunctions, ...backupFunctions],
+  functions: [...billingFunctions, ...leadFunctions, ...backupFunctions],
 });

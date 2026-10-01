@@ -25,3 +25,21 @@ export const TONE: Record<Tone, { text: string; softBg: string; cssVar: string }
 export const TONE_ROTATION: Tone[] = ["accent-1", "primary", "secondary", "accent-3"];
 
 export const toneAt = (index: number): Tone => TONE_ROTATION[index % TONE_ROTATION.length];
+
+/**
+ * The seven catalog trails keep one hue everywhere on the site (docs/DESIGN.md,
+ * palette usage): Planejar/Construir accent-2, Publicar/Divulgar accent-1,
+ * Vender/Escalar accent-4, Manter accent-3. Keyed by the trail slug of
+ * `catalog_trails`; an unknown slug falls back to the rotation.
+ */
+export const TRAIL_TONE: Record<string, Tone> = {
+  planejar: "accent-2",
+  construir: "accent-2",
+  publicar: "accent-1",
+  divulgar: "accent-1",
+  vender: "accent-4",
+  escalar: "accent-4",
+  manter: "accent-3",
+};
+
+export const trailTone = (slug: string, index: number): Tone => TRAIL_TONE[slug] ?? toneAt(index);

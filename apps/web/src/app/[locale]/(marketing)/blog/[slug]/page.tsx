@@ -11,6 +11,7 @@ import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import { localizeHref } from "@/i18n/routing";
 import NiChevronLeftSmall from "@/icons/nexture/ni-chevron-left-small";
+import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { getBlogPost } from "@/lib/public-content";
 import { publicPageMetadata, sectionTranslations } from "@/lib/seo";
 
@@ -39,7 +40,8 @@ export default async function BlogPostPage({ params }: Params) {
   const { slug } = await params;
   const t = await getTranslations("marketing");
   const locale = await getLocale();
-  const result = await getBlogPost(locale, slug);
+  const [result, stage] = await Promise.all([getBlogPost(locale, slug), getLaunchStage()]);
+  const cta = primaryCtaFor(stage);
   // A slug of the other language (the switch keeps the slug): its translation,
   // or the blog of this language when there is none.
   if (result.kind === "translated") redirect(localizeHref(`/blog/${result.slug}`, locale));
@@ -100,11 +102,7 @@ export default async function BlogPostPage({ params }: Params) {
         <BlogComments postId={post.id} />
       </Section>
 
-      <Cta
-        title={t("cta-title")}
-        subtitle={t("cta-subtitle")}
-        cta={{ label: t("cta-primary"), href: "/auth/sign-up" }}
-      />
+      <Cta title={t("cta-title")} subtitle={t("cta-subtitle")} cta={{ label: t(cta.labelKey), href: cta.href }} />
     </>
   );
 }

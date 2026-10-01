@@ -45,7 +45,14 @@ export default function ProcessSteps({
   return (
     <Section id={id} decor="grid">
       <SectionHeader eyebrow={eyebrow} title={title} subtitle={subtitle} />
-      <Reveal stagger={0.1} className="grid grid-cols-1 gap-5 md:grid-cols-3">
+      <Reveal
+        stagger={0.1}
+        className={cn(
+          "grid grid-cols-1 gap-5",
+          // Four steps read as one row on desktop and 2×2 on tablets, never 3 + 1.
+          steps.length === 4 ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-3",
+        )}
+      >
         {steps.map((step, index) => {
           const tone = TONE[step.tone ?? toneAt(index)];
           const ordinal = String(index + 1).padStart(2, "0");

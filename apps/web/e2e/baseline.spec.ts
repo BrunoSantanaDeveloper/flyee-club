@@ -50,6 +50,56 @@ test("public pages answer in the language of their address", async ({ page, requ
   expect(sitemap).toContain('hreflang="x-default"');
 });
 
+test("the waitlist is the primary action until the site opens", async ({ page }) => {
+  // Without a readable launch stage the site stays in the waitlist stage.
+  await page.goto("/");
+  await expect(page.locator("footer").getByRole("link", { name: /entrar na lista de espera/i })).toHaveAttribute(
+    "href",
+    "/espera",
+  );
+
+  await page.goto("/espera");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(/lista de espera/i);
+  const submit = page.getByRole("button", { name: /entrar na lista de espera/i });
+
+  await submit.click();
+  await expect(page.getByText("Informe um e-mail válido.")).toBeVisible();
+
+  await page.getByLabel("Seu e-mail").fill("pessoa@example.com");
+  await submit.click();
+  await expect(page.getByText("Marque a caixa para que possamos enviar o aviso.")).toBeVisible();
+
+  // No database in this run: the form says so instead of promising an e-mail.
+  await page.getByRole("checkbox").check();
+  await submit.click();
+  await expect(page.getByText(/a lista de espera está fora do ar agora/i)).toBeVisible();
+
+  await page.goto("/en/waitlist");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(/waitlist/i);
+});
+
+test("the confirmation link never leaves its token in the address", async ({ page }) => {
+  await page.goto(`/espera/confirmar?t=${"a".repeat(43)}`);
+  await expect(page).toHaveURL(/\/espera\/confirmar$/);
+  const confirm = page.getByRole("button", { name: /confirmar inscrição/i });
+  await expect(confirm).toBeVisible();
+  await confirm.click();
+  await expect(page.getByText(/a lista de espera está fora do ar agora/i)).toBeVisible();
+
+  await page.context().clearCookies();
+  await page.goto("/espera/confirmar");
+  await expect(page.getByText("Este link expirou ou já foi usado.")).toBeVisible();
+});
+
+test("legal pages render the terms in force or say they cannot", async ({ page }) => {
+  for (const route of ["/legal/termos", "/en/legal/terms", "/legal/privacidade", "/legal/cookies"]) {
+    await page.goto(route);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // No database in this run: never another text dressed as the terms.
+    await expect(page.locator("main")).toContainText(/não conseguimos carregar|couldn't load/i);
+  }
+});
+
 test("protected product routes preserve the intended destination through authentication", async ({ page }) => {
   for (const route of ["/inicio", "/settings", "/settings/billing", "/settings/security"]) {
     await page.goto(route);
@@ -73,6 +123,8 @@ test("@a11y core entry and product routes have no critical axe violations", asyn
     "/planos",
     "/en",
     "/en/pricing",
+    "/espera",
+    "/legal/termos",
     "/inicio",
     "/settings/billing",
     "/settings/security",

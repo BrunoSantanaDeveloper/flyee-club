@@ -94,6 +94,25 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+  // The waitlist confirmation link carries a one-time token. Analytics scripts
+  // send the page URL to third parties and links send it as Referer, so the
+  // token moves into a short-lived httpOnly cookie and the page loads at the
+  // clean address; the confirm action reads it from there.
+  const confirmToken = request.nextUrl.searchParams.get("t");
+  if (publicPage?.internal === "/espera/confirmar" && confirmToken) {
+    const clean = request.nextUrl.clone();
+    clean.searchParams.delete("t");
+    const redirect = NextResponse.redirect(clean);
+    redirect.cookies.set(COOKIE_KEYS.leadConfirm, confirmToken.slice(0, 128), {
+      path: "/",
+      maxAge: 15 * 60,
+      sameSite: "lax",
+      httpOnly: true,
+      secure: request.nextUrl.protocol === "https:",
+    });
+    return redirect;
+  }
+
   const { response: sessionResponse, user, needsMfa, impersonating } = await updateSession(request);
 
   /**

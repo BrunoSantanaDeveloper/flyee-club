@@ -25,6 +25,7 @@ export default function Hero({
   subtitle,
   primaryCta,
   secondaryCta,
+  action,
   note,
   highlights,
   media,
@@ -35,8 +36,15 @@ export default function Hero({
   /** Accepts rich content (e.g. t.rich with <em> for the two-tone blueprint headline). */
   title: React.ReactNode;
   subtitle: string;
-  primaryCta: HeroCta;
+  /** The page's conversion action. Required unless `action` replaces the buttons. */
+  primaryCta?: HeroCta;
   secondaryCta?: HeroCta;
+  /**
+   * Replaces the CTA buttons with the conversion itself when it fits in the
+   * hero (the waitlist form). It joins the copy column, so it enters with the
+   * load timeline like the buttons would.
+   */
+  action?: React.ReactNode;
   /** Risk-reducing microcopy under the CTAs (e.g. "No card required"). */
   note?: string;
   /**
@@ -88,11 +96,13 @@ export default function Hero({
     { scope },
   );
 
-  const ctas = (
+  const ctas = action ?? (
     <div className="flex flex-col items-center gap-2 sm:flex-row">
-      <Button size="large" variant="contained" color="primary" href={primaryCta.href} LinkComponent={Link}>
-        {primaryCta.label}
-      </Button>
+      {primaryCta && (
+        <Button size="large" variant="contained" color="primary" href={primaryCta.href} LinkComponent={Link}>
+          {primaryCta.label}
+        </Button>
+      )}
       {secondaryCta && (
         <Button
           size="large"

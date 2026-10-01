@@ -110,8 +110,9 @@ Operação:
 | `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` / `ASAAS_BASE_URL` | cobrança em BRL (produção: `https://api.asaas.com/v3`) |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | cobrança em USD |
 | `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | jobs em background (sem elas tudo cai para processamento inline) |
-| `RESEND_API_KEY` / `EMAIL_FROM` | e-mail transacional (sem elas os envios caem para o fallback de cada chamada) |
+| `RESEND_API_KEY` / `EMAIL_FROM` | e-mail transacional (sem elas os envios caem para o fallback de cada chamada). **Obrigatórias para a lista de espera**: sem o e-mail de confirmação ninguém confirma, e o formulário responde que a lista está fora do ar |
 | `CONTACT_FORM_TO` | destino do formulário de contato |
+| `PUBLIC_FORMS_IP_SALT` | segredo da janela por rede da lista de espera (HMAC do IP). Sem ele não há limite por rede |
 | `ANTHROPIC_API_KEY` ou `GEMINI_API_KEY` ou `OPENROUTER_API_KEY` | opcional: provedor do `/admin/insights`, custo do operador |
 | `BACKUP_RETENTION_DAYS` | opcional (default 30) |
 
@@ -148,6 +149,47 @@ barra final).
 - **Supabase Auth**: em Authentication → URL Configuration, definir o Site URL
   para o domínio de produção e adicionar as redirect URLs de auth.
 - Smoke test: home pública, `/auth/sign-in`, criar workspace, `/inicio`.
+
+## Primeiro deploy: a lista de espera
+
+O primeiro deploy põe no ar o portão da fase 0 do `docs/PRODUCT.md`: a lista de
+espera bilíngue (`/espera` e `/en/waitlist`), com confirmação por e-mail e as
+páginas legais lidas de `consent_terms`. O site sobe no estágio **lista de
+espera** (`platform_settings.launch`, migração `0019`): todos os botões
+principais levam para `/espera`, porque ainda não há nada à venda. Login e
+cadastro continuam acessíveis, só não aparecem nos botões.
+
+1. **Banco.** Com o `apps/web/.env.local` apontando para o projeto Supabase novo
+   do flyee.club, rode `npm run db:plan:remote` (dry-run) e depois
+   `npm run db:gate:remote`, que aplica `0000`–`0019` num projeto vazio e roda o
+   pgTAP. O gate recusa um banco que ele não construiu.
+2. **Variáveis na Vercel**: as obrigatórias acima, mais `RESEND_API_KEY` e
+   `EMAIL_FROM` com o domínio verificado no Resend, `PUBLIC_FORMS_IP_SALT` e as
+   duas chaves do Inngest. O job diário `flyee-purge-expired-leads` apaga em 7
+   dias os endereços não confirmados, prazo que a página e o e-mail prometem.
+3. **Deploy** pelo workflow, e então o Supabase Auth (Site URL e redirect URLs)
+   e a sincronização do Inngest (o job acima deve aparecer na lista).
+4. **Sua conta de operador.** Crie a conta em `/auth/sign-up` e promova-a no SQL
+   Editor do Supabase (a sessão do editor não tem JWT, e a trava de
+   superadmin permite):
+
+   ```sql
+   update public.profiles set is_superadmin = true
+   where id = (select id from auth.users where email = 'seu@email');
+   ```
+
+5. **Empresa no rodapé.** Em `/admin/support`, preencha "Empresa responsável"
+   (razão social, CNPJ, cidade). Os termos de uso e a política de privacidade
+   identificam a operadora pelo rodapé, então isso precisa estar no ar antes de
+   divulgar a página. Deixe "Lançamento do site" em "Lista de espera".
+6. **Smoke test.** Inscreva o seu e-mail em `/espera`, abra o link do e-mail,
+   confirme no botão e veja "Pronto, você está na lista"; repita em
+   `/en/waitlist`; confira `/legal/termos` com "Versão 1", a empresa no rodapé, e
+   `/sitemap.xml` com `/espera` e `/en/waitlist`. A inscrição aparece no
+   console de leads quando ele existir (fase 6); até lá, na tabela `leads`.
+
+Quando o checkout do kit estiver testado (fase 4), volte a `/admin/support` e
+mude "Lançamento do site" para "Aberto".
 
 ## Domínio — `flyee.club`
 

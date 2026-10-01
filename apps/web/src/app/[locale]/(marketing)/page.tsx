@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import Cta from "@/components/marketing/cta";
 import DataVizPlaceholder from "@/components/marketing/data-viz-placeholder";
@@ -13,6 +13,7 @@ import NiCode from "@/icons/nexture/ni-code";
 import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
 import NiRefresh from "@/icons/nexture/ni-refresh";
 import NiTerminal from "@/icons/nexture/ni-terminal";
+import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { publicPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -35,8 +36,11 @@ const STEP_ICONS = [NiDownloadCloud, NiTerminal, NiCode, NiRefresh];
  * numbers from the catalog, pricing) is built in phase 7.
  */
 export default async function Home() {
-  const locale = await getLocale();
+  const [locale, t, stage] = await Promise.all([getLocale(), getTranslations("marketing"), getLaunchStage()]);
   const copy = await getHomeCopy(locale);
+  // Until the site opens, both calls to action lead to the waitlist (lib/launch.ts).
+  const cta = primaryCtaFor(stage);
+  const waiting = stage === "waitlist";
 
   return (
     <>
@@ -46,7 +50,7 @@ export default async function Home() {
         eyebrow={copy.hero.eyebrow}
         title={rich(copy.hero.title)}
         subtitle={copy.hero.subtitle}
-        primaryCta={{ label: copy.hero.primaryCta, href: "/auth/sign-up" }}
+        primaryCta={{ label: waiting ? t(cta.labelKey) : copy.hero.primaryCta, href: cta.href }}
         secondaryCta={{ label: copy.hero.secondaryCta, href: "/planos" }}
         note={copy.hero.note}
         highlights={copy.hero.highlights}
@@ -65,7 +69,11 @@ export default async function Home() {
           return { ...step, icon: <Icon size="medium" />, tone: toneAt(index) };
         })}
       />
-      <Cta title={copy.cta.title} subtitle={copy.cta.subtitle} cta={{ label: copy.cta.label, href: "/auth/sign-up" }} />
+      <Cta
+        title={copy.cta.title}
+        subtitle={copy.cta.subtitle}
+        cta={{ label: waiting ? t(cta.labelKey) : copy.cta.label, href: cta.href }}
+      />
     </>
   );
 }

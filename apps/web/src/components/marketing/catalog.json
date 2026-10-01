@@ -108,7 +108,7 @@
       "name": "Hero",
       "file": "hero.tsx",
       "funnel": "attention + value proposition",
-      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle, primaryCta, secondaryCta{label, href, icon?}, note?, highlights?: string[] (reassurance chips row, split only)",
+      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle, primaryCta (unless action), secondaryCta{label, href, icon?}, action? (replaces the buttons with the conversion itself, e.g. the waitlist form), note?, highlights?: string[] (reassurance chips row, split only)",
       "use": "owns the page <h1> AND the page's one orchestrated motion moment (built-in load timeline: copy staggers, media rises); split + <ProductFrame glow> is the committed direction for product-heavy pages; media is required in practice (premium bar #1)"
     },
     {
@@ -243,6 +243,20 @@
       "role": "navigation",
       "props": "href (internal Portuguese path, query and hash kept), every next/link prop",
       "use": "every internal link of a public surface, and LinkComponent of MUI Buttons; never next/link directly on a public page, which would send an English reader to the Portuguese address"
+    },
+    {
+      "name": "LegalDocument",
+      "file": "legal-document.tsx",
+      "role": "layout",
+      "props": "slug: terms|privacy|cookies, path (internal Portuguese path), fallbackTitleKey, breadcrumbKey",
+      "use": "a legal page: renders the consent term in force (consent_terms) in the language of the address, with version and date; an honest unavailable state, never a second copy of the terms in the catalogs"
+    },
+    {
+      "name": "TerminalFrame",
+      "file": "terminal-frame.tsx",
+      "role": "evidence",
+      "props": "lines: {text, kind: command|output|success|muted}[], title?, label (figcaption), glow",
+      "use": "the signature update moment of docs/DESIGN.md: npx flyee update, a version moving forward, one changelog line; frame of a ProductComposition hero; same chrome family as ProductFrame"
     }
   ]
 }

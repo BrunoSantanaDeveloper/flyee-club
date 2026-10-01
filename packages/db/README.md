@@ -4,7 +4,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 
 ## The baseline
 
-`migrations/` holds the baseline `0000`–`0018`, written for a new Supabase project. Each file states the inherited MedChina migrations it was rewritten from.
+`migrations/` holds the baseline `0000`–`0018`, written for a new Supabase project (each file states the inherited MedChina migrations it was rewritten from), and the migrations added on top of it since.
 
 | File | What it holds |
 | --- | --- |
@@ -27,6 +27,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0016_account_deletion` | permanent account deletion |
 | `0017_ai_spend` | the platform's own AI spend ledger |
 | `0018_seed` | plan ladder (prices are hypotheses), settings, legal texts version 1 in pt-BR and en |
+| `0019_launch` | after the baseline: the public site's launch stage (`waitlist` until the kit is on sale) and the operating company shown in the footer |
 
 ## Conventions every migration follows
 
