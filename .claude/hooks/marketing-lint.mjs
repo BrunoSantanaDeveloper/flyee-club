@@ -39,34 +39,16 @@ const JSX_TEXT = />\s*([A-Za-zÀ-ÿ][^<>{}]*?\s+\S+\s+\S+[^<>{}]*?)\s*</;
 const ATTR_TEXT = /\b(?:alt|aria-label|placeholder)=["'][A-Za-zÀ-ÿ][^"']+["']/;
 
 /**
- * The Landing DS (docs/DESIGN.md, "The Landing DS").
+ * Copy files: `components/marketing/home-copy/<locale>.ts` hold the home's
+ * structured copy for both locales (pt-BR, en). They ARE strings by
+ * definition, so the hardcoded-copy and visual checks have nothing to say
+ * about them.
  *
- * Landing, offer and campaign pages are built in the hand-crafted system the
- * home established — its own stylesheet vocabulary, direct Phosphor imports and
- * hardcoded pt-BR copy — because a landing that does not look like the home
- * reads as a different company. Files in this system are exempt from the
- * token/library/icon/i18n checks; everything else (structure, SEO, GSAP,
- * JSON-LD, and the blocking honesty rules) still applies.
- *
- * Matched by PATH, not by filename: this was a two-name allowlist while the
- * home was a one-off exception, which meant every new campaign page needed an
- * edit to this hook before it could be written. Promoting the system to the
- * landing standard (2026-08-11) made that friction pointless — the route group
- * IS the declaration.
+ * The Landing DS exemption that lived here went away with the inherited
+ * landing pages (2026-09-30): every public page now composes the marketing
+ * library, so nothing else is exempt.
  */
-const LANDING_DS_PATTERNS = [
-  // Offer/campaign pages live in their own route group (no site chrome).
-  /\/app\/\(funil\)\//,
-  // The home and the stylesheet that defines the whole vocabulary.
-  /\/clinical-source-home\.(tsx|css)$/,
-  // The home's own parts, by the `home-` prefix: the language switcher and the
-  // detected-language notice are built in the home's class vocabulary with the
-  // same direct Phosphor imports, and `home-copy/` holds the page's copy for
-  // the six locales — copy files ARE strings by definition, so the i18n check
-  // has nothing to say about them.
-  /\/components\/marketing\/home-[a-z-]+\.tsx$/,
-  /\/components\/marketing\/home-copy\//,
-];
+const COPY_FILE_PATTERNS = [/\/components\/marketing\/home-copy\//];
 
 /**
  * Open Graph / Twitter card routes — exempt for a different reason than the
@@ -85,7 +67,7 @@ function lint(filePath, content) {
   const p = filePath.replace(/\\/g, "/");
   const isPage = /\/app\/\(marketing\)\//.test(p);
   const file = basename(p);
-  const isExempt = LANDING_DS_PATTERNS.some((pattern) => pattern.test(p)) || SATORI_IMAGE_PATTERN.test(p);
+  const isExempt = COPY_FILE_PATTERNS.some((pattern) => pattern.test(p)) || SATORI_IMAGE_PATTERN.test(p);
   const violations = [];
   const advisories = [];
   const lines = content.split(/\r?\n/);
@@ -121,7 +103,7 @@ function lint(filePath, content) {
       const text = line.match(JSX_TEXT);
       if (text)
         advisories.push(
-          `[hardcoded-copy?] ${at}: JSX text "${text[1].slice(0, 60)}" — marketing copy goes through the marketing i18n namespace in ALL 6 locales.`,
+          `[hardcoded-copy?] ${at}: JSX text "${text[1].slice(0, 60)}" — marketing copy goes through the marketing i18n namespace in both locales (pt-BR, en).`,
         );
       if (ATTR_TEXT.test(line))
         advisories.push(

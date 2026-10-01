@@ -2,80 +2,39 @@ import { DEFAULTS } from "@/config";
 import { type LocaleOption, LOCALES } from "@/constants";
 
 /**
- * First-visit language detection for the PUBLIC site.
+ * First-visit language detection.
  *
- * Why this exists: the platform's language is a cookie, and a visitor who has
- * never been here has no cookie — so everyone landed in pt-BR, including the
- * practitioners reaching the site from China. This picks a language for that
- * first request; the visitor's own choice, once made, is the cookie and is
- * never touched again.
+ * The platform ships two languages: Brazilian Portuguese (the default and home
+ * market) and English (decision 2026-09-30, docs/PRODUCT.md). A visitor who has
+ * never been here has no language cookie, so this picks one for that first
+ * request; the visitor's own choice, once made, is the cookie and is never
+ * touched again.
  *
  * Three rules hold this together:
  *
  * 1. `Accept-Language` beats the IP country. A header is what the visitor's
  *    own device says she reads; an IP says where she is standing (or where her
- *    VPN exits). A Brazilian at a congress in Shanghai keeps Portuguese.
- * 2. Crawlers are never switched. i18n here is cookie-based, so only
- *    `DEFAULTS.locale` is indexable (docs/SEO.md) — serving a crawler another
- *    language by header would put content in the index that no URL can return.
- *    Link-preview fetchers are treated the same, so a shared link keeps
- *    showing the language the sharer saw.
+ *    VPN exits). A Brazilian travelling abroad keeps Portuguese.
+ * 2. Crawlers are never switched. Serving a crawler another language on the
+ *    same URL would put content in the index that no URL can return, and a
+ *    link preview must keep showing the language the sharer saw.
  * 3. Detection is a SUGGESTION: the caller must also mark it as automatic
  *    (COOKIE_KEYS.localeAuto) so the page can offer the way back.
+ *
+ * With only two catalogs, English is the useful answer for every reader who
+ * does not read Portuguese: someone whose browser asks for Spanish or Japanese
+ * understands English far more often than Portuguese.
  */
 
 /**
  * A language choice must outlive the browser session: a session cookie means
  * the visitor picks Portuguese, closes the browser, comes back and is detected
- * into Chinese again — the switch she already refused. One year.
+ * into English again — the switch she already refused. One year.
  */
 export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-/** Simplified Chinese is the only Han catalog we ship — see the tw/hk note below. */
-const LANGUAGE_MAP: Record<string, LocaleOption> = {
-  pt: "pt-BR",
-  en: "en",
-  es: "es",
-  fr: "fr",
-  de: "de",
-  zh: "zh-CN",
-};
-
-/**
- * Country is the FALLBACK signal, used only when the header says nothing we
- * ship. Kept deliberately narrow: a country is a place, not a language, and a
- * wrong guess here is a visitor reading a language she did not ask for.
- *
- * zh-CN covers the Traditional-script regions too (TW/HK/MO): we ship one Han
- * catalog, and Simplified is far closer to a Traditional reader than Portuguese
- * is. If a Traditional catalog is ever added, these three move to it.
- */
-const COUNTRY_MAP: Record<string, LocaleOption> = {
-  CN: "zh-CN",
-  TW: "zh-CN",
-  HK: "zh-CN",
-  MO: "zh-CN",
-  SG: "zh-CN",
-  BR: "pt-BR",
-  PT: "pt-BR",
-  AO: "pt-BR",
-  MZ: "pt-BR",
-  ES: "es",
-  MX: "es",
-  AR: "es",
-  CL: "es",
-  CO: "es",
-  PE: "es",
-  UY: "es",
-  PY: "es",
-  BO: "es",
-  EC: "es",
-  FR: "fr",
-  BE: "fr",
-  DE: "de",
-  AT: "de",
-  CH: "de",
-};
+/** Countries whose official language is Portuguese. Everything else maps to English. */
+const LUSOPHONE_COUNTRIES = new Set(["BR", "PT", "AO", "MZ", "CV", "GW", "ST", "TL"]);
 
 const BOT_PATTERN =
   /bot|crawl|spider|slurp|bingpreview|baidu|yandex|sogou|bytespider|petalbot|duckduck|facebookexternalhit|whatsapp|telegram|twitter|linkedinbot|discord|embedly|quora|pinterest|applebot|headlesschrome|lighthouse|chrome-lighthouse|ahrefs|semrush|mj12|dotbot|screaming frog|curl|wget|python-requests|axios|go-http-client|node-fetch|monitoring|uptime|pingdom|gtmetrix|vercel-screenshot|prerender/i;
@@ -98,7 +57,7 @@ export function localeFromAcceptLanguage(header: string | null | undefined): Loc
       return {
         tag: tag.trim().toLowerCase(),
         // Order is the tie-breaker: "pt-BR,pt;q=0.9,en;q=0.8" must keep pt-BR
-        // ahead of pt even though both would map to the same locale.
+        // ahead of pt even though both map to the same locale.
         quality: Number.isFinite(quality) ? quality : 0,
         index,
       };
@@ -107,14 +66,14 @@ export function localeFromAcceptLanguage(header: string | null | undefined): Loc
     .sort((a, b) => b.quality - a.quality || a.index - b.index);
 
   for (const { tag } of ranked) {
-    // An exact tag we ship wins (pt-br, zh-cn).
+    // An exact tag we ship wins (pt-br, en).
     const exact = (LOCALES as readonly string[]).find((locale) => locale.toLowerCase() === tag);
     if (exact) return exact as LocaleOption;
 
-    // Otherwise the primary subtag: pt-PT -> pt-BR, en-GB -> en, zh-Hant -> zh-CN.
+    // Otherwise the primary subtag: pt-PT -> pt-BR, en-GB -> en.
     const primary = tag.split("-")[0];
-    const mapped = LANGUAGE_MAP[primary];
-    if (mapped) return mapped;
+    if (primary === "pt") return "pt-BR";
+    if (primary === "en") return "en";
   }
 
   return null;
@@ -122,8 +81,9 @@ export function localeFromAcceptLanguage(header: string | null | undefined): Loc
 
 /** The locale we ship for an ISO country code (Vercel's IP geolocation), or null. */
 export function localeFromCountry(country: string | null | undefined): LocaleOption | null {
-  if (!country) return null;
-  return COUNTRY_MAP[country.trim().toUpperCase()] ?? null;
+  const code = country?.trim().toUpperCase();
+  if (!code || !/^[A-Z]{2}$/.test(code)) return null;
+  return LUSOPHONE_COUNTRIES.has(code) ? "pt-BR" : "en";
 }
 
 /**

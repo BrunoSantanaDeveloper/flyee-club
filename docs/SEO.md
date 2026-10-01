@@ -1,5 +1,7 @@
 # Search direction (committed) — the SEO baseline, persisted
 
+> **Legado do MedChina, reescrito na fase 7 de `docs/PLANO-IMPLEMENTACAO.md`.** Os termos-alvo e a regra de idioma indexável abaixo são do MedChina e não valem para o flyee.club, que indexa pt-BR em `/` e inglês em `/en` com endereços traduzidos (decisões de 2026-09-30). As regras técnicas de página (um `<h1>`, metadata localizada, JSON-LD via `<JsonLd>`) continuam valendo.
+
 **This file is the single source of the public site's search direction.** The `marketing-page` skill READS it (the way it reads `docs/DESIGN.md`) when writing titles, descriptions and copy. It records two things: what the base template already guarantees for free, and the per-page target terms MedChina commits to.
 
 ---

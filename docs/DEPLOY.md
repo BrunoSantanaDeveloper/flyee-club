@@ -30,8 +30,10 @@ npx vercel link
 ```
 
 No `link`, escolha o escopo (team/conta) e crie o projeto novo (ex.:
-`medchina`). Isso gera `.vercel/project.json` (gitignored) com o `orgId` e o
-`projectId` — são os valores dos secrets do passo 4.
+`flyee-club`). Isso gera `.vercel/project.json` (gitignored) com o `orgId` e o
+`projectId` — são os valores dos secrets do passo 4. O `.vercel/` herdado da
+cópia do MedChina foi apagado em 2026-09-30: ele apontava para o projeto do
+MedChina, e um `vercel deploy` daqui publicaria o flyee.club lá.
 
 ### 2. Configurar o projeto no dashboard da Vercel
 
@@ -82,6 +84,14 @@ Cadastre em **Production** (e repita em **Preview** as que quiser testar em
 PRs — no mínimo as de Supabase e a licença MUI). Referência completa:
 `apps/web/.env.example`.
 
+> **Atenção, ambiente local:** o `apps/web/.env` veio da cópia do MedChina e
+> aponta para o Supabase de produção, a chave Asaas, Meta/GA4 e chaves de IA do
+> MedChina. O `apps/web/.env.local` criado em 2026-09-30 deixa essas variáveis
+> vazias (o Next lê `.env.local` antes de `.env`, e o script de migração remota
+> segue a mesma ordem). Ponha os valores dos projetos do flyee.club no
+> `.env.local`, ou troque o `.env` e apague o `.env.local`. Nunca rode
+> `db:*:remote` antes disso.
+
 Obrigatórias para produção:
 
 | Variável | Observação |
@@ -92,19 +102,17 @@ Obrigatórias para produção:
 | `SUPABASE_SERVICE_ROLE_KEY` | server-only (admin, backups, billing público) |
 | `NEXT_PUBLIC_MUI_X_LICENSE_KEY` | licença MUI X Premium |
 | `NEXT_PUBLIC_SITE_URL` | domínio canônico, sem barra final (sitemap/robots/OG/JSON-LD caem para `http://localhost:3000` sem ela) |
-| `NEXT_PUBLIC_CDN_URL` | `/assets/cdn/` (igual ao `.env.example`) |
 
-Núcleo do produto (IA/transcrição) e operação:
+Operação:
 
 | Variável | Observação |
 | --- | --- |
-| `GEMINI_API_KEY` | transcrição/diarização + embeddings RAG — coração do produto |
-| `ANTHROPIC_API_KEY` | assistentes/raciocínio clínico (provider Anthropic) |
+| `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` / `ASAAS_BASE_URL` | cobrança em BRL (produção: `https://api.asaas.com/v3`) |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | cobrança em USD |
 | `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | jobs em background (sem elas tudo cai para processamento inline) |
-| `RESEND_API_KEY` / `EMAIL_FROM` | e-mail transacional (convites caem para link copiável sem elas) |
+| `RESEND_API_KEY` / `EMAIL_FROM` | e-mail transacional (sem elas os envios caem para o fallback de cada chamada) |
 | `CONTACT_FORM_TO` | destino do formulário de contato |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | billing Stripe |
-| `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` / `ASAAS_BASE_URL` | billing Asaas (produção: `https://api.asaas.com/v3`) |
+| `ANTHROPIC_API_KEY` ou `GEMINI_API_KEY` ou `OPENROUTER_API_KEY` | opcional: provedor do `/admin/insights`, custo do operador |
 | `BACKUP_RETENTION_DAYS` | opcional (default 30) |
 
 ### 4. Token e secrets do GitHub
@@ -141,61 +149,40 @@ barra final).
   para o domínio de produção e adicionar as redirect URLs de auth.
 - Smoke test: home pública, `/auth/sign-in`, criar workspace, `/inicio`.
 
-## Domínio — app no subdomínio `ai.medchinaprontuarios.com.br` (escolhido)
+## Domínio — `flyee.club`
 
-O apex `medchinaprontuarios.com.br` já hospeda outros serviços na Hostinger
-(site atual, caixas de e-mail gratuitas via MX, outros subdomínios). Para não
-tocar em nada disso, o app roda num **subdomínio dedicado** apontado ao Vercel
-por CNAME — a forma recomendada de adicionar o app a um domínio com serviços
-existentes; risco zero ao apex.
-
-> **E-mail nunca corre risco**: registros **MX** (e-mail) e **A/CNAME** (web) são
-> independentes. Um CNAME em `ai` não afeta as caixas do apex. O código também
-> não tem URL hardcoded — canonical/OG/sitemap vêm de `NEXT_PUBLIC_SITE_URL`, e
-> auth/webhook são derivados do host da requisição, então tudo se adapta ao
-> subdomínio sozinho.
+O app inteiro (site público bilíngue, painel, admin, API da CLI e webhooks)
+roda no domínio `flyee.club`. O código não tem URL fixa: canonical, OG e
+sitemap vêm de `NEXT_PUBLIC_SITE_URL`, e auth e webhooks derivam do host da
+requisição.
 
 ### Configurar
 
-1. **Vercel → Settings → Domains** → adicionar `ai.medchinaprontuarios.com.br`.
-   O Vercel mostra o alvo do CNAME (`cname.vercel-dns.com`).
-2. **Hostinger → DNS** → criar **CNAME**: `ai` → `cname.vercel-dns.com`. SSL é
-   emitido automaticamente pelo Vercel. Não mexer em A, MX nem nos outros
-   subdomínios.
-3. **Vercel → `NEXT_PUBLIC_SITE_URL=https://ai.medchinaprontuarios.com.br`**
-   (Production) e **redeploy** — é build-time. Vira o domínio canônico
-   (sitemap/robots/OG/canonical) e corrige o `http://localhost:3000` atual.
-4. **Supabase → Authentication → URL Configuration**: Site URL + Redirect URLs
-   com `https://ai.medchinaprontuarios.com.br` (`/auth/callback`, `/**`).
-5. **OAuth Google/GitHub** (se usados): adicionar
-   `https://ai.medchinaprontuarios.com.br/auth/callback`.
-6. **Webhook Asaas + sync do Inngest**: apontar para o subdomínio
-   (`https://ai.medchinaprontuarios.com.br/api/webhooks/asaas`, `/api/inngest`)
-   — ou manter o alias estável `medchina-wheat.vercel.app`, que também vale.
-7. **Meta/GA4**: os IDs são independentes de domínio (funcionam no subdomínio).
-   Opcional: atualizar a URL do stream do GA4 para o subdomínio e verificar o
-   domínio no Meta Business (Domain Verification) para o Aggregated Event
-   Measurement.
-
-### Onde os anúncios apontam
-
-O **site público de marketing — com o Pixel e o funil de conversão — é o nosso
-app**, agora em `ai.medchinaprontuarios.com.br`. Anúncios e links de conversão
-apontam para lá (o WordPress do apex não tem nosso tracking). Um
-redirecionamento apex → subdomínio na Hostinger (opcional, quando quiser) leva o
-tráfego do domínio principal ao app **mantendo e-mail e demais serviços
-intactos**.
-
-> SEO: subdomínio é tratado como site à parte pelo Google. É adequado para o
-> lançamento; se depois quiser a autoridade no apex, mover é fácil (trocar
-> `NEXT_PUBLIC_SITE_URL` + DNS — nada no código muda).
+1. **Vercel → Settings → Domains** → adicionar `flyee.club` (e `www.flyee.club`
+   redirecionando para o apex). O Vercel mostra os registros a criar.
+2. **DNS do registrador** → criar os registros indicados pelo Vercel. SSL é
+   emitido automaticamente. Se o domínio também recebe e-mail, não mexer nos
+   registros MX.
+3. **Vercel → `NEXT_PUBLIC_SITE_URL=https://flyee.club`** (Production) e
+   **redeploy** — é build-time.
+4. **Supabase → Authentication → URL Configuration**: Site URL
+   `https://flyee.club` e Redirect URLs `https://flyee.club/auth/callback` e
+   `https://flyee.club/**`.
+5. **OAuth Google** (se usado): adicionar `https://flyee.club/auth/callback`.
+6. **Webhooks**: Asaas em `https://flyee.club/api/webhooks/asaas`, Stripe em
+   `https://flyee.club/api/webhooks/stripe`; sync do Inngest em
+   `https://flyee.club/api/inngest`.
+7. **Resend**: verificar o domínio `flyee.club` (DKIM/SPF) antes de definir
+   `EMAIL_FROM`; o mesmo SMTP serve aos e-mails de auth do Supabase.
+8. **Meta/GA4**: os IDs não dependem de domínio. Opcional: verificar o domínio
+   no Meta Business e atualizar a URL do stream do GA4.
 
 ### Smoke test pós-configuração
 
-Home pública em `ai.…` → aviso de cookies + Pixel dispara (ver o ID no HTML) →
-`/auth/sign-up` (e-mail + OAuth) → criar workspace → `/inicio` → um checkout de
-teste → confirmar `InitiateCheckout`/`Purchase` no Gerenciador de Eventos (Meta)
-e no GA4.
+Home pública em `https://flyee.club` e `https://flyee.club/en` → aviso de
+cookies → `/auth/sign-up` → `/inicio` → um checkout de teste em BRL (Asaas
+sandbox) e outro em USD (Stripe test) → confirmar `InitiateCheckout`/`Purchase`
+no Gerenciador de Eventos (Meta) e no GA4.
 
 ## Troubleshooting
 

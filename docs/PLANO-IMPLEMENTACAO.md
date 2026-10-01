@@ -2,6 +2,20 @@
 
 > Aprovado em 2026-09-30. Nenhuma fase foi executada ainda, exceto o item de `docs/PRODUCT.md` da fase 0 (marcado abaixo). Decisões do usuário, premissas de produto e questões em aberto: [`docs/PRODUCT.md`](PRODUCT.md), seções "Decisões tomadas 2026-09-30" e "Decisões em aberto". Elas são a fonte única; este plano não as repete.
 
+## Andamento
+
+| Fase | Estado | Notas |
+|---|---|---|
+| 0 · Identidade e desvinculação | Concluída em 2026-10-01 | Git iniciado com snapshot (`ab2e84d`). Junções de workspace em `node_modules/@flyee` recriadas (a cópia da pasta as perdeu). `apps/web/.env.local` criado para anular as credenciais do MedChina herdadas em `apps/web/.env`. Antecipados da fase 1: remoção de `apps/mobile`. Antecipado da fase 7: `docs/DESIGN.md` reescrito como direção provisória, porque as skills o herdam em modo estrito. Adiado para o fim da fase 1: a reescrita completa do `CLAUDE.md` e do `apps/web/CLAUDE.md`, para descrever o código já sem o clínico. |
+| 1 · Subtração do clínico | Pendente | |
+| 2 · Baseline do banco | Pendente | |
+| 3 · Token e API de entrega | Pendente | |
+| 4 · Escada de cobrança | Pendente | |
+| 5 · Painel do integrante | Pendente | |
+| 6 · Consoles admin | Pendente | |
+| 7 · Site público, i18n e SEO | Pendente | |
+| 8 · E-mail, jobs e notificações | Pendente | |
+
 ## Contexto
 
 A pasta `C:\AppsProjects\flyee-club` é uma cópia sem `.git` do repositório MedChina (prontuário clínico de MTC), derivado do template flyee. Ela vira a **plataforma** do flyee.club: contas, cobrança, emissão e revalidação de token, API de entrega de pacotes para a CLI, gestão de catálogo e releases, painel do integrante, consoles admin, analytics por segmento, lista de espera, site público bilíngue e legal. O **produto** (`npx flyee`, core do harness, conteúdo dos módulos) nasce depois em outro projeto e consome o contrato de API e o schema de manifesto definidos aqui. O harness de desenvolvimento do repositório (`.claude/*`, hooks, `scripts/sync-agent-harness.mjs`) fica como harness da plataforma; nada dele é distribuído.

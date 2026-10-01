@@ -28,12 +28,12 @@ function catalogDigest(cwd) {
     const json = readFileSync(join(cwd, "apps", "web", "src", "components", "product", "catalog.json"), "utf8");
     const catalog = JSON.parse(json);
     const shared = (catalog.components ?? []).map((c) => `- ${c.name}(${c.props}) — ${c.use}`);
-    const template = (catalog.template ?? []).map((c) => `- ${c.name} [porte de ${c.source}] — ${c.use}`);
+    const template = (catalog.template ?? []).map((c) => `- ${c.name} [shape: ${c.props}] — ${c.use}`);
     if (!shared.length && !template.length) return "";
     return [
       "5. COMPONENT CATALOG — check the shape against this BEFORE writing markup. A series, a ratio, a share or a counter set rendered as a sentence is a defect:",
       ...shared,
-      ...(template.length ? ["   Template patterns not yet packaged (port, never reinvent):", ...template] : []),
+      ...(template.length ? ["   Described but not packaged yet (build to this shape, never reinvent):", ...template] : []),
       ...(catalog.tones?.rule ? [`   Tones: ${catalog.tones.rule}`] : []),
       ...(catalog.traps ?? []).map((t) => `   Trap: ${t}`),
     ].join("\n");

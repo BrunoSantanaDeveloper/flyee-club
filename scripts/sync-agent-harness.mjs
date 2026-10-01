@@ -31,7 +31,7 @@ function canonicalSection(relativePath) {
 
 function rootAgentsFile() {
   const sources = ["CLAUDE.md"];
-  for (const app of ["apps/web/CLAUDE.md", "apps/mobile/CLAUDE.md"]) {
+  for (const app of ["apps/web/CLAUDE.md"]) {
     if (existsSync(join(repoRoot, app))) sources.push(app);
   }
 
@@ -56,9 +56,9 @@ contracts below. Never edit this file manually. Update the matching
 Canonical skill content lives only in \`.claude/skills/*\`.
 \`.agents/skills/*/SKILL.md\` files are generated discovery bridges. Load every
 skill required by the contracts below before taking task actions. In
-particular, use \`marketing-page\` for marketing paths, \`product-screen\` for
-authenticated product paths, and \`mobile-screen\` for mobile screen work. Run
-\`marketing-verify\` after substantial marketing work.
+particular, use \`marketing-page\` for marketing paths and \`product-screen\` for
+authenticated product paths. Run \`marketing-verify\` after substantial
+marketing work and \`product-verify\` after substantial product work.
 
 Canonical hook implementations live only in \`.claude/hooks/*\` and support
 both agents. Codex discovers them through \`.codex/config.toml\`. Treat every

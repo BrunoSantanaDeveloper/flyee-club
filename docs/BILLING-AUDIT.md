@@ -1,5 +1,7 @@
 # Auditoria de billing — jornada de contratação, checkout transparente e webhook Asaas
 
+> **Histórico herdado do MedChina.** Esta auditoria descreve a cobrança do MedChina antes do baseline do flyee.club (2026-09-30). O desenho vigente fica em `docs/BILLING.md`, escrito na fase 4 de `docs/PLANO-IMPLEMENTACAO.md`. Os achados sobre webhooks, idempotência e Asaas seguem úteis como referência; planos, minutos, trial e valores citados são do MedChina.
+
 **Data:** 2026-08-03
 **Escopo:** funil de contratação (CTA externo, usuário logado, trial ativo/vencido, upgrade, downgrade, cancelamento, inadimplência, pacotes avulsos), máquina de estados de assinatura, providers de pagamento, root-cause do HTTP 500 no webhook Asaas de 01/08/2026 14:00, e viabilidade de checkout transparente.
 

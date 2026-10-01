@@ -1,29 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import de from "@flyee/content/messages/de.json";
 import en from "@flyee/content/messages/en.json";
-import es from "@flyee/content/messages/es.json";
-import fr from "@flyee/content/messages/fr.json";
 import ptBR from "@flyee/content/messages/pt-BR.json";
-import zhCN from "@flyee/content/messages/zh-CN.json";
 
 /**
- * The six catalogs must hold the SAME keys.
+ * The two catalogs must hold the SAME keys.
  *
  * There is no `getMessageFallback` configured, so a key present in pt-BR and
- * missing in another locale does not fail the build or the page: it prints the
- * key path on screen, to someone who is already stuck. Import strings are
- * written by hand across six files, which is exactly the kind of edit that
- * drifts.
+ * missing in English does not fail the build or the page: it prints the key
+ * path on screen, to someone who is already stuck.
  */
 
 const CATALOGS: Record<string, Record<string, Record<string, string>>> = {
   "pt-BR": ptBR,
   en,
-  es,
-  fr,
-  de,
-  "zh-CN": zhCN,
 };
 
 const NAMESPACES = ["product", "auth", "dashboard", "marketing"];

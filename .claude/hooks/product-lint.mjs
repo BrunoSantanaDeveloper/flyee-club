@@ -97,7 +97,7 @@ function lint(filePath, content) {
       const text = line.match(JSX_TEXT);
       if (text)
         advisories.push(
-          `[hardcoded-copy?] ${at}: JSX text "${text[1].slice(0, 60)}" — product copy goes through the product i18n namespace in ALL 6 locales.`,
+          `[hardcoded-copy?] ${at}: JSX text "${text[1].slice(0, 60)}" — product copy goes through the product i18n namespace in both locales (pt-BR, en).`,
         );
     }
   });
@@ -152,9 +152,9 @@ function lint(filePath, content) {
   // caught it: hand-rolled markup type-checks perfectly.
   //
   // The catalog is the first stop, always. When nothing there fits, the new
-  // component is PORTED from the template's own section (recoverable with
-  // `git show "bd92373^:apps/web/src/app/(dashboard)/dashboards/..."`) and
-  // added to catalog.json in the same commit — never improvised.
+  // component is built in the existing visual language (tokens, radii,
+  // TILE_TONE, type scale) and added to catalog.json in the same commit —
+  // never improvised.
   if (!/\/components\/product\//.test(p)) {
     for (const tagName of ["Box", "div"]) {
       for (const { index, tag } of scanOpeningTags(content, tagName)) {

@@ -1,4 +1,4 @@
-project_id = "medchina-local"
+project_id = "flyee-club-local"
 
 [api]
 enabled = true
@@ -31,7 +31,7 @@ file_size_limit = "512MiB"
 [auth]
 enabled = true
 site_url = "http://127.0.0.1:3100"
-additional_redirect_urls = ["medchina://**"]
+additional_redirect_urls = []
 jwt_expiry = 3600
 enable_signup = true
 

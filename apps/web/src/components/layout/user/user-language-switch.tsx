@@ -38,11 +38,7 @@ export default function UserLanguageSwitch() {
         <div className="w-full"> {t("user-language")}</div>
         <Chip
           size="small"
-          avatar={
-            <Avatar alt={t(locale)} src={`/images/flags/${locale}.jpg`}>
-              {locale.slice(-2).toUpperCase()}
-            </Avatar>
-          }
+          avatar={<Avatar alt={t(locale)}>{locale.slice(0, 2).toUpperCase()}</Avatar>}
           label={t(locale)}
           variant="outlined"
         />
@@ -70,9 +66,9 @@ export default function UserLanguageSwitch() {
             }}
           >
             <ListItemIcon>
-              {/* Locales without a flag image fall back to the code initials. */}
-              <Avatar className="nano" alt={t(option)} src={`/images/flags/${option}.jpg`}>
-                {option.slice(-2).toUpperCase()}
+              {/* A language is not a country: the two-letter language code, never a flag. */}
+              <Avatar className="nano" alt={t(option)}>
+                {option.slice(0, 2).toUpperCase()}
               </Avatar>
             </ListItemIcon>
             {t(option)}

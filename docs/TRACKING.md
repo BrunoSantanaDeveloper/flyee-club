@@ -1,5 +1,7 @@
 # Tracking & conversions (Meta Pixel + GA4 + CAPI)
 
+> **Legado do MedChina, reescrito na fase 7 de `docs/PLANO-IMPLEMENTACAO.md`.** A regra de não rodar rastreador no app autenticado vinha de dado de saúde e deixa de valer para o flyee.club; até a reescrita, os mecanismos descritos (Pixel/GA4 com opt-out, CAPI e GA4 server-side) seguem como referência técnica.
+
 Measurement for ads and analytics, built to survive a **health-data** product
 (LGPD Art. 11). The governing rule: **no ad/analytics tracker ever runs on the
 authenticated clinical app.** Browser trackers live only on the public marketing

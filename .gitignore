@@ -58,9 +58,6 @@ next-env.d.ts
 
 .vercel
 
-# The Hellen testimony (149 MiB) is served off the site instead — GitHub
-# refuses any blob over 100 MiB. See components/presentation/README.md.
-/apps/web/public/videos/palestra/depo-hellen.mp4
 
 # Inherited MedChina media (deleted in phase 1 of docs/PLANO-IMPLEMENTACAO.md);
 # kept out of git history on purpose.

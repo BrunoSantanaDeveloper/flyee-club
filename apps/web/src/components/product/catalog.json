@@ -1,19 +1,16 @@
 {
-  "_readme": "Machine-readable catalog of the PRODUCT component library (mirror of components/marketing/catalog.json for the authenticated app). The PreToolUse product-screen-guard injects a digest of this file into every write/edit under app/(dashboard)/** or components/product/**, so the full expressive range of the template is in context on every generation — not just the primitives the model happens to remember. Two kinds of entry: `components` are shared components that already exist in this repo (import them), and `template` are patterns the flyee template ships that have NOT been packaged yet (port them from the cited source instead of inventing a new shape). Keep entries in sync when props change; guard lines render as `Name(props) — use`.",
-
+  "_readme": "Machine-readable catalog of the PRODUCT component library (mirror of components/marketing/catalog.json for the authenticated app). The PreToolUse product-screen-guard injects a digest of this file into every write/edit under app/(dashboard)/** or components/product/**, so the full expressive range is in context on every generation, not just the primitives the model happens to remember. Two kinds of entry: `components` are shared components that already exist in this repo (import them), and `template` are shapes described here but NOT packaged yet (build them to the description instead of inventing a new shape). Keep entries in sync when props change; guard lines render as `Name(props) — use`.",
   "contract": [
-    "NEVER invent a component. The catalog below is the first stop for any container, tile, card, badge, meter or chart, and it is checked BEFORE markup is written, not after. If nothing here fits, the next stop is the flyee template itself — its dashboard sections are recoverable with `git show \"bd92373^:apps/web/src/app/(dashboard)/dashboards/...\"` — and the new component is PORTED from that source, keeping its shape (radius, tint, band height, type scale), then added to this file in the same commit. Improvising a `<Box>` with a border and a radius is a defect even when it looks acceptable: it type-checks, it passes review, and it quietly grows a second design language beside the template's. `product-lint` blocks the interactive form of this.",
+    "NEVER invent a component. The catalog below is the first stop for any container, tile, card, badge, meter or chart, and it is checked BEFORE markup is written, not after. If nothing here fits, build the new component in the existing visual language (tokens, radii, TILE_TONE tints, band height, type scale) and add it to this file in the same commit. Improvising a `<Box>` with a border and a radius is a defect even when it looks acceptable: it type-checks, it passes review, and it quietly grows a second design language. `product-lint` blocks the interactive form of this.",
     "Before rendering a value, ask which catalog entry is the right shape for it. A counter set, a ratio, a share and a series each have a component — a run-on sentence of numbers is a defect, not a style.",
     "Never invent a chart to fill space. A visual earns its place only when it answers a question the user actually asks, and only on data the payload already carries. Vanity metrics and decorative charts are forbidden (.claude/rules/app-ux.md).",
-    "Never hand-roll a shape that exists here. If the nearest entry does not fit, port the `template` pattern from the cited source (recoverable with `git show \"bd92373^:<path>\"`) rather than writing a one-off.",
-    "Red is reserved for clinical risk and failure. Commercial ceilings, queues and declines use `attention` (accent-3 terracotta) — see usage-meter and library-usage-card for the precedent.",
+    "Never hand-roll a shape that exists here. If the nearest entry does not fit, extend it (a prop, a mode) or build the `template` shape it describes, rather than writing a one-off.",
+    "Red is reserved for risk and failure. Commercial ceilings, queues and declines use `attention` (accent-3) — see usage-meter for the precedent.",
     "Type scale: body1 14px, body2 12px, subtitle2 14px semibold, h5 18px, h4 20px. `caption` is below 12px — never for informative text."
   ],
-
   "tones": {
     "rule": "Icon containers use TILE_TONE (bg-{tone}-light/10 + text-{tone}), tones primary | secondary | accent-1..4. Bars and meters use the UsageMeter vocabulary: primary | secondary | attention | empty. Status labels use the pastel badge, never colour alone."
   },
-
   "components": [
     {
       "name": "EmptyState",
@@ -100,40 +97,33 @@
       "use": "The beat BETWEEN two steps of a guided flow: names what now exists in her records and loads the next step. Competence feedback, never a token — it awards, counts and ranks nothing, so it stays on the right side of the no-points/badges/leaderboards/streaks rule. Its primary action is what advances the wizard (drive SetupWizard in controlled mode)."
     }
   ],
-
   "template": [
     {
       "name": "Medidor circular (gauge)",
-      "source": "dashboards/analytics/sections/dashboard-analytics-progresses.tsx",
       "props": "CircularProgress variant=\"determinate\" + centred label + outline-grey-100 track ring",
       "use": "One ratio that must read at a glance next to its x/y. No chart library. Not packaged yet — port it when a screen needs a single prominent ratio."
     },
     {
       "name": "Tile horizontal com variação",
-      "source": "pages/user/overview/sections/user-overview-stats.tsx",
       "props": "Card flex-row p-1 + Box h-24 w-16 rounded-2xl bg-{tone}-light/10 + label body1 + value h5 + NiTriangleUp/Down change",
       "use": "A counter that has a previous period to compare against. Requires real prior-period data — otherwise use StatTile."
     },
     {
       "name": "Rosca / radar",
-      "source": "dashboards/analytics/sections/dashboard-analytics-categories.tsx, -orders-stocks.tsx",
       "props": "PieChart / RadarChart from @mui/x-charts",
       "use": "Only above ~6 categories, or to compare two comparable series. Below that, MetricBars reads better — prefer it."
     },
     {
       "name": "Card ilustrado",
-      "source": "dashboards/default/sections/dashboard-default-banner.tsx",
       "props": "h4 card-title + body1 + Illustration* h-64 max-w-xs + contained/outlined actions",
       "use": "The zero-data state of a whole screen, when the path to value deserves more than an EmptyState. Packaged example: components/product/home-empty-banner.tsx."
     },
     {
       "name": "Timeline de atividade",
-      "source": "dashboards/default/sections/dashboard-default-activity.tsx",
       "props": "@mui/lab Timeline + TimelineDot variant=outlined + subtitle2/body2 + relative time",
       "use": "'What happened recently' when the order IS the meaning. Packaged example: the recent-records card in app/(dashboard)/inicio/page.tsx."
     }
   ],
-
   "traps": [
     "MUI 9 builds a component class list as `Mui{Comp}-{variant}` + `Mui{Comp}-color{Color}`; the composed `Mui{Comp}-{variant}{Color}` of MUI 5 is gone. Both known instances are fixed: style/inputs/button.css now targets `.MuiButton-pastel.MuiButton-color{Color}`, and style/data-display/chip.css now targets `.MuiChip-outlined.MuiChip-color{Color}`. An outlined Chip therefore paints BOTH its text (from MUI emotion, matched on props) and its 1px ring (from the template, matched on classes). Before writing a selector against a composed class, check useUtilityClasses in the installed component source — TypeScript will not catch it, because a ChipClasses/ButtonClasses augmentation can declare a class the DOM never receives.",
     "useHighlightedSparkline derives its y-axis from the data: an empty array yields -Infinity. Guard the series before rendering.",

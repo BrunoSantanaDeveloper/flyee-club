@@ -14,7 +14,12 @@ for (const arg of args) {
 const shouldApply = args.has("--apply");
 const shouldTest = args.has("--test") || args.has("--test-only");
 const shouldInspectMigrations = !args.has("--test-only");
-const envPath = path.resolve(root, process.env.MEDCHINA_ENV_FILE ?? "apps/web/.env");
+// Same precedence as Next.js: apps/web/.env.local wins over apps/web/.env, and
+// the FIRST file that defines a key decides it, an empty value included. A
+// .env.local that blanks DATABASE_URL therefore disables this gate as well.
+const envPaths = process.env.FLYEE_ENV_FILE
+  ? [path.resolve(root, process.env.FLYEE_ENV_FILE)]
+  : [path.resolve(root, "apps/web/.env.local"), path.resolve(root, "apps/web/.env")];
 const migrationsPath = path.resolve(root, "packages/db/migrations");
 const testsPath = path.resolve(root, "packages/db/tests");
 
@@ -31,9 +36,19 @@ function parseEnvValue(source, key) {
 }
 
 async function getDatabaseUrl() {
-  const envFile = await readFile(envPath, "utf8");
-  const value = process.env.DATABASE_URL ?? parseEnvValue(envFile, "DATABASE_URL");
-  if (!value) throw new Error(`DATABASE_URL is not set in ${envPath}`);
+  let value = process.env.DATABASE_URL;
+  if (value === undefined) {
+    for (const envPath of envPaths) {
+      const envFile = await readFile(envPath, "utf8").catch(() => null);
+      if (envFile === null) continue;
+      const fromFile = parseEnvValue(envFile, "DATABASE_URL");
+      if (fromFile !== undefined) {
+        value = fromFile;
+        break;
+      }
+    }
+  }
+  if (!value) throw new Error(`DATABASE_URL is not set (checked ${envPaths.join(", ")})`);
 
   const databaseUrl = new URL(value);
   if (!new Set(["postgres:", "postgresql:"]).has(databaseUrl.protocol)) {
@@ -65,7 +80,7 @@ async function readAppliedMigrations(sql) {
 
   if (!state.has_history || !state.has_product_schema) {
     throw new Error(
-      "The configured database is not an initialized MedChina database (migration history or product schema missing)",
+      "The configured database is not an initialized flyee.club database (migration history or product schema missing)",
     );
   }
 
@@ -75,7 +90,7 @@ async function readAppliedMigrations(sql) {
 
 async function migrate(databaseUrl) {
   const sql = postgres(databaseUrl, {
-    application_name: "medchina-remote-db-gate",
+    application_name: "flyee-remote-db-gate",
     connect_timeout: 20,
     idle_timeout: 20,
     max: 1,
@@ -86,7 +101,7 @@ async function migrate(databaseUrl) {
 
   try {
     if (shouldApply) {
-      await sql`select pg_advisory_lock(hashtext('medchina'), hashtext('schema_migrations'))`;
+      await sql`select pg_advisory_lock(hashtext('flyee'), hashtext('schema_migrations'))`;
     }
 
     const applied = await readAppliedMigrations(sql);
@@ -119,7 +134,7 @@ async function migrate(databaseUrl) {
     }
   } finally {
     if (shouldApply) {
-      await sql`select pg_advisory_unlock(hashtext('medchina'), hashtext('schema_migrations'))`.catch(
+      await sql`select pg_advisory_unlock(hashtext('flyee'), hashtext('schema_migrations'))`.catch(
         () => undefined,
       );
     }
@@ -129,7 +144,7 @@ async function migrate(databaseUrl) {
 
 async function testDatabase(databaseUrl) {
   const sql = postgres(databaseUrl, {
-    application_name: "medchina-remote-pgtap",
+    application_name: "flyee-remote-pgtap",
     connect_timeout: 20,
     idle_timeout: 20,
     max: 1,

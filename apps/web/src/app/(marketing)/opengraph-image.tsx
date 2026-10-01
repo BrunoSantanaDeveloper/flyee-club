@@ -46,16 +46,10 @@ export default async function OpenGraphImage() {
   const textPrimary = hsl(common.light["text-primary"]);
   const textSecondary = hsl(common.light["text-secondary"]);
 
-  const [bold, medium, mark] = await Promise.all([
-    loadAsset(publicAsset("fonts", "tt-chocolates-bold.otf")),
-    loadAsset(publicAsset("fonts", "tt-chocolates-medium.otf")),
-    loadAsset(publicAsset("brand", "medchina-mark.png")),
-  ]);
-
-  const fonts = [
-    bold && { name: "TT Chocolates", data: bold, weight: 700 as const, style: "normal" as const },
-    medium && { name: "TT Chocolates", data: medium, weight: 500 as const, style: "normal" as const },
-  ].filter((font) => font !== null);
+  // The provisional brand has no display face of its own (decision 2026-09-30),
+  // so the card renders in Satori's default sans until one is licensed.
+  const mark = await loadAsset(publicAsset(...BRAND.mark.split("/").filter(Boolean)));
+  const fonts: { name: string; data: Buffer; weight: 500 | 700; style: "normal" }[] = [];
 
   return new ImageResponse(
     (
@@ -68,7 +62,7 @@ export default async function OpenGraphImage() {
           justifyContent: "center",
           alignItems: "center",
           background,
-          fontFamily: fonts.length > 0 ? "TT Chocolates" : "sans-serif",
+          fontFamily: "sans-serif",
         }}
       >
         {/* The hero glow of the site, flattened: a teal wash behind the lockup

@@ -27,7 +27,6 @@ on:
       - ".claude/**"
       - ".agents/**"
       - ".codex/**"
-      - "apps/mobile/**"
       - "attachments/**"
   pull_request:
     paths-ignore:
@@ -36,7 +35,6 @@ on:
       - ".claude/**"
       - ".agents/**"
       - ".codex/**"
-      - "apps/mobile/**"
       - "attachments/**"
   workflow_dispatch:
 

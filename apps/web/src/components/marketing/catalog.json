@@ -2,9 +2,9 @@
   "_readme": "Machine-readable catalog of the marketing component library (the Lovable design-system.json idea). The PreToolUse marketing-guard injects a digest of this file into every write/edit under app/(marketing)/** or components/marketing/**, so the full expressive range is in context on every generation — not just the archetypes the model happens to remember. Keep entries in sync when a component's props change; guard lines render as `Name(props) — use`.",
   "contract": [
     "Every content block sits in <Section>/<Container>/<SectionHeader> — spacing/width come from marketing tokens, never per-page values",
-    "Tokens only: hsl(var(--token)) / token Tailwind classes; must look right in 4 color themes × light/dark",
+    "Tokens only: hsl(var(--token)) / token Tailwind classes; must look right in the active palette × light/dark",
     "Headings: font-display text-display-{2xl,xl,lg,md} (fluid clamp scale, no breakpoint font jumps)",
-    "Copy through the marketing i18n namespace in ALL 6 locales (de,en,es,fr,pt-BR,zh-CN)",
+    "Copy through the marketing i18n namespace in BOTH locales (pt-BR, en)",
     "Icons only via @/icons/nexture/ni-* alias; meaningful concept icons, never decoration",
     "Exactly one <h1> per page (Hero, or SectionHeader/PricingSection as/headingAs=\"h1\")",
     "New public routes: PUBLIC_PREFIXES (src/middleware.ts) + src/app/sitemap.ts + generateMetadata",
@@ -15,7 +15,14 @@
   ],
   "tones": {
     "source": "tone.ts — TONE map + toneAt(index) rotation",
-    "values": ["primary", "secondary", "accent-1", "accent-2", "accent-3", "accent-4"],
+    "values": [
+      "primary",
+      "secondary",
+      "accent-1",
+      "accent-2",
+      "accent-3",
+      "accent-4"
+    ],
     "rule": "primary is reserved for CTAs and the page's one bold moment; categorical elements (plan tiers, feature families, chart series, icon chips) take accent hues with a CONSISTENT family→hue mapping across the whole site. A 100%-primary page reads monochrome and fails the premium bar."
   },
   "components": [

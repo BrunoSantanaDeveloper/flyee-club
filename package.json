@@ -1,5 +1,5 @@
 {
-  "name": "medchina",
+  "name": "flyee-club",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
@@ -8,9 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @flyee/web",
-    "dev:mobile": "npm run start -w @flyee/mobile",
     "build": "npm run build -w @flyee/web",
-    "build:mobile": "npm run build -w @flyee/mobile",
     "start": "npm run start -w @flyee/web",
     "lint": "npm run lint -w @flyee/web",
     "lint:fix": "npm run lint:fix -w @flyee/web",
@@ -19,12 +17,9 @@
     "harness:check": "node scripts/sync-agent-harness.mjs --check",
     "harness:test": "node scripts/test-agent-harness.mjs",
     "check:mui-classes": "node scripts/check-mui-classes.mjs",
-    "test:clinical": "npm test -w @flyee/clinical",
-    "test:whatsapp": "npm test -w @flyee/whatsapp",
     "test:ai": "npm test -w @flyee/ai",
-    "test": "npm run test:clinical && npm run test:ai && npm run test:transcribe && npm run test:knowledge && npm run test:web && npm run test:mobile",
+    "test": "npm run test:ai && npm run test:web",
     "test:web": "npm run test -w @flyee/web",
-    "test:mobile": "npm run test -w @flyee/mobile",
     "test:browser": "npm run test:browser -w @flyee/web",
     "test:e2e": "npm run test:e2e -w @flyee/web",
     "test:a11y": "npm run test:a11y -w @flyee/web",
@@ -37,17 +32,11 @@
     "test:db": "supabase test db --local packages/db/tests",
     "test:db:ci": "supabase test db --db-url postgresql://postgres:postgres@127.0.0.1:54322/postgres packages/db/tests",
     "test:db:remote": "node scripts/remote-db-gate.mjs --test-only",
-    "content:mobile": "node scripts/generate-mobile-messages.mjs",
-    "content:mobile:check": "node scripts/generate-mobile-messages.mjs --check",
-    "ci:verify": "npm run harness:check && npm run harness:test && npm run check:mui-classes && npm run typecheck && npm run test && npm run build && npm run build:mobile",
+    "ci:verify": "npm run harness:check && npm run harness:test && npm run check:mui-classes && npm run typecheck && npm run test && npm run build",
     "tokens:generate": "npm run generate -w @flyee/design-tokens",
     "prepare": "husky || true",
     "pre-commit": "lint-staged",
-    "typecheck": "npm run typecheck -w @flyee/clinical && npm run typecheck -w @flyee/web && npm run typecheck -w @flyee/mobile",
-    "test:knowledge": "npm test -w @flyee/knowledge",
-    "eval:retrieval": "tsx scripts/eval-retrieval.mts",
-    "knowledge:reindex": "tsx scripts/reindex-knowledge.mts",
-    "test:transcribe": "npm test -w @flyee/transcribe"
+    "typecheck": "npm run typecheck -w @flyee/web"
   },
   "devDependencies": {
     "husky": "9.1.7",

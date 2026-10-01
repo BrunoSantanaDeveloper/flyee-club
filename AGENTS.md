@@ -10,9 +10,9 @@ contracts below. Never edit this file manually. Update the matching
 Canonical skill content lives only in `.claude/skills/*`.
 `.agents/skills/*/SKILL.md` files are generated discovery bridges. Load every
 skill required by the contracts below before taking task actions. In
-particular, use `marketing-page` for marketing paths, `product-screen` for
-authenticated product paths, and `mobile-screen` for mobile screen work. Run
-`marketing-verify` after substantial marketing work.
+particular, use `marketing-page` for marketing paths and `product-screen` for
+authenticated product paths. Run `marketing-verify` after substantial
+marketing work and `product-verify` after substantial product work.
 
 Canonical hook implementations live only in `.claude/hooks/*` and support
 both agents. Codex discovers them through `.codex/config.toml`. Treat every
@@ -206,60 +206,6 @@ The product's second loop: the platform is useful BETWEEN consultations, not onl
 - Deployment target is Vercel (native Next.js runtime). Deploys go ONLY through GitHub Actions (`.github/workflows/deploy.yml`: `vercel pull/build/deploy --prebuilt` with token secrets) — the Vercel Git integration stays disconnected (multiple GitHub accounts on the owner's machine conflict with it). Runbook: `docs/DEPLOY.md`.
 - Server-only secrets (`DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) must never reach client components.
 
-===== apps/mobile/CLAUDE.md =====
-
-# MedChina Mobile (apps/mobile)
-
-Expo (SDK 57) + expo-router + React Native Paper — the MedChina companion app. Its product scope is CAPTURE, not review (PRD §11, docs/PRODUCT.md): consented audio recording, voice observations, resilient upload queue and processing status. NO checkout/purchase flows ever (store policy, PRD §4.4). Shares the MedChina identity with `apps/web` through `packages/*`. Before building or editing screens, load the `mobile-screen` skill; Expo/router specifics live in the `building-native-ui` skill, UX patterns in `mobile-app-ui-design`.
-
-Expo has changed significantly across versions — see @AGENTS.md and the versioned docs it points to.
-
-## Stack and conventions
-
-- **Identity**: Paper MD3 themes are GENERATED from `@flyee/design-tokens` in `src/theme/index.ts` (the single MedChina Teal/Camel identity × light/dark). Never hardcode colors; dimensions come from the `native` tokens export (`RADIUS`, `MOTION`, `GRID` = 8pt grid, `TOUCH_TARGET` = 44).
-- **Components**: React Native Paper first; custom components read `useTheme()`.
-- **Navigation**: expo-router — routes in `app/`, `_layout.tsx` stacks, bottom `Tabs` for primary destinations, kebab-case filenames.
-- **i18n**: `use-intl` with the shared catalogs from `@flyee/content/messages/*` (same keys/ICU as web's next-intl). App-shell strings live in the `mobile` namespace; locale names in `dashboard`. Every string goes through messages.
-- **Auth**: `@flyee/auth/native` wired in `src/lib/supabase.ts` reading `EXPO_PUBLIC_SUPABASE_URL/ANON_KEY`. Without env the app stays browsable with a hint (same rule as web). The session is persisted through `src/lib/session-storage.ts` — AES-GCM over AsyncStorage, key in SecureStore — because a clinical refresh token must not sit in plain text (SecureStore alone cannot hold it: >2 KB). Auto-refresh is bound to AppState (`startAutoRefresh`/`stopAutoRefresh`), the documented React Native pattern.
-- **Icons**: `@/icons/nexture/ni-*` RN adapters (react-native-svg) — port more with `node scripts/port-icons.mjs ni-name` (see `src/icons/README.md`).
-- **Settings**: theme mode / locale persisted in AsyncStorage (`src/providers/settings.tsx`), defaults mirror web (`system`, `pt-BR`) in `src/config.ts` — keep in sync with `apps/web/src/config.ts`.
-- **Path alias**: `@/*` → `./src/*`.
-
-## Capture flow (the app's product, PRD §11)
-
-- Routes: `(app)/index.tsx` = **today's consultations** (the home — reads `scheduled`/`in_progress` for today; the web agenda, PRD §9.3, is what fills it), `(app)/consulta/[id].tsx` = **Modo Consulta** (hidden from the tab bar with `href: null`; its header title is set per patient).
-- Data access is `src/lib/clinical.ts` (today's list, `has_active_consent`, `org_audio_allowance`). Consent is granted on the web with the patient present (PRD §9.5). On the first eligible online AI capture, the server may atomically grant the free promotional allowance; this is an operational entitlement, with no plan, price, card, renewal, checkout, purchase link or commercial trial UI in the app. When no allowance is available, the app states only that capture is unavailable; contracting remains web-only (PRD §4.4, store policy).
-- **Upload queue** (`src/lib/recording-queue.ts`, PRD §11/§12.4): the audio is moved out of cache into `Paths.document/recordings` the instant recording stops, and the queue survives restarts — a bad connection must never cost a consultation. States the UI says out loud: `local` (phone only) → `uploading` → `uploaded` (server confirmed). The device copy is deleted **only after** the server confirms (HOME-SPEC §22.3). A retry resumes from where it stopped (the `recordings` row id is kept) instead of inserting twice. `blocked` = the DB guards refused (no consent / no minutes): the audio is KEPT and the reason shown — never silently discarded.
-- The database is the gate, not the app: the `recordings` insert is where consent (0022) and audio allowance (0024) triggers fire; the queue reads their errors rather than re-implementing the rules.
-- Recording uses `expo-audio` (`useAudioRecorder` + `RecordingPresets.HIGH_QUALITY` → `.m4a`, matching the queue's MIME); the microphone permission string is in `app.json`'s `expo-audio` plugin.
-- **The capture survives the phone being put down**: `enableBackgroundRecording` (app.json) + `allowsBackgroundRecording` (`setAudioModeAsync`) keep the microphone running under the iOS `audio` background mode and an Android microphone foreground service. A consultation lasts 40–60 min with the screen auto-locking; ending the capture on `AppState !== "active"` used to truncate it silently. Only "Encerrar" (or the 2 h cap) ends a recording. If the OS kills the process anyway, `active-capture` is recovered at next launch — audio is never discarded. Both stores must be told (see `docs/STORE-REVIEW.md`).
-- **A failed read is never an empty day**: `src/lib/clinical.ts` returns `offline`/`not_found`/`unavailable` explicitly and falls back to `src/lib/clinical-cache.ts` (AES-GCM over AsyncStorage, scoped to the signed-in user and to TODAY, cleared on sign-out) so a phone with no signal still opens on the day's list. Consent reads return `null` (unknown) rather than `false` — offline, the cached authorization decides and the DB stays the gate.
-- **Queue states the home is honest about**: `isAwaitingDelivery` (audio on the phone, moving on its own) drives the "aguardando envio" banner; `needsAttention` (`failed`/`blocked`/`quarantined`) drives the stopped-recordings section, which lists items from ANY day — a failure from yesterday must not be buried inside yesterday's consultation. Delivered rows are purged after `DELIVERED_RETENTION_DAYS`; anything still holding audio is never purged on a timer.
-
-## Commands
-
-- `npm run dev:mobile` (root) or `npm start` here — Expo dev server (Expo Go first; custom builds only when native code demands).
-- `npx tsc --noEmit` — type check. `npx expo-doctor` — environment check.
-- The capture flow's DATA contract is verified against the real database, but **microphone capture, expo-file-system and the RN upload body need a device/emulator run** — they cannot be exercised from Node.
-
-## Boundaries (see .claude/rules/mobile-boundaries.md)
-
-- Never import from `apps/web` — shared code lives in `packages/*` (`design-tokens`, `content`, `auth`).
-- Mobile is not shrunken web: thumb-zone actions, tabs+stacks, limited type scale (≤4 sizes/2 weights per screen), ≥44pt touch targets, safe areas always.
-
-===== .claude/rules/agent-commands.md =====
-
----
-paths: ["**"]
----
-
-# Agent command workflows
-
-- **Slash Commands Mapping**:
-  - When the user inputs the slash command `/update-from-template`, you MUST load and execute the `update-from-template` skill. Read and follow `.claude/skills/update-from-template/SKILL.md` (or its bridge in `.agents/skills/update-from-template/SKILL.md`) step by step.
-  - When the user inputs the slash command `/init-project`, you MUST load and execute the `init-project` skill. Read and follow `.claude/skills/init-project/SKILL.md` (or its bridge in `.agents/skills/init-project/SKILL.md`) step by step.
-  - When the user inputs the slash command `/add-mobile`, you MUST load and execute the `add-mobile` skill. Read and follow `.claude/skills/add-mobile/SKILL.md` (or its bridge in `.agents/skills/add-mobile/SKILL.md`) step by step.
-
 ===== .claude/rules/app-ux.md =====
 
 ---
@@ -306,34 +252,16 @@ paths: ["apps/web/src/icons/**", "apps/web/src/app/**"]
 
 # Marketing layer boundaries
 
-- **Two design systems, chosen by what the page is FOR** (`docs/DESIGN.md`, scope note — revised 2026-08-11):
-  - **Landing / offer / campaign / event pages** — anything an ad, a QR code or a WhatsApp link points at — use the **Landing DS**: the `clinical-source-home.css` global class vocabulary (`.section`, `.eyebrow`, `.button`, `.price-card`…), direct `@phosphor-icons/react` imports and hardcoded pt-BR copy. They live in a sibling route group with its own layout — `app/(funil)/` (offer/campaign/event pages: no site chrome, `noindex`) or `app/(autoridade)/` (permanent, indexed landing pages with the home's header and footer, e.g. `/china`) — or are the home itself. The marketing hooks only watch `app/(marketing)/**` and `components/marketing/**`: a Landing DS page inside `(marketing)` is BLOCKED by `marketing-lint`, and pages in `(funil)`/`(autoridade)` are never linted at all — there the page spec's checklist is the contract (`docs/DESIGN.md`, "Where the hooks do NOT look").
-  - **Informational / institutional pages** (`/como-funciona`, `/recursos`, `/planos`, `/seguranca`, `/migracao`, `/sobre`, `/contato`, `/ajuda`, `/blog`, `/legal/*`) compose the primitives in `apps/web/src/components/marketing/` (`Section`/`Container`/`SectionHeader`) — never hand-tuned per-page spacing/widths.
-- The `marketing-page` skill is MANDATORY for any create/edit/add-section under `(marketing)`, `(funil)` or `(autoridade)`. Under `(marketing)` and `components/marketing` a `PreToolUse` hook (`.claude/hooks/marketing-guard.mjs`) loads it automatically; the hook does NOT fire in `(funil)`/`(autoridade)`, so load it yourself there — you never wait to be asked. On a Landing DS page, obey its conversion, copy and SEO rules, but build in the Landing DS instead of the component catalog.
-- The committed visual direction lives in `docs/DESIGN.md` and is STRICT: new pages, edits and new sections INHERIT it — never re-run the direction engine or restyle the UI unless the user explicitly asks for a "redesign". Adding a section triggers a whole-page coherence pass so all sections stay aesthetically aligned.
-- Every new public route must be added to `PUBLIC_PREFIXES` in `apps/web/src/middleware.ts`; an INDEXED one also goes to `apps/web/src/app/sitemap.ts`. A `noindex` page (`(funil)`, `/palestra/*`) stays out of the sitemap and is named in its exclusion comment — indexing is decided by `metadata` + `sitemap.ts` + `PUBLIC_PREFIXES`, never by the route group.
-- `/help` and `/blog` are DB-managed: content is written in `/admin/help` / `/admin/blog` and fetched through `apps/web/src/lib/public-content.ts` (anon client, published rows, locale with EN fallback); Markdown renders via `components/marketing/markdown-prose.tsx` — never interpolate DB content as raw HTML.
-- SEO is part of every page, per the committed `docs/SEO.md`: exactly one `<h1>` (the page title — `SectionHeader as="h1"` / `PricingSection headingAs="h1"` when the lead is not a `<Hero>`), a localized title + description via `generateMetadata`, and structured data through `<JsonLd>` (`components/marketing/json-ld.tsx`) — never a hand-written `<script>`. `Organization`/`FAQPage`/`Product` schemas are already emitted by the layout/`Faq`/`PricingSection`; do not duplicate them.
-- Marketing copy lives in the `marketing` i18n namespace, in ALL locale files (`de,en,es,fr,pt-BR,zh-CN`) — no hardcoded strings. **Exception: Landing DS pages in `app/(funil)/**` and `app/(autoridade)/**` carry hardcoded pt-BR copy** (they speak to one market; routing campaign copy through six catalogs buys nothing and slows every edit). **The home is NOT in that exception (2026-09-18):** its copy lives in `components/marketing/home-copy/<locale>.ts`, six typed files with `pt-BR.ts` as the structural source of truth — editing home copy means editing all six (TypeScript refuses the build otherwise). Emphasis is inline (`**em**`, `__strong__`, `==mark==`, `\n`), rendered by `home-copy/rich.tsx`; never put JSX in a copy file.
-- **Blocking on every public page, Landing DS included**: exactly one `<h1>`, real `alt` text, no fabricated testimonials/metrics/logos (HOME-SPEC §33.5), the clinical-safety copy guardrails, and honest scarcity — any counter or deadline must derive from server state (`docs/FUNIL.md`).
+- **One design system.** Every public page (the home, the institutional pages and the campaign pages in `app/(funil)/`) composes the primitives in `apps/web/src/components/marketing/`: `Section`/`Container`/`SectionHeader` plus the archetypes listed in `catalog.json`. Never hand-tuned per-page spacing or widths, never a parallel stylesheet vocabulary. The inherited MedChina "Landing DS" was removed on 2026-09-30.
+- The `marketing-page` skill is MANDATORY for any create/edit/add-section under `(marketing)`, `(funil)` or `components/marketing`. The `PreToolUse` hook (`.claude/hooks/marketing-guard.mjs`) loads it automatically for `(marketing)` and `components/marketing`; in `(funil)` load it yourself, you never wait to be asked.
+- The committed visual direction lives in `docs/DESIGN.md` and is STRICT: new pages, edits and new sections INHERIT it. Never re-run the direction engine or restyle the UI unless the user explicitly asks for a "redesign". Adding a section triggers a whole-page coherence pass so all sections stay aesthetically aligned.
+- Every new public route must be added to `PUBLIC_PREFIXES` in `apps/web/src/middleware.ts`; an INDEXED one also goes to `apps/web/src/app/sitemap.ts`. A `noindex` page (the campaign pages in `(funil)`) stays out of the sitemap and is named in its exclusion comment. Indexing is decided by `metadata` + `sitemap.ts` + `PUBLIC_PREFIXES`, never by the route group.
+- `/ajuda` and `/blog` are DB-managed: content is written in `/admin/help` / `/admin/blog` and fetched through `apps/web/src/lib/public-content.ts` (anon client, published rows, locale with EN fallback); Markdown renders via `components/marketing/markdown-prose.tsx`. Never interpolate DB content as raw HTML.
+- SEO is part of every page, per `docs/SEO.md`: exactly one `<h1>` (the page title: `SectionHeader as="h1"` / `PricingSection headingAs="h1"` when the lead is not a `<Hero>`), a localized title + description via `generateMetadata`, and structured data through `<JsonLd>` (`components/marketing/json-ld.tsx`), never a hand-written `<script>`. `Organization`/`FAQPage`/`Product` schemas are already emitted by the layout/`Faq`/`PricingSection`; do not duplicate them.
+- Marketing copy lives in the `marketing` i18n namespace, in BOTH locale files (`pt-BR`, `en`), campaign pages included. No hardcoded strings. The home's structured copy lives in `components/marketing/home-copy/{pt-BR,en}.ts`, with `pt-BR.ts` as the structural source of truth (TypeScript refuses the build when `en.ts` drifts). Emphasis is inline (`**em**`, `__strong__`, `==mark==`, `\n`), rendered by `home-copy/rich.tsx`; never put JSX in a copy file.
+- **Blocking on every public page**: exactly one `<h1>`, real `alt` text, no fabricated testimonials, metrics or logos, prices and limits read from data (`plans`), honest scarcity (any counter or deadline derives from server state, such as `founders_offer()`), and no claim that the club spends AI credit on the member's behalf.
 - GSAP only inside marketing client components (`Reveal`/`useGSAP`), transforms + `autoAlpha` only, honoring `prefers-reduced-motion`. Never import GSAP in admin code.
 - Site identity (name, tagline, siteUrl, favicons) comes from `apps/web/src/brand.ts`; the logo is the single component `components/logo/logo.tsx`.
-
-===== .claude/rules/mobile-boundaries.md =====
-
----
-paths: ["apps/mobile/**"]
----
-
-# apps/mobile boundaries
-
-- Load the `mobile-screen` skill BEFORE creating or substantially editing screens; Expo/router specifics live in `building-native-ui`, UX patterns in `mobile-app-ui-design`.
-- Never import from `apps/web`; only from `packages/*` (`@flyee/design-tokens`, `@flyee/content`, `@flyee/auth/native`).
-- Visual components: React Native Paper, themed EXCLUSIVELY through `src/theme/index.ts` (generated from `@flyee/design-tokens`: `themes`, `common`, `native`, `hsl()`). Never hardcode colors or dimensions in screens.
-- i18n messages come from `@flyee/content/messages/*` (shared with web); app-shell strings in the `mobile` namespace, all 6 catalogs in `packages/content/messages/` (the generated `mobile-messages/` still covers the five the app ships — parity in the source catalogs is what the tests check).
-- Icons only via `@/icons/nexture/ni-*` RN adapters — port missing ones with `node scripts/port-icons.mjs`, never import an icon library directly.
-- Mobile is not shrunken web: primary actions in the thumb zone, navigation via Expo Router (tabs + stacks), type scale ≤4 sizes/2 weights, touch targets ≥44pt, safe areas always.
-- Features must be functionally equivalent to their web counterpart (same validation rules and i18n messages from `packages/*`), expressed in the platform's visual language.
 
 ===== .claude/rules/web-boundaries.md =====
 
@@ -343,6 +271,6 @@ paths: ["apps/web/**"]
 
 # apps/web boundaries
 
-- Never import from other apps (`apps/mobile` etc.). Code shared across platforms lives in `packages/*`.
+- `apps/web` is the only app in this repo. Code shared between the app and tooling lives in `packages/*`.
 - Do not redefine theme tokens locally (`--primary`, `--grey-*` etc.) — they come from `@flyee/design-tokens`.
-- This is a TEMPLATE: do not introduce business logic specific to a client/derived project.
+- This repo is the flyee.club PLATFORM. The product (the `npx flyee` CLI, the harness core, the module contents) is a separate project: here, it only exists as the API contract (`/api/cli/*`) and the module manifest schema it consumes. Never add product logic to this repo.

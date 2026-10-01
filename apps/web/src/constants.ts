@@ -1,24 +1,20 @@
-export const LOCALES = ["de", "en", "fr", "es", "pt-BR", "zh-CN"] as const;
+/**
+ * The platform speaks two languages (decision 2026-09-30, docs/PRODUCT.md):
+ * Brazilian Portuguese, the default and home market, and English.
+ */
+export const LOCALES = ["pt-BR", "en"] as const;
 export type LocaleOption = (typeof LOCALES)[number];
 
 /**
- * Reading order wherever a person PICKS a language — by audience, not by the
- * alphabet: the home market first, then the market the product was translated
- * for next, then the rest. `LOCALES` is the catalog list and happens to start
- * at Deutsch, which would put Portuguese fifth for a Brazilian reader.
- *
- * Declared as a rank per locale rather than as a list, because a `Record` over
- * `LocaleOption` is what makes the compiler REQUIRE every language: a locale
- * added to the catalogs and forgotten here would otherwise just be missing from
- * every switcher, silently.
+ * Reading order wherever a person PICKS a language — by audience: the home
+ * market first. Declared as a rank per locale rather than as a list, because a
+ * `Record` over `LocaleOption` is what makes the compiler REQUIRE every
+ * language: a locale added to the catalogs and forgotten here would otherwise
+ * just be missing from every switcher, silently.
  */
 const LOCALE_RANK: Record<LocaleOption, number> = {
   "pt-BR": 0,
-  "zh-CN": 1,
-  en: 2,
-  es: 3,
-  fr: 4,
-  de: 5,
+  en: 1,
 };
 
 export const LOCALE_DISPLAY_ORDER: readonly LocaleOption[] = [...LOCALES].sort(
@@ -26,9 +22,8 @@ export const LOCALE_DISPLAY_ORDER: readonly LocaleOption[] = [...LOCALES].sort(
 );
 
 /**
- * MedChina locks a single brand palette (Teal/Camel — written into
- * packages/design-tokens/css/green.css); the other template themes were
- * removed from the switcher but their CSS files remain for template merges.
+ * A single locked palette (packages/design-tokens/css/green.css), kept as the
+ * provisional flyee.club palette until the brand is defined.
  */
 export const THEME_OPTIONS = {
   GREEN: "theme-green",

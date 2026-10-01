@@ -1,5 +1,7 @@
 # Asaas — checklist de entrada em produção
 
+> **Herdado do MedChina (auditoria de 2026-09-17).** O checklist de configuração da conta Asaas continua válido para o flyee.club: eventos de webhook, token e URL em `/api/webhooks/asaas`. Planos, valores, ids e contas citados são do MedChina; o Asaas cobra só BRL, e USD vai pela Stripe (decisão de 2026-09-30).
+
 Auditoria de 17/09/2026, antes da abertura das vendas. Complementa `docs/BILLING-AUDIT.md`
 (que cobre o desenho do billing como um todo); aqui o escopo é só a integração Asaas:
 criação da cobrança, redirecionamento para a fatura, webhook e reconciliação.

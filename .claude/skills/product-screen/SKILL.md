@@ -54,15 +54,15 @@ Distilled from the gamification research — most of it is a WARNING:
 
 ## Component conformance (check BEFORE writing markup)
 
-`apps/web/src/components/product/catalog.json` is the machine-readable catalog of this layer, and the `product-screen-guard` hook injects a digest of it into every write/edit here — so the full range is always in context. Two kinds of entry: `components` already exist (import them) and `template` are flyee patterns not packaged yet (port from the cited source, recoverable with `git show "bd92373^:<path>"`, and register the port in the catalog).
+`apps/web/src/components/product/catalog.json` is the machine-readable catalog of this layer, and the `product-screen-guard` hook injects a digest of it into every write/edit here — so the full range is always in context. Two kinds of entry: `components` already exist (import them) and `template` are shapes described but not packaged yet (build them to the description, in the existing visual language, and register them in the catalog).
 
 **Never invent a component.** The order is fixed and there is no fourth option:
 
 1. **The catalog has it** — import it. If it almost fits, EXTEND it (a prop, a mode) rather than writing a parallel one; the `StatTile` filter mode exists because a screen needed a clickable tile and the first attempt was eleven hand-written boxes instead.
-2. **The template has it and it is not packaged yet** — port it from the real source, keeping its shape: radius, tint (`-light/10`), band height, type scale, hover. Recover it with `git show "bd92373^:apps/web/src/app/(dashboard)/dashboards/..."`. Register the port in `catalog.json` in the same commit.
-3. **Neither has it** — build it, but build it IN the template's language: the same tokens, the same radii, the same tone vocabulary (`TILE_TONE`), the same type scale. Put it in `components/product/` with a comment saying which template section it is closest to and why nothing existing fit. Then register it.
+2. **The catalog describes it under `template` but it is not packaged yet** — build it to that description, keeping the shape: radius, tint (`-light/10`), band height, type scale, hover. Register it in `catalog.json` in the same commit.
+3. **Neither has it** — build it, but build it IN the existing visual language: the same tokens, the same radii, the same tone vocabulary (`TILE_TONE`), the same type scale. Put it in `components/product/` with a comment saying which existing component it is closest to and why nothing existing fit. Then register it.
 
-A `<Box>` with a border and a radius is not a shortcut, it is a second design language growing next to the template's. It type-checks, it survives review, and it is invisible until someone opens the screen and asks why it looks nothing like the rest. `product-lint` blocks the interactive form of this (`[invented-component]`) and flags the static one.
+A `<Box>` with a border and a radius is not a shortcut, it is a second design language growing next to the existing one. It type-checks, it survives review, and it is invisible until someone opens the screen and asks why it looks nothing like the rest. `product-lint` blocks the interactive form of this (`[invented-component]`) and flags the static one.
 
 **The check is about SHAPE, not only tokens.** For every value you are about to render, ask which entry fits it:
 
@@ -72,7 +72,7 @@ A `<Box>` with a border and a radius is not a shortcut, it is a second design la
 | an x-of-y allowance | `UsageMeter` |
 | 2–6 counters describing one population | `MetricBars` |
 | a single counter, or a clickable filter | `StatTile` |
-| a lifecycle state | `ConsultationStatusChip` (pastel badge — the state is NAMED, never colour alone) |
+| a lifecycle state | a pastel status `Chip` (the state is NAMED, never colour alone) |
 | a definition attached to a number | `InfoHint` (a `Tooltip` on a plain `Box` dies on touch and keyboard) |
 | zero data | `EmptyState`, or the illustrated banner when the whole screen is empty |
 
@@ -84,7 +84,7 @@ The inverse is also a defect: **never invent a chart to fill space.** A visual e
 
 `apps/web/src/components/product/`: `EmptyState`, `OnboardingChecklist`, `OnboardingChecklistCard`, `ActivationProgress`, `SetupWizard`. State persistence: `@flyee/onboarding` (`getOnboardingState`, `completeStep`, `computeProgress`) over `onboarding_state` (migration 0009). Step definitions live in the project's code; only state is persisted.
 
-**Live predicates are the preferred path** (not click-tracking): give a step a `done` derived from real product state (`{ key, title, done: hasConnection }`) so the checklist reflects reality; `completeStep` is only for steps with no observable signal. Strings in these components come from the `product` i18n namespace (all 6 locales). For multi-tenant setup work, set `ONBOARDING_ORG_SCOPED = true` so activation is shared across an org's members instead of per user.
+**Live predicates are the preferred path** (not click-tracking): give a step a `done` derived from real product state (`{ key, title, done: hasConnection }`) so the checklist reflects reality; `completeStep` is only for steps with no observable signal. Strings in these components come from the `product` i18n namespace (both locales, pt-BR and en). For multi-tenant setup work, set `ONBOARDING_ORG_SCOPED = true` so activation is shared across an org's members instead of per user.
 
 **Wiring (already in place):** declare the steps in `apps/web/src/lib/onboarding.ts` (`ONBOARDING_STEPS`; empty ⇒ everything degrades to the app root). The four auth entry points (sign-in, sign-up, `/auth/callback`, `/auth/two-factor`) call `resolvePostAuthDestination`, sending a user with pending onboarding to `/onboarding` (the `SetupWizard`, self-guarding) and everyone else to `DEFAULTS.appRoot`. The app home mounts `OnboardingChecklistCard` for the remaining steps. Do NOT put this check in the middleware — it runs on every request and must stay query-free.
 

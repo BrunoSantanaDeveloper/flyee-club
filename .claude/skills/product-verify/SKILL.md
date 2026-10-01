@@ -51,7 +51,7 @@ const leftovers = await page.evaluate(() =>
 
 1. **First-run path to value** — a brand-new account never lands on a blank screen; every zero-data view is an `EmptyState` with why + ONE action that actually works when clicked.
 2. **No dead ends** — every blocked/disabled action states its prerequisite and offers resolution **in place** (quick-create, inline step) or a navigation that provably returns. A disabled CTA with no explanation FAILS.
-3. **Context survives detours** — form drafts, selected dates/entities and the origin screen are preserved across any prerequisite side-trip (patient-before-appointment class of flows). Losing the user's input FAILS.
+3. **Context survives detours** — form drafts, selected dates/entities and the origin screen are preserved across any prerequisite side-trip (profile-before-checkout class of flows). Losing the user's input FAILS.
 4. **Error ≠ empty** — with data calls aborted (probe above), the screen shows an error with retry. Empty-state-on-failure FAILS.
 5. **Every CTA lands in context** — checklist items, "prepare X", menu entries and notifications land on the specific in-product destination, never on generic settings, a marketing page inside the app shell, or an unrelated module.
 6. **No fake or leftover surfaces** — search, shortcuts, assistants and menus contain only THIS product's entities and actions (probe above finds nothing). Demo e-commerce data reaching a user FAILS.
