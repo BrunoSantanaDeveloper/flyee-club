@@ -1,9 +1,10 @@
 import { MenuItem } from "@/types";
 
 /**
- * Production navigation is deliberately small: every destination advances a
- * real clinical job. Template showcases remain available only in development
- * and never enter this registry.
+ * Production navigation is deliberately small: only destinations that exist.
+ * Phase 5 of docs/PLANO-IMPLEMENTACAO.md adds the member screens (módulos,
+ * receitas, novidades, encontros, roadmap) and phase 6 the new admin consoles
+ * (catálogo, roadmap, membros, métricas, encontros, leads).
  */
 export const leftMenuItems: MenuItem[] = [
   {
@@ -13,38 +14,6 @@ export const leftMenuItems: MenuItem[] = [
     description: "menu-inicio-description",
     color: "text-primary",
     href: "/inicio",
-  },
-  {
-    id: "pacientes",
-    icon: "NiUsers",
-    label: "menu-pacientes",
-    description: "menu-pacientes-description",
-    color: "text-primary",
-    href: "/pacientes",
-  },
-  {
-    id: "agenda",
-    icon: "NiCalendar",
-    label: "menu-agenda",
-    description: "menu-agenda-description",
-    color: "text-primary",
-    href: "/agenda",
-  },
-  {
-    id: "biblioteca",
-    icon: "NiBook",
-    label: "menu-biblioteca",
-    description: "menu-biblioteca-description",
-    color: "text-primary",
-    href: "/biblioteca",
-  },
-  {
-    id: "primeiros-passos",
-    icon: "NiPath",
-    label: "menu-primeiros-passos",
-    description: "menu-primeiros-passos-description",
-    color: "text-primary",
-    href: "/primeiros-passos",
   },
   {
     id: "admin",
@@ -82,13 +51,6 @@ export const leftMenuItems: MenuItem[] = [
         label: "menu-admin-ai",
         href: "/admin/ai",
         description: "menu-admin-ai-description",
-      },
-      {
-        id: "admin-knowledge",
-        icon: "NiBook",
-        label: "menu-admin-knowledge",
-        href: "/admin/knowledge",
-        description: "menu-admin-knowledge-description",
       },
       {
         id: "admin-audit",
@@ -138,24 +100,6 @@ export const leftMenuItems: MenuItem[] = [
         label: "menu-admin-support",
         href: "/admin/support",
         description: "menu-admin-support-description",
-      },
-      {
-        // The live events: each with its own page, registrations and results
-        // (migrations 0112/0113, docs/PAGINA-EVENTO.md §7).
-        id: "admin-events",
-        icon: "NiPresentation",
-        label: "menu-admin-events",
-        href: "/admin/eventos",
-        description: "menu-admin-events-description",
-      },
-      {
-        // The people those events bring in — contacts without an account, one
-        // row per person across events (FUNIL T2.0/T6.4).
-        id: "admin-leads",
-        icon: "NiUsers",
-        label: "menu-admin-leads",
-        href: "/admin/leads",
-        description: "menu-admin-leads-description",
       },
     ],
   },

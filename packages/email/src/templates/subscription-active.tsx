@@ -2,8 +2,6 @@ import { Body, Button, Container, Head, Heading, Hr, Html, Preview, Section, Tex
 
 export type SubscriptionActiveEmailProps = {
   planName: string;
-  /** Cycle minutes the plan includes; omitted when it grants none. */
-  audioMinutes?: number | null;
   appUrl: string;
   name?: string | null;
 };
@@ -11,24 +9,17 @@ export type SubscriptionActiveEmailProps = {
 /**
  * "Your plan is active."
  *
- * The single most important moment of the funnel used to be silent: the
- * webhook activated the subscription and told nobody. With boleto or Pix the
- * confirmation lands hours or days after she closed the tab, so she could only
- * find out by coming back and reloading — days of a paid plan, unused.
+ * With Pix the confirmation lands minutes or hours after the member closed the
+ * tab, so without this they only find out by coming back and reloading.
  *
- * Transactional, not marketing: it confirms a purchase she made, so it carries
- * no unsubscribe (unlike the trial drip, which does).
+ * Transactional, not marketing: it confirms a purchase, so it carries no
+ * unsubscribe. Phase 8 of docs/PLANO-IMPLEMENTACAO.md makes it bilingual.
  *
  * Inline styles only — email clients ignore stylesheets, so design tokens
  * cannot be consumed here; keep values aligned with packages/design-tokens by
  * hand.
  */
-export default function SubscriptionActiveEmail({
-  planName,
-  audioMinutes,
-  appUrl,
-  name,
-}: SubscriptionActiveEmailProps) {
+export default function SubscriptionActiveEmail({ planName, appUrl, name }: SubscriptionActiveEmailProps) {
   return (
     <Html>
       <Head />
@@ -41,10 +32,7 @@ export default function SubscriptionActiveEmail({
             {planName} está ativo
           </Heading>
           <Text style={{ color: "#4d4d4d", fontSize: 14, lineHeight: "22px" }}>
-            {name ? `${name}, seu` : "Seu"} pagamento foi confirmado.
-            {audioMinutes && audioMinutes > 0
-              ? ` Seus ${audioMinutes} minutos de IA por ciclo já estão disponíveis.`
-              : " Seu plano já está liberado."}
+            {name ? `${name}, seu` : "Seu"} pagamento foi confirmado. Seu plano já está liberado.
           </Text>
           <Section style={{ margin: "24px 0", textAlign: "center" }}>
             <Button
@@ -60,7 +48,7 @@ export default function SubscriptionActiveEmail({
                 textDecoration: "none",
               }}
             >
-              Abrir o MedChina
+              Abrir o flyee.club
             </Button>
           </Section>
           <Hr style={{ borderColor: "#e8e8e8", margin: "24px 0" }} />

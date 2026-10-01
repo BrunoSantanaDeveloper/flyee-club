@@ -68,8 +68,8 @@ export function useCurrentOrg() {
       void load();
     };
     void load();
-    window.addEventListener("medchina:organization-updated", handleOrganizationUpdated);
-    return () => window.removeEventListener("medchina:organization-updated", handleOrganizationUpdated);
+    window.addEventListener("flyee:organization-updated", handleOrganizationUpdated);
+    return () => window.removeEventListener("flyee:organization-updated", handleOrganizationUpdated);
   }, [load]);
 
   return { orgId, timezone, loading, error, reload: load };

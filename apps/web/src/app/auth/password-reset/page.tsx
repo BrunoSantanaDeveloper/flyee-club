@@ -8,9 +8,9 @@ import { Alert, Box, Button, Divider, FormControl, FormLabel, Input, Paper, Typo
 
 import Logo from "@/components/logo/logo";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
-import { sanitizeInternalNext } from "@flyee/clinical";
 
 export default function Page() {
   const router = useRouter();

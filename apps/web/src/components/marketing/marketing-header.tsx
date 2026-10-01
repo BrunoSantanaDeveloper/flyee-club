@@ -10,13 +10,12 @@ import Container from "@/components/marketing/container";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiMenu from "@/icons/nexture/ni-menu";
 
-// HOME-SPEC §9.5: Como funciona · Recursos · Planos · Segurança · Dúvidas.
+// Only routes that exist. Phase 7.2 of docs/PLANO-IMPLEMENTACAO.md adds
+// "Como funciona" and "Catálogo" as those pages are built.
 const NAV_LINKS = [
-  { key: "nav-how-it-works", href: "/como-funciona" },
-  { key: "nav-features", href: "/recursos" },
   { key: "nav-pricing", href: "/planos" },
-  { key: "nav-security", href: "/seguranca" },
-  { key: "nav-faq", href: "/#duvidas" },
+  { key: "footer-help", href: "/ajuda" },
+  { key: "footer-blog", href: "/blog" },
 ] as const;
 
 /**

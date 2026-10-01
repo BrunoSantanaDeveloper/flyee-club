@@ -114,7 +114,7 @@ export default function SubscriptionsAdmin() {
         adminSuspended: row.admin_suspended,
         period: row.period,
         provider: row.provider,
-        orgName: (row.organizations as unknown as { name: string } | null)?.name ?? "Consultório desconhecido",
+        orgName: (row.organizations as unknown as { name: string } | null)?.name ?? "Conta desconhecida",
         planName: (row.plans as unknown as { name: string } | null)?.name ?? "Plano desconhecido",
         createdAt: row.created_at,
         packMinutes: Math.floor((remainingByOrg.get(row.org_id) ?? 0) / 60),
@@ -218,14 +218,14 @@ export default function SubscriptionsAdmin() {
       if (rpcError) {
         setError(
           rpcError.message.includes("provider_managed")
-            ? "Este consultório paga por um provedor — trocar o plano aqui descolaria a cobrança do que ela tem direito. Cancele a assinatura no provedor antes."
+            ? "Esta conta paga por um provedor — trocar o plano aqui descolaria a cobrança do que ela tem direito. Cancele a assinatura no provedor antes."
             : rpcError.message,
         );
         return;
       }
       const result = data as { toPlan?: string; selfGrant?: boolean } | null;
       setNotice(
-        `${row.orgName} agora está no ${result?.toPlan ?? "plano selecionado"}${result?.selfGrant ? " (seu próprio consultório — registrado na trilha de auditoria)" : ""}.`,
+        `${row.orgName} agora está no ${result?.toPlan ?? "plano selecionado"}${result?.selfGrant ? " (sua própria conta — registrado na trilha de auditoria)" : ""}.`,
       );
       setPlanDraft((draft) => ({ ...draft, [row.orgId]: "" }));
       refresh();
@@ -237,7 +237,7 @@ export default function SubscriptionsAdmin() {
     () => [
       {
         field: "orgName",
-        headerName: "Consultório",
+        headerName: "Conta",
         flex: 1.5,
         minWidth: 200,
         renderCell: (params: GridRenderCellParams<SubRow, string>) => (
@@ -434,7 +434,7 @@ export default function SubscriptionsAdmin() {
             <EmptyState
               icon={<NiCreditCard size="medium" />}
               title="Nenhuma assinatura em andamento"
-              description="Assinaturas em trial, ativas, inadimplentes e incompletas aparecem aqui conforme os consultórios começam a pagar — com o corte de acesso, a concessão de minutos e o plano cortesia em cada linha."
+              description="Assinaturas em trial, ativas, inadimplentes e incompletas aparecem aqui conforme as contas começam a pagar — com o corte de acesso e o plano cortesia em cada linha."
               className="border-none"
             />
           }

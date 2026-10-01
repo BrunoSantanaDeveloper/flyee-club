@@ -17,7 +17,7 @@ Building blocks for every public page under `apps/web/src/app/(marketing)/`. Con
 
 ## Conversion mapping (home page order)
 
-`Hero` split + `ProductFrame glow` (attention + value prop + evidence, ONE primary CTA) → `LogoCloud` (trust) → `FeatureRows` (flagship desire, claim next to evidence) → `BentoGrid` (secondary desire) → `StatBand` (proof) → `Testimonials` (trust) → `PricingSection` (action) → `Faq` (objection handling) → `Cta` (recovery, repeats the primary CTA verbatim).
+`Hero` split + `ProductFrame glow` (attention + value prop + evidence, ONE primary CTA) → `LogoCloud` (trust) → `FeatureRows` (flagship desire, claim next to evidence) → `BentoGrid` (secondary desire) → `StatBand` (proof) → `PricingSection` (action) → `Faq` (objection handling) → `Cta` (recovery, repeats the primary CTA verbatim).
 
 ## Layered compositions, breakouts & ambient motion
 

@@ -1,7 +1,6 @@
 "use client";
 
 import AccountCard from "./components/account-card";
-import PracticeScopeCard from "./components/practice-scope-card";
 import ProfileCard from "./components/profile-card";
 import SettingsMenu from "./components/settings-menu";
 import Link from "next/link";
@@ -14,9 +13,10 @@ import NiListCircle from "@/icons/nexture/ni-list-circle";
 import { isSupabaseConfigured } from "@flyee/auth";
 
 /**
- * The user's own account: who they are (name, photo) and how they sign in
- * (email, password). Organization, connections, billing and 2FA have their
- * own pages in the settings menu.
+ * The member's own account: who they are (name, photo) and how they sign in
+ * (email, password). Connections, billing and 2FA have their own pages in the
+ * settings menu. Segment, AI tool and language join this page in phase 5 of
+ * docs/PLANO-IMPLEMENTACAO.md.
  */
 export default function Settings() {
   const t = useTranslations("product");
@@ -73,11 +73,6 @@ export default function Settings() {
         {isSupabaseConfigured && (
           <>
             <ProfileCard />
-            {/* Scope of practice sits with the profile because it IS profile
-                data (profiles.practice_modalities), and because it was
-                write-once until now — declared in onboarding and then
-                unreachable. */}
-            <PracticeScopeCard />
             <AccountCard />
           </>
         )}

@@ -4,7 +4,7 @@ import NiCheck from "@/icons/nexture/ni-check";
 import NiCross from "@/icons/nexture/ni-cross";
 
 export type ComparisonSide = {
-  /** Small uppercase label ("Antes" / "Com o MedChina"). */
+  /** Small uppercase label ("Antes" / "Com o flyee.club"). */
   label: string;
   /** Short display heading for the card. */
   title: string;
@@ -12,9 +12,9 @@ export type ComparisonSide = {
 };
 
 /**
- * Blueprint §13 before/after: two cards joined by a bridge arrow — the muted
- * "before" on paper, the "after" on the deep teal band with camel checks. No
- * blame language in the copy (the professional's manual method is respected).
+ * Before/after: two cards joined by a bridge arrow — the muted "before" on
+ * paper, the "after" on the deep primary band with secondary-tone checks. No
+ * blame language in the copy (the reader's current method is respected).
  * Collapses to a vertical sequence with a rotated bridge on mobile.
  */
 export default function Comparison({ before, after }: { before: ComparisonSide; after: ComparisonSide }) {

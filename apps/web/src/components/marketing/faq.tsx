@@ -18,7 +18,7 @@ export type FaqItem = { question: string; answer: string };
  * Emits FAQPage structured data from the same `items` — an eligible rich
  * result and a strong AI-search signal, with nothing for the page to remember.
  *
- * `layout="split"` (blueprint §24): sticky intro column (eyebrow, title,
+ * `layout="split"`: sticky intro column (eyebrow, title,
  * subtitle, CTA link) beside the accordion list — the home treatment; "stack"
  * keeps the classic centered list for quieter pages.
  */

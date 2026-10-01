@@ -5,16 +5,15 @@ import { BRAND } from "@/brand";
 import Logo from "@/components/logo/logo";
 import Container from "@/components/marketing/container";
 
-// HOME-SPEC §26: Produto / Conta / Empresa / Suporte.
+// Only routes that exist. Phase 7.2 of docs/PLANO-IMPLEMENTACAO.md adds
+// "Como funciona", "Catálogo", "Sobre" and "Lista de espera" as those pages
+// are built.
 const COLUMNS = [
   {
     titleKey: "footer-product",
     links: [
-      { key: "nav-how-it-works", href: "/como-funciona" },
-      { key: "nav-features", href: "/recursos" },
       { key: "nav-pricing", href: "/planos" },
-      { key: "footer-mobile", href: "/recursos#mobile" },
-      { key: "nav-security", href: "/seguranca" },
+      { key: "footer-blog", href: "/blog" },
     ],
   },
   {
@@ -28,21 +27,10 @@ const COLUMNS = [
   {
     titleKey: "footer-company",
     links: [
-      { key: "nav-about", href: "/sobre" },
       { key: "nav-contact", href: "/contato" },
-      { key: "footer-guarantee", href: "/legal/garantia" },
       { key: "footer-terms", href: "/legal/termos" },
       { key: "footer-privacy", href: "/legal/privacidade" },
       { key: "footer-cookies", href: "/legal/cookies" },
-    ],
-  },
-  {
-    titleKey: "footer-support",
-    links: [
-      { key: "footer-support-contact", href: "/contato" },
-      { key: "footer-migration", href: "/migracao" },
-      { key: "nav-faq", href: "/#duvidas" },
-      { key: "footer-blog", href: "/blog" },
     ],
   },
 ] as const;
@@ -51,8 +39,7 @@ export default function MarketingFooter() {
   const t = useTranslations("marketing");
 
   return (
-    // Blueprint §26: the footer joins the deep teal band family (same token
-    // as the mobile/security/final-CTA moments) — the site closes dark.
+    // The site closes on the dark primary band.
     <footer className="bg-primary-dark text-text-contrast w-full">
       <Container className="flex flex-col gap-10 py-12 md:py-16">
         <div className="flex flex-col gap-10 md:flex-row md:justify-between">
@@ -87,8 +74,6 @@ export default function MarketingFooter() {
           <p className="text-text-contrast/60 text-sm">
             © {new Date().getFullYear()} {BRAND.name}. {t("footer-rights")}
           </p>
-          {/* HOME-SPEC §27.2 — the clinical-responsibility disclaimer, site-wide. */}
-          <p className="text-text-contrast/45 max-w-3xl text-xs leading-5">{t("footer-disclaimer")}</p>
         </div>
       </Container>
     </footer>

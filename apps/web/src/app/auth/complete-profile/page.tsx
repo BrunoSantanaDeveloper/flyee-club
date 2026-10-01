@@ -12,7 +12,6 @@ import {
   Box,
   Button,
   FormControl,
-  FormHelperText,
   FormLabel,
   Input,
   Paper,
@@ -25,9 +24,9 @@ import { DEFAULTS } from "@/config";
 import { useHydrated } from "@/hooks/use-hydrated";
 import NiCrossSquare from "@/icons/nexture/ni-cross-square";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
-import { sanitizeInternalNext } from "@flyee/clinical";
 
 const InputErrorTooltip = ({ title }: { title: string }) => (
   <Box className="relative">
@@ -53,10 +52,11 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, "");
 
 /**
- * Setup step for a first-time OAuth (Google/GitHub) user: OAuth provisions the
- * account but never runs the sign-up form, so we collect the practice name here
- * and create their first organization (the piece the sign-up trigger does for
- * email/password users). Name is pre-filled from the provider profile.
+ * Safety net for an account without a workspace. The handle_new_user trigger
+ * creates the personal workspace for every new account, so this only runs when
+ * that did not happen (an account provisioned before the trigger, or a
+ * workspace removed by support). It confirms the display name, pre-filled from
+ * the provider profile, and recreates the personal workspace under it.
  *
  * Guards itself: a user who already belongs to an organization is redirected
  * to the app, so the page can't be reached spuriously.
@@ -75,14 +75,10 @@ export default function Page() {
       .string()
       .required(t("field-required"))
       .min(3, t("field-min", { count: 3 })),
-    company: yup
-      .string()
-      .required(t("field-required"))
-      .min(3, t("field-min", { count: 3 })),
   });
 
   const formik = useFormik({
-    initialValues: { name: "", company: "" },
+    initialValues: { name: "" },
     validationSchema,
     validateOnBlur: false,
     validateOnMount: false,
@@ -102,9 +98,9 @@ export default function Page() {
 
       // create_organization (security definer) makes the caller the owner —
       // the RLS-safe path to insert an org + first membership.
-      const slug = `${slugify(values.company)}-${Math.random().toString(36).slice(2, 8)}`;
+      const slug = `${slugify(values.name)}-${Math.random().toString(36).slice(2, 8)}`;
       const { error } = await supabase.rpc("create_organization", {
-        org_name: values.company.trim(),
+        org_name: values.name.trim(),
         org_slug: slug,
       });
       if (error) {
@@ -154,7 +150,7 @@ export default function Page() {
       }
       const meta = user.user_metadata ?? {};
       const suggestedName = meta.full_name ?? meta.name ?? meta.display_name ?? user.email?.split("@")[0] ?? "";
-      resetForm({ values: { name: suggestedName, company: "" } });
+      resetForm({ values: { name: suggestedName } });
       setReady(true);
     };
     check();
@@ -202,25 +198,6 @@ export default function Page() {
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                 />
-              </FormControl>
-
-              <FormControl className="outlined" variant="standard" size="small">
-                <FormLabel component="label" htmlFor="company" className="flex flex-row">
-                  {t("practice")}
-                  {formik.touched.company && formik.errors.company && (
-                    <InputErrorTooltip title={formik.errors.company} />
-                  )}
-                </FormLabel>
-                <Input
-                  id="company"
-                  name="company"
-                  autoComplete="organization"
-                  placeholder={t("practice-placeholder")}
-                  value={formik.values.company}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                />
-                <FormHelperText className="text-text-secondary">{t("practice-hint")}</FormHelperText>
               </FormControl>
 
               {submitted && !formik.isValid && (

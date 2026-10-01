@@ -174,7 +174,7 @@ export async function startImpersonation(userId: string, reason: string): Promis
   await notifyUser(userId, {
     type: "system",
     title: "Acesso de suporte à sua conta",
-    body: `${operatorProfile.display_name ?? "A equipe de suporte"} acessou sua conta para investigar: "${trimmedReason}". O acesso é somente leitura no prontuário e expira em ${settings.maxMinutes} minutos.`,
+    body: `${operatorProfile.display_name ?? "A equipe de suporte"} acessou sua conta para investigar: "${trimmedReason}". O acesso é somente leitura e expira em ${settings.maxMinutes} minutos.`,
     href: "/settings/security",
   });
 

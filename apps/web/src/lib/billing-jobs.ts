@@ -3,7 +3,7 @@ import { expireStaleBillingLeases, retireAbandonedCheckouts } from "@/lib/billin
 import { inngest } from "@flyee/jobs";
 
 export const settleBillingCancellationsFunction = inngest.createFunction(
-  { id: "medchina-settle-billing-cancellations" },
+  { id: "flyee-settle-billing-cancellations" },
   { cron: "*/15 * * * *" },
   async () => settleDueBillingCancellations(),
 );
@@ -15,7 +15,7 @@ export const settleBillingCancellationsFunction = inngest.createFunction(
  * idempotent, so a retried run costs nothing.
  */
 export const billingMaintenanceFunction = inngest.createFunction(
-  { id: "medchina-billing-maintenance" },
+  { id: "flyee-billing-maintenance" },
   { cron: "20 4 * * *" },
   async () => {
     const leases = await expireStaleBillingLeases();

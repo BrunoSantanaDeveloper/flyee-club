@@ -30,10 +30,10 @@ import NiCrossSquare from "@/icons/nexture/ni-cross-square";
 import NiEyeClose from "@/icons/nexture/ni-eye-close";
 import NiEyeOpen from "@/icons/nexture/ni-eye-open";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { useThemeContext } from "@/theme/theme-provider";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
-import { sanitizeInternalNext } from "@flyee/clinical";
 
 type InputErrorProps = {
   title: string;

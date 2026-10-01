@@ -31,10 +31,10 @@ export default async function PricingPage({
   const [t, params, cookieStore] = await Promise.all([getTranslations("marketing"), searchParams, cookies()]);
 
   /**
-   * The campaign code, straight from the link she followed or from the cookie
-   * the middleware stored on an earlier page. Resolved HERE, on the server,
-   * because a visitor told "use the code HELLEN" who lands on table prices
-   * concludes the code failed — and leaves before reaching the sign-up.
+   * The campaign code, straight from the followed link or from the cookie the
+   * middleware stored on an earlier page. Resolved HERE, on the server, because
+   * a visitor told to use a code who lands on table prices concludes the code
+   * failed and leaves before reaching the sign-up.
    */
   const requestedCoupon =
     normalizeCouponCode(typeof params.cupom === "string" ? params.cupom : null) ??
@@ -53,8 +53,8 @@ export default async function PricingPage({
         ctaLabel={t("cta-primary")}
         headingAs="h1"
         decor="glow"
-        // A code that did not resolve is named, not ignored: she must not read
-        // the table price as the discounted one.
+        // A code that did not resolve is named, not ignored: the visitor must
+        // not read the table price as the discounted one.
         couponNotice={
           requestedCoupon
             ? coupon

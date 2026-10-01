@@ -165,7 +165,7 @@ export default function CheckoutForm({
   if (!canManage) {
     return (
       <Alert severity="info" className="neutral bg-background-paper/60!">
-        Só quem administra o consultório pode contratar um plano. Peça a quem criou a conta para concluir, ou fale com a
+        Só quem administra a conta pode contratar um plano. Peça a quem criou a conta para concluir, ou fale com a
         gente.
       </Alert>
     );
@@ -321,7 +321,7 @@ export default function CheckoutForm({
 
       <Typography variant="body2" className="text-text-secondary text-center">
         Pagamento processado pela operadora. Dentro de {guaranteeDays} dias, o reembolso é integral.{" "}
-        <Link href="/legal/garantia" target="_blank" rel="noopener noreferrer" className="link-primary">
+        <Link href="/legal/termos" target="_blank" rel="noopener noreferrer" className="link-primary">
           Ler os termos
         </Link>
         .

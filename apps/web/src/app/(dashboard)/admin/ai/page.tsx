@@ -1,8 +1,6 @@
 "use client";
 
 import AiPricesAdmin from "./components/ai-prices-admin";
-import AssistantsAdmin from "./components/assistants-admin";
-import McpAdmin from "./components/mcp-admin";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -11,7 +9,14 @@ import { Alert, Breadcrumbs, Card, CardContent, Grid, Typography } from "@mui/ma
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
 
-/** Superadmin console for AI assistants (RLS is the real gate). */
+/**
+ * Superadmin console for what the operator's AI costs (RLS is the real gate).
+ *
+ * The club never spends AI on a member's behalf; the only AI calls the
+ * platform makes are the operator's own `/admin/insights` questions, priced
+ * here so the console can say what they cost. Phase 6 of
+ * docs/PLANO-IMPLEMENTACAO.md moves this price book into `/admin/insights`.
+ */
 export default function AdminAi() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
@@ -39,7 +44,7 @@ export default function AdminAi() {
     <Grid container spacing={5}>
       <Grid size={12}>
         <Typography variant="h1" component="h1" className="mb-0">
-          Assistentes de IA
+          Custo de IA
         </Typography>
         <Breadcrumbs>
           <Link color="inherit" href="/inicio">
@@ -59,43 +64,16 @@ export default function AdminAi() {
       )}
 
       {allowed && (
-        <>
-          <Grid size={12}>
-            <Card component="section">
-              <CardContent>
-                <AssistantsAdmin />
-              </CardContent>
-            </Card>
-          </Grid>
-          {/* The price book sits with the assistants because that is where a
-              model is chosen — and choosing one without saying what it costs
-              is how the platform spent a year unable to price itself. */}
-          <Grid size={12}>
-            <Card component="section">
-              <CardContent className="flex flex-col gap-3">
-                <Typography variant="h6" component="h2" className="mb-0">
-                  Custo dos modelos
-                </Typography>
-                <AiPricesAdmin />
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid size={12}>
-            <Card component="section">
-              <CardContent className="flex flex-col gap-3">
-                <Typography variant="h6" component="h2" className="mb-0">
-                  Conectores MCP
-                </Typography>
-                <Typography variant="body2" className="text-text-secondary">
-                  Consultórios com assistentes externos (ChatGPT/Claude) conectados pelo servidor MCP. Pesos e limites
-                  de chamada ficam em platform_settings (&apos;mcp&apos;); a disponibilidade por plano, em
-                  plans.limits.mcp_access.
-                </Typography>
-                <McpAdmin />
-              </CardContent>
-            </Card>
-          </Grid>
-        </>
+        <Grid size={12}>
+          <Card component="section">
+            <CardContent className="flex flex-col gap-3">
+              <Typography variant="h6" component="h2" className="mb-0">
+                Custo dos modelos
+              </Typography>
+              <AiPricesAdmin />
+            </CardContent>
+          </Card>
+        </Grid>
       )}
     </Grid>
   );

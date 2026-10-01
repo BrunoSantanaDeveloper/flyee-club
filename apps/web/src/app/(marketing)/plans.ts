@@ -12,9 +12,12 @@ const PLACEHOLDER_SLUGS = ["plan-1", "plan-2", "plan-3"] as const;
  * plans when the database is not configured (fresh clone stays browsable).
  *
  * With a campaign coupon, every paid card also carries its ORIGINAL price and
- * the discount label: a visitor who followed "use the code HELLEN" and lands on
- * table prices concludes the code failed — the page has to show her the number
- * she was promised, not just accept the code silently.
+ * the discount label: a visitor who was told to use a code and lands on table
+ * prices concludes the code failed, so the page shows the promised number
+ * instead of accepting the code silently.
+ *
+ * Feature bullets are interim until phase 4 derives them from the entitlement
+ * keys (`pricing-feature-<key>`).
  */
 export async function getDisplayPlans(coupon?: CheckoutCoupon | null): Promise<PublicPlanDisplay[]> {
   const [t, locale, plans] = await Promise.all([getTranslations("marketing"), getLocale(), listPublicPlans()]);
@@ -39,29 +42,10 @@ export async function getDisplayPlans(coupon?: CheckoutCoupon | null): Promise<P
     if (plan.kind === "credits" && plan.creditAmount) {
       features.push(t("pricing-feature-credits", { count: plan.creditAmount }));
     }
-    // Audio minutes are the real unit of a MedChina paid plan (PRD §5.4/§5.5);
-    // the commercial reference (~50-minute consultations) comes with it.
-    const audioMinutes = plan.limits.audio_minutes;
-    if (typeof audioMinutes === "number" && audioMinutes > 0) {
-      features.push(t("pricing-feature-audio", { minutes: audioMinutes, sessions: Math.floor(audioMinutes / 50) }));
-    }
-    // The clinical library (fases 1-4) is part of what a plan sells. Derived
-    // from the SAME limits the runtime enforces: a missing library_messages
-    // key means unlimited (org_message_allowance), and clinical_reasoning is
-    // what unlocks reviewing a patient's own case.
-    const libraryMessages = plan.limits.library_messages;
-    if (typeof libraryMessages === "number" && libraryMessages > 0) {
-      features.push(t("pricing-feature-library-quota", { count: libraryMessages }));
-    } else if (libraryMessages === undefined) {
-      features.push(t("pricing-feature-library-unlimited"));
-    }
-    if (typeof plan.limits.clinical_reasoning === "number" && plan.limits.clinical_reasoning > 0) {
-      features.push(t("pricing-feature-case-review"));
-    }
-    // One professional per workspace in the MVP, so "1 member" is noise —
-    // only surface the seat count when a plan actually adds seats.
-    if (typeof plan.limits.members === "number" && plan.limits.members > 1) {
-      features.push(t("pricing-feature-members", { count: plan.limits.members }));
+    // One person per account, so the device ceiling is the plan's real
+    // capacity unit (kit 1 / club 3 / pro 5 — docs/PRODUCT.md).
+    if (typeof plan.limits.devices === "number" && plan.limits.devices > 0) {
+      features.push(t("pricing-feature-devices", { count: plan.limits.devices }));
     }
     if (plan.trialDays > 0) {
       features.push(t("pricing-feature-trial", { days: plan.trialDays }));

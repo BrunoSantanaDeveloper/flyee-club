@@ -144,7 +144,7 @@ export default function AuditEventsAdmin() {
       },
       {
         field: "orgName",
-        headerName: "Consultório",
+        headerName: "Conta",
         flex: 1,
         minWidth: 160,
         renderCell: (params: GridRenderCellParams<AuditRow, string | null>) => (

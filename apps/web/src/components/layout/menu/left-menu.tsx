@@ -5,7 +5,6 @@ import { useTranslations } from "use-intl";
 
 import { Box, Paper, Typography } from "@mui/material";
 
-import { AiChatMenuContent } from "@/app/(dashboard)/applications/ai-chat/components/menu-content";
 import { useLayoutContext } from "@/components/layout/layout-context";
 import PlanIndicator from "@/components/layout/menu/plan-indicator";
 import { PrimaryItem } from "@/components/layout/menu/primary-item";
@@ -116,10 +115,9 @@ export default function LeftMenu() {
 
   const leftSecondaryDefaultWidth = useMemo(() => DEFAULTS.leftMenuWidth[leftMenuType].secondary, [leftMenuType]);
 
-  const customSecondaryContent = useMemo(() => {
-    if (pathname.startsWith("/applications/ai-chat")) return <AiChatMenuContent />;
-    return null;
-  }, [pathname]);
+  // No screen supplies its own secondary menu content today; the slot stays so
+  // a future screen can, without changing the menu's layout logic.
+  const customSecondaryContent: React.ReactNode = null;
   return (
     <nav
       id="primary-navigation"
@@ -176,10 +174,8 @@ export default function LeftMenu() {
             )}
           </Box>
           <Box className={cn("mb-5 flex w-full flex-col items-center gap-0.5")}>
-            {/* Which plan this workspace is on. Hidden on the consultation
-                route: there is a patient in the room and the screen is the
-                capture surface — commercial chrome waits. */}
-            {!pathname.startsWith("/consultas/") && <PlanIndicator menuType={leftMenuType} />}
+            {/* Which plan this workspace is on. */}
+            <PlanIndicator menuType={leftMenuType} />
             {leftMenuBottomItems.map((item) =>
               leftMenuType !== MenuType.SingleLayer ? (
                 <PrimaryItem

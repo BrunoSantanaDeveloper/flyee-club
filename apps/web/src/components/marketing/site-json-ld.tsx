@@ -6,9 +6,9 @@ import JsonLd from "@/components/marketing/json-ld";
  * nodes, with the stable `@id`s every page-level node points at
  * (`publisher: { "@id": ".../#organization" }`).
  *
- * One component because two layouts emit it: `(marketing)` and `(autoridade)`
- * (/china). A page inside either must NOT emit its own Organization — it
- * references this one by `@id` (docs/SEO.md, .claude/rules/marketing.md).
+ * Emitted once by the `(marketing)` layout. A page must NOT emit its own
+ * Organization — it references this one by `@id` (docs/SEO.md,
+ * .claude/rules/marketing.md).
  * Rebrands with @flyee/content.
  */
 export default function SiteJsonLd() {

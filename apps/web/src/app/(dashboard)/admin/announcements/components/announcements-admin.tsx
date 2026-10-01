@@ -393,7 +393,7 @@ export default function AnnouncementsAdmin() {
               <EmptyState
                 icon={<NiAnnouncement size="medium" />}
                 title="Nenhum anúncio ainda"
-                description="Publique uma mensagem e toda profissional logada vê o aviso no topo da tela até dispensar — janelas de manutenção, novidades, mudanças de política."
+                description="Publique uma mensagem e todo integrante logado vê o aviso no topo da tela até dispensar — janelas de manutenção, novidades, mudanças de política."
                 action={{ label: "Novo anúncio", onClick: () => setForm(EMPTY_FORM) }}
                 className="border-none"
               />

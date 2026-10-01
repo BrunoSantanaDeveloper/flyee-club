@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { remoteEmpty, remoteError, remoteLoading, type RemoteState, remoteSuccess } from "@/lib/remote-state";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
-import { remoteEmpty, remoteError, remoteLoading, type RemoteState, remoteSuccess } from "@flyee/clinical";
 
 export type OrgLite = { id: string; name: string; role: string };
 

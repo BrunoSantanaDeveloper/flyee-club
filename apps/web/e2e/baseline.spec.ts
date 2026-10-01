@@ -10,7 +10,7 @@ test("public home and authentication remain reachable without remote data", asyn
 });
 
 test("protected product routes preserve the intended destination through authentication", async ({ page }) => {
-  for (const route of ["/primeiros-passos", "/agenda", "/pacientes", "/settings/preferences"]) {
+  for (const route of ["/inicio", "/settings", "/settings/billing", "/settings/security"]) {
     await page.goto(route);
     await expect(page).toHaveURL(new RegExp(`/auth/sign-in\\?next=${encodeURIComponent(route)}`));
     await expect(page.getByRole("heading", { name: /entrar|sign in/i })).toBeVisible();
@@ -28,10 +28,11 @@ test("@a11y core entry and product routes have no critical axe violations", asyn
     "/auth/sign-in",
     "/auth/sign-up",
     "/auth/password-reset",
-    "/primeiros-passos",
-    "/agenda",
-    "/pacientes",
-    "/settings/preferences",
+    "/",
+    "/planos",
+    "/inicio",
+    "/settings/billing",
+    "/settings/security",
   ]) {
     await page.goto(route);
     const results = await new AxeBuilder({ page: page as never }).withTags(["wcag2a", "wcag2aa", "wcag22aa"]).analyze();

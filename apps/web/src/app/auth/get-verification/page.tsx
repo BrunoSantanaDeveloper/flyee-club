@@ -20,9 +20,9 @@ import {
 import Logo from "@/components/logo/logo";
 import { SESSION_STORAGE_KEYS } from "@/constants";
 import NiEmailOpen from "@/icons/nexture/ni-email-open";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
-import { sanitizeInternalNext } from "@flyee/clinical";
 
 /** Matches the provider's own resend throttle, so the button cannot promise
  *  what the server will refuse. */

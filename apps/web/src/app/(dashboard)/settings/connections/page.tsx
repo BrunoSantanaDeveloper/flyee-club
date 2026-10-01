@@ -1,16 +1,16 @@
 import ConnectionsView, { type ConnectionSummary } from "./components/connections-view";
 import { redirect } from "next/navigation";
 
-import { BRAND } from "@/brand";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
 
 /**
- * Connected external assistants (docs/MCP-CONECTORES.md). The professional's
- * job here: see exactly which apps can reach her workspace, connect a new one
- * (copy the MCP URL, authorize in the app), and cut one off instantly. Few
- * rows, high stakes — cards with a confirm-to-revoke, never a CRUD table.
+ * Connected apps: which OAuth clients hold a live token for the member's
+ * account, and an immediate way to cut one off. Few rows, high stakes — cards
+ * with a confirm-to-revoke, never a CRUD table. Phase 5 of
+ * docs/PLANO-IMPLEMENTACAO.md turns this into /settings/devices, one card per
+ * machine running the flyee CLI.
  *
  * Server component because listing needs the service role: token rows are
  * member-readable (RLS), but the client NAMES live in oauth_clients, which is
@@ -19,7 +19,7 @@ import { createServiceClient } from "@flyee/auth/service";
  */
 export default async function ConnectionsPage() {
   if (!isSupabaseConfigured) {
-    return <ConnectionsView configured={false} connections={[]} mcpUrl={`${BRAND.siteUrl}/api/mcp`} />;
+    return <ConnectionsView configured={false} connections={[]} />;
   }
 
   const supabase = await createClient();
@@ -98,5 +98,5 @@ export default async function ConnectionsPage() {
     }
   }
 
-  return <ConnectionsView configured connections={connections} mcpUrl={`${BRAND.siteUrl}/api/mcp`} />;
+  return <ConnectionsView configured connections={connections} />;
 }

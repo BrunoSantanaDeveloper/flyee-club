@@ -1,13 +1,11 @@
+// Drizzle mirror of the SQL migrations. Phase 2 of docs/PLANO-IMPLEMENTACAO.md
+// rewrites it together with the new baseline (catalog, delivery, events, leads,
+// meetings).
 export * from "./profiles";
 export * from "./organizations";
 export * from "./billing";
 export * from "./ai";
-export * from "./knowledge";
-export * from "./connectors";
 export * from "./audit";
-export * from "./documents";
-export * from "./transcriptions";
-export * from "./whatsapp";
 export * from "./onboarding";
 export * from "./announcements";
 export * from "./notifications";

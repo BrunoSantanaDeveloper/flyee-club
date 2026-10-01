@@ -19,7 +19,7 @@ describe("WhatsApp handoff links", () => {
   });
 
   it("escapes the message so a document URL survives the query string intact", () => {
-    const url = "https://app.medchina.com.br/documento#abc-DEF_123";
+    const url = "https://flyee.club/ajuda#abc-DEF_123";
     const link = whatsappDeepLink("11987654321", `Segue: ${url}`);
     // The fragment must be encoded — a raw # would truncate the wa.me text.
     expect(link).toContain("%23abc-DEF_123");

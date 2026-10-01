@@ -12,9 +12,9 @@ import Logo from "@/components/logo/logo";
 import { DEFAULTS } from "@/config";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
-import { sanitizeInternalNext } from "@flyee/clinical";
 import { BRAND } from "@flyee/content";
 
 /** Step-up screen: verifies the TOTP code and raises the session to AAL2. */

@@ -30,11 +30,6 @@ export default function ProfileCard() {
   const t = useTranslations("product");
   const [userId, setUserId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
-  // What goes under her signature on every issued PDF. Free text on purpose:
-  // acupuncture in Brazil has no single council, so a fixed (council, number)
-  // shape would refuse the credential of whoever is not on the list.
-  const [registration, setRegistration] = useState("");
-  const [professionalTitle, setProfessionalTitle] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<"saved" | "error" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -51,7 +46,7 @@ export default function ProfileCard() {
       setUserId(user.id);
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, avatar_url, professional_registration, professional_title")
+        .select("display_name, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
       setDisplayName(data?.display_name ?? "");
@@ -91,7 +86,7 @@ export default function ProfileCard() {
     } else {
       setAvatarUrl(publicUrl);
       setStatus("saved");
-      window.dispatchEvent(new Event("medchina:profile-updated"));
+      window.dispatchEvent(new Event("flyee:profile-updated"));
     }
     setSaving(false);
   };
@@ -106,8 +101,6 @@ export default function ProfileCard() {
       .from("profiles")
       .update({
         display_name: displayName.trim() || null,
-        professional_registration: registration.trim() || null,
-        professional_title: professionalTitle.trim() || null,
       })
       .eq("id", userId);
     if (error) {
@@ -115,7 +108,7 @@ export default function ProfileCard() {
       setErrorMessage(t("settings-save-error"));
     } else {
       setStatus("saved");
-      window.dispatchEvent(new Event("medchina:profile-updated"));
+      window.dispatchEvent(new Event("flyee:profile-updated"));
     }
     setSaving(false);
   };
@@ -177,40 +170,6 @@ export default function ProfileCard() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
             />
-          </FormControl>
-
-          {/* These two print under her signature on every atestado, receituário
-              and plano terapêutico. Without them a document that reaches an
-              insurer or another practitioner is signed by a name alone — which
-              is why she was writing the credential on the paper by hand. */}
-          <FormControl className="outlined mb-4 max-w-md" variant="standard" size="small" fullWidth>
-            <FormLabel component="label" htmlFor="settings-professional-title">
-              {t("settings-professional-title")}
-            </FormLabel>
-            <Input
-              id="settings-professional-title"
-              value={professionalTitle}
-              placeholder={t("settings-professional-title-placeholder")}
-              onChange={(e) => setProfessionalTitle(e.target.value)}
-            />
-            <Typography variant="caption" className="text-text-secondary mt-1">
-              {t("settings-professional-title-help")}
-            </Typography>
-          </FormControl>
-
-          <FormControl className="outlined mb-4 max-w-md" variant="standard" size="small" fullWidth>
-            <FormLabel component="label" htmlFor="settings-professional-registration">
-              {t("settings-professional-registration")}
-            </FormLabel>
-            <Input
-              id="settings-professional-registration"
-              value={registration}
-              placeholder={t("settings-professional-registration-placeholder")}
-              onChange={(e) => setRegistration(e.target.value)}
-            />
-            <Typography variant="caption" className="text-text-secondary mt-1">
-              {t("settings-professional-registration-help")}
-            </Typography>
           </FormControl>
 
           <Box>

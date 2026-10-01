@@ -96,7 +96,7 @@ async function ensureFreeSubscription(supabase: ServiceClient, orgId: string) {
 }
 
 /**
- * A provider event that is not about MedChina at all.
+ * A provider event that is not about this platform at all.
  *
  * Asaas delivers webhooks for EVERY charge in the account, including ones
  * created by hand in its panel. Those carry no `externalReference` of ours, so
@@ -141,19 +141,15 @@ async function notifyOrg(supabase: ServiceClient, orgId: string, input: { title:
  */
 async function notifyActivation(supabase: ServiceClient, orgId: string, planId: string) {
   try {
-    const { data: plan } = await supabase.from("plans").select("name, limits").eq("id", planId).maybeSingle();
-    const minutes = Number((plan?.limits as { audio_minutes?: unknown } | null)?.audio_minutes);
+    const { data: plan } = await supabase.from("plans").select("name").eq("id", planId).maybeSingle();
     const planName = plan?.name ?? "seu plano";
-    const audioMinutes = Number.isFinite(minutes) && minutes > 0 ? minutes : null;
     await notifyOrg(supabase, orgId, {
       title: `${planName} ativo`,
-      body: audioMinutes
-        ? `Pagamento confirmado. Seus ${audioMinutes} minutos de IA por ciclo já estão disponíveis.`
-        : "Pagamento confirmado. Seu plano já está ativo.",
+      body: "Pagamento confirmado. Seu plano já está ativo.",
       href: "/inicio",
     });
 
-    // And out of the app, because with boleto/Pix she is not here when this
+    // And out of the app, because with Pix the member is not here when this
     // runs. The address lives in GoTrue, which the service role reads through
     // the admin API — there is no session on a provider callback.
     const { data: owners } = await supabase
@@ -172,7 +168,6 @@ async function notifyActivation(supabase: ServiceClient, orgId: string, planId: 
         .maybeSingle();
       await sendSubscriptionActiveEmail(email, {
         planName,
-        audioMinutes,
         appUrl: `${appOrigin()}/inicio`,
         name: (profile?.display_name as string | null) ?? null,
       });
@@ -185,43 +180,16 @@ async function notifyActivation(supabase: ServiceClient, orgId: string, planId: 
 /** Absolute app URL for links inside an email sent from a webhook (no request). */
 function appOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.VERCEL_URL?.trim();
-  if (!configured) return "https://ai.medchinaprontuarios.com.br";
+  if (!configured) return "https://flyee.club";
   return configured.startsWith("http") ? configured.replace(/\/+$/u, "") : `https://${configured}`;
-}
-
-/**
- * Lets the 80/95/100% audio alerts fire again after a pack purchase.
- *
- * `usage_alerts` is keyed by (org, meter, window, threshold), which is exactly
- * what makes the alerts idempotent. But buying minutes changes the
- * DENOMINATOR mid-window: without this, someone who hit 100%, bought a pack
- * and burned through it would never be warned a second time — the row saying
- * "already alerted" would still be there from before the purchase.
- *
- * Best-effort: a missed reset costs a warning, not correctness.
- */
-async function reopenAudioAlerts(supabase: ServiceClient, orgId: string) {
-  try {
-    const { data } = await supabase.rpc("org_audio_allowance", { target_org: orgId });
-    const windowStart = (data as { window_start?: string } | null)?.window_start;
-    if (!windowStart) return;
-    await supabase
-      .from("usage_alerts")
-      .delete()
-      .eq("org_id", orgId)
-      .eq("meter", "audio")
-      .eq("window_start", windowStart);
-  } catch {
-    // The pack is already granted; that is the part that had to be right.
-  }
 }
 
 /**
  * Stop charging a subscription the workspace no longer holds.
  *
- * Retiring the row locally only changes what MedChina believes; the provider
- * keeps its own recurring charge alive. An upgrade (Assistente → Pro) creates
- * a NEW subscription, so without this the customer is billed twice — the kind
+ * Retiring the row locally only changes what the platform believes; the
+ * provider keeps its own recurring charge alive. An upgrade creates a NEW
+ * subscription, so without this the customer is billed twice — the kind
  * of incident that ends in a chargeback and a cancelled account.
  *
  * The free plan carries no provider id and is skipped. The subscription that
@@ -288,7 +256,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       const sub = await findSubscription(supabase, event);
       if (!sub) {
         // No org_id in the provider's metadata means this subscription was
-        // never created by MedChina (a charge made by hand in the Asaas
+        // never created by this platform (a charge made by hand in the Asaas
         // panel). Reprocessing can only fail again — and failing forever is
         // what got the provider's queue suspended.
         if (!event.metadata.org_id) {
@@ -344,10 +312,10 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       // that is already running. The rule is shared and unit-tested
       // (`lib/billing-window.ts`) because BOTH directions cost money: restart
       // a cycle that did not renew and Stripe's cancel+undo hands out a fresh
-      // pool of minutes; fail to advance one that DID renew and, past the
-      // stored `current_period_end`, `org_audio_allowance` stops counting
-      // usage at all — which is what every Asaas renewal used to do, since
-      // Asaas reports no period, only the paid charge's due date.
+      // cycle; fail to advance one that DID renew and the stored
+      // `current_period_end` falls behind — which is what every Asaas renewal
+      // used to do, since Asaas reports no period, only the paid charge's due
+      // date.
       const window = resolveBillingWindow(
         {
           status: sub.status,
@@ -387,23 +355,6 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           .from("subscription_modules")
           .upsert({ subscription_id: sub.id, module_id: moduleId }, { onConflict: "subscription_id,module_id" });
         if (moduleError) throw new Error("subscription_module_reconciliation_failed");
-      }
-
-      // Did a time-boxed offer produce this sale? Stamped on first activation
-      // only, and only while the offer was still live — otherwise the report
-      // cannot tell "the offer worked" from "she subscribed months later"
-      // (migration 0088). Best-effort: never blocks reconciliation.
-      if (sub.status === "incomplete") {
-        try {
-          await supabase
-            .from("conversion_offers")
-            .update({ converted_at: new Date().toISOString() })
-            .eq("org_id", sub.org_id)
-            .is("converted_at", null)
-            .gt("expires_at", new Date().toISOString());
-        } catch {
-          // The subscription is active; a marketing timestamp is not worth a retry.
-        }
       }
 
       // Count the coupon redemption once, on first activation.
@@ -499,38 +450,14 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       if (planId) {
         const { data: plan, error: planError } = await supabase
           .from("plans")
-          .select("kind, credit_amount, credits_expire, period, name, is_addon, limits")
+          .select("kind, credit_amount, credits_expire, period, name")
           .eq("id", planId)
           .maybeSingle();
         if (planError) throw new Error("plan_reconciliation_failed");
 
-        // An à-la-carte minute pack (migration 0055). It is catalogued as a
-        // one-off `credits` plan, but it grants AUDIO MINUTES, not generic
-        // credits — so it takes this branch and never the one below, which
-        // would otherwise hand out both currencies for a single payment.
-        const packMinutes = Number((plan?.limits as { audio_minutes_pack?: unknown } | null)?.audio_minutes_pack);
-        if (plan?.is_addon && Number.isFinite(packMinutes) && packMinutes > 0) {
-          const { error: packError } = await supabase.from("audio_minute_packs").upsert(
-            {
-              org_id: orgId,
-              plan_id: planId,
-              source: "purchase",
-              minutes_purchased: packMinutes,
-              seconds_total: packMinutes * 60,
-              price_cents: event.amountCents,
-              currency: event.currency,
-              invoice_key: `${event.provider}:${event.providerInvoiceId}`,
-            },
-            { onConflict: "invoice_key", ignoreDuplicates: true },
-          );
-          if (packError) throw new Error("audio_pack_reconciliation_failed");
-          await reopenAudioAlerts(supabase, orgId);
-          await notifyOrg(supabase, orgId, {
-            title: `${packMinutes} minutos adicionados`,
-            body: "Seus minutos avulsos não expiram e são usados depois dos minutos do seu plano.",
-            href: "/settings/billing",
-          });
-        } else if (plan?.kind === "credits" && plan.credit_amount) {
+        // Phase 4 of docs/PLANO-IMPLEMENTACAO.md adds the one-time access
+        // purchase (the kit) here, granted on the paid invoice.
+        if (plan?.kind === "credits" && plan.credit_amount) {
           const expiresAt =
             plan.credits_expire && plan.period
               ? periodEnd(event.paidAt, plan.period as BillingPeriod).toISOString()
@@ -561,7 +488,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         if (recoveryError) throw new Error("subscription_reconciliation_failed");
         await notifyOrg(supabase, orgId, {
           title: "Pagamento confirmado",
-          body: "Sua assinatura está em dia e a gravação com IA segue disponível.",
+          body: "Sua assinatura está em dia e seu acesso segue liberado.",
           href: "/settings/billing",
         });
       }
@@ -777,15 +704,15 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           .eq("id", sub.id);
         if (pastDueError) throw new Error("subscription_reconciliation_failed");
 
-        // She has to learn about it here, not by discovering mid-appointment
-        // that the recorder stopped working.
+        // The member has to learn about it here, not by discovering later that
+        // updates stopped.
         const days = await graceDays(supabase);
         await notifyOrg(supabase, orgId, {
           title: "Não conseguimos processar seu pagamento",
           body:
             days > 0
-              ? `Atualize sua forma de pagamento em até ${days} dias para não interromper a gravação e a IA. Seus registros continuam acessíveis.`
-              : "Atualize sua forma de pagamento para continuar usando a gravação e a IA. Seus registros continuam acessíveis.",
+              ? `Atualize sua forma de pagamento em até ${days} dias para não interromper seu acesso. As ferramentas já instaladas continuam funcionando.`
+              : "Atualize sua forma de pagamento para manter seu acesso. As ferramentas já instaladas continuam funcionando.",
           href: "/settings/billing",
         });
       }
@@ -794,9 +721,8 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
 
     case "payment_reverted": {
       // Money that came back. The invoice must stop reading as paid, and — the
-      // part that actually costs money — anything it BOUGHT has to go with it.
-      // A minute pack never expires by design, so a chargeback left behind an
-      // unlimited free balance nobody could see.
+      // part that actually costs money — anything it BOUGHT has to go with it
+      // (phase 4 adds the kit's access grant to what is reverted).
       const { data, error } = await supabase.rpc("revert_paid_invoice", {
         target_provider: event.provider,
         target_provider_invoice_id: event.providerInvoiceId,

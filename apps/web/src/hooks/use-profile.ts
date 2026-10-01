@@ -52,8 +52,8 @@ export function useProfile() {
 
   useEffect(() => {
     const onProfileUpdated = () => refresh();
-    window.addEventListener("medchina:profile-updated", onProfileUpdated);
-    return () => window.removeEventListener("medchina:profile-updated", onProfileUpdated);
+    window.addEventListener("flyee:profile-updated", onProfileUpdated);
+    return () => window.removeEventListener("flyee:profile-updated", onProfileUpdated);
   }, [refresh]);
 
   return { ...profile, refresh };

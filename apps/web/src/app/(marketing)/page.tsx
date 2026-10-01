@@ -1,16 +1,18 @@
-import "./clinical-source-home.css";
-
-import { getDisplayPlans } from "./plans";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
-import { getTranslations } from "next-intl/server";
 
-import ClinicalSourceHome from "@/components/marketing/clinical-source-home";
+import Cta from "@/components/marketing/cta";
+import DataVizPlaceholder from "@/components/marketing/data-viz-placeholder";
+import Hero from "@/components/marketing/hero";
 import { getHomeCopy } from "@/components/marketing/home-copy";
-import { COOKIE_KEYS } from "@/constants";
+import { rich } from "@/components/marketing/home-copy/rich";
+import ProcessSteps from "@/components/marketing/process-steps";
+import ProductFrame from "@/components/marketing/product-frame";
+import { toneAt } from "@/components/marketing/tone";
+import NiCode from "@/icons/nexture/ni-code";
+import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
+import NiRefresh from "@/icons/nexture/ni-refresh";
+import NiTerminal from "@/icons/nexture/ni-terminal";
 import { resolveRequestLocale } from "@/lib/locale-request";
-import { normalizeCouponCode } from "@/lib/offer-link";
-import { resolvePublicCoupon } from "@flyee/billing/public";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale } = await resolveRequestLocale();
@@ -19,59 +21,50 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { absolute: copy.meta.title },
     description: copy.meta.description,
-    // Canonical (resolved against metadataBase = NEXT_PUBLIC_SITE_URL) so search
-    // engines pick the subdomain as the preferred URL, avoiding duplicate
-    // content. There is ONE URL per page: language is a cookie, so a crawler
-    // only ever sees pt-BR here and no hreflang set can be declared honestly
-    // (docs/SEO.md — "Indexable language").
     alternates: { canonical: "/" },
   };
 }
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const [t, params, cookieStore, { locale, autoSwitched }] = await Promise.all([
-    getTranslations("marketing"),
-    searchParams,
-    cookies(),
-    resolveRequestLocale(),
-  ]);
+const STEP_ICONS = [NiDownloadCloud, NiTerminal, NiCode, NiRefresh];
 
-  /**
-   * The home's copy for the active language. Resolved HERE, on the server, and
-   * handed down as data: the page is a client component, so importing all six
-   * languages into it would ship six copies of the page to every visitor.
-   */
+/**
+ * Interim home (phase 1 of docs/PLANO-IMPLEMENTACAO.md): the value line, how
+ * the club works and one call to action, composed from the marketing library.
+ * The full home of docs/DESIGN.md (catalog by trail, the update moment, real
+ * numbers from the catalog, pricing) is built in phase 7.
+ */
+export default async function Home() {
+  const { locale } = await resolveRequestLocale();
   const copy = await getHomeCopy(locale);
 
-  /**
-   * Prices and limits are read here, on the server, and handed to the home as
-   * data. They used to be constants inside the component, which meant a price
-   * change in /admin/billing updated /planos and the checkout while the home
-   * went on advertising the old one (docs/FUNIL.md D12).
-   */
-  const requestedCoupon =
-    normalizeCouponCode(typeof params.cupom === "string" ? params.cupom : null) ??
-    normalizeCouponCode(cookieStore.get(COOKIE_KEYS.offerCoupon)?.value);
-  const coupon = requestedCoupon ? await resolvePublicCoupon(requestedCoupon) : null;
-  const plans = await getDisplayPlans(coupon);
-
   return (
-    <ClinicalSourceHome
-      plans={plans}
-      copy={copy}
-      locale={locale}
-      autoSwitched={autoSwitched}
-      couponNotice={
-        requestedCoupon
-          ? coupon
-            ? { label: t("pricing-coupon-applied", { code: coupon.code }), applied: true }
-            : { label: t("pricing-coupon-unknown", { code: requestedCoupon }), applied: false }
-          : undefined
-      }
-    />
+    <>
+      <Hero
+        layout="split"
+        decor="glow"
+        eyebrow={copy.hero.eyebrow}
+        title={rich(copy.hero.title)}
+        subtitle={copy.hero.subtitle}
+        primaryCta={{ label: copy.hero.primaryCta, href: "/auth/sign-up" }}
+        secondaryCta={{ label: copy.hero.secondaryCta, href: "/planos" }}
+        note={copy.hero.note}
+        highlights={copy.hero.highlights}
+        media={
+          <ProductFrame glow>
+            <DataVizPlaceholder label={copy.hero.mediaLabel} />
+          </ProductFrame>
+        }
+      />
+      <ProcessSteps
+        eyebrow={copy.steps.eyebrow}
+        title={copy.steps.title}
+        variant="icon"
+        steps={copy.steps.items.map((step, index) => {
+          const Icon = STEP_ICONS[index % STEP_ICONS.length];
+          return { ...step, icon: <Icon size="medium" />, tone: toneAt(index) };
+        })}
+      />
+      <Cta title={copy.cta.title} subtitle={copy.cta.subtitle} cta={{ label: copy.cta.label, href: "/auth/sign-up" }} />
+    </>
   );
 }

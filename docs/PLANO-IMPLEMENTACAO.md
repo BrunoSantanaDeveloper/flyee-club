@@ -7,7 +7,7 @@
 | Fase | Estado | Notas |
 |---|---|---|
 | 0 · Identidade e desvinculação | Concluída em 2026-10-01 | Git iniciado com snapshot (`ab2e84d`). Junções de workspace em `node_modules/@flyee` recriadas (a cópia da pasta as perdeu). `apps/web/.env.local` criado para anular as credenciais do MedChina herdadas em `apps/web/.env`. Antecipados da fase 1: remoção de `apps/mobile`. Antecipado da fase 7: `docs/DESIGN.md` reescrito como direção provisória, porque as skills o herdam em modo estrito. Adiado para o fim da fase 1: a reescrita completa do `CLAUDE.md` e do `apps/web/CLAUDE.md`, para descrever o código já sem o clínico. |
-| 1 · Subtração do clínico | Pendente | |
+| 1 · Subtração do clínico | Concluída em 2026-10-01 | Pacotes `clinical`, `transcribe`, `knowledge`, `whatsapp`, `connectors` e `documents` apagados, com as rotas, APIs, libs, componentes, testes e assets clínicos. `lib/safe-next.ts` e `lib/remote-state.ts` extraídos antes da remoção. Apagados já, e não adaptados como o plano previa: `/admin/eventos`, `/admin/leads` e as libs de evento ao vivo (as fases 6 e 2 refazem encontros e leads sobre o baseline), `/settings/preferences`, a rota `/onboarding` (o assistente volta na fase 5) e as páginas `/como-funciona`, `/recursos` e `/sobre`, que eram inteiramente clínicas (a 7.2 refaz). Formas para portar: `git show ab2e84d:<caminho>`. O catálogo do painel passa a se chamar `/modulos`, porque o público é `/catalogo`. Cadastro sem nome de consultório: o gatilho cria o workspace pessoal pelo nome, e o cadastro envia `locale`. `/settings/connections` perdeu o passo a passo do MCP, cuja rota foi apagada. Também saíram restos do template sem uso (busca de demonstração, painel de tema, atalhos) e as imagens clínicas e de demonstração de `public/images`. Os testes pgTAP herdados (`packages/db/tests`) ficam até a fase 2, que os apaga junto com as migrações herdadas: até lá eles validam o schema que ainda está no lugar e servem de referência para portar as varreduras de FK e a cerca de impersonação. Novo `scripts/prune-messages.mjs` (`--check` acusa chave sem uso e chave usada que falta): 2.823 chaves removidas (product 2.121 → 229, marketing 602 → 170, dashboard 465 → 70, auth 99 → 76, namespace `mobile` inteiro) e a cópia que sobrou reescrita em pt-BR e en. Ficaram para a fase dona: escopos e cópia do OAuth (3), vocabulário de `product_events` e enum de `ai_spend` (2), visão de contas e dossiê do admin (6), textos legais herdados (2, com o seed de `consent_terms`). `npm install` na raiz podou 1.277 pacotes do lockfile e instalou os hooks do Husky; a partir daqui o pre-commit roda as checagens do harness, a checagem de classes MUI e o lint-staged. `CLAUDE.md` e `apps/web/CLAUDE.md` reescritos para a plataforma. |
 | 2 · Baseline do banco | Pendente | |
 | 3 · Token e API de entrega | Pendente | |
 | 4 · Escada de cobrança | Pendente | |
@@ -40,7 +40,7 @@ As decisões do usuário e as premissas de produto (kit sem prazo, Pro como fam�
 ```
 
 - Cada fase termina com `npm run typecheck && npm run build && npm run test` verde e um commit.
-- **Primeiro deploy** (marco da fase 0 do brief, "página de espera bilíngue"): após 2 + 7.1 + `/espera` + e-mail de confirmação (parte da fase 8 antecipada).
+- **Primeiro deploy** (marco da fase 0 do brief, "página de espera bilíngue"): após 2 + 7.1 + `/espera` + e-mail de confirmação (parte da fase 8 antecipada) + páginas legais renderizadas de `consent_terms` (antecipado da 7.2, porque os textos legais herdados identificam a empresa do MedChina).
 - 7.1 vem antes de 5 e 6 para que nenhuma tela nova mude de pasta duas vezes.
 
 ---
@@ -350,4 +350,4 @@ Shell: `menu-items.ts` (1.6), `plan-indicator.tsx` mostra o tier via `use-entitl
 
 ## Questões em aberto
 
-Registradas em [`docs/PRODUCT.md`](PRODUCT.md), seção "Decisões em aberto". As que mudam a execução: vídeo das aulas avançadas (fases 5 e 6), nota fiscal (fase 4), encontros embutidos ou externos (fases 5 e 6), caminhos em inglês sob `/en` (fase 7) e revisão jurídica dos termos (antes da primeira venda).
+Registradas em [`docs/PRODUCT.md`](PRODUCT.md), seção "Decisões em aberto". Vídeo das aulas, nota fiscal, encontros, caminhos em inglês e revisão jurídica foram decididos em 2026-10-01. As que ainda mudam a execução: a entidade que opera o flyee.club (razão social, CNPJ e cidade dos termos, necessária para o seed de `consent_terms` antes do primeiro deploy), o preço anual em USD (fase 4) e o trial da assinatura (fase 4).

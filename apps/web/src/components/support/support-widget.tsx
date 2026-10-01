@@ -7,7 +7,6 @@ import { useTranslations } from "use-intl";
 import { Box, Button, Card, ClickAwayListener, Fade, Tooltip } from "@mui/material";
 
 import { BRAND } from "@/brand";
-import { useRecordingSessionOptional } from "@/components/product/recording-session-provider";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiEmail from "@/icons/nexture/ni-email";
 import NiHeadset from "@/icons/nexture/ni-headset";
@@ -54,9 +53,6 @@ const CHANNEL_TONE: Record<string, string> = {
 
 export default function SupportWidget({ support }: { support?: SupportChannels }) {
   const t = useTranslations("marketing");
-  // A capture in progress owns the bottom-right corner. Optional because
-  // this widget is also mounted on the marketing site, which has no session.
-  const recordingActive = Boolean(useRecordingSessionOptional()?.active);
   const [open, setOpen] = useState(false);
   // Client-side fallback fetch for layouts that cannot fetch server-side
   // (the dashboard layout is a client component). Server-provided `support`
@@ -132,17 +128,7 @@ export default function SupportWidget({ support }: { support?: SupportChannels }
 
   return (
     <ClickAwayListener onClickAway={() => setOpen(false)}>
-      {/* The recorder's floating bar anchors to this exact corner while a
-          capture runs, with "Encerrar" at its right end — and this 56px button
-          is rendered later in the DOM at the same z-index, so it painted over
-          the one control that must never be missed. Lifted clear of it while
-          recording; back in place the moment the capture ends. */}
-      <Box
-        className={cn(
-          "fixed right-5 z-50 flex flex-col items-end gap-3 transition-[bottom]",
-          recordingActive ? "bottom-24 sm:bottom-24" : "bottom-5",
-        )}
-      >
+      <Box className={cn("fixed right-5 bottom-5 z-50 flex flex-col items-end gap-3")}>
         <Fade in={open} unmountOnExit>
           <Card className="shadow-darker-sm! flex w-72 flex-col gap-1 p-2">
             {channels.map((channel) =>

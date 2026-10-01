@@ -7,8 +7,8 @@ import { createServiceClient } from "@flyee/auth/service";
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Cut an external assistant off (docs/MCP-CONECTORES.md). Revokes EVERY live
- * token of that client for the caller's workspace — rotation keeps several
+ * Cut a connected app off. Revokes EVERY live token of that client for the
+ * caller's workspace — rotation keeps several
  * rows per connection, and revoking only the newest would leave a usable
  * refresh token behind. Rows are stamped, never deleted (the trail stays).
  *

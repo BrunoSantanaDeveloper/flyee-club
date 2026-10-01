@@ -6,28 +6,15 @@ import { ATTRIBUTION_COOKIE_MAX_AGE, encodeAttribution, readAttributionFromUrl }
 import { encodeCampaignCookie, hasCampaign, LAST_CAMPAIGN_MAX_AGE, pickCampaignParams } from "@/lib/campaign-params";
 import { detectLocale, LOCALE_COOKIE_MAX_AGE } from "@/lib/locale-detection";
 import { COUPON_COOKIE_MAX_AGE, COUPON_PARAM, normalizeCouponCode } from "@/lib/offer-link";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { IMPERSONATION_MARKER_COOKIE, parseImpersonationMarker } from "@flyee/auth";
 import { updateSession } from "@flyee/auth/middleware";
-import { sanitizeInternalNext } from "@flyee/clinical";
 
 // Prefixes reachable without a session. Everything else requires auth
 // once Supabase is configured (without it, the middleware no-ops and the
-// whole template stays browsable). Every route under app/(marketing) must
-// be listed here.
+// whole site stays browsable). Every public route must be listed here.
 const PUBLIC_PREFIXES = [
-  "/assets/medir-shell",
   "/auth",
-  "/consentir",
-  "/api/public/consent",
-  // QR "record from your phone" — token-authorized, no login (migration 0053).
-  "/gravar",
-  "/api/public/capture",
-  // The patient's own copy of a document her practitioner issued —
-  // token-authorized, no login (migration 0064).
-  "/documento",
-  "/api/public/document",
-  // One-click email unsubscribe (token in the query, no login) — trial drip.
-  "/api/public/unsubscribe",
   // Leaving a support impersonation only DELETES session cookies, so it must
   // work even when the session it is ending is already gone — otherwise the
   // way out redirects to sign-in and the operator is stuck.
@@ -36,48 +23,17 @@ const PUBLIC_PREFIXES = [
   // signature / Inngest signing key), so they must NOT hit the auth redirect.
   "/api/webhooks",
   "/api/inngest",
-  // MCP connectors (docs/MCP-CONECTORES.md): the OAuth endpoints authenticate
-  // by their own means (registration is open by spec; the token endpoint
-  // verifies PKCE/secret), and /api/mcp validates its Bearer token in-route.
-  // /oauth/authorize is deliberately NOT here — the consent screen needs the
-  // session.
+  // OAuth endpoints authenticate by their own means (registration is open by
+  // spec; the token endpoint verifies PKCE/secret). /oauth/authorize is
+  // deliberately NOT here — the consent screen needs the session.
   "/api/oauth",
-  "/api/mcp",
-  "/verify",
-  // Offer pages (route group `(funil)`): reached by a link the operator sends
-  // or by a paid ad, deliberately noindex and absent from the sitemap
-  // (docs/FUNIL.md D10), but they must still open without a session.
-  "/fundadores",
-  "/assinar",
-  // The live events (docs/PAGINA-EVENTO.md, migration 0113): same (funil)
-  // contract — noindex, out of the sitemap. The first keeps its own address;
-  // every later one lives under /ao-vivo/<slug>. Plus their public API (sign-up
-  // marks, presence, state, e-mail unsubscribe), each route authenticated by
-  // its own token.
-  "/lei-15345",
-  "/ao-vivo",
-  "/api/public/evento",
-  // The congress authority page (docs/PAGINA-CHINA.md): its own route group,
-  // `(autoridade)`, and — unlike the offer pages — INDEXED and in the sitemap.
-  "/china",
+  // Public marketing pages (docs/PLANO-IMPLEMENTACAO.md phase 7 adds the rest
+  // and the translated /en addresses).
   "/planos",
-  "/como-funciona",
-  "/recursos",
-  "/seguranca",
-  "/migracao",
-  "/sobre",
   "/contato",
   "/legal",
   "/ajuda",
   "/blog",
-  "/palestra",
-  // The pitch deck (NVIDIA Inception application): opened from a form or a
-  // link, by someone who has no account here. noindex, absent from the sitemap.
-  "/pitch",
-  // Slide sync for the phone teleprompter (docs: components/presentation).
-  // No session by design: the deck itself is public and the endpoint only
-  // fans a slide index out to whoever holds the room code.
-  "/api/public/palestra",
   // SEO surfaces crawlers hit anonymously.
   "/sitemap.xml",
   "/robots.txt",
@@ -92,14 +48,13 @@ const isPublic = (pathname: string) =>
 const IMPERSONATION_EXIT = "/api/impersonation/exit";
 
 /**
- * Surfaces a support session must not reach (migration 0057 decided the scope:
- * read everything, write only settings, billing and the agenda).
+ * Surfaces a support session must not reach (support visits read everything
+ * and write only settings and billing).
  *
- * The database is what actually refuses clinical writes — they leave the
- * browser straight for PostgREST and never pass through this middleware. What
- * this list adds is (a) the two things Postgres cannot see, credentials and
- * platform admin, and (b) a readable refusal instead of a raw 42501 for the
- * API routes that do come through Next.
+ * The database is what actually refuses member writes — they leave the browser
+ * straight for PostgREST and never pass through this middleware. What this
+ * list adds is the two things Postgres cannot see, credentials and platform
+ * admin, plus anything that mints credentials.
  */
 const IMPERSONATION_BLOCKED_PREFIXES = [
   // Credential takeover: password, email and 2FA changes go to GoTrue, not to
@@ -107,20 +62,14 @@ const IMPERSONATION_BLOCKED_PREFIXES = [
   "/settings/security",
   // Platform administration is the operator's own account's business.
   "/admin",
-  // Authorizing an external assistant mints credentials that OUTLIVE the
-  // support visit — a support session must never leave a standing connection
-  // to the professional's workspace behind.
+  // Authorizing a client (the flyee CLI) mints credentials that OUTLIVE the
+  // support visit — a support session must never leave a standing token on
+  // the member's account behind.
   "/oauth",
 ];
 
-/** API routes whose non-GET methods start or write clinical work. */
-const IMPERSONATION_READONLY_API = [
-  "/api/consultations",
-  "/api/recordings",
-  "/api/transcriptions",
-  "/api/patients",
-  "/api/ai",
-];
+/** API routes whose non-GET methods write member work (none yet; phase 3 adds /api/cli). */
+const IMPERSONATION_READONLY_API: string[] = [];
 
 export async function middleware(request: NextRequest) {
   const { response, user, needsMfa, impersonating } = await updateSession(request);
@@ -259,20 +208,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json(
         {
           error: "impersonation_read_only",
-          message: "Support sessions cannot write clinical data. Leave the session to act as yourself.",
+          message: "Support sessions cannot write member data. Leave the session to act as yourself.",
         },
         { status: 403 },
       );
     }
-  }
-
-  // Licensed template references stay useful in development, but are not
-  // product destinations and cannot be reached in a production deployment.
-  if (
-    process.env.NODE_ENV === "production" &&
-    ["/ui", "/docs", "/applications"].some((prefix) => pathname.startsWith(prefix))
-  ) {
-    return NextResponse.redirect(new URL(DEFAULTS.appRoot, request.url));
   }
 
   // Users with a verified TOTP factor must complete the challenge before

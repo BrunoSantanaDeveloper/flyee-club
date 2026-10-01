@@ -15,7 +15,6 @@ import ImpersonationBanner from "@/components/layout/impersonation/impersonation
 import LocaleAutoNotice from "@/components/layout/locale/locale-auto-notice";
 import LeftMenu from "@/components/layout/menu/left-menu";
 import MenuBackdrop from "@/components/layout/menu/menu-backdrop";
-import RecordingSessionProvider from "@/components/product/recording-session-provider";
 import SupportWidget from "@/components/support/support-widget";
 
 LicenseInfo.setLicenseKey(process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY || "");
@@ -27,7 +26,7 @@ export default function DashboardLayout({
 }>) {
   const t = useTranslations("product");
   return (
-    <RecordingSessionProvider exitMessage={t("recorder-leave-warning")}>
+    <>
       <a
         href="#main-content"
         className="bg-primary text-text-contrast fixed top-3 left-3 z-[2000] -translate-y-20 rounded-lg px-4 py-3 transition-transform focus:translate-y-0"
@@ -39,8 +38,9 @@ export default function DashboardLayout({
       <Main>
         <ContentWrapper>
           {/*
-            Above the announcements on purpose: if she cannot read the app, that
-            is the first thing to fix — every other message is unreadable too.
+            Above the announcements on purpose: if the member cannot read the
+            app, that is the first thing to fix — every other message is
+            unreadable too.
           */}
           <LocaleAutoNotice />
           <AnnouncementBanner />
@@ -50,18 +50,16 @@ export default function DashboardLayout({
       <MenuBackdrop />
       <SupportWidget />
       {/*
-        Renders only inside a support impersonation (migration 0057), and
-        stays fixed: the operator scrolls, and forgetting whose account you
-        are in is the failure mode worth designing against.
+        Renders only inside a support impersonation, and stays fixed: the
+        operator scrolls, and forgetting whose account you are in is the
+        failure mode worth designing against.
       */}
       <ImpersonationBanner />
       {/*
-        No cookie-consent banner and no ad/analytics tracker on the clinical
-        app: the Meta Pixel / GA4 live ONLY in the marketing layout (LGPD
-        Art. 11 — sensitive health data). In-app funnel events (checkout,
-        trial start, purchase) are sent server-side via the Conversions API
-        (lib/meta-capi.ts), never by a browser tracker over patient routes.
+        The analytics posture of the dashboard is decided in phase 7 of
+        docs/PLANO-IMPLEMENTACAO.md (docs/TRACKING.md): until then no browser
+        tracker mounts here; funnel events stay server-side.
       */}
-    </RecordingSessionProvider>
+    </>
   );
 }

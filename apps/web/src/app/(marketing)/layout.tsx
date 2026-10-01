@@ -31,16 +31,15 @@ export default async function MarketingLayout({ children }: { children: React.Re
   const support = await getSupportChannels();
   return (
     <div className="bg-background flex min-h-[100dvh] flex-col">
-      {/* Site-wide identity for search + AI engines; rebrands with @flyee/content.
-          Shared with the (autoridade) layout, which is why it is a component. */}
+      {/* Site-wide identity for search + AI engines; rebrands with @flyee/content. */}
       <SiteJsonLd />
       <MarketingHeader />
       <main className="flex flex-1 flex-col">{children}</main>
       <MarketingFooter />
       <SupportWidget support={support} />
       <CookieConsent />
-      {/* Marketing-only: SSR Pixel/GA4 (opt-out) + SPA pageviews. Never mounted
-          on the clinical app — the compliance boundary is the layout itself. */}
+      {/* SSR Pixel/GA4 (opt-out) + SPA pageviews. docs/TRACKING.md (phase 7.3)
+          decides whether the member area mounts them too. */}
       <MarketingTrackers />
       <MarketingAnalytics />
     </div>

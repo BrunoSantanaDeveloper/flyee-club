@@ -2,10 +2,10 @@ import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 
 /**
- * Blueprint §11 trust strip: a compact contrast band of 3–4 short reassurance
- * items under camel display ordinals, separated by hairlines. The ordinals ARE
- * information here — they read as the adoption path (start free → automate →
- * review → web+mobile). Sits right under the hero; never a full section story.
+ * Trust strip: a compact contrast band of 3–4 short reassurance items under
+ * secondary-tone display ordinals, separated by hairlines. The ordinals ARE
+ * information here — they read as a path (create account → install → use →
+ * update). Sits right under the hero; never a full section story.
  */
 export default function NumberStrip({ items }: { items: { title: string; body: string }[] }) {
   return (

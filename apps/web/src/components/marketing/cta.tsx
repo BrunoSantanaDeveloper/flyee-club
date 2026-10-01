@@ -11,7 +11,7 @@ import NiCheck from "@/icons/nexture/ni-check";
  * Funnel stage: recovery — the last conversion opportunity on the page.
  * Two treatments:
  * - "panel" (default): bordered console panel with a primary glow.
- * - "deep" (blueprint §25): full-bleed deep teal band with the orbit ambient,
+ * - "deep": full-bleed deep primary band with the orbit ambient,
  *   light CTA button, optional demo link and reassurance points.
  * The button label must repeat the page's final CTA verbatim.
  */
@@ -47,8 +47,8 @@ export default function Cta({
             <h2 className="font-display text-display-lg max-w-3xl font-bold">{title}</h2>
             {subtitle && <p className="text-text-contrast/75 max-w-2xl text-lg leading-7">{subtitle}</p>}
             <div className="mt-2 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-              {/* Light button on the deep band (blueprint §25): token classes override
-                  the contained-primary look — white surface, deep teal label. */}
+              {/* Light button on the deep band: token classes override the
+                  contained-primary look — white surface, deep primary label. */}
               <Button
                 size="large"
                 variant="contained"

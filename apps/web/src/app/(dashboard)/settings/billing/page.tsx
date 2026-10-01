@@ -5,7 +5,6 @@ import { checkoutAvailability } from "./actions";
 import BillingProfileCard from "./components/billing-profile-card";
 import CurrentSubscription from "./components/current-subscription";
 import InvoicesCard from "./components/invoices-card";
-import MinutePacksCard from "./components/minute-packs-card";
 import PaymentRecoveryCard from "./components/payment-recovery-card";
 import PendingCheckoutCard from "./components/pending-checkout-card";
 import PlansGrid from "./components/plans-grid";
@@ -17,17 +16,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Alert, Box, Breadcrumbs, Button, CircularProgress, Drawer, Grid, Tooltip, Typography } from "@mui/material";
 
-import AudioUsageCard from "@/components/product/audio-usage-card";
-import LibraryUsageCard from "@/components/product/library-usage-card";
-import { useAudioAllowance } from "@/hooks/use-audio-allowance";
 import NiListCircle from "@/icons/nexture/ni-list-circle";
-import { remoteError, remoteLoading, type RemoteState, remoteSuccess } from "@flyee/clinical";
+import { remoteError, remoteLoading, type RemoteState, remoteSuccess } from "@/lib/remote-state";
 
 export default function BillingSettings() {
   const t = useTranslations("product");
   const searchParams = useSearchParams();
   const checkout = searchParams.get("checkout");
-  const source = searchParams.get("source");
   const feature = searchParams.get("feature");
   // The offer she was sent by link (`?plan=pro-fundador`): the grid surfaces it
   // even when it is unlisted, and says so when the offer has ended.
@@ -53,12 +48,13 @@ export default function BillingSettings() {
     pendingCheckout,
     billingProfile,
     plans,
-    packs,
     invoices,
     retry,
     refreshDetails,
   } = useBilling();
-  const { allowance, trialParams, reload: reloadAllowance } = useAudioAllowance(currentOrg?.id ?? null);
+  // A failed renewal keeps the plan usable for a grace window; this screen's
+  // first job in that state is getting the charge paid.
+  const pastDue = subscription?.status === "past_due";
 
   /**
    * She came from an offer page to BUY, not to administer a subscription.
@@ -160,11 +156,6 @@ export default function BillingSettings() {
             <Alert severity="info">{t("billing-checkout-canceled")}</Alert>
           </Grid>
         )}
-        {source === "consultation" && feature === "clinical_reasoning" && (
-          <Grid size={12}>
-            <Alert severity="info">{t("billing-clinical-reasoning-context")}</Alert>
-          </Grid>
-        )}
         {/* She arrived here from a payment problem, not from shopping. Say so,
             so the plan grid below does not read as the answer to her question. */}
         {feature === "payment" && (
@@ -217,13 +208,9 @@ export default function BillingSettings() {
             {/* First, because she is here to FIX a charge, not to shop. The
                 plan grid below answers a different question and would read as
                 the wrong answer if it came first. */}
-            {/* Keyed on `dunning`, not on `reason`: a workspace with purchased
-                minutes keeps recording while past_due, so `reason` reads
-                'pack_only' and this card — her only way to pay — used to
-                vanish for exactly the person holding an unpaid invoice. */}
-            {canManage && allowance?.dunning && (
+            {canManage && pastDue && (
               <Grid size={12}>
-                <PaymentRecoveryCard orgId={currentOrg.id} graceEndsAt={allowance.graceEndsAt} />
+                <PaymentRecoveryCard orgId={currentOrg.id} />
               </Grid>
             )}
             {/* Before the plan grid: she is waiting on a payment she already
@@ -250,12 +237,6 @@ export default function BillingSettings() {
             )}
             {!checkoutFocus && (
               <>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <AudioUsageCard showWhenEmpty />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <LibraryUsageCard />
-                </Grid>
                 <CurrentSubscription
                   orgId={currentOrg.id}
                   subscription={subscription}
@@ -270,27 +251,11 @@ export default function BillingSettings() {
               plans={plans}
               canManage={canManage}
               checkoutAvailable={checkoutState.status === "success" && checkoutAvailable === true}
-              trialParams={trialParams}
               offerSlug={offerSlug}
               onBillingProfileRequired={() => setNeedsBillingProfile(true)}
               continueCheckout={continueCheckout}
             />
-            {/* After the tiers on purpose: for most people an upgrade is the
-                better deal, and a pack is the answer only once that has been
-                considered and the cycle still ran out. */}
-            {!checkoutFocus && (
-              <>
-                <MinutePacksCard
-                  orgId={currentOrg.id}
-                  packs={packs}
-                  allowance={allowance}
-                  canManage={canManage}
-                  checkoutAvailable={checkoutState.status === "success" && checkoutAvailable === true}
-                  onPurchased={reloadAllowance}
-                />
-                <InvoicesCard invoices={invoices} />
-              </>
-            )}
+            {!checkoutFocus && <InvoicesCard invoices={invoices} />}
             {/* Deferred, never removed: the settings she did not come for stay
                 one click away, and the link drops the `plan` parameter so the
                 full screen is what loads. */}

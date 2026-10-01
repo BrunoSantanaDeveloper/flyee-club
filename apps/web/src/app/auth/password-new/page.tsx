@@ -26,10 +26,10 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiCrossSquare from "@/icons/nexture/ni-cross-square";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { cn } from "@/lib/utils";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
-import { sanitizeInternalNext } from "@flyee/clinical";
 
 const InputErrorTooltip = ({ title }: { title: string }) => (
   <Box className="relative">

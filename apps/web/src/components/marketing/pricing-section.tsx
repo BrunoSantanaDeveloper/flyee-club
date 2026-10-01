@@ -73,9 +73,9 @@ export default function PricingSection({
   headingAs?: "h1" | "h2";
   /** Section depth layer — pages that LEAD with pricing use "glow" (same treatment as a hero). */
   decor?: "none" | "glow" | "grid" | "gradient-edge";
-  /** Automation ladder above the grid (blueprint §20: "Gratuito · Documentação · Raciocínio + plano"). */
+  /** Ladder above the grid (e.g. "Kit · Assinatura · Pro"). */
   tiers?: string[];
-  /** Differentiation line under the grid ("Assistente registra… Pro também prepara…"). */
+  /** Differentiation line under the grid ("O kit entrega… a assinatura soma…"). */
   footnote?: string;
 }) {
   return (

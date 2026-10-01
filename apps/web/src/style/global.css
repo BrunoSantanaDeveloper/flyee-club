@@ -87,9 +87,7 @@
 @import "./mui-x/tree-view.css";
 
 /* --------- Plugins --------- */
-@import "./plugins/lightbox-yarl.css";
 @import "./plugins/video-player-vidstack.css";
-@import "./plugins/text-editor-quill.css";
 @import "./plugins/file-upload-react-dropzone.css";
 
 /*

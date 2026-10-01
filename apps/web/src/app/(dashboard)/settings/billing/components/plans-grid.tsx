@@ -24,7 +24,6 @@ import {
 } from "@mui/material";
 
 import { COOKIE_KEYS } from "@/constants";
-import { derivePlanFeatures } from "@/lib/billing-plan-features";
 import { clearCouponCookie, normalizeCouponCode, readCouponCookie } from "@/lib/offer-link";
 import { trackCommercialEvent } from "@/lib/product-events";
 import { cn } from "@/lib/utils";
@@ -36,7 +35,6 @@ export default function PlansGrid({
   plans,
   canManage,
   checkoutAvailable,
-  trialParams,
   offerSlug,
   onBillingProfileRequired,
   continueCheckout = 0,
@@ -46,7 +44,6 @@ export default function PlansGrid({
   plans: PlanRow[];
   canManage: boolean;
   checkoutAvailable: boolean;
-  trialParams: { days: number; minutes: number } | null;
   /**
    * Plan slug she arrived with (`?plan=`) — the offer agreed on a call. It is
    * shown here even when the plan is unlisted (0085), highlighted and scrolled
@@ -243,20 +240,10 @@ export default function PlansGrid({
             <Typography variant="body2" className="text-text-secondary">
               {offerPlan ? t("billing-offer-body") : t("billing-plans-body")}
             </Typography>
-            {/* The trial is the alternative to paying today. It belongs on the
-                shopping screen — but for someone who arrived to complete terms
-                already agreed it reads as a reason to postpone, so it moves
-                into the "other plans" block she can open at any moment. */}
-            {!offerPlan && (
-              <Typography variant="body2" className="text-text-secondary mt-2 leading-6">
-                {trialParams ? t("billing-trial-explanation", trialParams) : t("billing-trial-explanation-generic")}
-              </Typography>
-            )}
           </Box>
           {offerMissing && <Alert severity="info">{t("billing-offer-unavailable")}</Alert>}
           {error === "billing_profile_required" && <Alert severity="warning">{t("billing-profile-required")}</Alert>}
           {error === "suspended" && <Alert severity="error">{t("billing-suspended-blocked")}</Alert>}
-          {error === "plan_required" && <Alert severity="info">{t("packs-plan-required")}</Alert>}
           {/* The checkout refused rather than quietly charging full price: the
               discount she was promised is the reason she is here. */}
           {error === "coupon_invalid" && <Alert severity="warning">{t("billing-coupon-invalid")}</Alert>}
@@ -264,10 +251,9 @@ export default function PlansGrid({
               and clicking. Not an error on her side, and not a generic failure —
               she needs to know the condition is gone and what is left. */}
           {error === "offer_closed" && <Alert severity="info">{t("billing-offer-closed")}</Alert>}
-          {error &&
-            !["billing_profile_required", "suspended", "plan_required", "coupon_invalid", "offer_closed"].includes(
-              error,
-            ) && <Alert severity="error">{t("billing-checkout-error")}</Alert>}
+          {error && !["billing_profile_required", "suspended", "coupon_invalid", "offer_closed"].includes(error) && (
+            <Alert severity="error">{t("billing-checkout-error")}</Alert>
+          )}
           {couponError === "link_invalid" && <Alert severity="info">{t("billing-coupon-link-invalid")}</Alert>}
           {coupon ? (
             <Alert
@@ -327,7 +313,6 @@ export default function PlansGrid({
               const current = subscription?.planId === plan.id;
               const isOffer = plan.id === offerPlan?.id;
               const solo = isOffer && !showOthers;
-              const features = derivePlanFeatures(plan.limits);
               const money = new Intl.NumberFormat(locale, { style: "currency", currency: plan.currency });
               const price = money.format(plan.priceCents / 100);
               // The SAME helper both providers use to charge, so the number on
@@ -355,9 +340,6 @@ export default function PlansGrid({
                         {isOffer && !current && showOthers && (
                           <Chip label={t("billing-offer-chip")} size="small" color="primary" />
                         )}
-                        {features.clinicalReasoning && !isOffer && (
-                          <Chip label={t("billing-most-complete")} size="small" color="primary" />
-                        )}
                       </Box>
                       <Typography variant="h4" component="p">
                         {discounted && (
@@ -375,37 +357,9 @@ export default function PlansGrid({
                           {t(`billing-period-${plan.period}` as never)}
                         </Typography>
                       </Typography>
-                      <Typography variant="subtitle2" className="text-primary dark:text-primary-light">
-                        {t(
-                          features.clinicalReasoning
-                            ? "billing-plan-profile-reasoning"
-                            : "billing-plan-profile-documentation",
-                        )}
-                      </Typography>
-                      <Box
-                        component="ul"
-                        className="text-text-secondary m-0 flex list-disc flex-col gap-1 pl-5 text-sm"
-                      >
-                        <li>
-                          {t("billing-audio-minutes", {
-                            minutes: new Intl.NumberFormat(locale).format(features.audioMinutes),
-                          })}
-                        </li>
-                        <li>
-                          {features.libraryMessages === null
-                            ? t("billing-library-unlimited")
-                            : t("billing-library-messages", {
-                                messages: new Intl.NumberFormat(locale).format(features.libraryMessages),
-                              })}
-                        </li>
-                        <li>
-                          {t(
-                            features.clinicalReasoning
-                              ? "billing-reasoning-included"
-                              : "billing-reasoning-not-included",
-                          )}
-                        </li>
-                      </Box>
+                      {/* What each tier unlocks is listed from its entitlement
+                          keys in phase 4 (docs/PLANO-IMPLEMENTACAO.md); until
+                          then the plan's own description says it. */}
                       {plan.description && (
                         <Typography variant="body2" className="text-text-secondary flex-1">
                           {plan.description}
@@ -449,11 +403,6 @@ export default function PlansGrid({
               <Button variant="text" color="grey" onClick={() => setShowOthers((open) => !open)}>
                 {showOthers ? t("billing-offer-others-hide") : t("billing-offer-others")}
               </Button>
-              {showOthers && (
-                <Typography variant="body2" className="text-text-secondary mt-2 leading-6">
-                  {trialParams ? t("billing-trial-explanation", trialParams) : t("billing-trial-explanation-generic")}
-                </Typography>
-              )}
             </Box>
           )}
         </CardContent>

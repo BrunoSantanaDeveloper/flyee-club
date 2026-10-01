@@ -4,7 +4,6 @@ import { cookies, headers } from "next/headers";
 
 import { COOKIE_KEYS } from "@/constants";
 import { recordAudit } from "@/lib/audit";
-import { CAMPAIGN_OFFER_KEY, type CampaignOfferSetting, resolveCampaignOffer } from "@/lib/campaign-offer";
 import { type CampaignParams, decodeCampaignCookie, hasCampaign, pickCampaignParams } from "@/lib/campaign-params";
 import { sendGa4Event } from "@/lib/ga4-mp";
 import { sendMetaConversion } from "@/lib/meta-capi";
@@ -15,7 +14,6 @@ import { pendingPixCharge } from "@/lib/pending-pix";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
 import { type CheckoutPlan, defaultProvider, getProvider, type PaymentMethod, type PixCharge } from "@flyee/billing";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function requireOrgManager(orgId: string) {
   const supabase = await createClient();
@@ -101,43 +99,6 @@ export async function validateCouponCode(
 type AppliedCouponRow = { id: string; code: string; discount_type: "percent" | "fixed"; discount_value: number };
 
 /**
- * Is this workspace still inside the personal window that was offered to it?
- *
- * Only the conversion offer's own coupon is subject to this: any other code is
- * a campaign code whose validity lives entirely in the `coupons` row, and this
- * guard must not have an opinion about it. Both reads are cheap and happen once
- * per checkout.
- */
-async function conversionOfferWindowOpen(
-  supabase: SupabaseClient,
-  orgId: string,
-  code: string,
-): Promise<{ ok: boolean; reason?: string }> {
-  try {
-    const { data: setting } = await supabase
-      .from("platform_settings")
-      .select("value")
-      .eq("key", "conversion_offers")
-      .maybeSingle();
-    const configured = normalizeCouponCode((setting?.value as { coupon_code?: string } | null)?.coupon_code ?? "");
-    if (!configured || configured !== normalizeCouponCode(code)) return { ok: true };
-
-    const { data } = await supabase.rpc("current_conversion_offer", { target_org: orgId });
-    const row = data as { active?: boolean; coupon_code?: string } | null;
-    if (row?.active === true && normalizeCouponCode(row.coupon_code ?? "") === configured) return { ok: true };
-    return { ok: false, reason: "conversion_offer_closed" };
-  } catch {
-    // Fails OPEN, like `offerBlock` below and for the same reason: when the
-    // read fails this guard cannot tell whether the code is even the one it
-    // owns, so blocking would break every partner-campaign checkout over a
-    // transient database hiccup. The asymmetry decides it — honouring a
-    // discount slightly past its window during an outage costs one discount;
-    // refusing a code that was promised costs the sale AND the promise.
-    return { ok: true, reason: "conversion_offer_check_failed" };
-  }
-}
-
-/**
  * Refuses a purchase the workspace must not be able to make.
  *
  * `admin_suspended` is the superadmin kill-switch — fraud, chronic default, a
@@ -164,48 +125,28 @@ async function purchaseBlockedReason(
 }
 
 /**
- * Refuses a plan whose limited offer is no longer open.
+ * Refuses a plan whose founders offer is no longer open.
  *
- * Two mechanisms, one answer. The founders condition counts SEATS, which needs
- * a privileged aggregate over `subscriptions` and therefore an RPC (migration
- * 0087); the paid-campaign condition only has a DEADLINE, which is a settings
- * row and a clock (`lib/campaign-offer.ts`). Either way, the landing page reads
- * the same state this guard reads — so a page can never advertise a condition
- * the checkout would refuse, nor the reverse, which is how a dated offer
- * quietly becomes permanent.
+ * The founders condition counts SEATS, which needs a privileged aggregate over
+ * `subscriptions` and therefore an RPC (`founders_offer()`). The landing page
+ * reads the same function, so a page can never advertise a seat the checkout
+ * would refuse, nor the reverse, which is how a limited offer quietly becomes
+ * permanent.
  *
- * Only applies to the plan an offer NAMES; every other plan is unaffected. A
+ * Only applies to the plan the offer NAMES; every other plan is unaffected. A
  * failure to READ the state deliberately does NOT block: an ordinary checkout
- * must not break because a campaign is misconfigured.
+ * must not break because an offer is misconfigured.
  */
 async function offerBlock(
   supabase: Awaited<ReturnType<typeof createClient>>,
   planSlug: string,
 ): Promise<string | null> {
   try {
-    const [founders, campaign] = await Promise.all([
-      supabase.rpc("founders_offer"),
-      supabase.from("platform_settings").select("value").eq("key", CAMPAIGN_OFFER_KEY).maybeSingle(),
-    ]);
-
+    const founders = await supabase.rpc("founders_offer");
     if (!founders.error && founders.data) {
       const offer = founders.data as { plan_slug?: string | null; closed?: boolean; reason?: string };
       if (offer.plan_slug && offer.plan_slug === planSlug && offer.closed) return offer.reason ?? "closed";
     }
-
-    if (!campaign.error) {
-      const offer = resolveCampaignOffer((campaign.data?.value ?? null) as CampaignOfferSetting | null);
-      // BOTH slugs, not just the default one. A campaign that sells a monthly
-      // and an annual side by side has two plans whose price the deadline
-      // promised; gating only the first would let the annual keep selling
-      // after the condition it was announced under had ended, which is the
-      // fake-scarcity failure the whole mechanism exists to prevent.
-      const named = offer.planSlug === planSlug || offer.annualPlanSlug === planSlug;
-      // `not_configured` names the absence of a campaign, not a closed one:
-      // the plan is then an ordinary catalogue plan and sells normally.
-      if (named && offer.closed && offer.reason !== "not_configured") return offer.reason;
-    }
-
     return null;
   } catch {
     return null;
@@ -400,22 +341,6 @@ export async function startCheckout(input: {
         return { error: validated.error ?? "coupon_invalid" };
       }
       coupon = validated.coupon;
-
-      // The conversion offer promises a PERSONAL window ("this condition is
-      // yours for the next N hours", migration 0088), but `coupons` only has a
-      // shared `valid_until` — nothing in the table can expire for one
-      // workspace and not another. Without this check the countdown on the
-      // home card would be pure decoration: the same code would still be
-      // honoured days later, and "afterwards it goes back to the normal price"
-      // would simply be false.
-      //
-      // This is the repo's own rule applied to a per-org offer: what the screen
-      // announces has to be what the checkout refuses.
-      const window = await conversionOfferWindowOpen(supabase, input.orgId, coupon.code);
-      if (!window.ok) {
-        logBillingFailure("coupon_rejected", { orgId: input.orgId, reason: window.reason });
-        return { error: "coupon_invalid" };
-      }
     }
 
     const plan: CheckoutPlan = {
@@ -426,8 +351,8 @@ export async function startCheckout(input: {
       period: planRow.period,
       priceCents: planRow.price_cents,
       currency: planRow.currency,
-      // MedChina's promotional access is cardless and lives exclusively in
-      // pro_trials/org_audio_allowance; provider checkout never starts it.
+      // No provider trial in v1 (docs/PRODUCT.md, open decision "Trial da
+      // assinatura"); phase 4 makes this a plan field read from data.
       trialDays: 0,
       creditAmount: planRow.credit_amount,
       creditsExpire: planRow.credits_expire,
@@ -652,190 +577,6 @@ export async function startCheckout(input: {
     // on the last step of the funnel.
     if (input.paymentMethod === "pix" && (error as { code?: string } | null)?.code === "invalid_billingType") {
       return { error: "pix_unavailable" };
-    }
-    return { error: "unavailable" };
-  }
-}
-
-/**
- * Buys a one-off pack of audio minutes (migration 0055).
- *
- * Deliberately NOT a variant of `startCheckout`: that flow writes a
- * `subscriptions` row and demands a billing period, both of which are right
- * for a plan and wrong for a single payment — an org may hold only one live
- * subscription, so reusing it would fight the tier the customer is already on.
- *
- * The commercial rule (a pack tops up a paid plan, it does not replace one) is
- * checked HERE as well as reported by `org_audio_allowance`. The allowance
- * drives what the UI offers; this is what actually holds, because a server
- * action is callable without the UI.
- */
-export async function startPackCheckout(input: {
-  orgId: string;
-  planId: string;
-  idempotencyKey: string;
-}): Promise<StartCheckoutResult> {
-  let activeClaim: ActiveBillingClaim | null = null;
-  try {
-    const { supabase, user } = await requireOrgManager(input.orgId);
-    if (!UUID.test(input.idempotencyKey)) return { error: "unavailable" };
-
-    const blocked = await purchaseBlockedReason(supabase, input.orgId);
-    if (blocked) {
-      logBillingFailure("purchase_blocked", { orgId: input.orgId, reason: blocked });
-      return { error: blocked };
-    }
-
-    const [{ data: planRow }, { orgName, payer }, { data: allowance }] = await Promise.all([
-      supabase.from("plans").select("*").eq("id", input.planId).eq("is_active", true).single(),
-      loadPayer(supabase, input.orgId),
-      supabase.rpc("org_audio_allowance", { target_org: input.orgId }),
-    ]);
-
-    const packMinutes = Number((planRow?.limits as { audio_minutes_pack?: unknown } | null)?.audio_minutes_pack);
-    if (!planRow || !planRow.is_addon || !Number.isFinite(packMinutes) || packMinutes <= 0) {
-      return { error: "unavailable" };
-    }
-    if ((allowance as { pack_purchasable?: boolean } | null)?.pack_purchasable !== true) {
-      return { error: "plan_required" };
-    }
-    if (!payer.document) {
-      logBillingFailure("missing_billing_document", { orgId: input.orgId });
-      return { error: "billing_profile_required" };
-    }
-
-    const plan: CheckoutPlan = {
-      id: planRow.id,
-      slug: planRow.slug,
-      name: planRow.name,
-      kind: planRow.kind,
-      // No period is what makes the provider charge once instead of
-      // subscribing (Stripe: `mode: "payment"`).
-      period: null,
-      priceCents: planRow.price_cents,
-      currency: planRow.currency,
-      trialDays: 0,
-      creditAmount: planRow.credit_amount,
-      creditsExpire: planRow.credits_expire,
-      description: planRow.description ?? null,
-    };
-    const provider = defaultProvider();
-    if (!provider) {
-      logBillingFailure("no_provider_configured", { orgId: input.orgId });
-      return { error: "unavailable" };
-    }
-    const service = createServiceClient();
-    const { data: claimData, error: claimError } = await service.rpc("claim_billing_operation", {
-      target_org: input.orgId,
-      target_actor: user.id,
-      target_kind: "checkout",
-      target_idempotency_key: input.idempotencyKey,
-      target_provider: provider,
-      target_plan: plan.id,
-      target_subscription: null,
-    });
-    const claim = claimData as {
-      ok?: boolean;
-      code?: string;
-      operationId?: string;
-      claimToken?: string;
-      result?: { url?: string };
-    } | null;
-    if (claim?.code === "completed" && claim.result?.url) return { url: claim.result.url };
-    if (claimError || !claim?.ok || !claim.operationId || !claim.claimToken) {
-      logBillingFailure("claim_rejected", { orgId: input.orgId, provider, code: claim?.code }, claimError);
-      return { error: "unavailable" };
-    }
-    activeClaim = { service, operationId: claim.operationId, claimToken: claim.claimToken };
-
-    const origin = await appOrigin();
-    const result = await getProvider(provider).createCheckout({
-      idempotencyKey: input.idempotencyKey,
-      orgId: input.orgId,
-      orgName,
-      customerEmail: user.email ?? "",
-      plan,
-      modules: [],
-      payer,
-      successUrl: `${origin}/settings/billing?checkout=success`,
-      cancelUrl: `${origin}/settings/billing?checkout=canceled`,
-    });
-
-    const { data: completedData, error: pendingError } = await service.rpc("complete_pack_checkout_billing_operation", {
-      target_operation: claim.operationId,
-      target_claim_token: claim.claimToken,
-      target_plan: plan.id,
-      target_checkout_url: result.url,
-    });
-    const completed = completedData as { ok?: boolean; result?: { url?: string } } | null;
-    if (pendingError || !completed?.ok) {
-      // The provider already has a checkout at this point; only the local
-      // bookkeeping failed. Worth shouting about — the customer may be looking
-      // at a payment page we have no record of.
-      logBillingFailure("local_reconciliation_failed", { orgId: input.orgId, planId: input.planId }, pendingError);
-      await failBillingClaim(activeClaim, "local_reconciliation_failed");
-      activeClaim = null;
-      return { error: "unavailable" };
-    }
-    activeClaim = null;
-
-    // The minutes themselves are granted by the webhook, on the paid invoice —
-    // never here. A checkout that is started is not a checkout that is paid,
-    // and PIX/boleto make that gap minutes or hours wide.
-    await recordAudit(supabase, "billing.audio_pack_checkout_started", {
-      orgId: input.orgId,
-      entityType: "plan",
-      entityId: plan.id,
-      metadata: { minutes: packMinutes },
-    });
-
-    try {
-      const metaContext = await getMetaClientContext(`${origin}/settings/billing`);
-      const gaClientId = await getGaClientId();
-      // Same stash as the subscription checkout. A pack paid by Pix or boleto
-      // confirms out of band, so the webhook has no browser to read signals
-      // from — without this the purchase reached Meta/GA4 unattributed.
-      if (metaContext.fbp || metaContext.fbc || gaClientId) {
-        await service.from("meta_attribution").upsert({
-          org_id: input.orgId,
-          fbp: metaContext.fbp ?? null,
-          fbc: metaContext.fbc ?? null,
-          email: user.email ?? null,
-          client_ip: metaContext.clientIp ?? null,
-          client_user_agent: metaContext.clientUserAgent ?? null,
-          ga_client_id: gaClientId,
-          updated_at: new Date().toISOString(),
-        });
-      }
-      await sendMetaConversion({
-        eventName: "InitiateCheckout",
-        eventId: input.idempotencyKey,
-        email: user.email,
-        externalId: input.orgId,
-        value: plan.priceCents / 100,
-        currency: plan.currency,
-        ...metaContext,
-      });
-      await sendGa4Event({
-        clientId: gaClientId,
-        eventName: "begin_checkout",
-        eventId: input.idempotencyKey,
-        params: { currency: plan.currency, value: plan.priceCents / 100 },
-      });
-    } catch {
-      // Best-effort — the checkout URL returned below is what matters.
-    }
-
-    return { url: completed.result?.url ?? result.url };
-  } catch (error) {
-    // The provider call is the likeliest thing to land here, and its message
-    // is the only place the real cause exists — a bad key, a rejected payload,
-    // a base URL that is not a URL. Losing it is what turns "she cannot
-    // subscribe" into an archaeology exercise over billing_operations.
-    logBillingFailure("provider_call_threw", { orgId: input.orgId, planId: input.planId }, error);
-    await failBillingClaim(activeClaim, providerFailureCode(error));
-    if (error instanceof Error && error.message === "asaas_missing_document") {
-      return { error: "billing_profile_required" };
     }
     return { error: "unavailable" };
   }

@@ -2,10 +2,9 @@ import Reveal from "@/components/marketing/reveal";
 import { cn } from "@/lib/utils";
 
 /**
- * Blueprint §18: the MTC specialization map — an indexed, hairline-ruled grid
- * of the clinical categories the record is built around, with periodic deep
- * accent cells to give the wall rhythm. The camel index digits are the
- * editorial motif shared with NumberStrip/WorkflowDemo.
+ * An indexed, hairline-ruled grid of categories (e.g. the seven catalog
+ * trails), with periodic deep accent cells to give the wall rhythm. The
+ * secondary-tone index digits are the editorial motif shared with NumberStrip.
  */
 export default function IndexGrid({
   items,

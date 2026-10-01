@@ -14,7 +14,6 @@ import MenuList from "@mui/material/MenuList";
 import Popper from "@mui/material/Popper";
 
 import { useProfile } from "@/hooks/use-profile";
-import NiPath from "@/icons/nexture/ni-path";
 import NiQuestionHexagon from "@/icons/nexture/ni-question-hexagon";
 import NiSettings from "@/icons/nexture/ni-settings";
 import { cn } from "@/lib/utils";
@@ -155,21 +154,11 @@ export default function User() {
                         <Divider className="large" />
 
                         <UserModeSwitch />
-                        {/* MedChina locks a single brand palette — no color-theme switch (see THEME_OPTIONS). */}
+                        {/* A single locked brand palette — no color-theme switch (see THEME_OPTIONS). */}
                         <UserLanguageSwitch />
 
                         <Divider className="large" />
-                        <MenuItem
-                          onClick={(event) => {
-                            handleClose(event);
-                            router.push("/primeiros-passos");
-                          }}
-                        >
-                          <ListItemIcon>
-                            <NiPath size={20} />
-                          </ListItemIcon>
-                          {t("menu-primeiros-passos")}
-                        </MenuItem>
+
                         <MenuItem
                           onClick={(event) => {
                             handleClose(event);

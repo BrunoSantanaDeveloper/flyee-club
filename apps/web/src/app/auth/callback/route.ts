@@ -8,9 +8,9 @@ import { sendGa4Event } from "@/lib/ga4-mp";
 import { sendMetaConversion } from "@/lib/meta-capi";
 import { getGaClientId, getMetaClientContext } from "@/lib/meta-capi-context";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { persistSignupAttribution } from "@/lib/signup-attribution";
 import { createClient } from "@flyee/auth/server";
-import { sanitizeInternalNext } from "@flyee/clinical";
 
 /** A brand-new account confirms within minutes; a returning session (e.g. a
  * password recovery link) has an old created_at — so this window isolates
@@ -58,10 +58,10 @@ export async function GET(request: Request) {
             params: { method: "email" },
           });
         }
-        // OAuth is sign-in AND sign-up: a first-time Google/GitHub user is
-        // provisioned here but never filled the sign-up form, so they have no
-        // organization (the handle_new_user trigger only creates one when the
-        // signup metadata carries a company). Send them to complete setup.
+        // OAuth is sign-in AND sign-up. The handle_new_user trigger creates the
+        // personal workspace for every new account, Google/GitHub included, so
+        // a missing membership is the rare safety-net case: complete-profile
+        // recreates the workspace instead of stranding the member.
         const { data: membership } = await supabase
           .from("memberships")
           .select("org_id")
@@ -77,11 +77,6 @@ export async function GET(request: Request) {
         }
         if (!membership) {
           const safeNext = requestedNext ? sanitizeInternalNext(requestedNext) : null;
-          // An invite supplies the user's single MVP workspace after explicit
-          // confirmation, so creating a second personal workspace would be wrong.
-          if (safeNext?.startsWith("/invite/")) {
-            return NextResponse.redirect(`${origin}${safeNext}`);
-          }
           const completeProfile = new URL("/auth/complete-profile", origin);
           if (safeNext) completeProfile.searchParams.set("next", safeNext);
           return NextResponse.redirect(completeProfile);

@@ -4,7 +4,16 @@ import { useTranslations } from "next-intl";
 
 import { Box, Button, Typography } from "@mui/material";
 
-import type { JourneyGate } from "@flyee/clinical";
+/**
+ * Whether an action can run right now, as the screen knows it. `blocked`
+ * carries the reason already translated by the caller, because only the
+ * caller knows which plan, step or setting is missing.
+ */
+export type Gate =
+  | { state: "available" }
+  | { state: "loading" }
+  | { state: "unknown" }
+  | { state: "blocked"; message: string };
 
 /**
  * Why an action cannot run right now — in words, under the control it disables.
@@ -15,19 +24,14 @@ import type { JourneyGate } from "@flyee/clinical";
  *  - a fact that is still LOADING says nothing at all — it is not a block, and
  *    claiming one would be as dishonest as claiming availability;
  *  - a fact that FAILED to load is "unknown": an offer to try again, never a
- *    block and never an empty state (PRD §10.5 — absence is not a negative).
- *
- * It deliberately offers NO consent button. Registering a consent lives in ONE
- * place — the "Consentimentos" control at the top of the consultation — because
- * the same button repeated on every card read as noise and made it unclear
- * which one to press; the reason sentence points there instead.
+ *    block and never an empty state.
  */
 export default function GateNotice({
   gate,
   id,
   onRetry,
 }: {
-  gate: JourneyGate;
+  gate: Gate;
   /** Id referenced by the control's `aria-describedby`. */
   id: string;
   /** Re-fetches whatever failed, when the state is "unknown". */
@@ -39,7 +43,7 @@ export default function GateNotice({
     return (
       <Box className="flex flex-row flex-wrap items-center gap-1">
         <Typography id={id} variant="body2" className="text-text-secondary text-xs leading-5">
-          {t("journey-reason-unknown")}
+          {t("gate-unknown")}
         </Typography>
         {onRetry && (
           <Button size="small" className="px-1!" onClick={onRetry}>
@@ -54,7 +58,7 @@ export default function GateNotice({
 
   return (
     <Typography id={id} variant="body2" className="text-text-secondary text-xs leading-5">
-      {t(`journey-reason-${gate.reason}`)}
+      {gate.message}
     </Typography>
   );
 }

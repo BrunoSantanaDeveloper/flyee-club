@@ -18,7 +18,7 @@ type Account = Record<string, unknown>;
 const account = (flags: string[], extra: Account = {}): Account => ({
   orgId: `org-${flags.join("-")}`,
   name: "Consultório",
-  owner: { name: "Dra. Marina", email: "marina@medchina.invalid" },
+  owner: { name: "Dra. Marina", email: "membro@flyee.invalid" },
   billing: { planName: "Gratuito", pastDueSince: null },
   trial: null,
   minutes: { remaining: 0 },
@@ -30,7 +30,7 @@ const supabaseWith = (accounts: Account[], operators: { id: string }[] = [{ id: 
   ({
     rpc: vi.fn(async () => ({ data: { accounts }, error: null })),
     from: vi.fn(() => ({ select: () => ({ eq: async () => ({ data: operators, error: null }) }) })),
-    auth: { admin: { getUserById: vi.fn(async () => ({ data: { user: { email: "operator@medchina.dev" } } })) } },
+    auth: { admin: { getUserById: vi.fn(async () => ({ data: { user: { email: "operator@flyee.dev" } } })) } },
   }) as unknown as SupabaseClient;
 
 beforeEach(() => {
@@ -66,10 +66,7 @@ describe("the daily operator watch", () => {
     // The alert lands on the accounts it is about, not on the whole book.
     expect(input.href).toBe("/admin/organizations?filter=trial_ending");
     expect(input.body).toContain("230 min restantes");
-    expect(sendDigest).toHaveBeenCalledWith(
-      "operator@medchina.dev",
-      expect.objectContaining({ headline: input.title }),
-    );
+    expect(sendDigest).toHaveBeenCalledWith("operator@flyee.dev", expect.objectContaining({ headline: input.title }));
   });
 
   it("names both problems when the morning has two kinds", async () => {

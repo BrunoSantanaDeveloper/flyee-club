@@ -10,7 +10,6 @@ import { Box, Button } from "@mui/material";
 
 import { useLayoutContext } from "@/components/layout/layout-context";
 import Logo from "@/components/logo/logo";
-import CommandPalette from "@/components/product/command-palette";
 import NiMenuSplit from "@/icons/nexture/ni-menu-split";
 import { cn } from "@/lib/utils";
 
@@ -85,7 +84,6 @@ export default function Header() {
 
         {/* Right buttons */}
         <Box className="ml-auto flex flex-row sm:gap-1">
-          <CommandPalette />
           <Notifications />
         </Box>
 

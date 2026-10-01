@@ -244,7 +244,7 @@ export default function ModulesAdmin() {
             <EmptyState
               icon={<NiPuzzle size="medium" />}
               title="Nenhum módulo ainda"
-              description="Um módulo é um adicional vendido em cima de um plano — um recurso extra que o consultório liga sem trocar de nível."
+              description="Um módulo é um adicional vendido em cima de um plano — um recurso extra que a conta liga sem trocar de nível."
               action={{ label: "Novo módulo", onClick: () => openEdit() }}
               className="border-none"
             />

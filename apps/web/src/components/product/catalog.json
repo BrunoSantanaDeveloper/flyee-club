@@ -55,12 +55,6 @@
       "use": "The only source of icon-container tinting. Never hand-write bg-primary/10 — the template tint is bg-{tone}-light/10."
     },
     {
-      "name": "ConsultationStatusChip",
-      "from": "@/components/product/consultation-status-chip",
-      "props": "status, className?",
-      "use": "A lifecycle stage as the template's pastel badge (Button size=tiny variant=pastel). The pattern to copy for any status label: the state is NAMED, not just coloured."
-    },
-    {
       "name": "ConfirmActionDialog",
       "from": "@/components/product/confirm-action-dialog",
       "props": "title, intro?, consequences[], stays?, staysTitle?, reasonLabel?, reasonPlaceholder?, reasonHelp?, reasonMinLength?, confirmLabel, tone?, onConfirm(reason)->Promise<string|null>, onClose",
@@ -71,12 +65,6 @@
       "from": "@/components/product/info-hint",
       "props": "label/title",
       "use": "A definition attached to a number. A bare Tooltip on a non-focusable Box disappears on touch and for keyboards — use this instead."
-    },
-    {
-      "name": "WeekSchedule",
-      "from": "@/components/product/week-schedule",
-      "props": "items, timeZone, locale, agendaHref, scheduleHref, startingId, onStart, onBriefing",
-      "use": "A day strip plus the selected day's items. Port of the template's Schedule card; deliberately NOT the agenda page."
     },
     {
       "name": "DataTable",
@@ -99,6 +87,11 @@
   ],
   "template": [
     {
+      "name": "Chip de estado (pastel)",
+      "props": "Button size=tiny variant=pastel, label = the state NAME",
+      "use": "A lifecycle state (module version draft/published/yanked, meeting state, subscription status): the state is NAMED, never colour alone. Not packaged yet: recover the shape with `git show ab2e84d:apps/web/src/components/product/consultation-status-chip.tsx` and package it as components/product/status-chip.tsx when the first screen needs it."
+    },
+    {
       "name": "Medidor circular (gauge)",
       "props": "CircularProgress variant=\"determinate\" + centred label + outline-grey-100 track ring",
       "use": "One ratio that must read at a glance next to its x/y. No chart library. Not packaged yet — port it when a screen needs a single prominent ratio."
@@ -116,12 +109,12 @@
     {
       "name": "Card ilustrado",
       "props": "h4 card-title + body1 + Illustration* h-64 max-w-xs + contained/outlined actions",
-      "use": "The zero-data state of a whole screen, when the path to value deserves more than an EmptyState. Packaged example: components/product/home-empty-banner.tsx."
+      "use": "The zero-data state of a whole screen, when the path to value deserves more than an EmptyState. Recover the shape with `git show ab2e84d:apps/web/src/components/product/home-empty-banner.tsx`."
     },
     {
       "name": "Timeline de atividade",
       "props": "@mui/lab Timeline + TimelineDot variant=outlined + subtitle2/body2 + relative time",
-      "use": "'What happened recently' when the order IS the meaning. Packaged example: the recent-records card in app/(dashboard)/inicio/page.tsx."
+      "use": "'What happened recently' when the order IS the meaning. Recover the shape from the recent-records card in `git show \"ab2e84d:apps/web/src/app/(dashboard)/inicio/page.tsx\"`."
     }
   ],
   "traps": [
@@ -133,6 +126,6 @@
     "Feedback severity tokens (`--{sev}-light` / `--{sev}-dark`) hold the SAME value in the light and the dark block of design-tokens/css/common.css. A rule written as `text-{sev}-dark` for the light theme is therefore automatically wrong in the dark one, and no `dark:` variant exists to save it. Measured on the Alert: the template pairing of `bg-{sev}-light/10` + `text-{sev}-dark` reads 2.51:1 (info), 2.56:1 (success), 2.95:1 (warning) on light and 2.15:1 for error on dark, against ~9.2:1 for the inherited text. Severity belongs in the BACKGROUND and the ICON; the words keep inheriting text-primary.",
     "The palette is written as `hsl(var(--token))` with cssVariables on. decomposeColor cannot read that and returns NaN WITHOUT throwing, so MUI never reaches its own fallback: every DERIVED colour (theme.alpha, palette.Alert.{sev}StandardBg, getContrastText) resolves to a value the browser discards. Direct references such as palette[sev].main survive — which is why an Alert icon is coloured today while its background is not. Consequence: when a template selector dies there is no native styling underneath it, and any new component that leans on a computed MUI colour is born broken and silent.",
     "Run `npm run check:mui-classes` after touching anything under apps/web/src/style/**. It matches every `.Mui{Comp}-{slot}` against that component's own class manifest in node_modules, the only source of truth: a ChipClasses/ButtonClasses type augmentation can declare a class the DOM never emits, and that is exactly how three stylesheets accumulated dead rules nobody could see.",
-    "COLOUR ON A LABEL, MEASURED. This theme's palette is too light on six of its ten colours to carry text, and neither MUI nor the template compensates. Light theme, against the 4.5:1 floor: a FILLED surface (contained Button, filled Chip, Fab, selected ToggleButton) paints the label with `contrastText` = white, which clears only primary 4.89, accent-2 4.51, accent-4 5.22 and error 5.31 — it fails secondary 2.77, accent-1 3.77, accent-3 3.55, info 2.12, warning 2.51, success 2.13. An OUTLINED Chip does NOT rescue it: MUI paints that label `palette[color].main`, the same tone, so outlined warning is also 2.51. The pastel badge is no better (warning 2.95). Only three ways out, in order of preference: fill with one of the four colours that pass; or keep the tone in the RING and give the label `text-text-primary!` (9.79:1), which is what the clinical alert chips in clinical-context-bar.tsx do; or state the severity in the word and drop the colour. Never assume a variant change fixes contrast — measure it."
+    "COLOUR ON A LABEL, MEASURED. This theme's palette is too light on six of its ten colours to carry text, and neither MUI nor the template compensates. Light theme, against the 4.5:1 floor: a FILLED surface (contained Button, filled Chip, Fab, selected ToggleButton) paints the label with `contrastText` = white, which clears only primary 4.89, accent-2 4.51, accent-4 5.22 and error 5.31 — it fails secondary 2.77, accent-1 3.77, accent-3 3.55, info 2.12, warning 2.51, success 2.13. An OUTLINED Chip does NOT rescue it: MUI paints that label `palette[color].main`, the same tone, so outlined warning is also 2.51. The pastel badge is no better (warning 2.95). Only three ways out, in order of preference: fill with one of the four colours that pass; or keep the tone in the RING and give the label `text-text-primary!` (9.79:1), which is what the alert chips of the inherited clinical-context-bar.tsx did (git show ab2e84d:apps/web/src/components/product/clinical-context-bar.tsx); or state the severity in the word and drop the colour. Never assume a variant change fixes contrast — measure it."
   ]
 }

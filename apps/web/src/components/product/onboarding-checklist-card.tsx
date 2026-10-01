@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 
-import { Box, Button } from "@mui/material";
+import { Box } from "@mui/material";
 
 import OnboardingChecklist from "@/components/product/onboarding-checklist";
 import {
@@ -12,22 +11,20 @@ import {
   buildOnboardingSteps,
   getActivationFacts,
   getOnboardingFlowKey,
+  isActivated,
   isOnboardingEnabled,
 } from "@/lib/onboarding";
-import { getProductAction } from "@/lib/product-actions";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
 import { dismissFlow, type FlowKey, getOnboardingState, type OnboardingStateRow } from "@flyee/onboarding";
 
-const GETTING_STARTED_HREF = getProductAction("getting-started").href;
-
 /**
- * Drop-in activation card for the app home: reads the user's onboarding state
- * AND the live clinical facts the steps are derived from (has a patient? has a
- * finalized consultation?), so the checklist reflects reality rather than
- * clicks. Renders nothing when onboarding is not declared, Supabase is
- * unconfigured, the flow is complete, or the user dismissed it — safe to mount
- * unconditionally.
+ * Drop-in activation card for the app home: reads the member's onboarding
+ * state AND the live facts the steps are derived from (profile answered?
+ * access? a device installed? a first tool run?), so the checklist reflects
+ * reality rather than clicks. Renders nothing when onboarding is not declared,
+ * Supabase is unconfigured, the member is activated, or they dismissed it —
+ * safe to mount unconditionally.
  */
 export default function OnboardingChecklistCard({
   title,
@@ -55,7 +52,7 @@ export default function OnboardingChecklistCard({
       setFlowKey(key);
       const [onboardingState, activationFacts] = await Promise.all([
         getOnboardingState(supabase, key),
-        getActivationFacts(supabase, user.id),
+        getActivationFacts(supabase),
       ]);
       setState(onboardingState);
       setFacts(activationFacts);
@@ -71,8 +68,7 @@ export default function OnboardingChecklistCard({
 
   if (!state || !facts) return null;
 
-  const activated = facts.hasProfileName && facts.hasPatient && facts.hasFinalizedConsultation;
-  if (state.dismissed || state.completedAt || activated) return fallback;
+  if (state.dismissed || state.completedAt || isActivated(facts)) return fallback;
 
   // Step titles/descriptions are declared as i18n keys (lib/onboarding.ts).
   const steps = buildOnboardingSteps(facts).map((step) => ({
@@ -84,9 +80,6 @@ export default function OnboardingChecklistCard({
   return (
     <Box className="flex flex-col gap-2">
       <OnboardingChecklist title={title} steps={steps} state={state} onDismiss={handleDismiss} className={className} />
-      <Button LinkComponent={Link} href={GETTING_STARTED_HREF} variant="text" size="small" className="self-start">
-        {t("getting-started-view-all")}
-      </Button>
     </Box>
   );
 }

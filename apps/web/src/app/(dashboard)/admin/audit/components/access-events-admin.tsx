@@ -104,13 +104,13 @@ export default function AccessEventsAdmin() {
       },
       {
         field: "userName",
-        headerName: "Profissional",
+        headerName: "Integrante",
         flex: 1.2,
         minWidth: 180,
         renderCell: (params: GridRenderCellParams<AccessRow, string | null>) => (
           <Box className="flex h-full items-center">
             <Typography variant="body2" className="text-text-secondary truncate">
-              {params.value ?? "Profissional desconhecida"}
+              {params.value ?? "Integrante desconhecido"}
             </Typography>
           </Box>
         ),

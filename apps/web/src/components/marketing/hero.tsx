@@ -40,8 +40,8 @@ export default function Hero({
   /** Risk-reducing microcopy under the CTAs (e.g. "No card required"). */
   note?: string;
   /**
-   * Short reassurance chips under the copy (blueprint §10.7 — "Feito para MTC",
-   * "IA supervisionada"…). Split layout only; rendered as a hairline-topped row.
+   * Short reassurance chips under the copy ("Bilíngue", "Na IA que você já
+   * usa"…). Split layout only; rendered as a hairline-topped row.
    */
   highlights?: string[];
   /** Product evidence. Required in practice — a hero without it fails the premium bar. */

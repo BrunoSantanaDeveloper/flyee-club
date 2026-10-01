@@ -40,40 +40,27 @@ export type ConnectionSummary = {
 };
 
 /**
- * The professional's control panel over external assistants: what is
- * connected, when it was last used, and an immediate way out. The how-to
- * card doubles as the empty state's path to value — connecting happens in
- * the ASSISTANT's app, so the one action we can give her is the URL.
+ * The member's control panel over connected apps: what is connected, when it
+ * was last used, and an immediate way out.
  */
 export default function ConnectionsView({
   configured,
   connections,
-  mcpUrl,
 }: {
   configured: boolean;
   connections: ConnectionSummary[];
-  mcpUrl: string;
 }) {
   const t = useTranslations("product");
   const locale = useLocale();
   const [openDrawer, setOpenDrawer] = useState(false);
   const [confirming, setConfirming] = useState<ConnectionSummary | null>(null);
-  const [feedback, setFeedback] = useState<"revoked" | "revoke-failed" | "copied" | null>(null);
+  const [feedback, setFeedback] = useState<"revoked" | "revoke-failed" | null>(null);
   const [pending, startTransition] = useTransition();
 
   const toggleDrawer = (newOpen: boolean) => () => setOpenDrawer(newOpen);
 
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat(locale, { dateStyle: "long", timeStyle: "short" }).format(new Date(value));
-
-  const copyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(mcpUrl);
-      setFeedback("copied");
-    } catch {
-      // Clipboard denied: the URL stays selectable right above the button.
-    }
-  };
 
   const confirmRevoke = () => {
     if (!confirming) return;
@@ -152,38 +139,6 @@ export default function ConnectionsView({
                 </Alert>
               </Grid>
             )}
-
-            <Grid size={12}>
-              <Card component="section">
-                <CardContent className="flex flex-col gap-3">
-                  <Box className="flex flex-row items-center gap-2">
-                    <NiPlug size="medium" className="text-primary" />
-                    <Typography variant="h6" component="h2">
-                      {t("connections-how-title")}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" className="text-text-secondary leading-6">
-                    {t("connections-how-body")}
-                  </Typography>
-                  <Box className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <Box className="border-grey-100 bg-background-default/60 grow rounded-lg border px-3 py-2">
-                      <Typography variant="caption" component="p" className="text-text-secondary mb-0">
-                        {t("connections-mcp-url-label")}
-                      </Typography>
-                      <Typography variant="body2" className="text-text-primary font-mono break-all select-all">
-                        {mcpUrl}
-                      </Typography>
-                    </Box>
-                    <Button variant="outlined" onClick={copyUrl} className="shrink-0">
-                      {feedback === "copied" ? t("connections-copied") : t("connections-copy-url")}
-                    </Button>
-                  </Box>
-                  <Typography variant="caption" className="text-text-secondary">
-                    {t("connections-plan-note")}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
 
             <Grid size={12}>
               {connections.length === 0 ? (

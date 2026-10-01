@@ -2,7 +2,7 @@
 import { useFormik } from "formik";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import React, { useState } from "react";
 import * as yup from "yup";
 
@@ -13,7 +13,6 @@ import {
   Button,
   Divider,
   FormControl,
-  FormHelperText,
   FormLabel,
   Input,
   Paper,
@@ -30,11 +29,11 @@ import NiCheck from "@/icons/nexture/ni-check";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiCrossSquare from "@/icons/nexture/ni-cross-square";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
+import { sanitizeInternalNext } from "@/lib/safe-next";
 import { cn } from "@/lib/utils";
 import { useThemeContext } from "@/theme/theme-provider";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
-import { sanitizeInternalNext } from "@flyee/clinical";
 
 const InputErrorTooltip = ({ title }: { title: string }) => (
   <Box className="relative">
@@ -50,28 +49,27 @@ const InputErrorTooltip = ({ title }: { title: string }) => (
 );
 
 /**
- * Free-account sign-up (PRD §6.3). `company` is the PRACTICE name — one
- * professional per workspace in the MVP — and it feeds the handle_new_user
- * trigger, which creates the profile plus the first organization.
+ * Free-account sign-up. One person is one account (docs/PRODUCT.md), so the
+ * handle_new_user trigger creates the profile AND the personal workspace from
+ * the display name — nothing here asks for an organization. The language the
+ * visitor signed up in travels as metadata and becomes the profile locale,
+ * which the transactional e-mails follow.
  */
 export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("auth");
+  const locale = useLocale();
   const hydrated = useHydrated();
   const [submitted, setSubmitted] = useState(false);
   const { isDarkMode } = useThemeContext();
   const prefillEmail = searchParams.get("email") ?? "";
   const requestedNext = searchParams.get("next");
   const next = requestedNext ? sanitizeInternalNext(requestedNext) : null;
-  const joiningInvite = Boolean(next?.startsWith("/invite/"));
   /**
-   * She arrived from an offer page and the only thing standing between her and
-   * the payment screen is this form. Every field here is abandonment, so the
-   * practice name — which she can rename at any time, and which nobody else
-   * sees until she issues a document — is derived from her own name instead of
-   * being asked for. Three fields, and the header says how many steps are left,
-   * because an unbounded form reads as bureaucracy even when it is short.
+   * The visitor arrived from a plan or kit page and this form is the only thing
+   * between them and the payment screen, so the header says how many steps are
+   * left: an unbounded form reads as bureaucracy even when it is short.
    */
   const buyingPlan = Boolean(next?.startsWith("/assinatura") || next?.startsWith("/settings/billing"));
   const [serverError, setServerError] = useState<string | null>(null);
@@ -82,13 +80,6 @@ export default function Page() {
       .required(t("field-required"))
       .min(3, t("field-min", { count: 3 })),
     email: yup.string().required(t("field-required")).email(t("field-email")),
-    company:
-      joiningInvite || buyingPlan
-        ? yup.string()
-        : yup
-            .string()
-            .required(t("field-required"))
-            .min(3, t("field-min", { count: 3 })),
     password: yup
       .string()
       .required(t("field-required"))
@@ -98,7 +89,7 @@ export default function Page() {
   });
 
   const formik = useFormik({
-    initialValues: { name: "", email: prefillEmail, company: "", password: "" },
+    initialValues: { name: "", email: prefillEmail, password: "" },
     validationSchema,
     onSubmit: async (values) => {
       setServerError(null);
@@ -109,21 +100,12 @@ export default function Page() {
       const supabase = createClient();
       const callback = new URL("/auth/callback", window.location.origin);
       if (next) callback.searchParams.set("next", next);
-      // Invite recipients receive their single workspace only after explicit
-      // acceptance. Everyone else gets a personal practice workspace here.
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
           emailRedirectTo: callback.toString(),
-          // `company` is what makes handle_new_user create the workspace; with
-          // the field hidden for offer traffic, her own name takes its place —
-          // otherwise the trigger creates no organization and she lands on
-          // /auth/complete-profile instead of the checkout she paid attention to.
-          data: {
-            display_name: values.name,
-            ...(!joiningInvite ? { company: (buyingPlan ? values.name : values.company).trim() } : {}),
-          },
+          data: { display_name: values.name.trim(), locale },
         },
       });
       if (error) {
@@ -278,9 +260,6 @@ export default function Page() {
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
                   />
-                  {buyingPlan && (
-                    <FormHelperText className="text-text-secondary">{t("signup-offer-practice-note")}</FormHelperText>
-                  )}
                 </FormControl>
 
                 <FormControl className="outlined" variant="standard" size="small">
@@ -298,33 +277,6 @@ export default function Page() {
                     onBlur={formik.handleBlur}
                   />
                 </FormControl>
-
-                {joiningInvite ? (
-                  <Alert severity="info" className="neutral bg-background-paper/60! mb-4">
-                    {t("invite-signup-body")}
-                  </Alert>
-                ) : buyingPlan ? null : (
-                  <FormControl className="outlined" variant="standard" size="small">
-                    <FormLabel component="label" htmlFor="company" className="flex flex-row">
-                      {t("practice")}
-                      {formik.touched.company && formik.errors.company && (
-                        <InputErrorTooltip title={formik.errors.company} />
-                      )}
-                    </FormLabel>
-                    <Input
-                      id="company"
-                      name="company"
-                      autoComplete="organization"
-                      // An example, because the label alone used to be read as
-                      // the answer: workspaces called just "Consultório".
-                      placeholder={t("practice-placeholder")}
-                      value={formik.values.company}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                    />
-                    <FormHelperText className="text-text-secondary">{t("practice-hint")}</FormHelperText>
-                  </FormControl>
-                )}
 
                 <FormControl className="outlined" variant="standard" size="small">
                   <FormLabel component="label" htmlFor="password" className="flex flex-row">

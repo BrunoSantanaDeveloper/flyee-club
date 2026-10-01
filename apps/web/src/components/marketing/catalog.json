@@ -15,31 +15,10 @@
   ],
   "tones": {
     "source": "tone.ts — TONE map + toneAt(index) rotation",
-    "values": [
-      "primary",
-      "secondary",
-      "accent-1",
-      "accent-2",
-      "accent-3",
-      "accent-4"
-    ],
+    "values": ["primary", "secondary", "accent-1", "accent-2", "accent-3", "accent-4"],
     "rule": "primary is reserved for CTAs and the page's one bold moment; categorical elements (plan tiers, feature families, chart series, icon chips) take accent hues with a CONSISTENT family→hue mapping across the whole site. A 100%-primary page reads monochrome and fails the premium bar."
   },
   "components": [
-    {
-      "name": "AnamnesisCard",
-      "file": "anamnesis-card.tsx",
-      "role": "evidence",
-      "props": "title, subtitle?, fields: {label, value?, state: clear|attention|empty, stateLabel}[], source?: {label, quote}, className",
-      "use": "MedChina signature motif (docs/DESIGN.md): structured-anamnesis surface with per-field review states (jade=clear, terracotta=attention, neutral=empty) and optional provenance footnote; the hero frame media and the anamnesis/traceability evidence — fictitious data only (Helena Martins)"
-    },
-    {
-      "name": "PhoneFrame",
-      "file": "phone-frame.tsx",
-      "role": "evidence",
-      "props": "children (screen content), className · RecordingMock{patient, statusLabel, timer, pauseLabel, voiceLabel, finishLabel} · AgendaMock{heading, items: {time, name, note}[]} · StatusMock{title, subtitle, steps: {label, note, state: done|current}[]}",
-      "use": "token phone chrome for the companion-app story (real screenshots when they exist); RecordingMock renders the Modo Consulta screen (recording state + timer + big actions) with translated labels"
-    },
     {
       "name": "Section",
       "file": "section.tsx",
@@ -181,13 +160,6 @@
       "use": "benefit-led card grid, meaningful icon per family hue; never the only archetype on a page (premium bar #2)"
     },
     {
-      "name": "Testimonials",
-      "file": "testimonials.tsx",
-      "funnel": "trust",
-      "props": "items: {quote, name, role, tone?}",
-      "use": "quotes must carry a concrete outcome (numbers, before/after); initials avatars rotate harmonic hues, no stock photos"
-    },
-    {
       "name": "LogoCloud",
       "file": "logo-cloud.tsx",
       "funnel": "trust",
@@ -206,7 +178,7 @@
       "file": "faq.tsx",
       "funnel": "objection handling",
       "props": "eyebrow?, title, subtitle?, items: {question, answer}, id?, layout: stack|split (sticky intro + list), link?: {label, href}",
-      "use": "REAL purchase objections (price, lock-in, security, migration) answered plainly; emits FAQPage JsonLd"
+      "use": "REAL purchase objections (price, lock-in, security, updates) answered plainly; emits FAQPage JsonLd"
     },
     {
       "name": "Cta",
@@ -237,25 +209,11 @@
       "use": "long-form reading rhythm (legal pages, articles) without styling each element by hand"
     },
     {
-      "name": "ConsultationMock",
-      "file": "consultation-mock.tsx",
-      "role": "evidence",
-      "props": "labels: {brand, search, kicker, title, reviewChip, tabs[], fields (AnamnesisField[]), changesKicker, changesTitle, changes[], changesCta}, ariaLabel, className",
-      "use": "token mock of the MedChina web record panel (blueprint hero frame): topbar + sidebar + field cards in the field-state hues + dark changes panel; role=img, fictitious data only"
-    },
-    {
       "name": "NumberStrip",
       "file": "number-strip.tsx",
       "role": "trust",
       "props": "items: {title, body}[] (3-4)",
       "use": "compact contrast band of numbered reassurance items under camel display ordinals (blueprint trust strip); sits right under the hero"
-    },
-    {
-      "name": "WorkflowDemo",
-      "file": "workflow-demo.tsx",
-      "role": "desire (how it works)",
-      "props": "tabsLabel, conversation/mapping/analysis/plan: WorkflowStepCopy & step-specific evidence strings",
-      "use": "interactive 4-tab consultation-flow demo (Conversa→Anamnese→Análise→Plano): the same fictitious information travelling through the product; client only for tab state, arrow-key accessible"
     },
     {
       "name": "Comparison",
@@ -276,35 +234,7 @@
       "file": "index-grid.tsx",
       "role": "desire",
       "props": "items: string[], accentEvery?: number",
-      "use": "indexed hairline grid of clinical categories (MTC specialization map) with periodic deep accent cells; camel ordinals"
-    },
-    {
-      "name": "AnamnesisDemo",
-      "file": "anamnesis-demo.tsx",
-      "role": "evidence",
-      "props": "quote: {kicker, text, cite}, connectorLabel, prepared: {kicker, title, countChip, rows: {label, value, state, stateLabel}[], investigation: {title, body}}",
-      "use": "quote → supervised-organization connector → prepared-fields card with the three field states + investigation footnote (absence stays blank); fictitious data only"
-    },
-    {
-      "name": "TraceabilityDemo",
-      "file": "traceability-demo.tsx",
-      "role": "evidence",
-      "props": "kicker, chip, field, value, origin: {kicker, quote, timecode}, actions: {listen, edit, reject, validated}, ariaLabel · SourceLegend{items: {label, tone}[]}",
-      "use": "provenance demo: one anamnesis field, its source audio excerpt and the four review actions (role=img); SourceLegend renders the permanent four-source legend (swatch + text, never color alone)"
-    },
-    {
-      "name": "ConsultationDuo",
-      "file": "consultation-duo.tsx",
-      "role": "evidence",
-      "props": "labels: {web (record panel strings/fields), phone (recording screen strings), notes (two floating notes)}, ariaLabel, className",
-      "use": "the blueprint hero visual ported 1:1: 690×570 token canvas with the web record panel in perspective, overlapping phone recording, orbit ellipses, dashed flow line with travelling dots and floating notes; scales via --duo-scale; role=img, fictitious data only"
-    },
-    {
-      "name": "MobileSequence",
-      "file": "mobile-sequence.tsx",
-      "role": "evidence",
-      "props": "back/front/side (screen contents: AgendaMock/RecordingMock/StatusMock), ariaLabel, className",
-      "use": "blueprint §15.7: three companion-app screens fanned over a faint ring on the deep band (agenda behind, recording front, status right); fixed canvas scaled via --seq-scale; role=img"
+      "use": "indexed hairline grid of categories (e.g. the seven catalog trails) with periodic deep accent cells; secondary-tone ordinals"
     }
   ]
 }

@@ -1,7 +1,5 @@
 "use client";
 
-import CampaignOfferAdmin from "./components/campaign-offer-admin";
-import ConversionOffersAdmin from "./components/conversion-offers-admin";
 import CouponsAdmin from "./components/coupons-admin";
 import FoundersAdmin from "./components/founders-admin";
 import ModulesAdmin from "./components/modules-admin";
@@ -81,41 +79,17 @@ export default function AdminBilling() {
               <Box hidden={tab !== 1}>{tab === 1 && <ModulesAdmin />}</Box>
               <Box hidden={tab !== 2}>{tab === 2 && <CouponsAdmin />}</Box>
               <Box hidden={tab !== 3}>{tab === 3 && <SubscriptionsAdmin />}</Box>
-              {/* Every offer in ONE tab. They were two, and a third one for the
-                  paid campaign would have made three places to look for "what
-                  are we selling right now" — with the same plan slug typed into
-                  each. Same order as the funnel: cold campaign, warm condition,
-                  in-product offer to someone already trialling. */}
               <Box hidden={tab !== 4}>
                 {tab === 4 && (
-                  <Box className="flex flex-col gap-8">
-                    <Box className="flex flex-col gap-3">
-                      <Box>
-                        <Typography variant="subtitle1">Oferta de campanha · /assinar</Typography>
-                        <Typography variant="body2" className="text-text-secondary">
-                          O que o tráfego pago recebe. O prazo daqui é o que o checkout aplica.
-                        </Typography>
-                      </Box>
-                      <CampaignOfferAdmin />
+                  <Box className="flex flex-col gap-3">
+                    <Box>
+                      <Typography variant="subtitle1">Oferta fundadores · /fundadores</Typography>
+                      <Typography variant="body2" className="text-text-secondary">
+                        Preço de fundador travado, limitado por vagas e por prazo. O contador da página e o checkout
+                        leem a mesma função.
+                      </Typography>
                     </Box>
-                    <Box className="flex flex-col gap-3">
-                      <Box>
-                        <Typography variant="subtitle1">Oferta fundadores · /fundadores</Typography>
-                        <Typography variant="body2" className="text-text-secondary">
-                          A condição do público aquecido, limitada por vagas e vendida em call.
-                        </Typography>
-                      </Box>
-                      <FoundersAdmin />
-                    </Box>
-                    <Box className="flex flex-col gap-3">
-                      <Box>
-                        <Typography variant="subtitle1">Ofertas de conversão do trial</Typography>
-                        <Typography variant="body2" className="text-text-secondary">
-                          Oferecidas dentro do produto nos dois momentos de maior intenção, uma vez por consultório.
-                        </Typography>
-                      </Box>
-                      <ConversionOffersAdmin />
-                    </Box>
+                    <FoundersAdmin />
                   </Box>
                 )}
               </Box>

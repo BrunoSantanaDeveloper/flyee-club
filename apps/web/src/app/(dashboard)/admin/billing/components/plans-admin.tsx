@@ -300,7 +300,7 @@ export default function PlansAdmin() {
             <EmptyState
               icon={<NiMoney size="medium" />}
               title="Nenhum plano ainda"
-              description="O catálogo de planos é o que um consultório pode comprar — preço, período, trial e os limites que cada nível libera."
+              description="O catálogo de planos é o que uma conta pode comprar — preço, período, trial e os limites que cada nível libera."
               action={{ label: "Novo plano", onClick: () => openEdit() }}
               className="border-none"
             />

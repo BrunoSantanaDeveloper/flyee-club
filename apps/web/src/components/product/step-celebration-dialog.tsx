@@ -71,8 +71,8 @@ export default function StepCelebrationDialog({
       <DialogHeader id={TITLE_ID} title={title} onClose={onClose} closeLabel={t("close")} className="pb-0!" />
       <DialogContent className="flex flex-col gap-4">
         <Box className="flex flex-row items-start gap-3">
-          {/* accent-1 is the codebase's "done" tone (see ConsultationStepHeader).
-              Green-as-success, never a colour that would read as risk. */}
+          {/* accent-1 is the codebase's "done" tone. Green-as-success, never a
+              colour that would read as risk. */}
           <span className="bg-accent-1/15 text-accent-1 flex h-10 w-10 flex-none items-center justify-center rounded-2xl">
             <NiCheck size="medium" />
           </span>

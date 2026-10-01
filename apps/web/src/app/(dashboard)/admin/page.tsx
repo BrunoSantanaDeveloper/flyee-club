@@ -250,14 +250,14 @@ export default function AdminOverview() {
               icon={<NiCoin size="medium" />}
               label="Créditos consumidos (30 d)"
               value={String(metrics?.credits_consumed_30d ?? 0)}
-              hint="Em todos os consultórios"
+              hint="Em todas as contas"
               loading={loading}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <StatCard
               icon={<NiBuilding size="medium" />}
-              label="Consultórios"
+              label="Contas"
               value={String(metrics?.orgs ?? 0)}
               hint={`${metrics?.new_orgs_30d ?? 0} novos nos últimos 30 dias`}
               loading={loading}

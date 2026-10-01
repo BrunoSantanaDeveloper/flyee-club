@@ -81,7 +81,7 @@ export default function SupportAdmin() {
       />
       <TextField
         label="E-mail de suporte"
-        placeholder="suporte@medchina.com.br"
+        placeholder="suporte@flyee.club"
         helperText="Exibido como canal mailto:."
         value={email}
         onChange={(event) => setEmail(event.target.value)}

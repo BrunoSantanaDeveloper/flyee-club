@@ -6,43 +6,33 @@ import { useTranslations } from "use-intl";
 
 import { Box, Typography } from "@mui/material";
 
-import { useAudioAllowance } from "@/hooks/use-audio-allowance";
 import { useCurrentOrg } from "@/hooks/use-current-org";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import NiBadge from "@/icons/nexture/ni-badge";
-import { getProductAction } from "@/lib/product-actions";
 import { trackCommercialEvent } from "@/lib/product-events";
 import { cn } from "@/lib/utils";
 import { MenuType } from "@/types";
 
-const BILLING_HREF = `${getProductAction("billing").href}?source=menu&feature=plans`;
+const BILLING_HREF = "/settings/billing?source=menu&feature=plans";
 
 /**
  * The workspace's current plan, at the foot of the nav rail.
  *
- * Deliberately a STATE READOUT, not a promotion. The product already sells at
- * the moment of need (recorder, reasoning panel, usage meter at 80/95/100%),
- * and PRD §7.4 asks for controlled frequency — an ambient "UPGRADE NOW" in
- * chrome that is on screen while a patient is in the room is exactly the nag
- * that asks for. What was missing is the opposite: a free workspace had no
- * quiet, permanent way to learn the paid tiers exist. So this names the plan,
- * and only adds a "compare plans" line when there is in fact something to buy.
- *
- * The plan comes from `org_audio_allowance` — the same single source the
- * capture gate uses (root CLAUDE.md); querying subscriptions here would create
- * a second opinion about the same workspace. The menu lives in the persistent
- * dashboard layout, so this is one RPC per page load, not per navigation.
+ * Deliberately a STATE READOUT, not a promotion: it names the plan, and only
+ * adds a "compare plans" line when there is in fact something to buy. The plan
+ * comes from `org_entitlements` (hooks/use-entitlements.ts), the single answer
+ * every gate shares. The menu lives in the persistent dashboard layout, so
+ * this is one request per page load, not per navigation.
  */
 export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
   const t = useTranslations("dashboard");
   const { orgId } = useCurrentOrg();
-  const { allowance, loading } = useAudioAllowance(orgId);
+  const { entitlements, loading } = useEntitlements(orgId);
   const viewTracked = useRef(false);
 
-  // A paid workspace has nothing to buy here: the commercial funnel must not
-  // count it as an impression, or the surface's conversion rate is diluted by
-  // people it was never addressed to (which is how the old menu CTA reported
-  // views from superadmins).
-  const sellable = Boolean(allowance) && allowance!.source !== "plan";
+  // A paying workspace has nothing to buy here: counting it as an impression
+  // would dilute the surface's conversion rate with people it never addressed.
+  const sellable = Boolean(entitlements) && (!entitlements!.active || entitlements!.isFree);
 
   useEffect(() => {
     if (!sellable || viewTracked.current) return;
@@ -50,20 +40,12 @@ export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
     trackCommercialEvent("upgrade.prompt_viewed", "menu", "plans");
   }, [sellable]);
 
-  if (loading || !allowance) return null;
+  if (loading || !entitlements) return null;
 
-  // A PIX being confirmed is honoured provisionally (migration 0111), which the
-  // allowance reports as source "plan". Naming the plan outright would tell her
-  // she has what the bank has not confirmed yet.
-  const planLabel = allowance.provisional
-    ? t("menu-plan-pending", { plan: allowance.planName ?? t("menu-plan-active") })
-    : allowance.reason === "payment_unconfirmed"
-      ? t("menu-plan-unconfirmed")
-      : allowance.source === "plan"
-        ? (allowance.planName ?? t("menu-plan-active"))
-        : allowance.source === "trial"
-          ? t("menu-plan-trial")
-          : t("menu-plan-free");
+  const planLabel =
+    entitlements.active && !entitlements.isFree
+      ? (entitlements.planName ?? t("menu-plan-active"))
+      : t("menu-plan-free");
   const title = t("menu-plan-current", { plan: planLabel });
   const minimal = menuType === MenuType.Minimal;
 
@@ -89,8 +71,6 @@ export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
           </Typography>
         )}
       </Box>
-      {/* Only when there is something to buy — a Pro subscriber reading
-          "compare plans" every day is noise, not information. */}
       {!minimal && sellable && (
         <Typography
           variant="body2"

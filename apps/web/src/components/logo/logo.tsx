@@ -21,13 +21,7 @@ function Mark({ tone }: { tone: "default" | "contrast" }) {
   return (
     <>
       <rect width="512" height="512" rx="112" fill={tile} />
-      <path
-        d="M384 256A128 128 0 1 1 256 128"
-        fill="none"
-        stroke={ink}
-        strokeWidth="48"
-        strokeLinecap="round"
-      />
+      <path d="M384 256A128 128 0 1 1 256 128" fill="none" stroke={ink} strokeWidth="48" strokeLinecap="round" />
       <circle cx="346.5" cy="165.5" r="34" fill={ink} />
     </>
   );

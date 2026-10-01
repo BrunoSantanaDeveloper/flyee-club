@@ -300,6 +300,7 @@ Das seis decisões originais, três foram tomadas em 2026-09-30 e estão marcada
 - [x] **Encontros.** Decidido: link externo.
 - [x] **Endereços em inglês.** Decidido: traduzidos já na v1.
 - [x] **Revisão jurídica.** Decidido: os termos são considerados revisados.
+- [ ] **Quem opera o flyee.club.** Razão social, CNPJ e cidade que os termos de uso e a política de privacidade identificam. Os textos legais herdados ainda identificam a empresa do MedChina; o seed dos termos (fase 2) precisa desse dado antes do primeiro deploy.
 - [ ] **Preço anual em USD.** Este documento só traz US$ 19 por mês. A hipótese do plano é 10 vezes a mensal.
 - [ ] **Trial da assinatura.** Nenhum na v1, ou dias de teste pelo provedor mais tarde?
 

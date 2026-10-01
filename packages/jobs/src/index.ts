@@ -1,51 +1,19 @@
 import { EventSchemas, Inngest } from "inngest";
 
 /**
- * Template-wide event map. Packages extend it by declaring their events
- * here so every `inngest.send` and function trigger stays typed.
+ * Platform-wide event map. Packages and apps/web declare their events here so
+ * every `inngest.send` and function trigger stays typed. flyee.club events use
+ * the `flyee/` prefix (phase 8 of docs/PLANO-IMPLEMENTACAO.md adds them).
  */
 export type JobEvents = {
-  /** Chunk + embed a knowledge document (sent by @flyee/knowledge ingestion). */
-  "knowledge/document.ingest": { data: { documentId: string } };
-  /** Run one sync cycle for an external connection (@flyee/connectors). */
-  "connectors/connection.sync": { data: { connectionId: string } };
-  /** Transcribe an uploaded audio file (@flyee/transcribe). */
-  "transcribe/audio.transcribe": { data: { transcriptionId: string } };
-  /** Deliver one queued wa_messages row (@flyee/whatsapp). */
-  "whatsapp/message.send": { data: { messageId: string } };
-  /** Inbound WhatsApp message — derived projects handle business logic. */
-  "whatsapp/message.received": { data: { messageId: string; from: string; text: string } };
   /** Run a logical database backup now (@flyee/backup); also fires on a daily cron. */
   "backup/run.requested": { data: Record<string, never> };
-
-  // ---- MedChina project events (business logic lives in apps/web/src/lib) ----
-  /** Transcribe a consultation recording and pre-fill its anamnesis (PRD §10.2). */
-  "medchina/recording.process": { data: { recordingId: string; claimId: string } };
-  /** Kick off the trial lifecycle email drip (activation → expiration → upgrade). */
-  "medchina/trial.started": { data: { orgId: string; userId: string; email: string } };
-  /**
-   * Package a whole practice for download (PRD §9.10 portability). The two
-   * strings travel with the event because they are written INTO the archive
-   * and must be in the requester's language — a background job has no locale
-   * of its own to resolve them from.
-   */
-  "medchina/account.export": {
-    data: { exportId: string; scopeNote: string; readmeTitle: string; readyTitle: string; readyBody: string };
-  };
-  /**
-   * Send one kind of live-event e-mail to every eligible registration of an
-   * event (docs/PAGINA-EVENTO.md §8). Fired by the /admin/leads buttons;
-   * idempotent — each kind has its own `email_<kind>_sent_at` column.
-   */
-  "medchina/live-event.email": {
-    data: { eventId: string; kind: "day_before" | "hour_before" | "live" | "recording" };
-  };
 };
 
 export const isInngestConfigured = Boolean(process.env.INNGEST_EVENT_KEY && process.env.INNGEST_SIGNING_KEY);
 
 /**
- * Single Inngest client for the whole template. In local dev it talks to
+ * Single Inngest client for the whole platform. In local dev it talks to
  * `npx inngest-cli dev` (no keys needed); in production it requires
  * INNGEST_EVENT_KEY + INNGEST_SIGNING_KEY.
  */

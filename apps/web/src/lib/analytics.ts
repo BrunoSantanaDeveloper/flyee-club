@@ -12,11 +12,11 @@ import { COOKIE_KEYS, LOCAL_STORAGE_KEYS } from "@/constants";
  * `analyticsOptOut` cookie — read both server-side (to skip rendering the
  * scripts) and here (to stop emitting events and disable the loaded SDKs).
  *
- * The compliance rule is UNCHANGED and load-bearing: the trackers live ONLY in
- * the marketing layout and NEVER on the authenticated clinical app (LGPD Art. 11
- * — sensitive health data). In-app money-funnel events go SERVER-side via the
- * Conversions API / Measurement Protocol, never a browser tracker on a clinical
- * page. This module only fires PageView / ViewContent on the public site.
+ * Today the trackers live ONLY in the marketing layout; docs/TRACKING.md
+ * (phase 7.3 of docs/PLANO-IMPLEMENTACAO.md) decides whether the member area
+ * mounts them too. Money-funnel events (sign-up, purchase) go SERVER-side via
+ * the Conversions API / Measurement Protocol. This module only fires PageView /
+ * ViewContent on the public site.
  */
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() || null;

@@ -2,8 +2,6 @@
 
 import AccessEventsAdmin from "./components/access-events-admin";
 import AuditEventsAdmin from "./components/audit-events-admin";
-import ProcessingFailuresAdmin from "./components/processing-failures-admin";
-import WaLogAdmin from "./components/wa-log-admin";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -70,13 +68,9 @@ export default function AdminAudit() {
               <Tabs value={tab} onChange={(_, value) => setTab(value)} className="mb-6">
                 <Tab label="Trilha de auditoria" />
                 <Tab label="Acesso" />
-                <Tab label="Falhas de processamento" />
-                <Tab label="Log do WhatsApp" />
               </Tabs>
               <Box hidden={tab !== 0}>{tab === 0 && <AuditEventsAdmin />}</Box>
               <Box hidden={tab !== 1}>{tab === 1 && <AccessEventsAdmin />}</Box>
-              <Box hidden={tab !== 2}>{tab === 2 && <ProcessingFailuresAdmin />}</Box>
-              <Box hidden={tab !== 3}>{tab === 3 && <WaLogAdmin />}</Box>
             </CardContent>
           </Card>
         </Grid>
