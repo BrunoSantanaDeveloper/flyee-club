@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -7,11 +6,14 @@ import { Box, Button, Drawer, IconButton, List, ListItem } from "@mui/material";
 
 import Logo from "@/components/logo/logo";
 import Container from "@/components/marketing/container";
+import LanguageSwitch from "@/components/marketing/language-switch";
+import Link from "@/components/marketing/locale-link";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiMenu from "@/icons/nexture/ni-menu";
 
 // Only routes that exist. Phase 7.2 of docs/PLANO-IMPLEMENTACAO.md adds
-// "Como funciona" and "Catálogo" as those pages are built.
+// "Como funciona" and "Catálogo" as those pages are built. The hrefs are the
+// internal (Portuguese) paths; LocaleLink writes the address of the language.
 const NAV_LINKS = [
   { key: "nav-pricing", href: "/planos" },
   { key: "footer-help", href: "/ajuda" },
@@ -46,6 +48,7 @@ export default function MarketingHeader() {
         </Box>
 
         <Box className="hidden flex-row items-center gap-2 md:flex">
+          <LanguageSwitch />
           <Button variant="text" color="text-primary" href="/auth/sign-in" LinkComponent={Link}>
             {t("nav-sign-in")}
           </Button>
@@ -99,6 +102,9 @@ export default function MarketingHeader() {
               >
                 {t("nav-sign-in")}
               </Button>
+            </ListItem>
+            <ListItem disablePadding>
+              <LanguageSwitch fullWidth className="justify-start" />
             </ListItem>
           </List>
           <Button variant="contained" color="primary" href="/auth/sign-up" LinkComponent={Link}>

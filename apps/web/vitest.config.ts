@@ -10,5 +10,8 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     unstubEnvs: true,
+    // next-intl's ESM build imports "next/server" without an extension, which
+    // Node refuses outside a bundler; processing it through Vite resolves it.
+    server: { deps: { inline: ["next-intl"] } },
   },
 });

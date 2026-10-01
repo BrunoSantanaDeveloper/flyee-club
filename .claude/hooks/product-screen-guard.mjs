@@ -57,7 +57,7 @@ process.stdin.on("end", () => {
     .map(normalizeToolPath)
     .some(
       (path) =>
-        !/\/app\/\(marketing\)\//.test(path) &&
+        !/\/app\/(?:\[locale\]\/)?\(marketing\)\//.test(path) &&
         !/\/components\/marketing\//.test(path) &&
         (/\/app\/\(dashboard\)\//.test(path) || /\/components\/product\//.test(path)),
     );

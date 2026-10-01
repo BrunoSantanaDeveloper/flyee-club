@@ -1,5 +1,5 @@
 {
-  "_readme": "Machine-readable catalog of the marketing component library (the Lovable design-system.json idea). The PreToolUse marketing-guard injects a digest of this file into every write/edit under app/(marketing)/** or components/marketing/**, so the full expressive range is in context on every generation — not just the archetypes the model happens to remember. Keep entries in sync when a component's props change; guard lines render as `Name(props) — use`.",
+  "_readme": "Machine-readable catalog of the marketing component library (the Lovable design-system.json idea). The PreToolUse marketing-guard injects a digest of this file into every write/edit under app/[locale]/(marketing)/** or components/marketing/**, so the full expressive range is in context on every generation — not just the archetypes the model happens to remember. Keep entries in sync when a component's props change; guard lines render as `Name(props) — use`.",
   "contract": [
     "Every content block sits in <Section>/<Container>/<SectionHeader> — spacing/width come from marketing tokens, never per-page values",
     "Tokens only: hsl(var(--token)) / token Tailwind classes; must look right in the active palette × light/dark",
@@ -7,7 +7,8 @@
     "Copy through the marketing i18n namespace in BOTH locales (pt-BR, en)",
     "Icons only via @/icons/nexture/ni-* alias; meaningful concept icons, never decoration",
     "Exactly one <h1> per page (Hero, or SectionHeader/PricingSection as/headingAs=\"h1\")",
-    "New public routes: PUBLIC_PREFIXES (src/middleware.ts) + src/app/sitemap.ts + generateMetadata",
+    "New public pages: folder under app/[locale]/(marketing) named after the Portuguese path + declared in src/i18n/routing.ts (pt-BR and English addresses) + src/app/sitemap.ts when indexed + generateMetadata spreading publicPageMetadata (lib/seo.ts)",
+    "Internal links through <LocaleLink> (also as MUI LinkComponent) with the Portuguese path: it renders the address of the language being read; /auth/* and external URLs pass through",
     "Structured data via <JsonLd> only; Organization/FAQPage/Product already emitted by layout/Faq/PricingSection",
     "Motion via <Reveal> or useGSAP in client components; transforms + autoAlpha; reduced-motion safe",
     "Layer scale: compositions are relative isolate with z-0 (back) / z-10 (frame) / z-20 (front); z-30 is reserved for site chrome",
@@ -235,6 +236,13 @@
       "role": "desire",
       "props": "items: string[], accentEvery?: number",
       "use": "indexed hairline grid of categories (e.g. the seven catalog trails) with periodic deep accent cells; secondary-tone ordinals"
+    },
+    {
+      "name": "LocaleLink",
+      "file": "locale-link.tsx",
+      "role": "navigation",
+      "props": "href (internal Portuguese path, query and hash kept), every next/link prop",
+      "use": "every internal link of a public surface, and LinkComponent of MUI Buttons; never next/link directly on a public page, which would send an English reader to the Portuguese address"
     }
   ]
 }

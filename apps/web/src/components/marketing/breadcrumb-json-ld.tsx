@@ -1,5 +1,8 @@
+import { useLocale } from "next-intl";
+
 import { BRAND } from "@/brand";
 import JsonLd from "@/components/marketing/json-ld";
+import { localizeHref } from "@/i18n/routing";
 
 /**
  * BreadcrumbList for an interior page.
@@ -10,9 +13,10 @@ import JsonLd from "@/components/marketing/json-ld";
  * parent/child signal instead of one inferred from the path.
  *
  * The home is always the first crumb and is added HERE, so no page has to
- * remember it and no two pages can name it differently. Paths are
- * site-relative; the absolute URL is built from `BRAND.siteUrl`, which is the
- * canonical host the whole metadata layer already agrees on.
+ * remember it and no two pages can name it differently. Paths are the
+ * internal (Portuguese) ones; each crumb points at the address of the language
+ * being read, absolute on `BRAND.siteUrl`, the canonical host the whole
+ * metadata layer already agrees on.
  *
  * Not for the home itself: a one-item breadcrumb describes nothing.
  */
@@ -25,6 +29,7 @@ export default function BreadcrumbJsonLd({
   /** Everything after the home, in order, ending at the current page. */
   trail: { name: string; path: string }[];
 }) {
+  const locale = useLocale();
   const crumbs = [{ name: home, path: "/" }, ...trail];
 
   return (
@@ -32,12 +37,15 @@ export default function BreadcrumbJsonLd({
       data={{
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
-        itemListElement: crumbs.map((crumb, index) => ({
-          "@type": "ListItem",
-          position: index + 1,
-          name: crumb.name,
-          item: `${BRAND.siteUrl}${crumb.path === "/" ? "" : crumb.path}`,
-        })),
+        itemListElement: crumbs.map((crumb, index) => {
+          const address = localizeHref(crumb.path, locale);
+          return {
+            "@type": "ListItem",
+            position: index + 1,
+            name: crumb.name,
+            item: `${BRAND.siteUrl}${address === "/" ? "" : address}`,
+          };
+        }),
       }}
     />
   );

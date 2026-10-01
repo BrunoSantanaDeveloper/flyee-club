@@ -1,9 +1,9 @@
 "use client";
-import Link from "next/link";
 import { useRef } from "react";
 
 import { Button } from "@mui/material";
 
+import Link from "@/components/marketing/locale-link";
 import { gsap, readMotionToken, tokenSeconds, useGSAP } from "@/components/marketing/motion";
 import Section from "@/components/marketing/section";
 

@@ -63,9 +63,12 @@ const COPY_FILE_PATTERNS = [/\/components\/marketing\/home-copy\//];
  */
 const SATORI_IMAGE_PATTERN = /\/(opengraph|twitter)-image\.tsx$/;
 
+/** The public pages: app/[locale]/(marketing)/** (path-based locales, phase 7.1). */
+const MARKETING_PAGES = /\/app\/(?:\[locale\]\/)?\(marketing\)\//;
+
 function lint(filePath, content) {
   const p = filePath.replace(/\\/g, "/");
-  const isPage = /\/app\/\(marketing\)\//.test(p);
+  const isPage = MARKETING_PAGES.test(p);
   const file = basename(p);
   const isExempt = COPY_FILE_PATTERNS.some((pattern) => pattern.test(p)) || SATORI_IMAGE_PATTERN.test(p);
   const violations = [];
@@ -137,29 +140,32 @@ function lint(filePath, content) {
       `[image-sizes] next/image used without a sizes= prop — add one so the browser fetches a sensibly sized webp/avif (LCP).`,
     );
 
-  // New public route → must be registered in PUBLIC_PREFIXES and the sitemap.
-  if (isPage && file === "page.tsx" && p.includes("/src/app/(marketing)/")) {
+  // New public page → declared in the locale routing and present in the sitemap.
+  if (isPage && file === "page.tsx" && p.includes("/src/app/")) {
     const route = routeFromPath(p);
     if (route) {
-      const webRoot = p.slice(0, p.indexOf("/src/app/(marketing)/"));
+      const webRoot = p.slice(0, p.indexOf("/src/app/"));
+      const internal = `/${route}`;
       const prefix = "/" + route.split("/")[0];
-      const middleware = tryRead(join(webRoot, "src", "middleware.ts"));
+      const routing = tryRead(join(webRoot, "src", "i18n", "routing.ts"));
       const sitemap = tryRead(join(webRoot, "src", "app", "sitemap.ts"));
-      if (middleware && !middleware.includes(`"${prefix}"`) && !middleware.includes(`'${prefix}'`))
+      if (routing && !routing.includes(`"${internal}"`))
         advisories.push(
-          `[route] ${prefix} not found in PUBLIC_PREFIXES (src/middleware.ts) — every public route must be listed.`,
+          `[route] ${internal} is not declared in src/i18n/routing.ts — every public page declares its pt-BR and English addresses there (pathnames), which is also what makes the middleware treat it as public.`,
         );
       if (sitemap && !sitemap.includes(prefix))
-        advisories.push(`[route] ${prefix} not found in src/app/sitemap.ts — every public route enters the sitemap.`);
+        advisories.push(
+          `[route] ${prefix} not found in src/app/sitemap.ts — an indexed page enters the sitemap; a noindex one is named in its exclusion comment.`,
+        );
     }
   }
 
   return { violations, advisories };
 }
 
-/** app/(marketing)/pricing/page.tsx → "pricing"; the home ("") returns null. */
+/** app/[locale]/(marketing)/planos/page.tsx → "planos"; the home ("") returns null. */
 function routeFromPath(p) {
-  const rel = p.split("/app/(marketing)/")[1];
+  const rel = p.split(MARKETING_PAGES)[1];
   if (!rel) return null;
   const segments = dirname(rel)
     .split("/")
@@ -185,7 +191,7 @@ process.stdin.on("end", () => {
 
     for (const toolPath of extractToolPaths(input)) {
       const p = normalizeToolPath(toolPath);
-      const isMarketing = /\/app\/\(marketing\)\//.test(p) || /\/components\/marketing\//.test(p);
+      const isMarketing = MARKETING_PAGES.test(p) || /\/components\/marketing\//.test(p);
       if (!isMarketing || !LINTABLE.test(p)) continue;
 
       // PostToolUse: the file is already on disk — lint the real result.

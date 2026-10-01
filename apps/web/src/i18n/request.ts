@@ -2,6 +2,7 @@ import { getRequestConfig } from "next-intl/server";
 
 import { DEFAULTS } from "@/config";
 import { LocaleOption } from "@/constants";
+import { isPublicLocale } from "@/i18n/routing";
 import { resolveRequestLocale } from "@/lib/locale-request";
 
 // Message catalogs live in @flyee/content. Static map instead of a
@@ -11,18 +12,24 @@ const MESSAGES: Record<LocaleOption, () => Promise<{ default: Record<string, unk
   "pt-BR": () => import("@flyee/content/messages/pt-BR.json"),
 };
 
-export default getRequestConfig(async () => {
+export default getRequestConfig(async ({ requestLocale }) => {
   try {
     /**
-     * The cookie is the visitor's own choice and always wins. Without one — a
-     * first visit — this request's own signals decide, so an English reader
-     * gets English on the FIRST render. Detecting here rather than only in the
-     * middleware is deliberate: a cookie the middleware sets lands on the
-     * RESPONSE, so trusting it alone would serve this page in Portuguese and
-     * switch only on the next navigation. The middleware persists the same
-     * decision so it survives and can be overridden.
+     * Two sources, one per kind of page (docs/PLANO-IMPLEMENTACAO.md, 7.1):
+     *
+     * - A public page carries its language in the URL. next-intl hands it over
+     *   as `requestLocale` (the `[locale]` segment, or the header the
+     *   middleware sets for it), and nothing else may override it: the address
+     *   is what a crawler indexed and what a link promised.
+     * - Everything else (sign-in, the member area, checkout) has no locale in
+     *   the URL and follows the visitor: the cookie she chose, or this
+     *   request's own signals on a first visit. Detecting here rather than only
+     *   in the middleware is deliberate: a cookie the middleware sets lands on
+     *   the RESPONSE, so trusting it alone would render this request in
+     *   Portuguese and switch only on the next navigation.
      */
-    const { locale } = await resolveRequestLocale();
+    const requested = await requestLocale;
+    const locale = isPublicLocale(requested) ? requested : (await resolveRequestLocale()).locale;
 
     return {
       locale,

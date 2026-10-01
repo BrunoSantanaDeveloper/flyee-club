@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import Link from "@/components/marketing/locale-link";
 import Reveal from "@/components/marketing/reveal";
 import { TONE, type Tone } from "@/components/marketing/tone";
 import NiArrowRight from "@/icons/nexture/ni-arrow-right";

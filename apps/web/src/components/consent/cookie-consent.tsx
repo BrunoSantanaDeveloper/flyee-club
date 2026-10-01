@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Box, Button, Card, Slide, Typography } from "@mui/material";
 
+import Link from "@/components/marketing/locale-link";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import { ANALYTICS_ENABLED, getStoredConsent, optOutOfAnalytics, storeConsent } from "@/lib/analytics";
 

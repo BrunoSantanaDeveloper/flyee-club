@@ -1,7 +1,7 @@
 import { getDisplayPlans } from "../plans";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import TrackEvent from "@/components/consent/track-event";
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
@@ -12,14 +12,15 @@ import PricingSection from "@/components/marketing/pricing-section";
 import { COOKIE_KEYS } from "@/constants";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import { normalizeCouponCode } from "@/lib/offer-link";
+import { publicPageMetadata } from "@/lib/seo";
 import { resolvePublicCoupon } from "@flyee/billing/public";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("marketing");
+  const [t, locale] = await Promise.all([getTranslations("marketing"), getLocale()]);
   return {
     title: t("pricing-meta-title"),
     description: t("pricing-meta-description"),
-    alternates: { canonical: "/planos" },
+    ...publicPageMetadata({ path: "/planos", locale }),
   };
 }
 

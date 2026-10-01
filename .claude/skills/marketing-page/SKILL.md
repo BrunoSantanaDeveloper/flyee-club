@@ -1,6 +1,6 @@
 ---
 name: marketing-page
-description: Design/copy playbook for public marketing pages (landing pages, pricing, about, any page under apps/web/src/app/(marketing)). Use BEFORE creating or substantially editing any public-facing page — it prevents generic "AI slop" design and copy by forcing a committed design direction, conversion-mapped structure and jargon-free copy (EN + pt-BR rules).
+description: Design/copy playbook for public marketing pages (landing pages, pricing, about, any page under apps/web/src/app/[locale]/(marketing)). Use BEFORE creating or substantially editing any public-facing page — it prevents generic "AI slop" design and copy by forcing a committed design direction, conversion-mapped structure and jargon-free copy (EN + pt-BR rules).
 ---
 
 # Marketing page playbook
@@ -9,7 +9,7 @@ You are designing a public page that must convert visitors, not decorate a templ
 
 ## Scope: this skill governs ALL marketing work, not just new pages
 
-It applies equally to **creating a page**, **editing an existing page**, and **adding or changing a section**. The `PreToolUse` marketing-guard hook loads it automatically on every Write/Edit to `app/(marketing)/**` or `components/marketing/**` — you do not wait to be asked.
+It applies equally to **creating a page**, **editing an existing page**, and **adding or changing a section**. The `PreToolUse` marketing-guard hook loads it automatically on every Write/Edit to `app/[locale]/(marketing)/**` or `components/marketing/**` — you do not wait to be asked.
 
 - **New page** → Pass 0 (inherit or commit a direction), then build.
 - **Edit an existing page** → skip the engine; obey `docs/DESIGN.md`; change only what was asked, in the established style.
@@ -97,7 +97,7 @@ A page can follow every rule below and still look like a beginner site if it is 
 - **i18n:** every string through the `marketing` namespace in BOTH locale files (`pt-BR`, `en`). No hardcoded copy.
 - **Icons:** the codebase ships more than one icon set (Nexture native; Phosphor and others via adapters — see `apps/web/src/icons/README.md`). The set is a per-project decision made once (init-project or tsconfig alias remap), NOT per page. Pages always import through the alias `@/icons/nexture/ni-*` regardless of the chosen set, and never import an icon library (Phosphor, Lucide, MUI icons) directly. If the project hasn't decided yet, ask before the first page — don't mix sets.
 - **Responsive:** mobile-first — the base layout is the phone; breakpoints only add columns/space. No horizontal scroll at 375px. Verify 375/768/1440.
-- **Routes:** a new public page must be added to `PUBLIC_PREFIXES` in `apps/web/src/middleware.ts` and to `apps/web/src/app/sitemap.ts`, and export its own `metadata`/`generateMetadata`.
+- **Routes:** a new public page lives in `app/[locale]/(marketing)/<portuguese-path>/`, is declared in `apps/web/src/i18n/routing.ts` (`pathnames`: its pt-BR address and its translated English one — this is also what makes it public to the middleware), enters `apps/web/src/app/sitemap.ts` when indexed, and exports its own `generateMetadata` spreading `publicPageMetadata({ path, locale })` (`lib/seo.ts`). Internal links use `LocaleLink` with the Portuguese path.
 
 ## SEO & discoverability (every page earns its ranking)
 
@@ -110,7 +110,7 @@ The codebase already ships the technical layer — `sitemap.ts`, `robots.ts`, th
 - **Target term in the visible places:** the page's keyword belongs in the `<h1>`, the title tag, the URL slug and the first sentence — naturally, never stuffed.
 - **Structured data:** reuse the components that already emit it; if a page adds a new schema-eligible block (article, breadcrumb, how-to), emit it with `<JsonLd>` (`components/marketing/json-ld.tsx`) — never hand-write a `<script>`.
 - **Internal links:** connect a new page to related pages and to the money page (pricing/sign-up) — this is how authority flows and how crawlers discover it.
-- **Indexable language:** i18n is cookie-based, so crawlers only see the default locale (`DEFAULTS.locale`). The primary market's language MUST be the default; a truly multilingual site needs `/[locale]/` routing (an architecture change, not a page edit).
+- **Indexable language:** both languages are indexed, each at its own address (pt-BR at `/`, English at `/en` with translated slugs). `publicPageMetadata` emits the canonical of the language being read plus hreflang for every language the page exists in (and `x-default` on the Portuguese address), and the sitemap lists each page once per language. Content that exists in one language only (a help article, a blog post) declares only that language — never serve one language's text at the other's address.
 
 ## Visual vocabulary (the library's expressive range)
 
@@ -135,7 +135,7 @@ Map every section to a funnel stage; a section that serves no stage gets cut:
 1. **Hero — attention + value proposition.** Above the fold answers: what it is, for whom, the outcome. ONE primary CTA per page; its label is the conversion action and repeats verbatim at every action point (hero → pricing → final CTA). Secondary actions are visually subordinate (pastel/text variants).
 2. **Logo cloud / testimonials — trust.** Testimonial quotes carry a concrete outcome (numbers, before/after), never vague praise.
 3. **Feature grid — desire.** Titles are benefit-led (the customer's outcome), never internal feature names.
-4. **Pricing — action.** Real plans via `getDisplayPlans()` (`app/(marketing)/plans.ts`); highlight one anchor plan.
+4. **Pricing — action.** Real plans via `getDisplayPlans()` (`app/[locale]/(marketing)/plans.ts`); highlight one anchor plan.
 5. **FAQ — objection handling.** Each question is a REAL purchase objection (price, lock-in, security, migration), answered plainly.
 6. **Final CTA — recovery.** Repeats the primary CTA verbatim.
 
@@ -180,4 +180,4 @@ Rules:
 
 Run the `marketing-verify` skill — it renders the page and judges the premium bar on actual screenshots (375/768/1440 × light/dark, reduced motion, fired reveals). Code that was never rendered is not verified. Additionally: confirm every string resolves in both locales (pt-BR, en); run `npm run build` and `npm run lint:fix`.
 
-**SEO pass:** exactly one `<h1>`; `generateMetadata` exports a localized title (target term + value, not just the brand) and a distinct 150–160-char description; the route is in `PUBLIC_PREFIXES` and `sitemap.ts`; structured data is present where applicable (FAQ, pricing, article); every image has descriptive `alt`; the page links to the money page. View source and confirm the JSON-LD and `<h1>` are in the server-rendered HTML.
+**SEO pass:** exactly one `<h1>`; `generateMetadata` exports a localized title (target term + value, not just the brand) and a distinct 150–160-char description; the page is declared in `src/i18n/routing.ts` and listed in `sitemap.ts` (when indexed), and its view source carries the canonical and the hreflang links; structured data is present where applicable (FAQ, pricing, article); every image has descriptive `alt`; the page links to the money page. View source and confirm the JSON-LD and `<h1>` are in the server-rendered HTML.

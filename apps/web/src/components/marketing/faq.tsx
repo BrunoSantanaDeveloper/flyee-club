@@ -1,9 +1,8 @@
 "use client";
-import Link from "next/link";
-
 import { Accordion, AccordionDetails, AccordionSummary, Button, Typography } from "@mui/material";
 
 import JsonLd from "@/components/marketing/json-ld";
+import Link from "@/components/marketing/locale-link";
 import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";

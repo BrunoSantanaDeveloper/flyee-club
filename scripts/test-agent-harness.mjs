@@ -42,7 +42,7 @@ assert(marketingCodex.systemMessage.includes("COMPONENT CATALOG"), "Marketing ca
 const marketingClaude = runHook("marketing-guard.mjs", {
   cwd: repoRoot,
   hook_event_name: "PreToolUse",
-  tool_input: { file_path: join(repoRoot, "apps/web/src/app/(marketing)/page.tsx") },
+  tool_input: { file_path: join(repoRoot, "apps/web/src/app/[locale]/(marketing)/page.tsx") },
 });
 assert(
   marketingClaude?.hookSpecificOutput?.additionalContext?.includes("marketing-page"),
@@ -139,7 +139,7 @@ const productLintMarketing = runHook("product-lint.mjs", {
   cwd: repoRoot,
   hook_event_name: "PostToolUse",
   tool_input: {
-    file_path: join(repoRoot, "apps/web/src/app/(marketing)/page.tsx"),
+    file_path: join(repoRoot, "apps/web/src/app/[locale]/(marketing)/page.tsx"),
     content: 'const color = "#fff";',
   },
 });

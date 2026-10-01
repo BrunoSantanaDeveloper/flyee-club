@@ -1,14 +1,15 @@
 import { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Prose from "@/components/marketing/prose";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
+import { publicPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("marketing");
-  return { title: t("cookies-meta-title"), alternates: { canonical: "/legal/cookies" } };
+  const [t, locale] = await Promise.all([getTranslations("marketing"), getLocale()]);
+  return { title: t("cookies-meta-title"), ...publicPageMetadata({ path: "/legal/cookies", locale }) };
 }
 
 /**

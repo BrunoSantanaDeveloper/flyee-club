@@ -239,7 +239,12 @@
     "cookies-4-body": "Beyond cookies, we send Meta and Google, from our server, the events of our own sales: sign-up, subscription start and payment. They carry commercial data about the subscriber, such as an e-mail turned into an irreversible code, the account identifier, IP address, browser and value, never patient data. This relies on the legitimate interest of measuring the promotion of the service and continues even if you refuse analytics cookies, because it does not depend on them. To object, write to contato@medchinaprontuarios.com.br.",
     "cookies-5-title": "How to manage them",
     "cookies-5-body": "You can refuse analytics in the site notice, delete cookies in your browser settings or browse in a private window. Blocking essential cookies prevents sign-in and use of the platform.",
-    "pricing-feature-devices": "{count, plural, one {# device} other {Up to # devices}}"
+    "pricing-feature-devices": "{count, plural, one {# device} other {Up to # devices}}",
+    "language-switch-name": "Português",
+    "language-switch-label": "View this page in Portuguese",
+    "language-suggest-message": "Esta página também está disponível em português.",
+    "language-suggest-action": "Ler em português",
+    "language-suggest-dismiss": "Dispensar"
   },
   "product": {
     "security-title": "Security",

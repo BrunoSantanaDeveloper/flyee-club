@@ -1,8 +1,7 @@
 "use client";
-import Link from "next/link";
-
 import { Button } from "@mui/material";
 
+import Link from "@/components/marketing/locale-link";
 import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 import NiCheck from "@/icons/nexture/ni-check";

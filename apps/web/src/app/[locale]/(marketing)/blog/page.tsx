@@ -1,25 +1,31 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Cta from "@/components/marketing/cta";
+import Link from "@/components/marketing/locale-link";
 import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import { TONE, toneAt } from "@/components/marketing/tone";
 import { listBlogPosts } from "@/lib/public-content";
+import { publicPageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("marketing");
-  return { title: t("blog-meta-title"), description: t("blog-meta-description"), alternates: { canonical: "/blog" } };
+  const [t, locale] = await Promise.all([getTranslations("marketing"), getLocale()]);
+  return {
+    title: t("blog-meta-title"),
+    description: t("blog-meta-description"),
+    ...publicPageMetadata({ path: "/blog", locale }),
+  };
 }
 
 /**
- * Blog index over the DB-managed posts (/admin/blog). The newest post
- * leads full-width; covers are optional — postless and coverless states
- * both stay on the committed direction (token gradients, tone hues).
+ * Blog index over the DB-managed posts (/admin/blog), in the language of the
+ * address only. The newest post leads full-width; covers are optional —
+ * postless and coverless states both stay on the committed direction (token
+ * gradients, tone hues).
  */
 export default async function BlogPage() {
   const t = await getTranslations("marketing");

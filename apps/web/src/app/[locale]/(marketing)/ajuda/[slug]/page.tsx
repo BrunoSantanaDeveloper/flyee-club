@@ -1,29 +1,37 @@
 import { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import Cta from "@/components/marketing/cta";
 import JsonLd from "@/components/marketing/json-ld";
+import Link from "@/components/marketing/locale-link";
 import MarkdownProse from "@/components/marketing/markdown-prose";
 import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
+import { localizeHref } from "@/i18n/routing";
 import NiChevronLeftSmall from "@/icons/nexture/ni-chevron-left-small";
 import NiChevronRightSmall from "@/icons/nexture/ni-chevron-right-small";
 import { getHelpArticle } from "@/lib/public-content";
+import { publicPageMetadata, sectionTranslations } from "@/lib/seo";
 
-type Params = { params: Promise<{ slug: string }> };
+type Params = { params: Promise<{ locale: string; slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const [t, locale] = await Promise.all([getTranslations("marketing"), getLocale()]);
-  const article = await getHelpArticle(locale, slug);
-  if (!article) return { title: t("help-meta-title"), description: t("help-meta-description") };
+  const result = await getHelpArticle(locale, slug);
+  if (result.kind !== "found") return { title: t("help-meta-title"), description: t("help-meta-description") };
+  const article = result.item;
   return {
     title: article.title,
     description: article.excerpt ?? t("help-meta-description"),
-    alternates: { canonical: `/ajuda/${slug}` },
+    ...publicPageMetadata({
+      path: `/ajuda/${slug}`,
+      locale,
+      translations: sectionTranslations("/ajuda", article.translations),
+      type: "article",
+    }),
   };
 }
 
@@ -32,8 +40,13 @@ export default async function HelpArticlePage({ params }: Params) {
   const { slug } = await params;
   const t = await getTranslations("marketing");
   const locale = await getLocale();
-  const article = await getHelpArticle(locale, slug);
-  if (!article) notFound();
+  const result = await getHelpArticle(locale, slug);
+  // A slug of the other language (the switch keeps the slug): its translation,
+  // or the help center of this language when there is none.
+  if (result.kind === "translated") redirect(localizeHref(`/ajuda/${result.slug}`, locale));
+  if (result.kind === "untranslated") redirect(localizeHref("/ajuda", locale));
+  if (result.kind !== "found") notFound();
+  const article = result.item;
 
   const updated = new Date(article.updatedAt).toLocaleDateString(locale, {
     year: "numeric",

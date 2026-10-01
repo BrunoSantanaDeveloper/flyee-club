@@ -1,10 +1,10 @@
 ﻿import HelpSearch from "./help-search";
 import { Metadata } from "next";
-import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Cta from "@/components/marketing/cta";
+import Link from "@/components/marketing/locale-link";
 import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
@@ -12,16 +12,21 @@ import { TONE, toneAt } from "@/components/marketing/tone";
 import NiBookmark from "@/icons/nexture/ni-bookmark";
 import NiChevronRightSmall from "@/icons/nexture/ni-chevron-right-small";
 import { listHelpContent } from "@/lib/public-content";
+import { publicPageMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("marketing");
-  return { title: t("help-meta-title"), description: t("help-meta-description"), alternates: { canonical: "/ajuda" } };
+  const [t, locale] = await Promise.all([getTranslations("marketing"), getLocale()]);
+  return {
+    title: t("help-meta-title"),
+    description: t("help-meta-description"),
+    ...publicPageMetadata({ path: "/ajuda", locale }),
+  };
 }
 
 /**
- * Public help center over the DB-managed articles (/admin/help). Content
- * follows the visitor's locale with an English fallback; without Supabase
- * env (fresh clone) the page renders the honest empty state.
+ * Public help center over the DB-managed articles (/admin/help), in the
+ * language of the address only (no fallback to the other language); without
+ * Supabase env (fresh clone) the page renders the honest empty state.
  */
 export default async function HelpPage() {
   const t = await getTranslations("marketing");

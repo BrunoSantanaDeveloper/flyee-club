@@ -212,7 +212,7 @@ process.stdin.on("end", () => {
     for (const toolPath of extractToolPaths(input)) {
       const p = normalizeToolPath(toolPath);
       const isProduct =
-        !/\/app\/\(marketing\)\//.test(p) &&
+        !/\/app\/(?:\[locale\]\/)?\(marketing\)\//.test(p) &&
         !/\/components\/marketing\//.test(p) &&
         (/\/app\/\(dashboard\)\//.test(p) || /\/components\/product\//.test(p));
       if (!isProduct || !LINTABLE.test(p)) continue;

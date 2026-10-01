@@ -1,6 +1,6 @@
 # Search direction (committed) — the SEO baseline, persisted
 
-> **Legado do MedChina, reescrito na fase 7 de `docs/PLANO-IMPLEMENTACAO.md`.** Os termos-alvo e a regra de idioma indexável abaixo são do MedChina e não valem para o flyee.club, que indexa pt-BR em `/` e inglês em `/en` com endereços traduzidos (decisões de 2026-09-30). As regras técnicas de página (um `<h1>`, metadata localizada, JSON-LD via `<JsonLd>`) continuam valendo.
+> **Legado do MedChina, reescrito na fase 7.3 de `docs/PLANO-IMPLEMENTACAO.md`.** Os termos-alvo abaixo são do MedChina e não valem para o flyee.club. A regra de idioma indexável já mudou: desde a fase 7.1 (2026-10-01) o site indexa pt-BR em `/` e inglês em `/en` com endereços traduzidos. As peças são `apps/web/src/i18n/routing.ts` (endereços de cada página nos dois idiomas), `apps/web/src/lib/seo.ts` (`publicPageMetadata`: canonical do idioma lido, hreflang com `x-default` no endereço em português, URL e locale do Open Graph) e `apps/web/src/app/sitemap.ts` (cada página uma vez por idioma, com alternates; ajuda e blog só nos idiomas em que o conteúdo existe). As seções "Indexable language" e "Multilingual SEO" abaixo descrevem o estado anterior e saem na reescrita. As regras técnicas de página (um `<h1>`, metadata localizada, JSON-LD via `<JsonLd>`) continuam valendo.
 
 **This file is the single source of the public site's search direction.** The `marketing-page` skill READS it (the way it reads `docs/DESIGN.md`) when writing titles, descriptions and copy. It records two things: what the base template already guarantees for free, and the per-page target terms MedChina commits to.
 
@@ -15,8 +15,9 @@ These ship in the base and rebrand from `@flyee/content` — a new page inherits
 | XML sitemap (public routes only) | `apps/web/src/app/sitemap.ts` |
 | robots + sitemap pointer (crawlers blocked from app/api) | `apps/web/src/app/robots.ts` |
 | `metadataBase` + `%s \| Brand` title template + favicons | `apps/web/src/app/layout.tsx` |
-| Shared Open Graph image (token-driven, 1200×630) | `apps/web/src/app/(marketing)/opengraph-image.tsx` |
-| `Organization` + `WebSite` JSON-LD (site-wide) | `components/marketing/site-json-ld.tsx`, mounted by the `(marketing)` and `(autoridade)` layouts |
+| Shared Open Graph image (token-driven, 1200×630) | `apps/web/src/app/opengraph-image.tsx` |
+| `Organization` + `WebSite` JSON-LD (site-wide) | `components/marketing/site-json-ld.tsx`, mounted by the `[locale]/(marketing)` layout |
+| Canonical + hreflang + Open Graph URL per page | `apps/web/src/lib/seo.ts` (`publicPageMetadata`) |
 | `FAQPage` JSON-LD (from the FAQ items) | `components/marketing/faq.tsx` |
 | `Product`/`Offer` JSON-LD (from real billing plans) | `components/marketing/pricing-section.tsx` |
 | One `<h1>` per page contract | `SectionHeader` `as` / `PricingSection` `headingAs` |

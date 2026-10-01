@@ -78,4 +78,7 @@ export const LOCAL_STORAGE_KEYS = {
   leftMenuType: `${storagePrefix}-left-menu-type`,
   contentType: `${storagePrefix}-content-type`,
   cookieConsent: `${storagePrefix}-cookie-consent`,
+  // Set once the visitor has answered the public site's language suggestion
+  // (or picked a language with the switch): the offer is never repeated.
+  languageSuggestion: `${storagePrefix}-language-suggestion`,
 };

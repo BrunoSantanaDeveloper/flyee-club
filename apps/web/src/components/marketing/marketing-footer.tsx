@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { BRAND } from "@/brand";
 import Logo from "@/components/logo/logo";
 import Container from "@/components/marketing/container";
+import LanguageSwitch from "@/components/marketing/language-switch";
+import Link from "@/components/marketing/locale-link";
 
 // Only routes that exist. Phase 7.2 of docs/PLANO-IMPLEMENTACAO.md adds
 // "Como funciona", "Catálogo", "Sobre" and "Lista de espera" as those pages
@@ -45,7 +46,7 @@ export default function MarketingFooter() {
         <div className="flex flex-col gap-10 md:flex-row md:justify-between">
           <div className="flex max-w-xs flex-col gap-3">
             <Link href="/" aria-label={t("nav-home")} className="flex items-center">
-              <Logo classNameFull="block" tone="contrast" />
+              <Logo classNameFull="block" classNameMobile="hidden" tone="contrast" />
             </Link>
             <p className="text-text-contrast/65 text-base leading-5">{t("footer-tagline")}</p>
           </div>
@@ -70,10 +71,14 @@ export default function MarketingFooter() {
           </div>
         </div>
 
-        <div className="border-text-contrast/15 flex flex-col gap-2 border-t pt-6">
+        <div className="border-text-contrast/15 flex flex-col gap-2 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-text-contrast/60 text-sm">
             © {new Date().getFullYear()} {BRAND.name}. {t("footer-rights")}
           </p>
+          <LanguageSwitch
+            color="inherit"
+            className="text-text-contrast/80 hover:text-text-contrast -mx-2 self-start sm:self-auto"
+          />
         </div>
       </Container>
     </footer>

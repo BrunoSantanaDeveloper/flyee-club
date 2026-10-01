@@ -7,7 +7,7 @@ description: UX playbook for authenticated app screens (everything under apps/we
 
 You are designing a screen inside a paid product, not an admin CRUD. The failure mode this skill exists to prevent: **defaulting to a table of rows with add/edit/delete**, because that is the statistically common shape. Real products are designed around what the user is trying to ACHIEVE and how fast they reach value.
 
-Scope: every screen under `apps/web/src/app/(dashboard)/**` (the authenticated app). Marketing (`(marketing)`) has its own skill. A `PreToolUse` hook loads this automatically on edits here — you never wait to be asked.
+Scope: every screen under `apps/web/src/app/(dashboard)/**` (the authenticated app). Marketing (`[locale]/(marketing)`) has its own skill. A `PreToolUse` hook loads this automatically on edits here — you never wait to be asked.
 
 ## Pass 0 — goal, not table
 

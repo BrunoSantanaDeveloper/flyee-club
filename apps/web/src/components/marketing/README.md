@@ -1,6 +1,6 @@
 # Marketing component library
 
-Building blocks for every public page under `apps/web/src/app/(marketing)/`. Consistency is enforced **by construction**: pages compose these components and never hand-tune spacing, widths or type sizes.
+Building blocks for every public page under `apps/web/src/app/[locale]/(marketing)/`. Consistency is enforced **by construction**: pages compose these components and never hand-tune spacing, widths or type sizes.
 
 `catalog.json` is the machine-readable index of this library (components, props, funnel stage, when to use). The `marketing-guard` hook injects its digest into every marketing write/edit, and the `marketing-lint` hook checks the written result against the contract — keep the catalog in sync whenever a component's props change.
 

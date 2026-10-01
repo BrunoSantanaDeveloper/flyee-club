@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Box, Button, Card, ClickAwayListener, Fade, Tooltip } from "@mui/material";
 
 import { BRAND } from "@/brand";
+import Link from "@/components/marketing/locale-link";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiEmail from "@/icons/nexture/ni-email";
 import NiHeadset from "@/icons/nexture/ni-headset";

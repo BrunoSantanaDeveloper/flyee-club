@@ -1,6 +1,6 @@
 ---
 name: marketing-verify
-description: Visual verification of marketing pages against the premium bar — runs the app, captures screenshots at 3 widths × light/dark, and judges the actual pixels (evidence above the fold, archetypes, background changes, density, fired reveals). Use AFTER building or substantially editing any page under apps/web/src/app/(marketing), before declaring it done; also when asked to "verify/check the marketing page" or audit it against docs/DESIGN.md.
+description: Visual verification of marketing pages against the premium bar — runs the app, captures screenshots at 3 widths × light/dark, and judges the actual pixels (evidence above the fold, archetypes, background changes, density, fired reveals). Use AFTER building or substantially editing any page under apps/web/src/app/[locale]/(marketing), before declaring it done; also when asked to "verify/check the marketing page" or audit it against docs/DESIGN.md.
 ---
 
 # Marketing visual verification

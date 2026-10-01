@@ -1,28 +1,36 @@
 import BlogComments from "./comments";
 import { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import Cta from "@/components/marketing/cta";
 import JsonLd from "@/components/marketing/json-ld";
+import Link from "@/components/marketing/locale-link";
 import MarkdownProse from "@/components/marketing/markdown-prose";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
+import { localizeHref } from "@/i18n/routing";
 import NiChevronLeftSmall from "@/icons/nexture/ni-chevron-left-small";
 import { getBlogPost } from "@/lib/public-content";
+import { publicPageMetadata, sectionTranslations } from "@/lib/seo";
 
-type Params = { params: Promise<{ slug: string }> };
+type Params = { params: Promise<{ locale: string; slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const [t, locale] = await Promise.all([getTranslations("marketing"), getLocale()]);
-  const post = await getBlogPost(locale, slug);
-  if (!post) return { title: t("blog-meta-title"), description: t("blog-meta-description") };
+  const result = await getBlogPost(locale, slug);
+  if (result.kind !== "found") return { title: t("blog-meta-title"), description: t("blog-meta-description") };
+  const post = result.item;
   return {
     title: post.title,
     description: post.excerpt ?? t("blog-meta-description"),
-    alternates: { canonical: `/blog/${slug}` },
+    ...publicPageMetadata({
+      path: `/blog/${slug}`,
+      locale,
+      translations: sectionTranslations("/blog", post.translations),
+      type: "article",
+    }),
   };
 }
 
@@ -31,8 +39,13 @@ export default async function BlogPostPage({ params }: Params) {
   const { slug } = await params;
   const t = await getTranslations("marketing");
   const locale = await getLocale();
-  const post = await getBlogPost(locale, slug);
-  if (!post) notFound();
+  const result = await getBlogPost(locale, slug);
+  // A slug of the other language (the switch keeps the slug): its translation,
+  // or the blog of this language when there is none.
+  if (result.kind === "translated") redirect(localizeHref(`/blog/${result.slug}`, locale));
+  if (result.kind === "untranslated") redirect(localizeHref("/blog", locale));
+  if (result.kind !== "found") notFound();
+  const post = result.item;
 
   const published = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })

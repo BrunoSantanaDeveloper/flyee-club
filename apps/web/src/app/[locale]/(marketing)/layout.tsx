@@ -5,6 +5,7 @@ import { BRAND } from "@/brand";
 import CookieConsent from "@/components/consent/cookie-consent";
 import MarketingAnalytics from "@/components/consent/marketing-analytics";
 import MarketingTrackers from "@/components/consent/marketing-trackers";
+import LanguageSuggestion from "@/components/marketing/language-suggestion";
 import MarketingFooter from "@/components/marketing/marketing-footer";
 import MarketingHeader from "@/components/marketing/marketing-header";
 import SiteJsonLd from "@/components/marketing/site-json-ld";
@@ -13,19 +14,18 @@ import { getSupportChannels } from "@/lib/platform-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("marketing");
+  // Defaults only: every page states its own address, hreflang and Open Graph
+  // URL through publicPageMetadata (lib/seo.ts).
   return {
     description: t("home-meta-description"),
-    openGraph: {
-      siteName: BRAND.name,
-      type: "website",
-      url: BRAND.siteUrl,
-    },
+    openGraph: { siteName: BRAND.name, type: "website" },
   };
 }
 
 /**
- * Public site chrome: no admin layout, no auth required. Every route in this
- * group must be listed as public in src/middleware.ts (PUBLIC_PREFIXES).
+ * Public site chrome: no admin layout, no auth required. Every page in this
+ * group is declared in src/i18n/routing.ts (its Portuguese and English
+ * addresses), which is also what makes the middleware treat it as public.
  */
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
   const support = await getSupportChannels();
@@ -33,6 +33,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
     <div className="bg-background flex min-h-[100dvh] flex-col">
       {/* Site-wide identity for search + AI engines; rebrands with @flyee/content. */}
       <SiteJsonLd />
+      <LanguageSuggestion />
       <MarketingHeader />
       <main className="flex flex-1 flex-col">{children}</main>
       <MarketingFooter />

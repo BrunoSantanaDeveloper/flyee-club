@@ -5,7 +5,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 ## Where things stand
 
 - Plan and progress: `docs/PLANO-IMPLEMENTACAO.md` (phases 0–8; the "Andamento" table says what is done). Product decisions and open questions: `docs/PRODUCT.md`.
-- Done: phase 0 (identity, two locales, de-templated harness), phase 1 (clinical code, mobile app and dead packages removed) and phase 2 (the database baseline). Next: phase 7.1, path-based locales for the public site.
+- Done: phase 0 (identity, two locales, de-templated harness), phase 1 (clinical code, mobile app and dead packages removed), phase 2 (the database baseline) and phase 7.1 (path-based locales for the public site). Next: phase 4, the billing ladder.
 - **The database is the flyee.club baseline** (`packages/db/migrations`, `0000`–`0018`, with its pgTAP suite in `packages/db/tests`). It has not been applied to a hosted project yet: that happens once the new Supabase project exists (`npm run db:gate:remote`). New schema work is a new numbered migration on top of it. See `packages/db/README.md`.
 
 ## Safety during the transition
@@ -27,7 +27,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 - `apps/web` — Next.js 15 (App Router) + React 19 + MUI v9 + MUI X Premium + Tailwind 4, deployed on Vercel. See `apps/web/CLAUDE.md`.
   - **Member dashboard** (`app/(dashboard)`): `/inicio` (interim home: activation checklist + empty state until phase 5), `/settings` (profile, security and 2FA, connected apps, billing). Phase 5 adds the catalog, recipes, news, meetings, roadmap and devices screens. Screens are goal-first, never CRUD by default; quality is enforced by the `product-screen` skill (loaded by `.claude/hooks/product-screen-guard.mjs`, which also injects `components/product/catalog.json`), the `product-lint` hook and the `product-verify` skill.
   - **Admin** (`app/(dashboard)/admin`, superadmin only): overview, organizations, billing, AI model prices, audit, insights, backups, announcements, help, blog, support. Phase 6 adds catálogo, roadmap, membros, métricas, encontros and leads. Admin copy is hardcoded pt-BR.
-  - **Public site** (`app/(marketing)`): interim pages (home, `/planos`, `/contato`, `/ajuda`, `/blog`, `/legal/*`) composed from `components/marketing/*`. Phase 7 rebuilds it bilingual with path-based locales. Quality is enforced by the `marketing-page` skill (loaded by `.claude/hooks/marketing-guard.mjs`) and the `marketing-lint` hook.
+  - **Public site** (`app/[locale]/(marketing)`): interim pages (home, `/planos`, `/contato`, `/ajuda`, `/blog`, `/legal/*`) composed from `components/marketing/*`, in Portuguese at `/` and in English at `/en` with translated addresses (`src/i18n/routing.ts`). Phase 7.2 rebuilds the pages with the club's copy. Quality is enforced by the `marketing-page` skill (loaded by `.claude/hooks/marketing-guard.mjs`) and the `marketing-lint` hook.
   - **Checkout and auth**: `/assinatura`, `/auth/*`, `/oauth/authorize` with `/api/oauth/*` (the OAuth 2.1 server that phase 3 turns into the CLI token server), billing webhooks at `/api/webhooks/[provider]`.
 - `packages/design-tokens` — design system source of truth: the provisional palette in `css/green.css`, neutrals in `css/common.css`, `css/marketing.css` (fluid display scale, section rhythm, motion). See its README.
 - `packages/db` — the SQL baseline with RLS on every table and explicit grants (one organization per member: the personal workspace), the pgTAP suite, and a Drizzle mirror generated from the migrations. See its README.
@@ -77,7 +77,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 ## Platform decisions
 
 - Deploy: Vercel, only through GitHub Actions (`docs/DEPLOY.md`). Database, auth and storage: Supabase (Postgres + RLS). ORM: Drizzle. Email: Resend. Jobs and cron: Inngest. Billing: Asaas for BRL (PIX, card, Asaas issues the NFS-e) and Stripe for USD, routed by the purchase currency.
-- Locales: pt-BR (default) and en. Today i18n is cookie-based and crawlers index only pt-BR. Phase 7.1 makes it hybrid: the public site moves under `app/[locale]` with next-intl `pathnames` (pt-BR at `/`, English at `/en` with translated paths), while dashboard, admin, auth and checkout keep the cookie and profile locale.
+- Locales: pt-BR (default) and en, hybrid since phase 7.1: the public site lives under `app/[locale]` with next-intl `pathnames` (pt-BR at `/`, English at `/en` with translated paths, both indexed with hreflang), while dashboard, admin, auth and checkout keep the cookie and profile locale.
 - Lessons are unlisted YouTube videos gated by the page and by RLS. Meetings use an external link (Zoom/Meet), with registration and click-through recorded on the platform.
 - Do not introduce Cloudflare-specific services (Workers, D1, R2, Workers AI).
 

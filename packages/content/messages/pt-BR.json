@@ -239,7 +239,12 @@
     "cookies-4-body": "Além dos cookies, enviamos à Meta e ao Google, a partir do nosso servidor, os eventos das nossas próprias vendas: cadastro, início de assinatura e pagamento. Vão junto dados comerciais da assinante, como e-mail transformado em código irreversível, identificador da conta, endereço IP, navegador e valor, nunca dado de paciente. Esse envio se apoia no legítimo interesse de medir a divulgação do serviço e continua mesmo se você recusar os cookies de análise, porque não depende deles. Para se opor, escreva para contato@medchinaprontuarios.com.br.",
     "cookies-5-title": "Como gerenciar",
     "cookies-5-body": "Você pode recusar as análises no aviso do site, apagar os cookies nas configurações do navegador ou navegar em janela anônima. Bloquear os cookies essenciais impede o login e o uso da plataforma.",
-    "pricing-feature-devices": "{count, plural, one {# dispositivo} other {Até # dispositivos}}"
+    "pricing-feature-devices": "{count, plural, one {# dispositivo} other {Até # dispositivos}}",
+    "language-switch-name": "English",
+    "language-switch-label": "Ver esta página em inglês",
+    "language-suggest-message": "This page is also available in English.",
+    "language-suggest-action": "Read in English",
+    "language-suggest-dismiss": "Dismiss"
   },
   "product": {
     "security-title": "Segurança",
