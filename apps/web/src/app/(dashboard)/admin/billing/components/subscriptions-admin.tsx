@@ -24,6 +24,42 @@ type SubRow = {
   planId: string;
   /** A provider-backed subscription cannot be re-planned from here. */
   providerManaged: boolean;
+  /** The price it was SOLD at (snapshot, migration 0003); later plan edits never touch it. */
+  priceCents: number | null;
+  currency: string | null;
+  couponCode: string | null;
+  /** False for a yearly plan paid in installments: one purchase, no renewal. */
+  renews: boolean;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+  cancelReason: string | null;
+};
+
+/** Why a member left (enum subscription_cancel_reason), as the operator reads it. */
+const CANCEL_REASON_LABEL: Record<string, string> = {
+  too_expensive: "achou caro",
+  not_using: "não está usando",
+  missing_tool: "falta a ferramenta",
+  switched: "trocou de solução",
+  technical: "problema técnico",
+  temporary: "pausa",
+  other: "outro motivo",
+};
+
+const moneyOf = (cents: number | null, currency: string | null) =>
+  cents === null || !currency
+    ? "—"
+    : new Intl.NumberFormat("pt-BR", { style: "currency", currency, maximumFractionDigits: 2 }).format(cents / 100);
+
+/** Renewal in one line: renews, single term, or ending (with the reason, when given). */
+const renewalOf = (row: SubRow) => {
+  const end = row.currentPeriodEnd ? new Date(row.currentPeriodEnd).toLocaleDateString("pt-BR") : null;
+  if (!row.renews) return end ? `pago por um período · até ${end}` : "pago por um período";
+  if (row.cancelAtPeriodEnd) {
+    const reason = row.cancelReason ? ` · ${CANCEL_REASON_LABEL[row.cancelReason] ?? row.cancelReason}` : "";
+    return `cancela${end ? ` em ${end}` : ""}${reason}`;
+  }
+  return end ? `renova em ${end}` : "renova";
 };
 
 /** Tiers a workspace can be put on: real subscriptions, never add-ons. */
@@ -66,7 +102,7 @@ export default function SubscriptionsAdmin() {
       supabase
         .from("subscriptions")
         .select(
-          "id, org_id, plan_id, status, admin_suspended, period, provider, provider_subscription_id, created_at, organizations(name), plans(name)",
+          "id, org_id, plan_id, status, admin_suspended, period, provider, provider_subscription_id, created_at, price_cents, currency, coupon_code_snapshot, renews, cancel_at_period_end, current_period_end, cancel_reason, organizations(name), plans(name)",
         )
         .in("status", ["trialing", "active", "past_due", "incomplete"])
         .order("created_at", { ascending: false })
@@ -107,6 +143,13 @@ export default function SubscriptionsAdmin() {
         createdAt: row.created_at,
         planId: row.plan_id,
         providerManaged: Boolean(row.provider_subscription_id),
+        priceCents: (row.price_cents as number | null) ?? null,
+        currency: (row.currency as string | null) ?? null,
+        couponCode: (row.coupon_code_snapshot as string | null) ?? null,
+        renews: row.renews !== false,
+        cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
+        currentPeriodEnd: (row.current_period_end as string | null) ?? null,
+        cancelReason: (row.cancel_reason as string | null) ?? null,
       })),
     );
     setLoadFailed(false);
@@ -136,6 +179,16 @@ export default function SubscriptionsAdmin() {
         entityId: row.id,
         metadata: { org: row.orgName },
       });
+      // A suspended workspace also loses its CLI tokens: installed tools keep
+      // working, updates stop until the suspension is lifted (the member signs
+      // in to the CLI again then). The RPC records its own audit event.
+      if (!row.adminSuspended) {
+        const { error: revokeError } = await supabase.rpc("revoke_member_tokens", {
+          target_org: row.orgId,
+          target_reason: "suspended",
+        });
+        if (revokeError) setError(`Acesso suspenso, mas os tokens da CLI não foram revogados: ${revokeError.message}`);
+      }
       refresh();
     },
     [refresh],
@@ -220,6 +273,20 @@ export default function SubscriptionsAdmin() {
             </Typography>
           </Box>
         ),
+      },
+      {
+        field: "priceCents",
+        headerName: "Preço vendido",
+        minWidth: 170,
+        // The snapshot, not the plan's current price: what this member pays.
+        valueGetter: (_, row) =>
+          `${moneyOf(row.priceCents, row.currency)}${row.couponCode ? ` · ${row.couponCode}` : ""}`,
+      },
+      {
+        field: "renews",
+        headerName: "Renovação",
+        minWidth: 220,
+        valueGetter: (_, row) => renewalOf(row),
       },
       {
         field: "status",

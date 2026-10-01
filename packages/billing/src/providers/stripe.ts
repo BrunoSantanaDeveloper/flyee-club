@@ -22,9 +22,13 @@ function getStripe() {
   return new Stripe(key);
 }
 
-/** Creates (or reuses) a Stripe coupon mirroring ours, so recurring cycles stay discounted. */
+/**
+ * Creates (or reuses) a Stripe coupon mirroring ours, so recurring cycles stay
+ * discounted. A fixed discount is an amount in one currency, so its mirror is
+ * per currency; a percentage is the same everywhere.
+ */
 async function ensureStripeCoupon(stripe: Stripe, coupon: CheckoutCoupon, currency: string): Promise<string> {
-  const id = `flyee-${coupon.id}`;
+  const id = coupon.discountType === "fixed" ? `flyee-${coupon.id}-${currency.toLowerCase()}` : `flyee-${coupon.id}`;
   try {
     await stripe.coupons.retrieve(id);
     return id;
@@ -100,7 +104,9 @@ export class StripeProvider implements PaymentProvider {
                 ...(plan.trialDays > 0 ? { trial_period_days: plan.trialDays } : {}),
               },
             }
-          : {}),
+          : // A one-off purchase (the kit) carries the same metadata on its
+            // payment intent, so a refund or a dispute names what it reverts.
+            { payment_intent_data: { metadata } }),
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
       },
@@ -169,7 +175,8 @@ export class StripeProvider implements PaymentProvider {
             metadata: (session.metadata ?? {}) as Partial<CheckoutMetadata>,
             providerInvoiceId: String(session.payment_intent ?? session.id),
             amountCents: session.amount_total ?? 0,
-            currency: (session.currency ?? "brl").toUpperCase(),
+            // Stripe always names it; the fallback is the only currency routed here.
+            currency: (session.currency ?? "usd").toUpperCase(),
             paidAt: new Date(),
           });
         }
@@ -189,8 +196,8 @@ export class StripeProvider implements PaymentProvider {
             status: sub.status,
             // The provider's own cycle start, not "now". The handler uses this
             // to tell a real renewal from a cosmetic update (toggling
-            // cancel_at_period_end emits this same event), and resetting the
-            // consumption window on a cosmetic one handed out free minutes.
+            // cancel_at_period_end emits this same event), and restarting the
+            // cycle on a cosmetic one pushed the paid-through date for free.
             currentPeriodStart: sub.items.data[0]?.current_period_start
               ? new Date(sub.items.data[0].current_period_start * 1000)
               : undefined,
@@ -234,9 +241,9 @@ export class StripeProvider implements PaymentProvider {
           event.type === "charge.refunded"
             ? event.data.object
             : ((await getStripe().charges.retrieve(String(event.data.object.charge))) as Stripe.Charge);
-        // One-off purchases (minute packs) are mirrored under the payment
-        // intent — see `checkout.session.completed` above — and those are the
-        // ones where an un-reverted refund leaves a spendable balance behind.
+        // One-off purchases (the kit) are mirrored under the payment intent —
+        // see `checkout.session.completed` above — and those are the ones
+        // where an un-reverted refund leaves a paid-for grant behind.
         // Subscription invoices are keyed by invoice id, which the Charge no
         // longer carries in this API version; `revert_paid_invoice` answers
         // `unknown_invoice` for those and the handler skips them.

@@ -1,6 +1,6 @@
 "use client";
 
-import { abandonPendingCheckout } from "../actions";
+import { abandonPendingCheckout } from "../actions-recovery";
 import type { PendingCheckout } from "./use-billing";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";

@@ -12,17 +12,25 @@ import NiBadge from "@/icons/nexture/ni-badge";
 import { trackOffer } from "@/lib/product-events";
 import { cn } from "@/lib/utils";
 import { MenuType } from "@/types";
+import type { Tier } from "@flyee/billing/entitlements";
 
 const BILLING_HREF = "/settings/billing?source=menu&feature=plans";
 
+/** The rung's name, never the plan's: a kit owner on the free subscription row is still a kit owner. */
+const TIER_LABEL = {
+  kit: "menu-plan-kit",
+  club: "menu-plan-club",
+  pro: "menu-plan-pro",
+} as const satisfies Record<Tier, string>;
+
 /**
- * The workspace's current plan, at the foot of the nav rail.
+ * The workspace's rung on the ladder, at the foot of the nav rail.
  *
- * Deliberately a STATE READOUT, not a promotion: it names the plan, and only
- * adds a "compare plans" line when there is in fact something to buy. The plan
- * comes from `org_entitlements` (hooks/use-entitlements.ts), the single answer
- * every gate shares. The menu lives in the persistent dashboard layout, so
- * this is one request per page load, not per navigation.
+ * Deliberately a STATE READOUT, not a promotion: it names the rung, and only
+ * adds a "compare plans" line for a workspace that has bought nothing. The
+ * rung comes from `org_entitlements` (hooks/use-entitlements.ts), the single
+ * answer every gate shares. The menu lives in the persistent dashboard
+ * layout, so this is one request per page load, not per navigation.
  */
 export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
   const t = useTranslations("dashboard");
@@ -30,9 +38,11 @@ export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
   const { entitlements, loading } = useEntitlements(orgId);
   const viewTracked = useRef(false);
 
-  // A paying workspace has nothing to buy here: counting it as an impression
-  // would dilute the surface's conversion rate with people it never addressed.
-  const sellable = Boolean(entitlements) && (!entitlements!.active || entitlements!.isFree);
+  // Only a workspace that bought nothing is addressed here. Moving a buyer up
+  // the ladder is the upsell rule's job, where it can say WHY (the home and the
+  // CLI revalidation); counting buyers as impressions here would dilute this
+  // surface's conversion rate with people it never addressed.
+  const sellable = Boolean(entitlements) && !entitlements!.suspended && !entitlements!.tier;
 
   useEffect(() => {
     if (!sellable || viewTracked.current) return;
@@ -42,10 +52,7 @@ export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
 
   if (loading || !entitlements) return null;
 
-  const planLabel =
-    entitlements.active && !entitlements.isFree
-      ? (entitlements.planName ?? t("menu-plan-active"))
-      : t("menu-plan-free");
+  const planLabel = entitlements.active && entitlements.tier ? t(TIER_LABEL[entitlements.tier]) : t("menu-plan-free");
   const title = t("menu-plan-current", { plan: planLabel });
   const minimal = menuType === MenuType.Minimal;
 

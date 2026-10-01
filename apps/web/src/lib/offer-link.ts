@@ -48,3 +48,14 @@ export function clearCouponCookie(cookieName: string): void {
   if (typeof document === "undefined") return;
   document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax`;
 }
+
+/**
+ * Keeps a code the member applied by hand on the billing screen, so the
+ * checkout page it leads to finds it the same way it finds a campaign code.
+ */
+export function writeCouponCookie(cookieName: string, code: string): void {
+  if (typeof document === "undefined") return;
+  const normalized = normalizeCouponCode(code);
+  if (!normalized) return;
+  document.cookie = `${cookieName}=${encodeURIComponent(normalized)}; path=/; max-age=${COUPON_COOKIE_MAX_AGE}; SameSite=Lax`;
+}

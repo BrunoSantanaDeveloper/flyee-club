@@ -61,6 +61,10 @@ export const COOKIE_KEYS = {
   // credited to the campaign that brought it. httpOnly; 14 days, the same
   // window the billing webhook accepts (migration 0113).
   lastCampaign: `${storagePrefix}-campanha`,
+  // The currency the visitor chose to see and buy in (`?moeda=USD` or the
+  // currency switch); without it the language decides (lib/billing-currency.ts).
+  // Readable by the client, which shows the active currency.
+  currency: `${storagePrefix}-moeda`,
   // The waitlist confirmation token, moved out of the e-mail link by the
   // middleware (a URL is what analytics scripts and Referer headers carry).
   // httpOnly, 15 minutes, consumed by the confirm action.

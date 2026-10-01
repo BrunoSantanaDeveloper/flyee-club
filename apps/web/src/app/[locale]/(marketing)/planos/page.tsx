@@ -1,6 +1,7 @@
 import { getDisplayPlans } from "../plans";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
+import NextLink from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import TrackEvent from "@/components/consent/track-event";
@@ -10,7 +11,9 @@ import Cta from "@/components/marketing/cta";
 import Faq from "@/components/marketing/faq";
 import PricingSection from "@/components/marketing/pricing-section";
 import { COOKIE_KEYS } from "@/constants";
+import { localizeHref } from "@/i18n/routing";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
+import { resolveCurrency } from "@/lib/billing-currency";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
 import { publicPageMetadata } from "@/lib/seo";
@@ -30,12 +33,20 @@ export default async function PricingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [t, params, cookieStore, stage] = await Promise.all([
+  const [t, locale, params, cookieStore, stage] = await Promise.all([
     getTranslations("marketing"),
+    getLocale(),
     searchParams,
     cookies(),
     getLaunchStage(),
   ]);
+  // The visitor's own pick (a `?moeda=` link, kept by the middleware) wins;
+  // otherwise the page language decides: Portuguese BRL, English USD.
+  const currency = resolveCurrency({
+    cookie: typeof params.moeda === "string" ? params.moeda : cookieStore.get(COOKIE_KEYS.currency)?.value,
+    locale,
+  });
+  const otherCurrency = currency === "BRL" ? "USD" : "BRL";
   // Before the site opens the plans are shown, and every button leads to the waitlist.
   const cta = primaryCtaFor(stage);
 
@@ -49,7 +60,7 @@ export default async function PricingPage({
     normalizeCouponCode(typeof params.cupom === "string" ? params.cupom : null) ??
     normalizeCouponCode(cookieStore.get(COOKIE_KEYS.offerCoupon)?.value);
   const coupon = requestedCoupon ? await resolvePublicCoupon(requestedCoupon) : null;
-  const plans = await getDisplayPlans(coupon);
+  const { plans, periodToggle } = await getDisplayPlans({ coupon, currency, stage });
 
   return (
     <>
@@ -59,6 +70,7 @@ export default async function PricingPage({
         title={t("pricing-page-title")}
         subtitle={t("pricing-page-subtitle")}
         plans={plans}
+        periodToggle={periodToggle}
         ctaLabel={t(cta.labelKey)}
         ctaHref={cta.href}
         headingAs="h1"
@@ -88,7 +100,18 @@ export default async function PricingPage({
       </Container>
 
       <Container>
-        <p className="text-text-secondary mx-auto max-w-2xl pb-4 text-center text-sm leading-5">{t("pricing-note")}</p>
+        <p className="text-text-secondary mx-auto max-w-2xl pb-4 text-center text-sm leading-5">
+          {t("pricing-note")} {/* A full load: the currency is a cookie the middleware writes from the link. */}
+          <NextLink
+            href={`${localizeHref("/planos", locale)}?moeda=${otherCurrency}`}
+            prefetch={false}
+            className="text-primary underline"
+          >
+            {t("pricing-currency-switch", {
+              currency: t(otherCurrency === "USD" ? "pricing-currency-usd" : "pricing-currency-brl"),
+            })}
+          </NextLink>
+        </p>
       </Container>
 
       {/* Marketing-only ViewContent (Meta/GA4) — no-op until consent + provider. */}

@@ -1,18 +1,21 @@
 import type { BillingPeriod } from "@flyee/billing";
 
 /**
- * Which consumption window a subscription activation opens.
+ * Which billing window a subscription activation opens.
  *
- * `org_audio_allowance` meters audio inside `[current_period_start,
- * current_period_end)`. Get this wrong in either direction and money is lost:
+ * `current_period_end` is the date a member has paid up to: a scheduled
+ * cancellation takes effect there (lib/billing-cancellation.ts), a yearly plan
+ * paid in installments stops there (it never renews), and the billing screen
+ * promises it as the renewal date. Get this wrong in either direction and the
+ * member is told, or given, the wrong thing:
  *
  *  - Restart the window on an event that is NOT a renewal (Stripe re-emits
  *    `customer.subscription.updated` when the product schedules or undoes a
- *    cancellation) and cancel + undo hands out a fresh cycle of minutes.
+ *    cancellation) and cancel + undo pushes the paid-up date a cycle out.
  *  - FAIL to advance it on an event that IS a renewal and, once the first
- *    `current_period_end` passes, usage falls outside the window entirely:
- *    the workspace is metered as unlimited. Asaas sends no period at all, only
- *    the charge's due date, so this was the case for every Asaas renewal.
+ *    `current_period_end` passes, a later scheduled cancellation ends at once,
+ *    taking a cycle the member already paid for. Asaas sends no period at all,
+ *    only the charge's due date, so this was the case for every Asaas renewal.
  *
  * Pure, so the rule can be tested without a provider or a database.
  */

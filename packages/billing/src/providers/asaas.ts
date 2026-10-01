@@ -369,6 +369,11 @@ export class AsaasProvider implements PaymentProvider {
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
     const { plan, modules, coupon } = input;
+    // Asaas charges reais only. A USD plan routed here would be billed as the
+    // same number in BRL (docs/BILLING.md, routing by currency).
+    if (plan.currency.trim().toUpperCase() !== "BRL") {
+      throw new Error("asaas_currency_unsupported");
+    }
     const document = digits(input.payer?.document);
     // Named, not generic: this is the one failure the professional can fix
     // herself, and the caller turns it into "complete your fiscal data" rather
@@ -456,7 +461,7 @@ export class AsaasProvider implements PaymentProvider {
     }
 
     // A one-off charge. Two things arrive here:
-    //  - a plan with no period (an à-la-carte minute pack), and
+    //  - a plan with no period (the kit, a one-time access purchase), and
     //  - a RECURRING plan the customer chose to split.
     //
     // The second is not a compromise, it is the only shape Asaas has:
@@ -466,7 +471,7 @@ export class AsaasProvider implements PaymentProvider {
     // NOT renew by itself. The caller decides whether to offer that; here we
     // only execute it faithfully.
     const totalCents = applyDiscount(plan.priceCents + oneTimeCents, coupon);
-    const payment = await createWithReturnCallback<{ id: string; invoiceUrl: string }>(
+    const payment = await createWithReturnCallback<{ id: string; invoiceUrl: string; installment?: string }>(
       "/payments",
       {
         customer: customerId,
@@ -484,7 +489,19 @@ export class AsaasProvider implements PaymentProvider {
       input.successUrl,
       `${input.idempotencyKey}:payment`,
     );
-    return { url: payment.invoiceUrl, providerCustomerId: customerId };
+    // The reference the webhook matches the purchase by. A split purchase is
+    // one INSTALLMENT with a payment per parcel: every parcel's webhook carries
+    // the installment id, while the payment returned here is only the first.
+    const providerPaymentId = payment.installment ?? payment.id;
+    // A single charge can be PIX (the kit): its QR rides along like a
+    // subscription's first charge does.
+    const pix = input.paymentMethod === "pix" ? await pixQrCode(payment.id, payment.invoiceUrl) : null;
+    return {
+      url: payment.invoiceUrl,
+      providerCustomerId: customerId,
+      providerPaymentId,
+      ...(pix ? { pix } : {}),
+    };
   }
 
   /**
@@ -521,7 +538,7 @@ export class AsaasProvider implements PaymentProvider {
   }
 
   // Asaas supports an endDate on the subscription. It stops future charge
-  // generation while the already paid period remains available in MedChina.
+  // generation while the already paid period stays usable on the platform.
   async scheduleCancellation(
     providerSubscriptionId: string,
     currentPeriodEnd?: Date,
@@ -557,6 +574,8 @@ export class AsaasProvider implements PaymentProvider {
         id: string;
         customer: string;
         subscription?: string;
+        /** Present on every parcel of a purchase split into installments. */
+        installment?: string;
         value?: number;
         invoiceUrl?: string;
         externalReference?: string;
@@ -598,6 +617,12 @@ export class AsaasProvider implements PaymentProvider {
       const value = Number(payment?.value);
       return Number.isFinite(value) ? Math.round(value * 100) : 0;
     };
+    /**
+     * The one-off purchase a payment belongs to, as checkout stored it in
+     * `subscriptions.provider_payment_id`: the installment for a parcel, the
+     * payment itself for a single charge. A subscription cycle has none.
+     */
+    const providerPaymentRef = payment?.installment ?? (payment && !payment.subscription ? payment.id : undefined);
 
     switch (body.event) {
       case "PAYMENT_CONFIRMED":
@@ -609,6 +634,7 @@ export class AsaasProvider implements PaymentProvider {
           provider: "asaas",
           metadata,
           providerSubscriptionId: payment.subscription,
+          ...(providerPaymentRef ? { providerPaymentRef } : {}),
           providerInvoiceId: payment.id,
           amountCents: amountCents(),
           currency: "BRL",
@@ -621,9 +647,9 @@ export class AsaasProvider implements PaymentProvider {
         // The charge's due date IS the start of the cycle it pays for, and it
         // is the only cycle information Asaas sends. Without it every renewal
         // looked like a cosmetic re-emission to the handler (Stripe's
-        // cancel/undo case), so the consumption window stayed pinned to the
-        // FIRST month: once that `current_period_end` passed, usage fell
-        // outside the window and the workspace was metered as unlimited.
+        // cancel/undo case), so the paid-up date stayed pinned to the FIRST
+        // month and a later scheduled cancellation ended at once, taking a
+        // cycle already paid for (lib/billing-window.ts).
         // A duplicate delivery (CONFIRMED then RECEIVED, same charge) carries
         // the same due date, which is exactly what keeps it from restarting
         // the window twice.
@@ -646,7 +672,7 @@ export class AsaasProvider implements PaymentProvider {
       case "PAYMENT_OVERDUE":
       // Recurring card capture was refused. This used to be dropped with a
       // 200, so `past_due` was never set, the dunning window never opened and
-      // the workspace kept consuming AI minutes on a subscription nobody was
+      // the workspace kept its paid access on a subscription nobody was
       // paying. PAYMENT_OVERDUE only ever covered the boleto/Pix world.
       case "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED": {
         if (!payment) break;
@@ -656,6 +682,7 @@ export class AsaasProvider implements PaymentProvider {
           provider: "asaas",
           metadata,
           providerSubscriptionId: payment.subscription,
+          ...(providerPaymentRef ? { providerPaymentRef } : {}),
           providerInvoiceId: payment.id,
           amountCents: amountCents(),
           currency: "BRL",

@@ -1,82 +1,150 @@
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { PublicPlanDisplay } from "@/components/marketing/pricing-section";
+import type { PublicPlanDisplay } from "@/components/marketing/pricing-section";
+import type { Tone } from "@/components/marketing/tone";
+import type { LaunchStage } from "@/lib/launch";
+import type { BillingCurrency } from "@flyee/billing/currency";
+import { enabledFeatures, type EntitlementKey, isTier, limitOf, type Tier } from "@flyee/billing/entitlements";
 import { listPublicPlans } from "@flyee/billing/public";
 import { applyDiscount, type CheckoutCoupon } from "@flyee/billing/types";
 
 const PLACEHOLDER_SLUGS = ["plan-1", "plan-2", "plan-3"] as const;
 
-/**
- * Display-ready plans for the public pricing sections: real rows from
- * packages/billing formatted for the active locale, or the i18n placeholder
- * plans when the database is not configured (fresh clone stays browsable).
- *
- * With a campaign coupon, every paid card also carries its ORIGINAL price and
- * the discount label: a visitor who was told to use a code and lands on table
- * prices concludes the code failed, so the page shows the promised number
- * instead of accepting the code silently.
- *
- * Feature bullets are interim until phase 4 derives them from the entitlement
- * keys (`pricing-feature-<key>`).
- */
-export async function getDisplayPlans(coupon?: CheckoutCoupon | null): Promise<PublicPlanDisplay[]> {
-  const [t, locale, plans] = await Promise.all([getTranslations("marketing"), getLocale(), listPublicPlans()]);
+/** One hue per rung, the same everywhere on the site (docs/DESIGN.md). */
+const TIER_TONE: Record<Tier, Tone> = { kit: "accent-2", club: "primary", pro: "accent-4" };
 
-  if (!plans || plans.length === 0) {
-    return PLACEHOLDER_SLUGS.map((slug) => ({
-      slug,
-      name: t(`${slug}-name`),
-      description: t(`${slug}-description`),
-      price: t(`${slug}-price`),
-      period: t(`${slug}-period`),
-      features: [t(`${slug}-feature-1`), t(`${slug}-feature-2`), t(`${slug}-feature-3`)],
-      highlighted: slug === "plan-2",
-    }));
+/** The on/off rights; devices are a count, rendered apart. */
+type FeatureKey = Exclude<EntitlementKey, "devices">;
+
+/** What each on/off right reads as on a card. */
+const FEATURE_LABEL: Record<FeatureKey, string> = {
+  catalog_access: "pricing-feature-catalog_access",
+  advanced_lessons: "pricing-feature-advanced_lessons",
+  recipes: "pricing-feature-recipes",
+  roadmap_vote: "pricing-feature-roadmap_vote",
+  meetings: "pricing-feature-meetings",
+  commercial_license: "pricing-feature-commercial_license",
+  open_the_hood: "pricing-feature-open_the_hood",
+};
+
+export type DisplayPricing = {
+  plans: PublicPlanDisplay[];
+  /** Present when the plans come in monthly and yearly cycles. */
+  periodToggle?: { label: string; monthly: string; yearly: string; yearlyNote?: string };
+};
+
+/**
+ * Display-ready plans for the public pricing sections, in one currency: real
+ * rows from packages/billing formatted for the page's language, or the i18n
+ * placeholder plans when the database is not configured (a fresh clone stays
+ * browsable).
+ *
+ * Each card says what it unlocks from its entitlement keys (`plans.limits`),
+ * never from hand-written copy, so a plan edited in /admin/billing reads
+ * right on the site. Until the site opens (launch stage `waitlist`) every
+ * button leads to the waitlist; afterwards each leads to sign-up and then to
+ * that plan's own checkout.
+ *
+ * With a campaign coupon, every card the coupon applies to also carries its
+ * ORIGINAL price and the discount label, using the same helper the providers
+ * charge with.
+ */
+export async function getDisplayPlans({
+  coupon,
+  currency,
+  stage,
+}: {
+  coupon?: CheckoutCoupon | null;
+  currency: BillingCurrency;
+  stage: LaunchStage;
+}): Promise<DisplayPricing> {
+  const [t, locale, rows] = await Promise.all([
+    getTranslations("marketing"),
+    getLocale(),
+    listPublicPlans({ currency }),
+  ]);
+
+  if (!rows || rows.length === 0) {
+    return {
+      plans: PLACEHOLDER_SLUGS.map((slug) => ({
+        slug,
+        name: t(`${slug}-name`),
+        description: t(`${slug}-description`),
+        price: t(`${slug}-price`),
+        period: t(`${slug}-period`),
+        features: [t(`${slug}-feature-1`), t(`${slug}-feature-2`), t(`${slug}-feature-3`)],
+        highlighted: slug === "plan-2",
+      })),
+    };
   }
 
-  // Highlight the middle plan — the conventional anchor of a 3-tier grid.
-  const highlightIndex = plans.length >= 3 ? 1 : -1;
+  const plans = rows.filter((plan) => !plan.isFree && (plan.kind === "access" || plan.period));
+  const money = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+  // A fixed discount is an amount in one currency; a percentage applies anywhere.
+  const planCoupon = coupon && (coupon.discountType === "percent" || coupon.currency === currency) ? coupon : undefined;
 
-  return plans.map((plan, index) => {
-    const features: string[] = [];
-    // One person per account, so the device ceiling is the plan's real
-    // capacity unit (kit 1 / club 3 / pro 5 — docs/PRODUCT.md).
-    if (typeof plan.limits.devices === "number" && plan.limits.devices > 0) {
-      features.push(t("pricing-feature-devices", { count: plan.limits.devices }));
-    }
-    if (plan.trialDays > 0) {
-      features.push(t("pricing-feature-trial", { days: plan.trialDays }));
-    }
+  const display = plans.map((plan): PublicPlanDisplay => {
+    const tier = isTier(plan.tier) ? plan.tier : null;
+    const features = enabledFeatures(plan.limits).map((key) => t(FEATURE_LABEL[key as FeatureKey]));
+    const devices = limitOf(plan.limits, "devices");
+    if (devices > 0) features.push(t("pricing-feature-devices", { count: devices }));
 
-    const money = new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: plan.currency,
-      maximumFractionDigits: 0,
-    });
-    // The SAME helper both providers use to charge, so the promised price and
-    // the invoiced one cannot drift. A free plan has nothing to discount.
-    const payableCents = plan.isFree ? 0 : applyDiscount(plan.priceCents, coupon ?? undefined);
-    const discounted = !plan.isFree && payableCents !== plan.priceCents;
-
+    const payableCents = applyDiscount(plan.priceCents, planCoupon);
+    const discounted = payableCents !== plan.priceCents;
+    const isKit = plan.kind === "access";
     return {
       slug: plan.slug,
       name: plan.name,
       description: plan.description ?? undefined,
-      price: plan.isFree ? t("pricing-free") : money.format(payableCents / 100),
+      price: money.format(payableCents / 100),
       originalPrice: discounted ? money.format(plan.priceCents / 100) : undefined,
       discountLabel: discounted
-        ? coupon?.discountType === "percent"
-          ? t("pricing-coupon-off-percent", { value: coupon.discountValue })
-          : t("pricing-coupon-off-fixed", { value: money.format((coupon?.discountValue ?? 0) / 100) })
+        ? planCoupon?.discountType === "percent"
+          ? t("pricing-coupon-off-percent", { value: planCoupon.discountValue })
+          : t("pricing-coupon-off-fixed", { value: money.format((planCoupon?.discountValue ?? 0) / 100) })
         : undefined,
-      period: plan.kind === "recurring" && plan.period && !plan.isFree ? t(`pricing-period-${plan.period}`) : undefined,
+      period: isKit ? t("pricing-one-time") : t(`pricing-period-${plan.period}`),
       features,
-      highlighted: index === highlightIndex,
+      // The subscription is the anchor of the ladder.
+      highlighted: tier === "club",
+      tone: tier ? TIER_TONE[tier] : undefined,
+      cycle: plan.period === "monthly" || plan.period === "yearly" ? plan.period : undefined,
+      href: stage === "open" ? `/auth/sign-up?next=${encodeURIComponent(`/assinatura?plan=${plan.slug}`)}` : "/espera",
+      ctaLabel: stage === "open" && isKit ? t("pricing-cta-kit") : undefined,
       // Raw values power the Offer JSON-LD (formatted `price` is display-only).
       // Deliberately the LIST price: the structured data describes the offer
       // open to everyone, and crawlers never carry a campaign code anyway.
-      priceAmount: plan.isFree ? 0 : plan.priceCents / 100,
+      priceAmount: plan.priceCents / 100,
       priceCurrency: plan.currency,
     };
   });
+
+  const hasCycles = display.some((plan) => plan.cycle === "monthly") && display.some((plan) => plan.cycle === "yearly");
+  if (!hasCycles) return { plans: display };
+
+  // The yearly saving, from real prices: the smallest across families, so the
+  // label never promises more than every plan gives.
+  const savings = ["club", "pro"]
+    .map((family) => {
+      const monthly = plans.find((plan) => plan.family === family && plan.period === "monthly");
+      const yearly = plans.find((plan) => plan.family === family && plan.period === "yearly");
+      if (!monthly || !yearly || monthly.priceCents <= 0) return 0;
+      return Math.round((1 - yearly.priceCents / (monthly.priceCents * 12)) * 100);
+    })
+    .filter((value) => value > 0);
+
+  return {
+    plans: display,
+    periodToggle: {
+      label: t("pricing-period-toggle-label"),
+      monthly: t("pricing-monthly"),
+      yearly: t("pricing-yearly"),
+      yearlyNote: savings.length > 0 ? t("pricing-yearly-saving", { percent: Math.min(...savings) }) : undefined,
+    },
+  };
 }

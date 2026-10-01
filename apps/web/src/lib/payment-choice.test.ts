@@ -1,57 +1,77 @@
 import { resolvePaymentChoice } from "./payment-choice";
 import { describe, expect, it } from "vitest";
 
+const yearlyBrl = { planPeriod: "yearly", currency: "BRL", maxInstallments: 12 };
+
 describe("resolvePaymentChoice", () => {
-  it("passes a card purchase on an annual plan through with its instalments", () => {
-    expect(resolvePaymentChoice({ method: "credit_card", installments: 5, planPeriod: "yearly" })).toEqual({
+  it("passes a card purchase on an annual BRL plan through with its instalments", () => {
+    expect(resolvePaymentChoice({ ...yearlyBrl, method: "credit_card", installments: 5 })).toEqual({
       method: "credit_card",
       installments: 5,
     });
   });
 
   it("clamps a crafted request to the instalments actually on offer", () => {
-    // The grid shows 5; a hand-made request asking for 12 must not open a 12x
-    // checkout just because nothing in the browser stopped it.
-    expect(resolvePaymentChoice({ method: "credit_card", installments: 12, planPeriod: "yearly" }).installments).toBe(
-      5,
-    );
-    expect(resolvePaymentChoice({ method: "credit_card", installments: 0, planPeriod: "yearly" }).installments).toBe(1);
-    expect(resolvePaymentChoice({ method: "credit_card", installments: -3, planPeriod: "yearly" }).installments).toBe(
-      1,
-    );
+    expect(
+      resolvePaymentChoice({ ...yearlyBrl, maxInstallments: 6, method: "credit_card", installments: 12 }).installments,
+    ).toBe(6);
+    expect(resolvePaymentChoice({ ...yearlyBrl, method: "credit_card", installments: 0 }).installments).toBe(1);
+    expect(resolvePaymentChoice({ ...yearlyBrl, method: "credit_card", installments: -3 }).installments).toBe(1);
+  });
+
+  it("never exceeds the providers' ceiling, whatever the setting says", () => {
+    expect(
+      resolvePaymentChoice({ ...yearlyBrl, maxInstallments: 48, method: "credit_card", installments: 48 }).installments,
+    ).toBe(12);
+  });
+
+  it("turns instalments off when the setting is 1", () => {
+    expect(
+      resolvePaymentChoice({ ...yearlyBrl, maxInstallments: 1, method: "credit_card", installments: 5 }).installments,
+    ).toBe(1);
   });
 
   it("refuses to split a MONTHLY plan — that would sell a year of cycles for one month", () => {
-    expect(resolvePaymentChoice({ method: "credit_card", installments: 5, planPeriod: "monthly" }).installments).toBe(
-      1,
-    );
+    expect(
+      resolvePaymentChoice({ ...yearlyBrl, planPeriod: "monthly", method: "credit_card", installments: 5 })
+        .installments,
+    ).toBe(1);
+  });
+
+  it("refuses to split a one-time purchase (the kit)", () => {
+    expect(
+      resolvePaymentChoice({ ...yearlyBrl, planPeriod: null, method: "credit_card", installments: 3 }).installments,
+    ).toBe(1);
   });
 
   it("refuses to split a Pix purchase, which Asaas would turn into five manual charges", () => {
-    expect(resolvePaymentChoice({ method: "pix", installments: 5, planPeriod: "yearly" })).toEqual({
+    expect(resolvePaymentChoice({ ...yearlyBrl, method: "pix", installments: 5 })).toEqual({
       method: "pix",
       installments: 1,
     });
   });
 
+  it("lets Stripe choose the method in USD, without instalments", () => {
+    expect(
+      resolvePaymentChoice({
+        planPeriod: "yearly",
+        currency: "USD",
+        maxInstallments: 12,
+        method: "pix",
+        installments: 5,
+      }),
+    ).toEqual({ method: undefined, installments: 1 });
+  });
+
   it("ignores a method it does not know instead of forwarding it to the provider", () => {
-    // `undefined` means "the provider decides", which is the behaviour that
-    // shows boleto — so an unknown string must never become a method, but it
-    // must also not crash the purchase.
-    expect(resolvePaymentChoice({ method: "boleto", installments: 1, planPeriod: "yearly" }).method).toBeUndefined();
-    expect(resolvePaymentChoice({ method: null, installments: 1, planPeriod: "monthly" }).method).toBeUndefined();
+    expect(resolvePaymentChoice({ ...yearlyBrl, method: "boleto", installments: 1 }).method).toBeUndefined();
+    expect(resolvePaymentChoice({ ...yearlyBrl, method: null, installments: 1 }).method).toBeUndefined();
   });
 
   it("survives junk in the instalment field", () => {
-    expect(
-      resolvePaymentChoice({ method: "credit_card", installments: Number.NaN, planPeriod: "yearly" }).installments,
-    ).toBe(1);
-    expect(resolvePaymentChoice({ method: "credit_card", installments: 2.9, planPeriod: "yearly" }).installments).toBe(
-      2,
+    expect(resolvePaymentChoice({ ...yearlyBrl, method: "credit_card", installments: Number.NaN }).installments).toBe(
+      1,
     );
-  });
-
-  it("does not split a plan with no period — a minute pack is a small one-off, not a financed purchase", () => {
-    expect(resolvePaymentChoice({ method: "credit_card", installments: 3, planPeriod: null }).installments).toBe(1);
+    expect(resolvePaymentChoice({ ...yearlyBrl, method: "credit_card", installments: 2.9 }).installments).toBe(2);
   });
 });

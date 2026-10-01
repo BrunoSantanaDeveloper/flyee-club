@@ -66,9 +66,9 @@ function toLocalInput(iso: string): string {
  *    whatever else the row holds, so an unknown key can never be dropped again.
  *  - It reported seats but never whether the page will actually RENDER what was
  *    configured. The readout below resolves both plans and says what the
- *    visitor will see, including the audio quota, which on a yearly line is a
- *    quota for the whole year (`org_audio_allowance`, migration 0024) and is
- *    the easiest thing in this offer to get wrong by a factor of twelve.
+ *    visitor will see: the price in the plan's own currency, the device
+ *    ceiling, whether the plan can still be bought, and why an anchor does
+ *    not render (another currency or period, inactive, or cheaper).
  */
 export default function FoundersAdmin() {
   const [config, setConfig] = useState<OfferConfig>(EMPTY);
@@ -85,7 +85,7 @@ export default function FoundersAdmin() {
     const [{ data: setting }, { data: live }, { data: planRows }] = await Promise.all([
       supabase.from("platform_settings").select("value").eq("key", "founders").maybeSingle(),
       supabase.rpc("founders_offer"),
-      supabase.from("plans").select("slug, name, period, price_cents, is_active, limits"),
+      supabase.from("plans").select("slug, name, period, price_cents, currency, is_active, limits"),
     ]);
     const value = (setting?.value ?? {}) as Partial<OfferConfig>;
     setRawValue((setting?.value ?? {}) as Record<string, unknown>);

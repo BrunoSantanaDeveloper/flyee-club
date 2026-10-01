@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+
 import { Button } from "@mui/material";
 
 import { BRAND } from "@/brand";
@@ -34,6 +36,12 @@ export type PublicPlanDisplay = {
    */
   priceAmount?: number;
   priceCurrency?: string;
+  /** Where THIS card's button leads, when it differs from the section's `ctaHref` (each plan's own checkout). */
+  href?: string;
+  /** This card's button label, when it differs from the section's (the one-time kit reads "Buy", not "Subscribe"). */
+  ctaLabel?: string;
+  /** With `periodToggle`, the cycle this card belongs to; a card without one (the kit) always shows. */
+  cycle?: "monthly" | "yearly";
 };
 
 /**
@@ -54,6 +62,7 @@ export default function PricingSection({
   tiers,
   footnote,
   couponNotice,
+  periodToggle,
 }: {
   id?: string;
   eyebrow?: string;
@@ -76,7 +85,15 @@ export default function PricingSection({
   tiers?: string[];
   /** Differentiation line under the grid ("O kit entrega… a assinatura soma…"). */
   footnote?: string;
+  /**
+   * Monthly / yearly switch above the grid: cards with a `cycle` show only in
+   * theirs, cards without one always show. Labels are translated by the page;
+   * `yearlyNote` is a real saving computed from the plans ("save 25%").
+   */
+  periodToggle?: { label: string; monthly: string; yearly: string; yearlyNote?: string };
 }) {
+  const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
+  const visiblePlans = periodToggle ? plans.filter((plan) => !plan.cycle || plan.cycle === period) : plans;
   return (
     <Section id={id} decor={decor}>
       {plans
@@ -95,7 +112,7 @@ export default function PricingSection({
                 price: plan.priceAmount,
                 priceCurrency: plan.priceCurrency,
                 availability: "https://schema.org/InStock",
-                url: `${BRAND.siteUrl}${ctaHref}`,
+                url: `${BRAND.siteUrl}${plan.href ?? ctaHref}`,
               },
             }}
           />
@@ -124,6 +141,42 @@ export default function PricingSection({
           ))}
         </p>
       )}
+      {periodToggle && (
+        <div
+          role="radiogroup"
+          aria-label={periodToggle.label}
+          className="border-grey-100 bg-background-paper mx-auto -mt-4 mb-10 flex w-fit flex-row gap-1 rounded-full border p-1"
+        >
+          {(["monthly", "yearly"] as const).map((option) => {
+            const selected = period === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setPeriod(option)}
+                className={cn(
+                  "flex flex-row items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
+                  selected ? "bg-primary text-text-contrast" : "text-text-secondary hover:text-text-primary",
+                )}
+              >
+                {option === "monthly" ? periodToggle.monthly : periodToggle.yearly}
+                {option === "yearly" && periodToggle.yearlyNote && (
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-xs",
+                      selected ? "bg-text-contrast/20" : "bg-secondary/10 text-secondary",
+                    )}
+                  >
+                    {periodToggle.yearlyNote}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
       <Reveal
         stagger={0.08}
         className={cn(
@@ -131,12 +184,12 @@ export default function PricingSection({
           // Track the real plan count: one or two plans stay CENTERED instead
           // of stranding in the first column of a 3-up grid (a project may
           // ship a single public plan while billing is being set up).
-          plans.length === 1 && "md:max-w-sm",
-          plans.length === 2 && "md:max-w-2xl md:grid-cols-2",
-          plans.length >= 3 && "max-w-4xl md:grid-cols-3",
+          visiblePlans.length === 1 && "md:max-w-sm",
+          visiblePlans.length === 2 && "md:max-w-2xl md:grid-cols-2",
+          visiblePlans.length >= 3 && "max-w-4xl md:grid-cols-3",
         )}
       >
-        {plans.map((plan, index) => {
+        {visiblePlans.map((plan, index) => {
           const tone = TONE[plan.tone ?? toneAt(index)];
           return (
             <div
@@ -189,10 +242,10 @@ export default function PricingSection({
               <Button
                 variant={plan.highlighted ? "contained" : "pastel"}
                 color="primary"
-                href={ctaHref}
+                href={plan.href ?? ctaHref}
                 LinkComponent={Link}
               >
-                {ctaLabel}
+                {plan.ctaLabel ?? ctaLabel}
               </Button>
             </div>
           );

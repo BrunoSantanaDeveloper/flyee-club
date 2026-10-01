@@ -11,30 +11,34 @@ import PlansGrid from "./components/plans-grid";
 import { useBilling } from "./components/use-billing";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { Alert, Box, Breadcrumbs, Button, CircularProgress, Drawer, Grid, Tooltip, Typography } from "@mui/material";
 
 import NiListCircle from "@/icons/nexture/ni-list-circle";
+import { resolveCurrency } from "@/lib/billing-currency";
+import { readCurrencyCookie, writeCurrencyCookie } from "@/lib/currency-cookie";
 import { remoteError, remoteLoading, type RemoteState, remoteSuccess } from "@/lib/remote-state";
+import type { BillingCurrency } from "@flyee/billing/currency";
 
 export default function BillingSettings() {
   const t = useTranslations("product");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const checkout = searchParams.get("checkout");
   const feature = searchParams.get("feature");
-  // The offer she was sent by link (`?plan=pro-fundador`): the grid surfaces it
-  // even when it is unlisted, and says so when the offer has ended.
+  // The offer she was sent by link (`?plan=club-fundador-anual`): the grid
+  // surfaces it even when it is unlisted, and says so when the offer ended.
   const offerSlug = searchParams.get("plan");
   const [openDrawer, setOpenDrawer] = useState(false);
+  // Her own pick (the cookie) wins; otherwise the language decides. Resolved
+  // after mount, where the cookie is readable, so server and client agree.
+  const [currency, setCurrency] = useState<BillingCurrency>(() => resolveCurrency({ locale }));
+  useEffect(() => {
+    setCurrency(resolveCurrency({ cookie: readCurrencyCookie(), locale }));
+  }, [locale]);
   const [checkoutState, setCheckoutState] = useState<RemoteState<boolean, "check_failed">>(() => remoteLoading());
-  // Set when the provider refused the checkout for a missing CPF/CNPJ, so the
-  // form leads with WHY it is suddenly being asked for.
-  const [needsBillingProfile, setNeedsBillingProfile] = useState(false);
-  // Bumped when the fiscal form is saved while she is completing a purchase:
-  // the plan grid watches it and opens the checkout without a second click.
-  const [continueCheckout, setContinueCheckout] = useState(0);
   const {
     configured,
     loading,
@@ -48,6 +52,7 @@ export default function BillingSettings() {
     pendingCheckout,
     billingProfile,
     plans,
+    entitlements,
     invoices,
     retry,
     refreshDetails,
@@ -56,40 +61,23 @@ export default function BillingSettings() {
   // first job in that state is getting the charge paid.
   const pastDue = subscription?.status === "past_due";
 
-  /**
-   * She came from an offer page to BUY, not to administer a subscription.
-   *
-   * This screen is the settings hub — usage meters, packs, invoice history —
-   * and every one of those blocks is a reason to stop and read on the last
-   * step before paying. So when she arrives with a plan in the link and has
-   * nothing to administer yet, the page shows only what completes the
-   * purchase: the fiscal field the provider demands, and the plan. Nothing is
-   * removed, only deferred: the full screen is one link away, and the moment a
-   * subscription exists this mode stops applying by itself.
-   */
-  //
-  // `subscription.isFree`, NUNCA `!subscription`: toda organização nasce com
-  // uma assinatura ATIVA do plano Gratuito, criada por gatilho de banco
-  // (0001_billing.sql, `where is_free and is_active`). Com `!subscription` a
-  // condição era falsa para todo usuário real e este modo nunca ligava em
-  // produção — a pessoa que veio do anúncio caía na tela de configurações
-  // inteira, com medidor de uso, pacotes avulsos, histórico de faturas e um
-  // cartão anunciando "Seu plano: Gratuito", que é justamente o que a oferta
-  // não menciona. O teste local não pegou porque lá não havia workspace.
-  const checkoutFocus = Boolean(offerSlug) && canManage && (!subscription || subscription.isFree);
-
-  const loadCheckoutAvailability = useCallback(async () => {
+  const loadCheckoutAvailability = useCallback(async (target: BillingCurrency) => {
     setCheckoutState(remoteLoading());
     try {
-      setCheckoutState(remoteSuccess(await checkoutAvailability()));
+      setCheckoutState(remoteSuccess(await checkoutAvailability(target)));
     } catch {
       setCheckoutState(remoteError("check_failed"));
     }
   }, []);
 
   useEffect(() => {
-    void loadCheckoutAvailability();
-  }, [loadCheckoutAvailability]);
+    void loadCheckoutAvailability(currency);
+  }, [currency, loadCheckoutAvailability]);
+
+  const changeCurrency = (next: BillingCurrency) => {
+    writeCurrencyCookie(next);
+    setCurrency(next);
+  };
 
   const checkoutAvailable = checkoutState.status === "success" ? checkoutState.data : undefined;
   const detailsAvailable =
@@ -105,26 +93,17 @@ export default function BillingSettings() {
         <Grid size={12} spacing={2.5} container>
           <Grid size={{ xs: 12, md: "grow" }}>
             <Typography variant="h1" component="h1" className="mb-0">
-              {checkoutFocus ? t("billing-checkout-focus-title") : t("billing-title")}
+              {t("billing-title")}
             </Typography>
-            {/* Where she is in the path, not where she is in the site tree.
-                Mid-purchase, a breadcrumb back to Settings is an exit; the step
-                line is the thing that makes a short flow feel short. */}
-            {checkoutFocus ? (
-              <Typography variant="body2" className="text-text-secondary">
-                {billingProfile.document ? t("billing-checkout-step-pay") : t("billing-checkout-step-profile")}
-              </Typography>
-            ) : (
-              <Breadcrumbs>
-                <Link color="inherit" href="/inicio">
-                  {t("settings-home")}
-                </Link>
-                <Link color="inherit" href="/settings">
-                  {t("settings-title")}
-                </Link>
-                <Typography variant="body2">{t("settings-billing")}</Typography>
-              </Breadcrumbs>
-            )}
+            <Breadcrumbs>
+              <Link color="inherit" href="/inicio">
+                {t("settings-home")}
+              </Link>
+              <Link color="inherit" href="/settings">
+                {t("settings-title")}
+              </Link>
+              <Typography variant="body2">{t("settings-billing")}</Typography>
+            </Breadcrumbs>
           </Grid>
           <Grid size={{ xs: 12, md: "auto" }} className="lg:hidden">
             <Tooltip title={t("settings-open-menu")}>
@@ -169,7 +148,7 @@ export default function BillingSettings() {
           <Grid size={12}>
             <Alert
               severity="error"
-              action={<Button onClick={() => void loadCheckoutAvailability()}>{t("retry")}</Button>}
+              action={<Button onClick={() => void loadCheckoutAvailability(currency)}>{t("retry")}</Button>}
             >
               {t("billing-provider-check-error")}
             </Alert>
@@ -205,9 +184,7 @@ export default function BillingSettings() {
 
         {currentOrg && detailsAvailable && (
           <>
-            {/* First, because she is here to FIX a charge, not to shop. The
-                plan grid below answers a different question and would read as
-                the wrong answer if it came first. */}
+            {/* First, because she is here to FIX a charge, not to shop. */}
             {canManage && pastDue && (
               <Grid size={12}>
                 <PaymentRecoveryCard orgId={currentOrg.id} />
@@ -219,53 +196,36 @@ export default function BillingSettings() {
             {canManage && pendingCheckout && (
               <PendingCheckoutCard orgId={currentOrg.id} pending={pendingCheckout} onChanged={refreshDetails} />
             )}
-            {canManage && (needsBillingProfile || !billingProfile.document) && (
-              <BillingProfileCard
-                orgId={currentOrg.id}
-                profile={billingProfile}
-                required={needsBillingProfile}
-                // In checkout mode the button says where it goes, and going
-                // there is the same click: saving the document was never a
-                // destination, it was the provider's requirement.
-                continuesToCheckout={checkoutFocus}
-                onSaved={() => {
-                  setNeedsBillingProfile(false);
-                  if (checkoutFocus) setContinueCheckout((token) => token + 1);
-                  void refreshDetails();
-                }}
-              />
-            )}
-            {!checkoutFocus && (
-              <>
-                <CurrentSubscription
-                  orgId={currentOrg.id}
-                  subscription={subscription}
-                  canManage={canManage}
-                  onChanged={refreshDetails}
-                />
-              </>
-            )}
-            <PlansGrid
+            <CurrentSubscription
               orgId={currentOrg.id}
               subscription={subscription}
+              entitlements={entitlements}
+              canManage={canManage}
+              onChanged={refreshDetails}
+            />
+            <PlansGrid
+              subscription={subscription}
               plans={plans}
+              currency={currency}
+              onCurrencyChange={changeCurrency}
+              entitlements={entitlements}
               canManage={canManage}
               checkoutAvailable={checkoutState.status === "success" && checkoutAvailable === true}
               offerSlug={offerSlug}
-              onBillingProfileRequired={() => setNeedsBillingProfile(true)}
-              continueCheckout={continueCheckout}
             />
-            {!checkoutFocus && <InvoicesCard invoices={invoices} />}
-            {/* Deferred, never removed: the settings she did not come for stay
-                one click away, and the link drops the `plan` parameter so the
-                full screen is what loads. */}
-            {checkoutFocus && (
-              <Grid size={12}>
-                <Button variant="text" color="grey" LinkComponent={Link} href="/settings/billing">
-                  {t("billing-checkout-all-settings")}
-                </Button>
-              </Grid>
+            {/* The fiscal data only exists for BRL (Asaas issues the NFS-e
+                from it); the checkout asks for it too, this is where it is
+                kept up to date. */}
+            {canManage && currency === "BRL" && (
+              <BillingProfileCard
+                orgId={currentOrg.id}
+                profile={billingProfile}
+                required={false}
+                continuesToCheckout={false}
+                onSaved={() => void refreshDetails()}
+              />
             )}
+            <InvoicesCard invoices={invoices} />
           </>
         )}
 

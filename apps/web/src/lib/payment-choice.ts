@@ -1,19 +1,25 @@
-import { MAX_INSTALLMENTS, type PaymentMethod } from "@flyee/billing/types";
+import { PROVIDER_MAX_INSTALLMENTS } from "@flyee/billing/currency";
+import type { PaymentMethod } from "@flyee/billing/types";
 
 /**
  * What the customer may actually be charged, decided on the server.
  *
  * The form offers what it offers, but a form is a suggestion: a server action
  * is a public endpoint, and the values that reach the provider are settled
- * here. Three rules, all of them money:
+ * here. The rules, all of them money:
  *
+ *  - **Methods belong to a currency.** PIX and a chosen card exist only in BRL
+ *    (Asaas); a USD purchase goes to Stripe's own checkout, which picks the
+ *    method itself.
  *  - **Installments only on a card.** Pix has no instalment concept at Asaas;
  *    asking for 5x on Pix would silently produce five separate charges the
  *    customer has to pay by hand, which is not what either side agreed to.
- *  - **Installments only off a monthly plan.** Splitting a monthly price into
- *    5 would sell a year of billing cycles for one month's money.
- *  - **Clamped to the offer.** A crafted request asking for 12x must not open
- *    a 12x checkout just because the grid showed 5.
+ *  - **Installments only off a monthly plan, and never on a one-time
+ *    purchase.** Splitting a monthly price would sell a year of billing
+ *    cycles for one month's money; the kit is a small one-off.
+ *  - **Clamped to the offer** (`platform_settings.billing.max_installments`).
+ *    A crafted request asking for 12x must not open a 12x checkout just
+ *    because nothing in the browser stopped it.
  *
  * Pure, so the rule can be tested without a provider or a network.
  */
@@ -23,14 +29,20 @@ export function resolvePaymentChoice(input: {
   method?: string | null;
   installments?: number | null;
   planPeriod: string | null;
+  currency: string;
+  /** The configured ceiling; 1 turns installments off. */
+  maxInstallments: number;
 }): ResolvedPaymentChoice {
+  const brl = input.currency.trim().toUpperCase() === "BRL";
   const method: PaymentMethod | undefined =
-    input.method === "credit_card" || input.method === "pix" ? input.method : undefined;
+    brl && (input.method === "credit_card" || input.method === "pix") ? input.method : undefined;
 
   const asked = Number(input.installments);
   const wanted = Number.isFinite(asked) ? Math.floor(asked) : 1;
-  const splittable = method === "credit_card" && input.planPeriod !== null && input.planPeriod !== "monthly";
-  const installments = splittable ? Math.min(Math.max(wanted, 1), MAX_INSTALLMENTS) : 1;
+  const ceiling = Math.max(1, Math.min(Math.floor(input.maxInstallments) || 1, PROVIDER_MAX_INSTALLMENTS));
+  const splittable =
+    method === "credit_card" && input.planPeriod !== null && input.planPeriod !== "monthly" && ceiling > 1;
+  const installments = splittable ? Math.min(Math.max(wanted, 1), ceiling) : 1;
 
   return { method, installments };
 }

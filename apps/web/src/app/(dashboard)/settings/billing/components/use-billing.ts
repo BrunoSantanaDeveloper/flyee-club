@@ -21,6 +21,8 @@ export interface SubscriptionInfo {
   trialEndsAt: string | null;
   cancelAtPeriodEnd: boolean;
   cancellationRequestedAt: string | null;
+  /** False for a yearly plan paid in installments: one purchase, which ends with its period. */
+  renews: boolean;
   modules: { id: string; name: string }[];
 }
 
@@ -52,11 +54,12 @@ export interface PlanRow {
   currency: string;
   trialDays: number;
   isFree: boolean;
-  audioMinutes: number;
-  /** Not a subscription tier: a one-off add-on (migration 0055). */
+  /** The same offer across periods and currencies: `free`, `kit`, `club`, `pro`. */
+  family: string;
+  /** The rung of the ladder (`kit`, `club`, `pro`); null for the free plan. */
+  tier: string | null;
+  /** Not a subscription tier: an add-on (none are sold today). */
   isAddon: boolean;
-  /** Minutes an à-la-carte pack grants; 0 for everything else. */
-  packMinutes: number;
   /**
    * Whether the plan belongs in the catalog grid (0085). A limited offer is
    * active and fully purchasable but not public: it is reached by the link the
@@ -88,13 +91,27 @@ export interface InvoiceRow {
 interface BillingDetails {
   subscription: SubscriptionInfo | null;
   pendingCheckout: PendingCheckout | null;
-  /** Subscription tiers only — add-ons are split out into `packs`. */
+  /** Every purchasable plan, in every currency; the screen picks the member's. */
   plans: PlanRow[];
-  packs: PlanRow[];
+  /** What the workspace may use now, as `org_entitlements` answers it. */
+  entitlements: WorkspaceEntitlements;
   modules: ModuleRow[];
   invoices: InvoiceRow[];
   billingProfile: BillingProfile;
 }
+
+/**
+ * The part of `org_entitlements(org)` the billing screen needs: the rung the
+ * workspace is on, and whether it owns the kit (a grant that survives any
+ * subscription ending).
+ */
+export interface WorkspaceEntitlements {
+  tier: string | null;
+  hasKit: boolean;
+  catalogAccess: boolean;
+}
+
+const NO_ENTITLEMENTS: WorkspaceEntitlements = { tier: null, hasKit: false, catalogAccess: false };
 
 /** Fiscal identity of the workspace — Asaas refuses a customer without it. */
 export interface BillingProfile {
@@ -110,7 +127,7 @@ const EMPTY_DETAILS: BillingDetails = {
   subscription: null,
   pendingCheckout: null,
   plans: [],
-  packs: [],
+  entitlements: NO_ENTITLEMENTS,
   modules: [],
   invoices: [],
   billingProfile: EMPTY_PROFILE,
@@ -187,42 +204,44 @@ export function useBilling() {
       setDetailsState(remoteLoading(previous));
       const supabase = createClient();
 
-      const [subResult, plansResult, modulesResult, invoicesResult, pendingResult, orgResult] = await Promise.all([
-        supabase
-          .from("subscriptions")
-          .select(
-            "id, status, admin_suspended, plan_id, period, current_period_end, trial_ends_at, cancel_at_period_end, cancellation_requested_at, plans(name, kind, is_free), subscription_modules(module_id, status, modules(name))",
-          )
-          .eq("org_id", currentOrgId)
-          .in("status", ["trialing", "active", "past_due"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase.from("plans").select("*").eq("is_active", true).order("sort"),
-        supabase.from("modules").select("*").eq("is_active", true).order("sort"),
-        supabase
-          .from("invoices")
-          .select("*")
-          .eq("org_id", currentOrgId)
-          .order("created_at", { ascending: false })
-          .limit(24),
-        // The checkout she started and has not paid yet. `billing_operations`
-        // carries the provider's hosted URL, and its RLS already limits the
-        // read to the manager who started it.
-        supabase
-          .from("subscriptions")
-          .select("id, plan_id, created_at, plans(name), billing_operations(result)")
-          .eq("org_id", currentOrgId)
-          .eq("status", "incomplete")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("organizations")
-          .select("billing_cpf_cnpj, billing_postal_code, billing_address_number, billing_phone")
-          .eq("id", currentOrgId)
-          .maybeSingle(),
-      ]);
+      const [subResult, plansResult, modulesResult, invoicesResult, pendingResult, orgResult, entitlementsResult] =
+        await Promise.all([
+          supabase
+            .from("subscriptions")
+            .select(
+              "id, status, admin_suspended, plan_id, period, current_period_end, trial_ends_at, cancel_at_period_end, cancellation_requested_at, renews, plans(name, kind, is_free), subscription_modules(module_id, status, modules(name))",
+            )
+            .eq("org_id", currentOrgId)
+            .in("status", ["trialing", "active", "past_due"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase.from("plans").select("*").eq("is_active", true).order("sort"),
+          supabase.from("modules").select("*").eq("is_active", true).order("sort"),
+          supabase
+            .from("invoices")
+            .select("*")
+            .eq("org_id", currentOrgId)
+            .order("created_at", { ascending: false })
+            .limit(24),
+          // The checkout she started and has not paid yet. `billing_operations`
+          // carries the provider's hosted URL, and its RLS already limits the
+          // read to the manager who started it.
+          supabase
+            .from("subscriptions")
+            .select("id, plan_id, created_at, plans(name), billing_operations(result)")
+            .eq("org_id", currentOrgId)
+            .eq("status", "incomplete")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("organizations")
+            .select("billing_cpf_cnpj, billing_postal_code, billing_address_number, billing_phone")
+            .eq("id", currentOrgId)
+            .maybeSingle(),
+          supabase.rpc("org_entitlements", { target_org: currentOrgId }),
+        ]);
 
       if (requestId !== detailsRequestRef.current) return;
       if (subResult.error || plansResult.error || modulesResult.error || invoicesResult.error) {
@@ -251,6 +270,7 @@ export function useBilling() {
           trialEndsAt: sub.trial_ends_at,
           cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
           cancellationRequestedAt: sub.cancellation_requested_at,
+          renews: sub.renews !== false,
           modules: subModules
             .filter((m) => m.status === "active")
             .map((m) => ({ id: m.module_id, name: m.modules?.name ?? "Module" })),
@@ -268,12 +288,10 @@ export function useBilling() {
         currency: p.currency,
         trialDays: p.trial_days,
         isFree: p.is_free,
-        audioMinutes: Number((p.limits as { audio_minutes?: number } | null)?.audio_minutes ?? 0),
+        family: p.family,
+        tier: p.tier,
         isAddon: Boolean(p.is_addon),
-        // Defaults to public when the column is absent, so a database that has
-        // not run 0085 yet keeps listing every plan instead of emptying the grid.
         isPublic: p.is_public !== false,
-        packMinutes: Number((p.limits as { audio_minutes_pack?: number } | null)?.audio_minutes_pack ?? 0),
         limits: (p.limits as Record<string, unknown> | null) ?? {},
       }));
 
@@ -298,10 +316,9 @@ export function useBilling() {
           addressNumber: orgResult.data?.billing_address_number ?? null,
           phone: orgResult.data?.billing_phone ?? null,
         },
-        // An add-on is not a tier: mixed into the plan grid, a minute pack
-        // would read as a fourth thing to subscribe to.
+        // An add-on is not a rung of the ladder.
         plans: catalog.filter((plan) => !plan.isAddon),
-        packs: catalog.filter((plan) => plan.isAddon && plan.packMinutes > 0),
+        entitlements: readEntitlements(entitlementsResult.data),
         modules: (modulesResult.data ?? []).map((m) => ({
           id: m.id,
           name: m.name,
@@ -358,7 +375,7 @@ export function useBilling() {
     pendingCheckout: details.pendingCheckout,
     billingProfile: details.billingProfile,
     plans: details.plans,
-    packs: details.packs,
+    entitlements: details.entitlements,
     modules: details.modules,
     invoices: details.invoices,
     retry: async () => {
@@ -369,5 +386,17 @@ export function useBilling() {
   };
 }
 
-export const formatMoney = (cents: number, currency = "BRL") =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(cents / 100);
+/** Reads the slice of `org_entitlements` the screen uses; nothing readable means nothing owned. */
+function readEntitlements(raw: unknown): WorkspaceEntitlements {
+  const value = (raw ?? {}) as {
+    tier?: string | null;
+    limits?: Record<string, unknown> | null;
+    sources?: { type?: string; tier?: string | null }[] | null;
+  };
+  const sources = Array.isArray(value.sources) ? value.sources : [];
+  return {
+    tier: value.tier ?? null,
+    hasKit: sources.some((source) => source.type === "grant" && source.tier === "kit"),
+    catalogAccess: Number(value.limits?.catalog_access ?? 0) > 0,
+  };
+}

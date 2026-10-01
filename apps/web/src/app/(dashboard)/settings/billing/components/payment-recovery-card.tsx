@@ -1,6 +1,6 @@
 "use client";
 
-import { startPaymentRecovery } from "../actions";
+import { startPaymentRecovery } from "../actions-recovery";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 

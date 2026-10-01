@@ -35,7 +35,18 @@ type CouponForm = {
   max_redemptions: number | "";
   valid_until: string;
   is_active: boolean;
+  /** Required for a fixed amount (an amount of money belongs to one currency). */
+  currency: string;
+  /** Empty = every family; otherwise the families the code applies to. */
+  plan_families: string[];
 };
+
+/** The plan families a code can be limited to (migration 0018). */
+const FAMILIES = [
+  { value: "kit", label: "Kit" },
+  { value: "club", label: "Assinatura" },
+  { value: "pro", label: "Pro" },
+];
 
 /** One coupon row, flattened for the grid; `raw` is what the edit dialog reads. */
 type CouponRow = {
@@ -57,6 +68,8 @@ const EMPTY: CouponForm = {
   max_redemptions: "",
   valid_until: "",
   is_active: true,
+  currency: "BRL",
+  plan_families: [],
 };
 
 export default function CouponsAdmin() {
@@ -99,6 +112,8 @@ export default function CouponsAdmin() {
             max_redemptions: (row.max_redemptions as number) ?? "",
             valid_until: row.valid_until ? String(row.valid_until).slice(0, 10) : "",
             is_active: row.is_active as boolean,
+            currency: (row.currency as string | null) ?? "BRL",
+            plan_families: (row.plan_families as string[] | null) ?? [],
           }
         : EMPTY,
     );
@@ -108,12 +123,22 @@ export default function CouponsAdmin() {
     if (!form) return;
     setError(null);
     const supabase = createClient();
+    const fixed = form.discount_type === "fixed";
     const { error: saveError } = await supabase.from("coupons").upsert({
       ...(form.id ? { id: form.id } : {}),
       code: form.code.trim().toUpperCase(),
       description: form.description || null,
       discount_type: form.discount_type,
       discount_value: Number(form.discount_value) || 0,
+      // A fixed amount is money in one currency, and only plans in that
+      // currency accept it (validate_coupon); a percentage applies to any.
+      currency: fixed ? form.currency : null,
+      plan_families: form.plan_families.length > 0 ? form.plan_families : null,
+      // Both providers apply a code on every cycle (Stripe mirrors it as a
+      // `forever` coupon, Asaas bills the discounted value), so that is what
+      // is stored: the record says what the member is actually charged.
+      duration: "forever",
+      duration_months: null,
       max_redemptions: form.max_redemptions === "" ? null : Number(form.max_redemptions),
       valid_until: form.valid_until ? new Date(`${form.valid_until}T23:59:59`).toISOString() : null,
       is_active: form.is_active,
@@ -140,7 +165,9 @@ export default function CouponsAdmin() {
         discount:
           row.discount_type === "percent"
             ? `${row.discount_value}%`
-            : `${((row.discount_value as number) / 100).toFixed(2)} fixo`,
+            : new Intl.NumberFormat("pt-BR", { style: "currency", currency: (row.currency as string) ?? "BRL" }).format(
+                (row.discount_value as number) / 100,
+              ),
         redeemed: `${row.redeemed_count}${row.max_redemptions ? `/${row.max_redemptions}` : ""}`,
         validUntil: row.valid_until ? String(row.valid_until).slice(0, 10) : "sem validade",
         isActive: Boolean(row.is_active),
@@ -276,6 +303,46 @@ export default function CouponsAdmin() {
               value={form.discount_value}
               onChange={(v) => setForm({ ...form, discount_value: Number(v) })}
             />
+            {form.discount_type === "fixed" && (
+              <SelectField
+                label="Moeda do desconto"
+                value={form.currency}
+                options={[
+                  { value: "BRL", label: "Reais (BRL) · só planos em real" },
+                  { value: "USD", label: "Dólares (USD) · só planos em dólar" },
+                ]}
+                onChange={(v) => setForm({ ...form, currency: v })}
+              />
+            )}
+            <Typography variant="body2" className="text-text-secondary mt-2">
+              Vale para (nenhum marcado = todos os planos)
+            </Typography>
+            <Box className="flex flex-row flex-wrap gap-x-4">
+              {FAMILIES.map((family) => (
+                <FormControlLabel
+                  key={family.value}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={form.plan_families.includes(family.value)}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          plan_families: event.target.checked
+                            ? [...form.plan_families, family.value]
+                            : form.plan_families.filter((value) => value !== family.value),
+                        })
+                      }
+                    />
+                  }
+                  label={family.label}
+                />
+              ))}
+            </Box>
+            <Alert severity="info" className="neutral bg-background-paper/60! my-2">
+              O desconto vale em todos os ciclos enquanto a assinatura durar: é o que os dois provedores aplicam (o
+              Asaas cobra o valor com desconto, a Stripe espelha um cupom permanente). No kit, vale no pagamento único.
+            </Alert>
             <Field
               label="Máximo de resgates (vazio = ilimitado)"
               type="number"

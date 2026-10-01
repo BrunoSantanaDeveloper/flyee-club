@@ -31,7 +31,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 ## Where things stand
 
 - Plan and progress: `docs/PLANO-IMPLEMENTACAO.md` (phases 0–8; the "Andamento" table says what is done). Product decisions and open questions: `docs/PRODUCT.md`.
-- Done: phase 0 (identity, two locales, de-templated harness), phase 1 (clinical code, mobile app and dead packages removed), phase 2 (the database baseline), phase 7.1 (path-based locales for the public site) and the code of the first-deploy milestone (bilingual waitlist with double opt-in, legal pages from `consent_terms`, launch stage and company line managed at `/admin/support`). The deploy itself waits on the new services and the company data (`docs/DEPLOY.md`, "Primeiro deploy"). Next: phase 4, the billing ladder.
+- Done: phase 0 (identity, two locales, de-templated harness), phase 1 (clinical code, mobile app and dead packages removed), phase 2 (the database baseline), phase 7.1 (path-based locales for the public site), the code of the first-deploy milestone (bilingual waitlist with double opt-in, legal pages from `consent_terms`, launch stage and company line managed at `/admin/support`) and phase 4 (the billing ladder: kit, membership and Pro, in BRL through Asaas and USD through Stripe, `docs/BILLING.md`). The deploy itself waits on the new services and the company data (`docs/DEPLOY.md`, "Primeiro deploy"). Next: phase 3, the CLI token server and delivery API.
 - **The database is the flyee.club baseline** (`packages/db/migrations`, `0000`–`0018`, plus `0019_launch` on top, with the pgTAP suite in `packages/db/tests`). It has not been applied to a hosted project yet: that happens once the new Supabase project exists (`npm run db:gate:remote`). New schema work is a new numbered migration on top of it. See `packages/db/README.md`.
 
 ## Safety during the transition
@@ -58,7 +58,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 - `packages/design-tokens` — design system source of truth: the provisional palette in `css/green.css`, neutrals in `css/common.css`, `css/marketing.css` (fluid display scale, section rhythm, motion). See its README.
 - `packages/db` — the SQL baseline with RLS on every table and explicit grants (one organization per member: the personal workspace), the pgTAP suite, and a Drizzle mirror generated from the migrations. See its README.
 - `packages/auth` — Supabase clients (browser/server/middleware/service), 2FA step-up, and the parallel session cookie used by support impersonation.
-- `packages/billing` — plans, subscriptions, coupons, invoices; Asaas and Stripe behind one `PaymentProvider`. Phase 4 adds the one-time access purchase (kit), entitlement grants and routing by currency.
+- `packages/billing` — the ladder (the kit as a one-time access purchase; membership and Pro, monthly and yearly; every plan in BRL and in USD), subscriptions with price snapshots, entitlement grants, coupons, invoices; Asaas (BRL) and Stripe (USD) behind one `PaymentProvider`, routed by the plan's currency. Pure, client-safe helpers in `@flyee/billing/currency` and `@flyee/billing/entitlements`. See `docs/BILLING.md`.
 - `packages/email` — Resend + React Email (server-only); no-ops without `RESEND_API_KEY`, so callers keep a fallback.
 - `packages/jobs` — Inngest client + typed event map; functions are served by `apps/web` at `/api/inngest`. `sendEvent` never throws; callers fall back to inline work.
 - `packages/audit` — append-only `audit_events`, the `access_events` sign-in trail, row versioning, versioned consent terms and acceptances.
@@ -68,7 +68,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 - `packages/onboarding` — activation state machinery; the steps live in `apps/web/src/lib/onboarding.ts`.
 - `packages/content` — `BRAND` (site identity) + the message catalogs `messages/{pt-BR,en}.json`; brand master art in `packages/content/brand/`.
 - Phase 3 adds `packages/catalog` (`@flyee/catalog`): the `flyee.module.json` manifest schema the CLI and the upload pipeline share.
-- `docs/` — `PRODUCT.md`, `PLANO-IMPLEMENTACAO.md`, `DEPLOY.md`, `DESIGN.md` (provisional direction), `ASAAS-GO-LIVE.md`, `BILLING-AUDIT.md` (historical), `SEO.md` and `TRACKING.md` (rewritten in phase 7).
+- `docs/` — `PRODUCT.md`, `PLANO-IMPLEMENTACAO.md`, `DEPLOY.md`, `DESIGN.md` (provisional direction), `ASAAS-GO-LIVE.md`, `BILLING.md` (the billing design), `BILLING-AUDIT.md` (historical), `SEO.md` and `TRACKING.md` (rewritten in phase 7).
 - `attachments/` — input inbox: drop project material here; agents route each file to its canonical home per `attachments/README.md`.
 
 ## Golden rules
@@ -154,11 +154,12 @@ Next.js 15 (App Router) + React 19 — the only app of the flyee.club platform: 
 
 ## Billing and checkout
 
-- `/settings/billing` (plan grid, current subscription, cancel and undo, invoices, billing profile, pending checkout, payment recovery) and `/assinatura` (the focused checkout, PIX or card). Server actions in `settings/billing/actions.ts`; provider webhooks at `api/webhooks/[provider]/route.ts`, idempotent through `claim_billing_webhook_event`/`complete_billing_webhook_event` with an attempt ceiling.
+- `/settings/billing` (the ladder in the member's currency, current subscription, cancel with a reason and undo, invoices, billing profile, pending checkout, payment recovery) and `/assinatura?plan=<slug>` (the focused checkout; without `plan` it opens the kit in the visitor's currency; Pix, card or installments in BRL, Stripe Checkout in USD). Server actions in `settings/billing/actions.ts` (checkouts), `actions-cancel.ts` and `actions-recovery.ts`, sharing `billing-server.ts`; provider webhooks at `api/webhooks/[provider]/route.ts`, idempotent through `claim_billing_webhook_event`/`complete_billing_webhook_event` with an attempt ceiling.
 - **Dunning grace**: `past_due` keeps access for a configurable window (`platform_settings` key `dunning`) counted from `subscriptions.past_due_since`; `billing_past_due_grace_ends()` is the one answer every gate shares. Installed tools always keep working; only updates stop.
 - **Comped plans**: `set_org_plan(org, plan, note)` puts a workspace on a tier without checkout (betas, partners, the team). It updates the live row instead of inserting, keeps the period bounds NULL, refuses a provider-backed subscription (`provider_managed`) and stamps `self_grant` in the audit event when the operator comps their own account.
 - The founders offer counts real seats (`lib/founders-offer.ts`); the guarantee window comes from `platform_settings` (`lib/guarantee.ts`); a pending PIX survives a closed tab (`lib/pending-pix.ts`).
-- Phase 4 adds the one-time access purchase (kit), entitlement grants, monthly and annual families, routing by currency (BRL → Asaas, USD → Stripe), price snapshots on subscriptions and cancellation reasons. See `docs/PLANO-IMPLEMENTACAO.md`, phase 4.
+- **Entitlements**: `org_entitlements(org)` is the one answer (free floor + live grants + live subscription + add-ons, with `tier` and `sources`). Screens read it through `hooks/use-entitlements.ts` and `@flyee/billing/entitlements`, never by plan name or slug. The kit is an `entitlement_grants` row the webhook creates on the paid invoice; CLI tokens are revoked only when catalog access really ends (`lib/billing-lifecycle.ts`).
+- **Currency**: `?moeda=` (kept in a cookie by the middleware) or the page language picks BRL or USD (`lib/billing-currency.ts`), and the plan's currency picks the provider. A yearly BRL plan split into installments is ONE purchase that does not renew. Full design, state machine, refunds and deferred items: `docs/BILLING.md`.
 
 ## Platform admin and account
 

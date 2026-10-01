@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { Alert, Box, Button, CircularProgress, TextField, Typography } from "@mui/material";
@@ -13,40 +14,30 @@ import type { PixCharge } from "@flyee/billing/types";
 const POLL_MS = 4_000;
 /**
  * When the page stops asking on its own. A PIX normally confirms in seconds;
- * past this point the webhook is late, not the payment, and polling a page she
- * may have forgotten open for an hour only costs queries. The plan is released
- * by the webhook either way — this only decides when the SCREEN stops waiting.
+ * past this point the webhook is late, not the payment. Access is released by
+ * the webhook either way — this only decides when the SCREEN stops waiting.
  */
 const POLL_CAP_MS = 20 * 60_000;
 /**
- * The "já paguei" button appears once the page has checked this many times and
- * the charge is still open. Deliberately a count of real checks, not a clock:
- * a countdown on the button would be a timer we invented, and the honest
- * moment to offer "I paid" is after we have looked and not yet seen it.
+ * The "I paid" button appears once the page has checked this many times and
+ * the charge is still open: the honest moment to offer it is after we have
+ * looked and not yet seen it, never a countdown we invented.
  */
 const CHECKS_BEFORE_PAID_BUTTON = 2;
 
-const EXPIRY_FORMAT = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-  timeStyle: "short",
-  timeZone: "America/Sao_Paulo",
-});
+/** Where she goes once the payment is confirmed, or when she stops waiting. */
+const AFTER_PAYMENT = "/inicio";
 
 type Phase = "waiting" | "confirmed" | "timeout";
 
 /**
  * The PIX charge, on OUR page instead of the provider's.
  *
- * What changed for her: she used to leave for a page with another company's
- * look to scan a code; now the code is here, and this page watches for the
- * confirmation itself. What did NOT change: the charge, the QR and the hosted
- * invoice are exactly the provider's — the hosted page stays one tap away as
- * the fallback, because it shows the same code and always works.
- *
- * Confirmation is the WEBHOOK's job, never this page's: the subscription row is
- * `incomplete` until the provider says otherwise, and that is all this reads.
- * Leaving early loses nothing — the plan is released wherever she is, and the
- * guided onboarding's badge says "confirmando pagamento" until it is.
+ * The charge, the QR and the hosted invoice are exactly the provider's — the
+ * hosted page stays one tap away as the fallback. Confirmation is the
+ * WEBHOOK's job, never this page's: for a subscription the row stays
+ * `incomplete` until the provider confirms; for the one-time kit the grant
+ * appears when the paid invoice arrives. That is all this reads.
  */
 export default function PixPaymentPanel({
   pix,
@@ -54,13 +45,18 @@ export default function PixPaymentPanel({
   planId,
   planName,
   priceLabel,
+  oneTime,
 }: {
   pix: PixCharge;
   orgId: string;
   planId: string;
   planName: string;
   priceLabel: string;
+  /** The kit: a grant, not a subscription, and nothing renews. */
+  oneTime: boolean;
 }) {
+  const t = useTranslations("product");
+  const locale = useLocale();
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("waiting");
   const [checks, setChecks] = useState(0);
@@ -78,16 +74,31 @@ export default function PixPaymentPanel({
         return;
       }
       try {
-        const { data } = await createClient()
-          .from("subscriptions")
-          .select("status")
-          .eq("org_id", orgId)
-          .eq("plan_id", planId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const supabase = createClient();
+        let confirmed = false;
+        if (oneTime) {
+          const { data } = await supabase
+            .from("entitlement_grants")
+            .select("id")
+            .eq("org_id", orgId)
+            .eq("plan_id", planId)
+            .is("revoked_at", null)
+            .limit(1)
+            .maybeSingle();
+          confirmed = Boolean(data);
+        } else {
+          const { data } = await supabase
+            .from("subscriptions")
+            .select("status")
+            .eq("org_id", orgId)
+            .eq("plan_id", planId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          confirmed = data?.status === "active" || data?.status === "trialing";
+        }
         if (!active) return;
-        if (data?.status === "active" || data?.status === "trialing") {
+        if (confirmed) {
           setPhase("confirmed");
           return;
         }
@@ -101,12 +112,12 @@ export default function PixPaymentPanel({
       active = false;
       window.clearInterval(timer);
     };
-  }, [orgId, phase, planId]);
+  }, [oneTime, orgId, phase, planId]);
 
   // Confirmed while she was looking: say so, then take her on.
   useEffect(() => {
     if (phase !== "confirmed") return;
-    const timer = window.setTimeout(() => router.push("/onboarding?pagamento=confirmado"), 2_500);
+    const timer = window.setTimeout(() => router.push(AFTER_PAYMENT), 2_500);
     return () => window.clearTimeout(timer);
   }, [phase, router]);
 
@@ -128,25 +139,32 @@ export default function PixPaymentPanel({
           <NiCheck size="large" />
         </span>
         <Typography variant="h1" component="h1" className="mb-0">
-          Pagamento confirmado
+          {t("pix-confirmed-title")}
         </Typography>
         <Typography variant="body1" className="text-text-secondary">
-          O {planName} já está liberado. Levando você para a configuração…
+          {t("pix-confirmed-body", { plan: planName })}
         </Typography>
       </Box>
     );
   }
 
-  const expires = pix.expiresAt ? EXPIRY_FORMAT.format(new Date(pix.expiresAt)) : null;
+  // PIX is a Brazilian rail: the provider's expiry is shown in Brasília time.
+  const expires = pix.expiresAt
+    ? new Intl.DateTimeFormat(locale, {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "America/Sao_Paulo",
+      }).format(new Date(pix.expiresAt))
+    : null;
 
   return (
     <Box className="flex flex-col gap-5">
       <Box className="flex flex-col gap-1">
         <Typography variant="h1" component="h1" className="mb-0">
-          Pague com PIX
+          {t("pix-title")}
         </Typography>
         <Typography variant="body1" className="text-text-secondary">
-          {planName} · {priceLabel}. Abra o app do seu banco e escaneie o código, ou copie e cole.
+          {t("pix-subtitle", { plan: planName, price: priceLabel })}
         </Typography>
       </Box>
 
@@ -154,12 +172,12 @@ export default function PixPaymentPanel({
         <Box
           component="img"
           src={`data:image/png;base64,${pix.qrCodeBase64}`}
-          alt={`QR Code do PIX para pagar ${planName}`}
+          alt={t("pix-qr-alt", { plan: planName })}
           className="h-52 w-52 flex-none rounded-xl bg-white p-2"
         />
         <Box className="flex w-full min-w-0 flex-col gap-3">
           <TextField
-            label="PIX copia e cola"
+            label={t("pix-copy-label")}
             value={pix.copyPaste}
             fullWidth
             size="small"
@@ -169,56 +187,52 @@ export default function PixPaymentPanel({
             onFocus={(event) => event.target.select()}
           />
           <Button variant="outlined" onClick={() => void copy()} className="self-start">
-            {copied ? "Código copiado" : "Copiar código"}
+            {copied ? t("pix-copied") : t("pix-copy")}
           </Button>
           {/* The provider's own instant, not a countdown we invented. */}
           {expires && (
             <Typography variant="body2" className="text-text-secondary">
-              Este código vale até {expires} (horário de Brasília).
+              {t("pix-expires", { date: expires })}
             </Typography>
           )}
         </Box>
       </Box>
 
-      {/* On PIX, "renews by itself" would be false: each cycle is a NEW code she
-          pays by hand. Saying so here is what stops a subscription from lapsing
-          on someone who never knew there was something to pay. */}
-      <Alert severity="info" className="neutral bg-background-paper/60!">
-        No PIX, cada renovação chega como um código novo, por e-mail, para você pagar. Se preferir renovação automática,
-        o cartão faz isso sozinho.
-      </Alert>
+      {/* On PIX a subscription does NOT renew by itself: each cycle is a new
+          code she pays by hand. The kit is paid once and has nothing to renew. */}
+      {!oneTime && (
+        <Alert severity="info" className="neutral bg-background-paper/60!">
+          {t("pix-renewal-note")}
+        </Alert>
+      )}
 
       {phase === "timeout" ? (
-        <Alert severity="info">
-          Ainda não recebemos a confirmação do banco. Se você já pagou, não precisa pagar de novo: o plano é liberado
-          assim que a confirmação chegar, e avisamos por e-mail.
-        </Alert>
+        <Alert severity="info">{t("pix-timeout")}</Alert>
       ) : (
         <Box className="flex items-center gap-3" role="status" aria-live="polite">
           <CircularProgress size={18} aria-hidden />
           <Typography variant="body2" className="text-text-secondary">
-            Aguardando a confirmação do pagamento. Esta página atualiza sozinha.
+            {t("pix-waiting")}
           </Typography>
         </Box>
       )}
 
       {(checks >= CHECKS_BEFORE_PAID_BUTTON || phase === "timeout") && (
         <Box className="flex flex-col gap-2">
-          <Button variant="contained" size="large" onClick={() => router.push("/onboarding?pagamento=pix")}>
-            Já paguei, continuar
+          <Button variant="contained" size="large" onClick={() => router.push(AFTER_PAYMENT)}>
+            {t("pix-paid-continue")}
           </Button>
           <Typography variant="body2" className="text-text-secondary text-center">
-            Você segue para a configuração. A confirmação do banco continua sendo verificada, e o plano é liberado
-            sozinho assim que chegar.
+            {t("pix-paid-note")}
           </Typography>
         </Box>
       )}
 
       {pix.invoiceUrl && (
         <Typography variant="body2" className="text-text-secondary text-center">
-          Problemas com o código?{" "}
+          {t("pix-trouble")}{" "}
           <a href={pix.invoiceUrl} className="link-primary" rel="noopener noreferrer">
-            Abrir a fatura na operadora
+            {t("pix-open-invoice")}
           </a>
           .
         </Typography>

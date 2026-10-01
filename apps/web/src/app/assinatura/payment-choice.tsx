@@ -1,42 +1,36 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
+
 import { Box, Typography } from "@mui/material";
 
 import NiCheck from "@/icons/nexture/ni-check";
 import NiCreditCard from "@/icons/nexture/ni-credit-card";
 import NiMoney from "@/icons/nexture/ni-money";
 import { cn } from "@/lib/utils";
-import { MAX_INSTALLMENTS, type PaymentMethod } from "@flyee/billing/types";
+import type { PaymentMethod } from "@flyee/billing/types";
 
 /**
- * Where the customer picks how to pay — the step that used to happen on the
- * provider's invoice page.
+ * Where the customer picks how to pay a BRL purchase (Asaas) — the step that
+ * used to happen on the provider's invoice page.
  *
  * Moving it here is what removes boleto. Asaas has no way to offer a SUBSET of
- * methods on a charge (measured: a subscription takes one `billingType` or
- * `UNDEFINED`, which means everything), so the only way to not show boleto is
- * to decide the method BEFORE the charge exists.
+ * methods on a charge, so the only way to not show boleto is to decide the
+ * method BEFORE the charge exists.
  *
- * Three things here are about not losing the sale on the last screen:
- *
- *  - **A default is already chosen.** An unselected radio group is one more
- *    decision between her and the purchase; card is pre-selected because it is
- *    the method that renews by itself.
- *  - **The whole card is the target**, not a 20px radio. On a phone this is
- *    the difference between one tap and three.
+ *  - **A default is already chosen**: card, the method that renews by itself.
+ *  - **The whole card is the target**, not a 20px radio.
  *  - **Installments show the instalment value, not the count.** "5x de R$ 458"
- *    is the number she is deciding about; "5x" alone makes her do the division
- *    herself, and a person doing arithmetic is a person hesitating.
+ *    is the number she is deciding about.
  */
 export type PaymentChoiceValue = { method: PaymentMethod; installments: number };
-
-const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function PaymentChoice({
   value,
   onChange,
   pixAvailable,
-  installmentsAvailable,
+  maxInstallments,
+  oneTime,
   priceCents,
   disabled,
 }: {
@@ -44,16 +38,27 @@ export default function PaymentChoice({
   onChange: (next: PaymentChoiceValue) => void;
   /** Pix is offered only where the account can actually charge it. */
   pixAvailable: boolean;
-  /** Splitting only makes sense on a plan that is not already monthly. */
-  installmentsAvailable: boolean;
+  /** The configured ceiling for this purchase; 1 when it cannot be split. */
+  maxInstallments: number;
+  /** A one-time purchase (the kit): nothing renews, by card or by PIX. */
+  oneTime: boolean;
   priceCents: number;
   disabled?: boolean;
 }) {
+  const t = useTranslations("product");
+  const locale = useLocale();
+  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "BRL" });
+  const splittable = maxInstallments > 1;
+
   const methods: { id: PaymentMethod; title: string; hint: string; icon: React.ReactNode }[] = [
     {
       id: "credit_card",
-      title: "Cartão de crédito",
-      hint: installmentsAvailable ? "Acesso na hora. Pode parcelar." : "Acesso na hora, renova sozinho.",
+      title: t("checkout-method-card"),
+      hint: oneTime
+        ? t("checkout-method-card-hint-once")
+        : splittable
+          ? t("checkout-method-card-hint-split")
+          : t("checkout-method-card-hint-renews"),
       icon: <NiCreditCard size="medium" />,
     },
     ...(pixAvailable
@@ -61,23 +66,22 @@ export default function PaymentChoice({
           {
             id: "pix" as const,
             title: "PIX",
-            // Beside a card that "renova sozinho", silence here would sell by
-            // association a recurrence PIX does not have: each cycle is a new
-            // code she pays by hand.
-            hint: "Acesso na hora, sem cartão. Cada renovação é um PIX novo.",
+            // Beside a card that renews by itself, silence here would sell by
+            // association a recurrence PIX does not have.
+            hint: oneTime ? t("checkout-method-pix-hint-once") : t("checkout-method-pix-hint-renews"),
             icon: <NiMoney size="medium" />,
           },
         ]
       : []),
   ];
 
-  const showInstallments = installmentsAvailable && value.method === "credit_card";
+  const showInstallments = splittable && value.method === "credit_card";
 
   return (
     <Box className="flex flex-col gap-4">
       <Box
         role="radiogroup"
-        aria-label="Forma de pagamento"
+        aria-label={t("checkout-method-label")}
         className={cn("grid gap-3", methods.length > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1")}
       >
         {methods.map((method) => {
@@ -115,10 +119,10 @@ export default function PaymentChoice({
       {showInstallments && (
         <Box className="flex flex-col gap-2">
           <Typography variant="body2" className="text-text-secondary">
-            Em quantas vezes?
+            {t("checkout-installments-label")}
           </Typography>
-          <Box role="radiogroup" aria-label="Parcelamento" className="flex flex-row flex-wrap gap-2">
-            {Array.from({ length: MAX_INSTALLMENTS }, (_, index) => index + 1).map((count) => {
+          <Box role="radiogroup" aria-label={t("checkout-installments-aria")} className="flex flex-row flex-wrap gap-2">
+            {Array.from({ length: maxInstallments }, (_, index) => index + 1).map((count) => {
               const selected = value.installments === count;
               // Rounded DOWN per instalment so the label never promises a
               // smaller total than the provider will charge; the remainder
@@ -140,18 +144,17 @@ export default function PaymentChoice({
                   )}
                 >
                   {count === 1
-                    ? `À vista · ${BRL.format(priceCents / 100)}`
-                    : `${count}x de ${BRL.format(perInstallment)}`}
+                    ? t("checkout-installments-once", { amount: money.format(priceCents / 100) })
+                    : t("checkout-installments-split", { count, amount: money.format(perInstallment) })}
                 </Box>
               );
             })}
           </Box>
           {value.installments > 1 && (
-            // Said plainly, because it is the one consequence she cannot see:
-            // a split purchase is a single charge the issuer divides, so there
-            // is no automatic renewal at the end of it.
+            // The one consequence she cannot see: a split purchase is a single
+            // charge the issuer divides, so nothing renews at the end of it.
             <Typography variant="body2" className="text-text-secondary text-xs leading-5">
-              Parcelado, a cobrança é única e não renova sozinha. Ao fim do período você decide se continua.
+              {t("checkout-installments-note")}
             </Typography>
           )}
         </Box>

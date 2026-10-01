@@ -5,6 +5,7 @@ import { DEFAULTS } from "@/config";
 import { COOKIE_KEYS } from "@/constants";
 import { localizeHref, matchPublicPath, routing } from "@/i18n/routing";
 import { ATTRIBUTION_COOKIE_MAX_AGE, encodeAttribution, readAttributionFromUrl } from "@/lib/attribution";
+import { CURRENCY_COOKIE_MAX_AGE, CURRENCY_PARAM, normalizeCurrency } from "@/lib/billing-currency";
 import { encodeCampaignCookie, hasCampaign, LAST_CAMPAIGN_MAX_AGE, pickCampaignParams } from "@/lib/campaign-params";
 import { detectLocale, LOCALE_COOKIE_MAX_AGE } from "@/lib/locale-detection";
 import { COUPON_COOKIE_MAX_AGE, COUPON_PARAM, normalizeCouponCode } from "@/lib/offer-link";
@@ -128,6 +129,13 @@ export async function middleware(request: NextRequest) {
   const linkCoupon = normalizeCouponCode(request.nextUrl.searchParams.get(COUPON_PARAM));
 
   /**
+   * A link that names the currency (`?moeda=USD`): a campaign for one market,
+   * or the currency switch of the pricing page. Like the coupon it has to
+   * survive the sign-up on the way to the checkout, so it is kept here.
+   */
+  const linkCurrency = normalizeCurrency(request.nextUrl.searchParams.get(CURRENCY_PARAM));
+
+  /**
    * Campaign attribution (?origem/?onda/utm_*), captured on the FIRST touch and
    * never overwritten: the campaign that brought her earned the signup, and a
    * later visit through a bookmark must not take the credit. Persisted to the
@@ -185,6 +193,14 @@ export async function middleware(request: NextRequest) {
         sameSite: "lax",
         // Read by the billing page to confirm the code visually. A coupon code
         // is public by nature — it is printed in the campaign itself.
+        httpOnly: false,
+      });
+    }
+    if (linkCurrency) {
+      res.cookies.set(COOKIE_KEYS.currency, linkCurrency, {
+        path: "/",
+        maxAge: CURRENCY_COOKIE_MAX_AGE,
+        sameSite: "lax",
         httpOnly: false,
       });
     }

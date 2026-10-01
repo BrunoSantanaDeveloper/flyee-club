@@ -1,92 +1,77 @@
 import CheckoutForm from "./checkout-form";
 import PixPaymentPanel from "./pix-payment-panel";
 import { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { Alert, Box, Button, Paper, Typography } from "@mui/material";
 
-import { BRAND } from "@/brand";
 import Logo from "@/components/logo/logo";
+import { COOKIE_KEYS } from "@/constants";
+import { resolveCurrency } from "@/lib/billing-currency";
+import { getMaxInstallments } from "@/lib/billing-settings";
 import { campaignQuery, pickCampaignParams } from "@/lib/campaign-params";
 import { getGuaranteeDays } from "@/lib/guarantee";
 import { pendingPixCharge } from "@/lib/pending-pix";
 import { createClient } from "@flyee/auth/server";
 import { isPixAvailable } from "@flyee/billing";
 
-export const metadata: Metadata = {
-  title: { absolute: `Concluir assinatura · ${BRAND.name}` },
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("product");
+  return { title: t("checkout-meta-title"), robots: { index: false, follow: false } };
+}
 
-/**
- * Never rounds, still reads clean.
- *
- * This was `maximumFractionDigits: 0`, which renders a R$ 59,90 plan as
- * "R$ 60" — a price this screen states wrong, on the screen where it is about
- * to be charged. Three plans in the catalog already carry cents. Keeping the
- * minimum at 0 preserves the headline the current whole-real plans were
- * designed around ("R$ 299", not "R$ 299,00") while making a cents price
- * impossible to misstate.
- */
-const BRL = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
-const PERIOD_SUFFIX: Record<string, string> = { yearly: "por ano", monthly: "por mês", weekly: "por semana" };
+/** How long a started kit purchase counts as "waiting for the payment" (a PIX confirms in minutes). */
+const PENDING_KIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
  * One screen, one job: turn a decision already made into a paid invoice.
  *
- * It exists as a TOP-LEVEL route, outside `app/(dashboard)`, and that
- * placement is the whole point: someone who clicked "assinar" on a public page
- * thirty seconds earlier gets a checkout, not the settings hub with its menu,
- * invoice history and a card announcing the free plan.
+ * A TOP-LEVEL route, outside `app/(dashboard)`: someone who clicked "buy" on a
+ * public page gets a checkout, not the settings hub. Nothing on this page
+ * navigates anywhere except forward, plus one deliberate way out.
  *
- * Outside the group there is no layout to inherit, so there is no menu, no
- * header and no support widget. Nothing on this page navigates anywhere except
- * forward, plus one deliberate way out.
- *
- * Auth needs no wiring: `PUBLIC_PREFIXES` in the middleware is an allow-list,
- * so any route not listed there already requires a session, and the requested
- * path keeps its query string through the bounce. Public pages send people
- * through `/auth/sign-up?next=/assinatura?plan=…` rather than straight here,
- * because the middleware's own bounce goes to sign-IN, which is the wrong door
- * for someone who has never had an account.
- *
- * Copy is hardcoded pt-BR and prices are formatted in BRL for now; phase 4 of
- * docs/PLANO-IMPLEMENTACAO.md makes the screen bilingual and currency-aware
- * (Asaas for BRL, Stripe for USD) and adds the one-time kit.
+ * `?plan=<slug>` names what is bought; without it the door is the kit, in the
+ * member's currency (`kit` in BRL, `kit-usd` in USD). The plan's currency
+ * decides the provider and therefore the form: BRL asks for the CPF/CNPJ and
+ * the payment method, USD continues to Stripe's own page (docs/BILLING.md).
  */
 export default async function AssinaturaPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
+  const [params, t, locale, cookieStore] = await Promise.all([
+    searchParams,
+    getTranslations("product"),
+    getLocale(),
+    cookies(),
+  ]);
   const rawSlug = Array.isArray(params.plan) ? params.plan[0] : params.plan;
-  const slug = typeof rawSlug === "string" ? rawSlug.trim() : "";
-  // The campaign of THIS purchase, forwarded by /assinar (lib/campaign-params.ts).
+  const requestedSlug = typeof rawSlug === "string" ? rawSlug.trim() : "";
+  // The campaign of THIS purchase, forwarded from the landing link.
   const campaign = pickCampaignParams(params);
+  const currency = resolveCurrency({ cookie: cookieStore.get(COOKIE_KEYS.currency)?.value, locale });
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  // The middleware already guarantees a session here; this is the belt to its
-  // braces, and it keeps the plan (and the campaign) in the destination.
+  // The middleware already guarantees a session here; this keeps the plan (and
+  // the campaign) in the destination.
   if (!user) {
-    redirect(`/auth/sign-in?next=${encodeURIComponent(`/assinatura?plan=${slug}${campaignQuery(campaign)}`)}`);
+    redirect(`/auth/sign-in?next=${encodeURIComponent(`/assinatura?plan=${requestedSlug}${campaignQuery(campaign)}`)}`);
   }
 
-  const [guaranteeDays, pixAvailable] = await Promise.all([getGuaranteeDays(), isPixAvailable()]);
+  const [guaranteeDays, pixAvailable, maxInstallments] = await Promise.all([
+    getGuaranteeDays(),
+    isPixAvailable(),
+    getMaxInstallments(),
+  ]);
 
-  // One workspace per member, so the first membership is THE
-  // membership. `user_id` is stated rather than left to RLS: the policy would
-  // filter it anyway, and a query whose correctness depends on a policy is one
-  // policy edit away from being wrong.
+  // One workspace per member, so the first membership is THE membership.
   const { data: membership } = await supabase
     .from("memberships")
     .select(
@@ -102,60 +87,136 @@ export default async function AssinaturaPage({
     return (
       <Shell>
         <Typography variant="h1" component="h1" className="mb-0">
-          Falta concluir seu cadastro
+          {t("checkout-no-workspace-title")}
         </Typography>
         <Alert severity="info" className="neutral bg-background-paper/60!">
-          Sua conta existe, mas o cadastro não foi concluído. Conclua o cadastro e a assinatura continua daqui.
+          {t("checkout-no-workspace-body")}
         </Alert>
-        <Button variant="contained" component={Link} href={`/auth/complete-profile?next=/assinatura?plan=${slug}`}>
-          Concluir cadastro
+        <Button
+          variant="contained"
+          component={Link}
+          href={`/auth/complete-profile?next=${encodeURIComponent(`/assinatura?plan=${requestedSlug}`)}`}
+        >
+          {t("checkout-no-workspace-action")}
         </Button>
       </Shell>
     );
   }
 
-  // PostgREST types an embedded relation as an array; both shapes reach here.
   const orgRel = membership?.organizations as Record<string, unknown> | Record<string, unknown>[] | null;
   const org = (Array.isArray(orgRel) ? orgRel[0] : orgRel) ?? {};
 
   // `is_active`, never `is_public`: a limited offer (the founders plan) is
   // deliberately unlisted and reached only by the link it is sent with.
-  const { data: planRow } = await supabase
+  const planQuery = supabase
     .from("plans")
-    .select("id, slug, name, description, period, price_cents, currency, limits, is_free")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
+    .select("id, slug, name, kind, family, tier, period, price_cents, currency, is_free")
+    .eq("is_active", true);
+  const { data: planRow } = requestedSlug
+    ? await planQuery.eq("slug", requestedSlug).maybeSingle()
+    : await planQuery
+        .eq("kind", "access")
+        .eq("family", "kit")
+        .eq("currency", currency)
+        .eq("is_public", true)
+        .order("sort")
+        .limit(1)
+        .maybeSingle();
 
-  if (!slug || !planRow || planRow.is_free) {
+  if (!planRow || planRow.is_free) {
     return (
       <Shell>
         <Typography variant="h1" component="h1" className="mb-0">
-          Não encontramos esta condição
+          {t("checkout-not-found-title")}
         </Typography>
         <Alert severity="info" className="neutral bg-background-paper/60!">
-          O link pode ter expirado. Se você veio por um anúncio e queria assinar, fale com a gente — resolvemos antes
-          que você assine qualquer outra coisa.
+          {t("checkout-not-found-body")}
         </Alert>
         <Button variant="contained" component={Link} href="/contato?assunto=assinar">
-          Falar com a gente
+          {t("checkout-contact")}
         </Button>
       </Shell>
     );
   }
 
-  // Already paying for this exact plan: the checkout would open a second
-  // subscription and retire the first, charging her twice for what she has.
-  //
-  // `incomplete` is read HERE too, and it is not a detail: it is the state a
-  // PIX charge sits in until the provider's webhook confirms it. Without it,
-  // reloading this page while waiting for that confirmation showed the checkout
-  // again and opened a SECOND charge for a plan she had already paid for.
-  //
-  // Several rows are fetched and ranked in code rather than narrowed to one in
-  // SQL: `maybeSingle()` errors when more than one row matches, and an errored
-  // read here returns null — which would silently switch the double-charge
-  // guard off for exactly the accounts that have more than one subscription row.
+  const oneTime = planRow.kind === "access";
+  const planCurrency = planRow.currency === "USD" ? "USD" : "BRL";
+  const money = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: planCurrency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+  const suffix = planRow.period ? t(`billing-period-${planRow.period}` as never) : t("billing-one-time");
+  const priceLabel = `${money.format(Number(planRow.price_cents) / 100)} ${suffix}`;
+
+  if (oneTime) {
+    // Already owns this kit: buying again would only pay twice for a right
+    // that never expires.
+    const { data: liveGrant } = await supabase
+      .from("entitlement_grants")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("plan_id", planRow.id)
+      .is("revoked_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (liveGrant) {
+      return (
+        <Shell>
+          <Typography variant="h1" component="h1" className="mb-0">
+            {t("checkout-owned-kit-title")}
+          </Typography>
+          <Alert severity="success" className="neutral bg-background-paper/60!">
+            {t("checkout-owned-kit-body")}
+          </Alert>
+          <Button variant="contained" component={Link} href="/inicio">
+            {t("checkout-go-platform")}
+          </Button>
+        </Shell>
+      );
+    }
+
+    // A kit purchase started in the last day and not granted yet: a PIX being
+    // confirmed. Showing the form again would open a second charge.
+    const { data: pendingOperation } = await supabase
+      .from("billing_operations")
+      .select("result, created_at")
+      .eq("org_id", orgId)
+      .eq("kind", "access_checkout")
+      .eq("plan_id", planRow.id)
+      .eq("status", "completed")
+      .gte("created_at", new Date(Date.now() - PENDING_KIT_WINDOW_MS).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const pendingUrl = (pendingOperation?.result as { url?: string } | null)?.url ?? null;
+    if (pendingOperation) {
+      return (
+        <Shell>
+          <Typography variant="h1" component="h1" className="mb-0">
+            {t("checkout-pending-title")}
+          </Typography>
+          <Alert severity="info" className="neutral bg-background-paper/60!">
+            {t("checkout-pending-body", { plan: planRow.name })}
+          </Alert>
+          {pendingUrl && (
+            <Button variant="outlined" component="a" href={pendingUrl} rel="noopener noreferrer">
+              {t("checkout-pending-open")}
+            </Button>
+          )}
+          <Button variant="contained" component={Link} href="/inicio">
+            {t("checkout-go-platform")}
+          </Button>
+        </Shell>
+      );
+    }
+  }
+
+  // A subscription: already paying for this exact plan, or waiting on a charge
+  // for it (`incomplete` is the state a PIX sits in until the webhook). Several
+  // rows are fetched and ranked in code: `maybeSingle()` errors on more than
+  // one row, which would switch the double-charge guard off.
   const { data: subscriptionRows } = await supabase
     .from("subscriptions")
     .select("plan_id, status, plans(name, is_free)")
@@ -164,8 +225,6 @@ export default async function AssinaturaPage({
     .order("created_at", { ascending: false })
     .limit(5);
   const rows = subscriptionRows ?? [];
-  // A live subscription is what she HAS; an incomplete one is what she is
-  // waiting on. They answer different questions, so they stay separate.
   const currentSub = rows.find((row) => ["trialing", "active", "past_due"].includes(row.status)) ?? null;
   const pendingSub = rows.find((row) => row.status === "incomplete") ?? null;
   const subPlanRel = currentSub?.plans as
@@ -173,23 +232,13 @@ export default async function AssinaturaPage({
     | { name?: string; is_free?: boolean }[]
     | null;
   const subPlan = (Array.isArray(subPlanRel) ? subPlanRel[0] : subPlanRel) ?? null;
-
-  // A charge is waiting for THIS plan and she does not already hold it.
-  //
-  // This used to require `!currentSub` — "no live subscription at all" — and
-  // was therefore dead for exactly the people it exists for: every new account
-  // starts on the free plan, which IS a live subscription row. Measured: with
-  // Gratuito active and a PIX pending, a reload skipped this branch, showed the
-  // checkout form again, and never re-read the QR. What matters is not whether
-  // she has ANY plan, but whether she already has THIS one.
   const alreadyHoldsThisPlan = Boolean(currentSub && currentSub.plan_id === planRow.id);
-  if (pendingSub && pendingSub.plan_id === planRow.id && !alreadyHoldsThisPlan) {
+
+  if (!oneTime && pendingSub && pendingSub.plan_id === planRow.id && !alreadyHoldsThisPlan) {
     // The charge already exists. If it is a PIX whose code can still be read,
-    // show THAT code again — the same charge, never a new one. This is what a
-    // reload, a second tab or coming back from the bank app lands on.
-    const waitingPix = orgId ? await pendingPixCharge(supabase, orgId, planRow.id as string) : null;
-    if (waitingPix && orgId) {
-      const suffix = planRow.period ? (PERIOD_SUFFIX[planRow.period] ?? "por ciclo") : "por ciclo";
+    // show THAT code again — the same charge, never a new one.
+    const waitingPix = await pendingPixCharge(supabase, orgId, planRow.id as string);
+    if (waitingPix) {
       return (
         <Shell wide>
           <Box className="flex justify-center">
@@ -200,47 +249,46 @@ export default async function AssinaturaPage({
             orgId={orgId}
             planId={planRow.id as string}
             planName={planRow.name as string}
-            priceLabel={`${BRL.format(Number(planRow.price_cents) / 100)} ${suffix}`}
+            priceLabel={priceLabel}
+            oneTime={false}
           />
         </Shell>
       );
     }
-    // A card charge in flight, or a PIX whose code the provider no longer
-    // returns (paid, or expired): nothing to show but the wait itself.
     return (
       <Shell>
         <Typography variant="h1" component="h1" className="mb-0">
-          Pagamento em confirmação
+          {t("checkout-pending-title")}
         </Typography>
         <Alert severity="info" className="neutral bg-background-paper/60!">
-          Já registramos sua contratação do {planRow.name} e estamos aguardando a confirmação do pagamento. Isso costuma
-          levar poucos minutos no Pix. Assim que o pagamento for confirmado, o plano é liberado automaticamente — você
-          não precisa pagar de novo.
+          {t("checkout-pending-body", { plan: planRow.name })}
         </Alert>
         <Button variant="contained" component={Link} href="/inicio">
-          Ir para a plataforma
+          {t("checkout-go-platform")}
         </Button>
       </Shell>
     );
   }
 
-  if (currentSub && currentSub.plan_id === planRow.id) {
+  if (!oneTime && alreadyHoldsThisPlan) {
     return (
       <Shell>
         <Typography variant="h1" component="h1" className="mb-0">
-          Você já tem este plano
+          {t("checkout-owned-plan-title")}
         </Typography>
         <Alert severity="success" className="neutral bg-background-paper/60!">
-          A assinatura do {planRow.name} já está ativa nesta conta.
+          {t("checkout-owned-plan-body", { plan: planRow.name })}
         </Alert>
         <Button variant="contained" component={Link} href="/inicio">
-          Ir para a plataforma
+          {t("checkout-go-platform")}
         </Button>
       </Shell>
     );
   }
 
-  const periodSuffix = planRow.period ? (PERIOD_SUFFIX[planRow.period] ?? "por ciclo") : "por ciclo";
+  // Installments only for a yearly BRL subscription paid by card (the server
+  // re-applies the same rule).
+  const splittable = !oneTime && planCurrency === "BRL" && planRow.period === "yearly";
 
   return (
     <Shell wide>
@@ -252,21 +300,20 @@ export default async function AssinaturaPage({
         orgId={orgId}
         planId={planRow.id as string}
         planName={planRow.name as string}
-        priceLabel={`${BRL.format(Number(planRow.price_cents) / 100)} ${periodSuffix}`}
-        minutesLabel={null}
+        priceLabel={priceLabel}
+        currency={planCurrency}
+        oneTime={oneTime}
         guaranteeDays={guaranteeDays}
         priceCents={Number(planRow.price_cents)}
-        planPeriod={(planRow.period as string | null) ?? null}
-        pixAvailable={pixAvailable}
+        maxInstallments={splittable ? maxInstallments : 1}
+        pixAvailable={planCurrency === "BRL" && pixAvailable}
         campaign={campaign}
         // Only the owner or an admin may start a checkout; saying so up front
         // beats letting her fill a form the server will refuse.
         canManage={membership?.role === "owner" || membership?.role === "admin"}
-        // A paid plan already exists: switching starts a NEW subscription and
-        // retires the current one with no credit for days already paid, at
-        // either provider (docs/BILLING-AUDIT.md A1). She has to be told before
-        // she pays, not after.
-        switchingFrom={currentSub && !subPlan?.is_free ? (subPlan?.name ?? null) : null}
+        // A paid subscription already exists: switching starts a NEW one and
+        // retires the current one, with no credit for days already paid.
+        switchingFrom={!oneTime && currentSub && !subPlan?.is_free ? (subPlan?.name ?? null) : null}
         profile={{
           document: (org.billing_cpf_cnpj as string | null) ?? null,
           postalCode: (org.billing_postal_code as string | null) ?? null,

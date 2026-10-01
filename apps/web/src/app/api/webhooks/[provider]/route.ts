@@ -1,14 +1,15 @@
 import { after, NextResponse } from "next/server";
 
-import { resolveBillingWindow } from "@/lib/billing-window";
+import { revokeTokensIfAccessEnded, trackWorkspaceEvent, workspaceOwner } from "@/lib/billing-lifecycle";
+import { periodEnd, resolveBillingWindow } from "@/lib/billing-window";
 import { sendGa4Event } from "@/lib/ga4-mp";
 import { sendMetaConversion } from "@/lib/meta-capi";
 import { notifyUsers } from "@/lib/notifications";
 import { readSignupAttribution } from "@/lib/signup-attribution";
 import { logAuditEvent } from "@flyee/audit";
 import { createServiceClient } from "@flyee/auth/service";
-import { type BillingEvent, type BillingPeriod, getProvider } from "@flyee/billing";
-import { sendSubscriptionActiveEmail } from "@flyee/email";
+import { type BillingEvent, type BillingPeriod, getProvider, isTier } from "@flyee/billing";
+import { sendKitReceiptEmail, sendSubscriptionActiveEmail } from "@flyee/email";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -25,13 +26,7 @@ const MAX_HANDLER_ATTEMPTS = 5;
  *
  * Asaas waits 10 SECONDS for a 200 and counts anything else — a read timeout
  * included — as a delivery failure; 15 consecutive failures INTERRUPT the
- * queue, and nothing is delivered again until a human reactivates it. That is
- * the incident that takes real activations down with it.
- *
- * This handler is nowhere near instant: one `payment_succeeded` does a dozen
- * sequential round trips to Postgres plus Meta CAPI, GA4, a Resend e-mail and
- * a GoTrue admin lookup per owner. A slow provider API on any of those is
- * enough to cross 10s while the money is already ours.
+ * queue, and nothing is delivered again until a human reactivates it.
  *
  * So the route stops racing the clock: it processes inline until this budget
  * and hands the rest to `after()`, which keeps running after the response goes
@@ -40,14 +35,35 @@ const MAX_HANDLER_ATTEMPTS = 5;
  */
 const INLINE_BUDGET_MS = 6_000;
 
+/** How long after the checkout campaign a purchase is still credited to it. */
+const CAMPAIGN_WINDOW_MS = 14 * 86_400_000;
+
 /** Locates the subscription a provider event refers to. */
-async function findSubscription(supabase: ServiceClient, event: { providerSubscriptionId?: string } & BillingEvent) {
+async function findSubscription(
+  supabase: ServiceClient,
+  event: { providerSubscriptionId?: string; providerPaymentRef?: string } & BillingEvent,
+) {
   if (event.providerSubscriptionId) {
     const { data, error } = await supabase
       .from("subscriptions")
       .select("*")
       .eq("provider", event.provider)
       .eq("provider_subscription_id", event.providerSubscriptionId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+  }
+  // A yearly plan split into installments is one purchase with no provider
+  // subscription: checkout stored its reference (the installment id) in
+  // `provider_payment_id`, and every parcel's payment carries it.
+  if (event.providerPaymentRef) {
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("provider", event.provider)
+      .eq("provider_payment_id", event.providerPaymentRef)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -72,14 +88,8 @@ async function findSubscription(supabase: ServiceClient, event: { providerSubscr
 }
 
 /**
- * Ensures the org lands back on the free plan after a cancellation.
- *
- * The read-then-insert this replaced raced against
- * `settleDueBillingCancellations`, which does the same job on a cron: the
- * loser hit `subscriptions_org_live_unique` (a PARTIAL unique index, so
- * `on conflict` needed a target the caller could not name from PostgREST),
- * raised, and the provider was asked to resend a perfectly reconciled event.
- * The RPC does it in one statement, and "already live" is a success.
+ * Ensures the org lands back on the free plan after a cancellation, in one
+ * statement that treats "already live" as success (it races the settle job).
  */
 async function ensureFreeSubscription(supabase: ServiceClient, orgId: string) {
   const { data, error } = await supabase.rpc("ensure_free_subscription", { target_org: orgId });
@@ -124,12 +134,40 @@ async function notifyOrg(supabase: ServiceClient, orgId: string, input: { title:
   }
 }
 
+/** The owners and admins of a workspace, with the address and language each one reads. */
+async function workspaceManagers(supabase: ServiceClient, orgId: string) {
+  const { data: managers } = await supabase
+    .from("memberships")
+    .select("user_id")
+    .eq("org_id", orgId)
+    .in("role", ["owner", "admin"]);
+  const people: { email: string; name: string | null; locale: "pt-BR" | "en" }[] = [];
+  for (const manager of managers ?? []) {
+    // The address lives in GoTrue, read through the admin API: there is no
+    // session on a provider callback.
+    const { data: account } = await supabase.auth.admin.getUserById(manager.user_id as string);
+    const email = account?.user?.email;
+    if (!email) continue;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name, locale")
+      .eq("id", manager.user_id as string)
+      .maybeSingle();
+    people.push({
+      email,
+      name: (profile?.display_name as string | null) ?? null,
+      locale: profile?.locale === "en" ? "en" : "pt-BR",
+    });
+  }
+  return people;
+}
+
 /**
  * Tells the workspace its plan is live.
  *
  * Best-effort like every other notification here: the entitlement is already
  * correct in the database, and replaying the whole event to retry a bell would
- * re-run the coupon and module reconciliation above it.
+ * re-run the reconciliation above it.
  */
 async function notifyActivation(supabase: ServiceClient, orgId: string, planId: string) {
   try {
@@ -141,31 +179,48 @@ async function notifyActivation(supabase: ServiceClient, orgId: string, planId: 
       href: "/inicio",
     });
 
-    // And out of the app, because with Pix the member is not here when this
-    // runs. The address lives in GoTrue, which the service role reads through
-    // the admin API — there is no session on a provider callback.
-    const { data: owners } = await supabase
-      .from("memberships")
-      .select("user_id, role")
-      .eq("org_id", orgId)
-      .in("role", ["owner", "admin"]);
-    for (const owner of owners ?? []) {
-      const { data: account } = await supabase.auth.admin.getUserById(owner.user_id as string);
-      const email = account?.user?.email;
-      if (!email) continue;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("id", owner.user_id as string)
-        .maybeSingle();
-      await sendSubscriptionActiveEmail(email, {
+    // And out of the app, because with Pix the member is not here when this runs.
+    for (const person of await workspaceManagers(supabase, orgId)) {
+      await sendSubscriptionActiveEmail(person.email, {
         planName,
         appUrl: `${appOrigin()}/inicio`,
-        name: (profile?.display_name as string | null) ?? null,
+        name: person.name,
       });
     }
   } catch {
     // The plan is already active; a bell or an email is not worth replaying it.
+  }
+}
+
+/** The kit is granted: the bell, and the receipt in each manager's language. */
+async function notifyKitPurchase(
+  supabase: ServiceClient,
+  orgId: string,
+  payment: { amountCents: number; currency: string },
+) {
+  try {
+    await notifyOrg(supabase, orgId, {
+      title: "Kit liberado",
+      body: "Pagamento confirmado. O catálogo e as atualizações já estão liberados na sua conta.",
+      href: "/inicio",
+    });
+    for (const person of await workspaceManagers(supabase, orgId)) {
+      const amountLabel = new Intl.NumberFormat(person.locale, {
+        style: "currency",
+        currency: payment.currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(payment.amountCents / 100);
+      await sendKitReceiptEmail(person.email, {
+        locale: person.locale,
+        appUrl: `${appOrigin()}/inicio`,
+        name: person.name,
+        amountLabel,
+        fiscalNote: payment.currency === "BRL",
+      });
+    }
+  } catch {
+    // The grant is already in the database; the receipt is not worth replaying it.
   }
 }
 
@@ -181,22 +236,18 @@ function appOrigin(): string {
  *
  * Retiring the row locally only changes what the platform believes; the
  * provider keeps its own recurring charge alive. An upgrade creates a NEW
- * subscription, so without this the customer is billed twice — the kind
- * of incident that ends in a chargeback and a cancelled account.
+ * subscription, so without this the customer is billed twice.
  *
  * The free plan carries no provider id and is skipped. The subscription that
  * just activated is skipped explicitly, so a provider that re-emits the same
- * activation can never cancel the very thing it activated.
- *
- * Failures are logged, not thrown: the local state is already correct, and
- * replaying the whole event to retry a provider call would re-run the coupon
- * and module reconciliation above it.
+ * activation can never cancel the very thing it activated. Failures are
+ * logged to the audit trail, not thrown: the local state is already correct.
  */
 async function cancelSupersededAtProvider(
   supabase: ServiceClient,
   orgId: string,
   rows: { id: string; provider: string | null; provider_subscription_id: string | null }[],
-  keep: { keepProvider: string; keepProviderSubscriptionId: string },
+  keep: { keepProvider: string; keepProviderSubscriptionId: string | null },
 ) {
   for (const row of rows) {
     if (!row.provider_subscription_id) continue;
@@ -208,9 +259,7 @@ async function cancelSupersededAtProvider(
       await getProvider(row.provider).cancelSubscription(row.provider_subscription_id);
     } catch (error) {
       // The customer is now being charged twice and nothing in the product
-      // knows it: the local row says canceled while the provider keeps
-      // billing. A console line is not enough for something that ends in a
-      // chargeback — this has to be reviewable in /admin/audit.
+      // knows it: this has to be reviewable in /admin/audit.
       console.error("superseded_subscription_cancel_failed", {
         orgId,
         provider: row.provider,
@@ -235,11 +284,180 @@ async function cancelSupersededAtProvider(
   }
 }
 
-/** How many days the dunning window lasts, as configured (migration 0054). */
+/**
+ * Retires every live subscription OLDER than the one that just activated
+ * (the free plan, or the paid plan being replaced) and stops the replaced
+ * one at its provider.
+ *
+ * Only older rows: without that bound, an out-of-order event for the previous
+ * plan would cancel the newer subscription the customer just paid for.
+ */
+async function retireSuperseded(
+  supabase: ServiceClient,
+  sub: { id: string; org_id: string; created_at: string },
+  keep: { keepProvider: string; keepProviderSubscriptionId: string | null },
+) {
+  const { data: superseded, error: supersededError } = await supabase
+    .from("subscriptions")
+    .select("id, provider, provider_subscription_id, created_at")
+    .eq("org_id", sub.org_id)
+    .in("status", ["trialing", "active", "past_due"])
+    .neq("id", sub.id)
+    .lt("created_at", sub.created_at);
+  if (supersededError) throw new Error("subscription_reconciliation_failed");
+
+  const { error: retireError } = await supabase
+    .from("subscriptions")
+    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .eq("org_id", sub.org_id)
+    .in("status", ["trialing", "active", "past_due"])
+    .neq("id", sub.id)
+    .lt("created_at", sub.created_at);
+  if (retireError) throw new Error("subscription_reconciliation_failed");
+
+  await cancelSupersededAtProvider(supabase, sub.org_id, superseded ?? [], keep);
+}
+
+/**
+ * Credits a purchase to the campaign of its checkout (migration 0005):
+ * reconciliation, not measurement, so it checks its errors and throws for a
+ * retry. Idempotent through `invoice_key`. Only with a checkout campaign at
+ * most 14 days old: long enough for a PIX that settles late, too short to
+ * credit an abandoned attempt.
+ */
+async function recordPurchaseAttribution(
+  supabase: ServiceClient,
+  input: {
+    orgId: string;
+    invoiceKey: string;
+    subscriptionId: string | null;
+    planSlug: string | null;
+    amountCents: number;
+    currency: string;
+    paidAt: Date;
+  },
+) {
+  const { data: campaignRow, error: campaignError } = await supabase
+    .from("meta_attribution")
+    .select(
+      "campaign_origem, campaign_utm_source, campaign_utm_medium, campaign_utm_campaign, campaign_utm_content, campaign_captured_at",
+    )
+    .eq("org_id", input.orgId)
+    .maybeSingle();
+  if (campaignError) throw new Error("purchase_attribution_failed");
+  const capturedAt = campaignRow?.campaign_captured_at ? new Date(campaignRow.campaign_captured_at as string) : null;
+  const hasValue = Boolean(
+    campaignRow?.campaign_origem ||
+      campaignRow?.campaign_utm_source ||
+      campaignRow?.campaign_utm_medium ||
+      campaignRow?.campaign_utm_campaign ||
+      campaignRow?.campaign_utm_content,
+  );
+  if (!capturedAt || !hasValue || input.paidAt.getTime() - capturedAt.getTime() > CAMPAIGN_WINDOW_MS) return;
+
+  const { error: attributionError } = await supabase.from("purchase_attributions").upsert(
+    {
+      org_id: input.orgId,
+      invoice_key: input.invoiceKey,
+      subscription_id: input.subscriptionId,
+      plan_slug: input.planSlug,
+      amount_cents: input.amountCents,
+      currency: input.currency,
+      paid_at: input.paidAt.toISOString(),
+      origem: campaignRow?.campaign_origem ?? null,
+      utm_source: campaignRow?.campaign_utm_source ?? null,
+      utm_medium: campaignRow?.campaign_utm_medium ?? null,
+      utm_campaign: campaignRow?.campaign_utm_campaign ?? null,
+      utm_content: campaignRow?.campaign_utm_content ?? null,
+      campaign_captured_at: capturedAt.toISOString(),
+    },
+    { onConflict: "invoice_key", ignoreDuplicates: true },
+  );
+  if (attributionError) throw new Error("purchase_attribution_failed");
+}
+
+/** How many days the dunning window lasts, as configured. */
 async function graceDays(supabase: ServiceClient): Promise<number> {
   const { data } = await supabase.from("platform_settings").select("value").eq("key", "dunning").maybeSingle();
   const days = Number((data?.value as { grace_days?: unknown } | null)?.grace_days);
   return Number.isFinite(days) && days > 0 ? Math.floor(days) : 0;
+}
+
+type PlanFacts = { id: string; slug: string; name: string; kind: string; tier: string | null; period: string | null };
+
+async function readPlan(supabase: ServiceClient, planId: string | null | undefined): Promise<PlanFacts | null> {
+  if (!planId) return null;
+  const { data, error } = await supabase
+    .from("plans")
+    .select("id, slug, name, kind, tier, period")
+    .eq("id", planId)
+    .maybeSingle();
+  if (error) throw new Error("plan_reconciliation_failed");
+  return (data as PlanFacts | null) ?? null;
+}
+
+/**
+ * Counts one use of a coupon, atomically and once per purchase
+ * (`redeem_coupon`, migration 0020): a subscription claims its use by taking
+ * `coupon_id`, so a replay counts nothing; a kit is counted by its first grant.
+ */
+async function redeemCoupon(supabase: ServiceClient, couponId: string, subscriptionId: string | null) {
+  const { data, error } = await supabase.rpc("redeem_coupon", {
+    target_coupon: couponId,
+    ...(subscriptionId ? { target_subscription: subscriptionId } : {}),
+  });
+  const result = data as { ok?: boolean } | null;
+  if (error || result?.ok !== true) throw new Error("coupon_reconciliation_failed");
+}
+
+/**
+ * Ends a purchase paid once (a yearly plan split into installments) whose
+ * money came back.
+ *
+ * A renewing subscription is ended by its provider: the operator cancels it
+ * there and the deletion webhook lands in `subscription_canceled`. A single
+ * purchase has nothing at the provider to delete, so the refund IS the end.
+ * Every parcel's refund arrives here; the first closes the term and the rest
+ * find it closed.
+ */
+async function endRefundedSinglePurchase(
+  supabase: ServiceClient,
+  event: { provider: string; providerInvoiceId: string; kind: "refund" | "chargeback" },
+) {
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("subscription_id")
+    .eq("provider", event.provider)
+    .eq("provider_invoice_id", event.providerInvoiceId)
+    .maybeSingle();
+  if (invoiceError) throw new Error("invoice_reversal_failed");
+  if (!invoice?.subscription_id) return;
+
+  const { data: ended, error: endError } = await supabase
+    .from("subscriptions")
+    .update({ status: "canceled", canceled_at: new Date().toISOString(), cancel_at_period_end: false })
+    .eq("id", invoice.subscription_id as string)
+    .eq("renews", false)
+    .in("status", ["trialing", "active", "past_due"])
+    .select("id, org_id, plan_id");
+  if (endError) throw new Error("subscription_reconciliation_failed");
+  const row = (ended ?? [])[0] as { id: string; org_id: string; plan_id: string } | undefined;
+  if (!row) return;
+
+  await ensureFreeSubscription(supabase, row.org_id);
+  const plan = await readPlan(supabase, row.plan_id);
+  await trackWorkspaceEvent(supabase, row.org_id, "subscription.canceled", plan?.tier ? { tier_from: plan.tier } : {});
+  await revokeTokensIfAccessEnded(supabase, row.org_id, "canceled");
+  await logAuditEvent(supabase, {
+    orgId: row.org_id,
+    actorId: null,
+    action: "billing.purchase_reverted",
+    entityType: "subscription",
+    entityId: row.id,
+    metadata: { provider: event.provider, kind: event.kind, invoice: event.providerInvoiceId },
+  }).catch(() => {
+    // The term is already closed in the database.
+  });
 }
 
 async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
@@ -248,9 +466,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       const sub = await findSubscription(supabase, event);
       if (!sub) {
         // No org_id in the provider's metadata means this subscription was
-        // never created by this platform (a charge made by hand in the Asaas
-        // panel). Reprocessing can only fail again — and failing forever is
-        // what got the provider's queue suspended.
+        // never created by this platform. Reprocessing can only fail again.
         if (!event.metadata.org_id) {
           skipForeignEvent(event, "unknown_subscription");
           return;
@@ -261,53 +477,21 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       }
 
       // An activation for a subscription we already retired is a stale event —
-      // providers do not guarantee delivery order, and a failed event returns
-      // BEHIND newer ones. Applying it would resurrect the old plan and, worse,
-      // the supersedence below would cancel the new (paid) one at the provider.
+      // providers do not guarantee delivery order. Applying it would resurrect
+      // the old plan and cancel the new (paid) one at the provider.
       if (sub.status === "canceled") {
         skipForeignEvent(event, "obsolete_activation");
         return;
       }
 
-      // Retire the previous live subscription (e.g. the free plan). When that
-      // one was PAID, marking it canceled locally is not enough — the provider
-      // keeps charging it, so an Assistente→Pro upgrade would bill both. Read
-      // the rows before the update so the provider ids survive it.
-      //
-      // Only rows OLDER than this one are superseded. Without that bound, an
-      // out-of-order event for the previous plan would cancel the newer
-      // subscription the customer just paid for.
-      const { data: superseded, error: supersededError } = await supabase
-        .from("subscriptions")
-        .select("id, provider, provider_subscription_id, created_at")
-        .eq("org_id", sub.org_id)
-        .in("status", ["trialing", "active", "past_due"])
-        .neq("id", sub.id)
-        .lt("created_at", sub.created_at);
-      if (supersededError) throw new Error("subscription_reconciliation_failed");
-
-      const { error: retireError } = await supabase
-        .from("subscriptions")
-        .update({ status: "canceled", canceled_at: new Date().toISOString() })
-        .eq("org_id", sub.org_id)
-        .in("status", ["trialing", "active", "past_due"])
-        .neq("id", sub.id)
-        .lt("created_at", sub.created_at);
-      if (retireError) throw new Error("subscription_reconciliation_failed");
-
-      await cancelSupersededAtProvider(supabase, sub.org_id, superseded ?? [], {
+      await retireSuperseded(supabase, sub, {
         keepProvider: event.provider,
         keepProviderSubscriptionId: event.providerSubscriptionId,
       });
 
       // Whether this event opens a NEW billing cycle, or merely repeats one
-      // that is already running. The rule is shared and unit-tested
-      // (`lib/billing-window.ts`) because BOTH directions cost money: restart
-      // a cycle that did not renew and Stripe's cancel+undo hands out a fresh
-      // cycle; fail to advance one that DID renew and the stored
-      // `current_period_end` falls behind — which is what every Asaas renewal
-      // used to do, since Asaas reports no period, only the paid charge's due
-      // date.
+      // that is already running (`lib/billing-window.ts`, unit-tested): both
+      // directions cost money.
       const window = resolveBillingWindow(
         {
           status: sub.status,
@@ -333,14 +517,20 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         .eq("id", sub.id);
       if (activationError) throw new Error("subscription_reconciliation_failed");
 
-      // The one celebratory moment of the funnel, and it used to be silent.
-      // With boleto/Pix the confirmation lands hours or days after she left
-      // the app: without this she only finds out by coming back and reloading.
       if (sub.status === "incomplete") {
+        // The one celebratory moment of the funnel: with Pix the confirmation
+        // lands after she left the app.
         await notifyActivation(supabase, sub.org_id, sub.plan_id);
+        const plan = await readPlan(supabase, sub.plan_id);
+        await trackWorkspaceEvent(
+          supabase,
+          sub.org_id,
+          "subscription.started",
+          isTier(plan?.tier) ? { offer: plan.tier } : {},
+        );
       }
 
-      // Attach order-bump modules chosen at checkout.
+      // Attach order-bump add-ons chosen at checkout (none are sold today).
       const moduleIds = (event.metadata.module_ids ?? "").split(",").filter(Boolean);
       for (const moduleId of moduleIds) {
         const { error: moduleError } = await supabase
@@ -349,27 +539,10 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         if (moduleError) throw new Error("subscription_module_reconciliation_failed");
       }
 
-      // Count the coupon redemption once, on first activation.
-      if (event.metadata.coupon_id && sub.status === "incomplete" && !sub.coupon_id) {
-        const { error: subscriptionCouponError } = await supabase
-          .from("subscriptions")
-          .update({ coupon_id: event.metadata.coupon_id })
-          .eq("id", sub.id)
-          .is("coupon_id", null);
-        if (subscriptionCouponError) throw new Error("coupon_reconciliation_failed");
-        const { data: coupon, error: couponReadError } = await supabase
-          .from("coupons")
-          .select("redeemed_count")
-          .eq("id", event.metadata.coupon_id)
-          .maybeSingle();
-        if (couponReadError) throw new Error("coupon_reconciliation_failed");
-        if (coupon) {
-          const { error: couponUpdateError } = await supabase
-            .from("coupons")
-            .update({ redeemed_count: coupon.redeemed_count + 1 })
-            .eq("id", event.metadata.coupon_id);
-          if (couponUpdateError) throw new Error("coupon_reconciliation_failed");
-        }
+      // Count the coupon's use once, on first activation. A failure throws:
+      // the claim rolled back with it, so the retry counts it.
+      if (event.metadata.coupon_id && sub.status === "incomplete") {
+        await redeemCoupon(supabase, event.metadata.coupon_id, sub.id);
       }
       break;
     }
@@ -377,7 +550,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
     case "subscription_canceled": {
       const { data: sub, error: subscriptionError } = await supabase
         .from("subscriptions")
-        .select("id, org_id")
+        .select("id, org_id, status, cancel_reason, plans(tier)")
         .eq("provider", event.provider)
         .eq("provider_subscription_id", event.providerSubscriptionId)
         .in("status", ["trialing", "active", "past_due", "incomplete"])
@@ -390,6 +563,17 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         .eq("id", sub.id);
       if (cancellationError) throw new Error("subscription_reconciliation_failed");
       await ensureFreeSubscription(supabase, sub.org_id);
+      // A checkout that never paid was never a subscription to lose.
+      if (sub.status !== "incomplete") {
+        const tier = (sub.plans as unknown as { tier: string | null } | null)?.tier ?? null;
+        await trackWorkspaceEvent(supabase, sub.org_id, "subscription.canceled", {
+          ...(sub.cancel_reason ? { reason: sub.cancel_reason as string } : {}),
+          ...(tier ? { tier_from: tier } : {}),
+        });
+        // Tools already installed keep working; updates stop, unless the kit
+        // (or another source) still grants access.
+        await revokeTokensIfAccessEnded(supabase, sub.org_id, "canceled");
+      }
       break;
     }
 
@@ -397,21 +581,15 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       const sub = await findSubscription(supabase, event);
       const orgId = sub?.org_id ?? event.metadata.org_id;
       // No local subscription AND no org in the provider's metadata: this
-      // charge belongs to someone else's flow in the same Asaas account. It
-      // will never reconcile, so retrying it forever only gets our queue
-      // penalized — and a penalized queue stops delivering the payments that
-      // ARE ours.
+      // charge belongs to someone else's flow in the same Asaas account.
       if (!orgId) {
         skipForeignEvent(event, "no_billing_context");
         return;
       }
 
       // Asaas emits PAYMENT_CONFIRMED then PAYMENT_RECEIVED for the SAME card
-      // payment. Reconciliation below is idempotent (invoice/credits dedup),
-      // but the analytics Purchase must fire ONCE per invoice — so we remember
-      // whether this invoice was already paid before this event and skip the
-      // conversion the second time (Meta dedups by event_id anyway; GA4 does
-      // not, so this is what keeps GA4 revenue honest).
+      // payment. Reconciliation below is idempotent, but the analytics
+      // Purchase must fire ONCE per invoice.
       const { data: priorInvoice } = await supabase
         .from("invoices")
         .select("status")
@@ -436,39 +614,120 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       );
       if (invoiceError) throw new Error("invoice_reconciliation_failed");
 
+      const invoiceKey = `${event.provider}:${event.providerInvoiceId}`;
+      const plan = await readPlan(supabase, event.metadata.plan_id ?? sub?.plan_id);
+
       // A one-time ACCESS purchase (the kit) is granted HERE, on the paid
       // invoice and never at checkout start. The grant is idempotent per
       // invoice, so a resent event grants nothing more, and a refunded kit is
       // never revived by a late replay (grant_entitlement_on_invoice, 0003).
-      // Phase 4 of docs/PLANO-IMPLEMENTACAO.md adds the receipt e-mail, the
-      // purchase attribution and the `kit.purchased` event.
-      const planId = event.metadata.plan_id ?? sub?.plan_id;
-      if (planId) {
-        const { data: plan, error: planError } = await supabase
-          .from("plans")
-          .select("kind")
-          .eq("id", planId)
-          .maybeSingle();
-        if (planError) throw new Error("plan_reconciliation_failed");
+      if (plan?.kind === "access") {
+        const { data: granted, error: grantError } = await supabase.rpc("grant_entitlement_on_invoice", {
+          target_org: orgId,
+          target_plan: plan.id,
+          target_provider: event.provider,
+          target_provider_invoice_id: event.providerInvoiceId,
+          target_price_cents: event.amountCents,
+          target_currency: event.currency.toUpperCase(),
+        });
+        const grant = granted as { ok?: boolean; code?: string } | null;
+        if (grantError || !grant?.ok) throw new Error("grant_reconciliation_failed");
 
-        if (plan?.kind === "access") {
-          const { data: granted, error: grantError } = await supabase.rpc("grant_entitlement_on_invoice", {
-            target_org: orgId,
-            target_plan: planId,
-            target_provider: event.provider,
-            target_provider_invoice_id: event.providerInvoiceId,
-            target_price_cents: event.amountCents,
-            target_currency: event.currency.toUpperCase(),
-          });
-          if (grantError || !(granted as { ok?: boolean } | null)?.ok) {
-            throw new Error("grant_reconciliation_failed");
+        // The first delivery of a new grant is the purchase; a replay is not.
+        // This block runs before anything below that may throw, because a
+        // retry finds the grant already given and never comes back to it.
+        if (grant.code === "granted") {
+          // Counted here or never: a retry finds the grant already given and
+          // skips this block, so a failure is logged instead of replayed.
+          if (event.metadata.coupon_id) {
+            await redeemCoupon(supabase, event.metadata.coupon_id, null).catch((couponError) => {
+              console.error("billing_kit_coupon_not_counted", {
+                orgId,
+                couponId: event.metadata.coupon_id,
+                message: couponError instanceof Error ? couponError.message : String(couponError),
+              });
+            });
           }
+          await trackWorkspaceEvent(supabase, orgId, "kit.purchased", { offer: "kit" }, event.paidAt);
+          await notifyKitPurchase(supabase, orgId, {
+            amountCents: event.amountCents,
+            currency: event.currency.toUpperCase(),
+          });
         }
+
+        // Idempotent per invoice (upsert, duplicates ignored): a failure here
+        // throws and the retry writes it.
+        await recordPurchaseAttribution(supabase, {
+          orgId,
+          invoiceKey,
+          subscriptionId: null,
+          planSlug: plan.slug,
+          amountCents: event.amountCents,
+          currency: event.currency.toUpperCase(),
+          paidAt: event.paidAt,
+        });
       }
 
+      // A yearly plan split into installments is ONE purchase: no provider
+      // subscription will ever emit an activation, so its first paid parcel
+      // activates it here, for exactly one period, set not to renew
+      // (docs/BILLING.md, installments). Before this, such a purchase was paid
+      // and never activated.
+      //
+      // The card is authorized for the total, so Asaas confirms every parcel
+      // within seconds, in parallel deliveries. Whichever handler flips the row
+      // out of `incomplete` owns the SALE: the notice, the event, the campaign
+      // credit and the ad-platform Purchase, all at the full price. Counting
+      // paid invoices instead raced (two parcels each saw two) and reported a
+      // sale per parcel.
+      const singlePurchase = Boolean(sub) && sub?.renews === false;
+      let saleOpenedHere = false;
+      if (sub && sub.status === "incomplete" && singlePurchase) {
+        await retireSuperseded(supabase, sub, { keepProvider: event.provider, keepProviderSubscriptionId: null });
+        // No provider subscription will ever activate, so the coupon's use is
+        // counted here, BEFORE the row leaves `incomplete`: a failure throws
+        // with nothing flipped, and the retry (or a parallel parcel) finds the
+        // use already claimed on the row.
+        if (event.metadata.coupon_id) {
+          await redeemCoupon(supabase, event.metadata.coupon_id, sub.id);
+        }
+        const start = event.paidAt;
+        const end = periodEnd(start, (sub.period as BillingPeriod | null) ?? "yearly");
+        const { data: flipped, error: activationError } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            past_due_since: null,
+            current_period_start: start.toISOString(),
+            current_period_end: end.toISOString(),
+            // It ends when the period ends; the member buys again to continue.
+            cancel_at_period_end: true,
+          })
+          .eq("id", sub.id)
+          .eq("status", "incomplete")
+          .select("id");
+        if (activationError) throw new Error("subscription_reconciliation_failed");
+        saleOpenedHere = (flipped ?? []).length > 0;
+        // Everything below the flip is best-effort: a retry finds the row
+        // active and never comes back here, so throwing would only lose it.
+        if (saleOpenedHere) {
+          await notifyActivation(supabase, sub.org_id, sub.plan_id);
+          await trackWorkspaceEvent(
+            supabase,
+            sub.org_id,
+            "subscription.started",
+            isTier(plan?.tier) ? { offer: plan.tier } : {},
+            event.paidAt,
+          );
+        }
+      }
+      // What the sale is worth: the whole purchase for a split one (the price
+      // snapshot), the charge itself otherwise.
+      const saleCents =
+        singlePurchase && typeof sub?.price_cents === "number" ? (sub.price_cents as number) : event.amountCents;
+
       // A paid invoice heals a past_due subscription — and closes the dunning
-      // window with it, so a later failure starts counting from scratch
-      // instead of inheriting the previous one's clock.
+      // window with it, so a later failure starts counting from scratch.
       if (sub && sub.status === "past_due") {
         const { error: recoveryError } = await supabase
           .from("subscriptions")
@@ -482,15 +741,27 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         });
       }
 
-      // Purchases per campaign (migration 0113) — reconciliation, not
-      // measurement: it is what each live event's console counts as "compras",
-      // so it runs on every delivery (idempotent through invoice_key), checks
-      // its errors and throws so the provider retries, unlike the best-effort
-      // conversions below. Only the invoice that STARTS a subscription counts,
-      // and only with a checkout campaign at most 14 days old: long enough for
-      // a PIX or boleto that settles late, too short to credit an abandoned
-      // attempt. meta_attribution keeps only the latest checkout per workspace.
-      if (sub) {
+      // Purchases per campaign: only the invoice that STARTS a subscription
+      // counts (the kit was credited above; a split purchase, by its opener).
+      if (sub && singlePurchase) {
+        if (saleOpenedHere) {
+          await recordPurchaseAttribution(supabase, {
+            orgId,
+            invoiceKey,
+            subscriptionId: sub.id,
+            planSlug: plan?.slug ?? null,
+            amountCents: saleCents,
+            currency: event.currency.toUpperCase(),
+            paidAt: event.paidAt,
+          }).catch((attributionError) => {
+            console.error("billing_split_attribution_failed", {
+              orgId,
+              invoiceKey,
+              message: attributionError instanceof Error ? attributionError.message : String(attributionError),
+            });
+          });
+        }
+      } else if (sub) {
         const { count: paidCount, error: countError } = await supabase
           .from("invoices")
           .select("id", { count: "exact", head: true })
@@ -498,59 +769,22 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           .eq("status", "paid");
         if (countError) throw new Error("purchase_attribution_failed");
         if (paidCount === 1) {
-          const { data: campaignRow, error: campaignError } = await supabase
-            .from("meta_attribution")
-            .select(
-              "campaign_origem, campaign_utm_source, campaign_utm_medium, campaign_utm_campaign, campaign_utm_content, campaign_captured_at",
-            )
-            .eq("org_id", orgId)
-            .maybeSingle();
-          if (campaignError) throw new Error("purchase_attribution_failed");
-          const capturedAt = campaignRow?.campaign_captured_at
-            ? new Date(campaignRow.campaign_captured_at as string)
-            : null;
-          const hasValue = Boolean(
-            campaignRow?.campaign_origem ||
-              campaignRow?.campaign_utm_source ||
-              campaignRow?.campaign_utm_medium ||
-              campaignRow?.campaign_utm_campaign ||
-              campaignRow?.campaign_utm_content,
-          );
-          if (capturedAt && hasValue && event.paidAt.getTime() - capturedAt.getTime() <= 14 * 86_400_000) {
-            let planSlug: string | null = null;
-            if (sub.plan_id) {
-              const { data: planRow } = await supabase.from("plans").select("slug").eq("id", sub.plan_id).maybeSingle();
-              planSlug = (planRow?.slug as string | undefined) ?? null;
-            }
-            const { error: attributionError } = await supabase.from("purchase_attributions").upsert(
-              {
-                org_id: orgId,
-                invoice_key: `${event.provider}:${event.providerInvoiceId}`,
-                subscription_id: sub.id,
-                plan_slug: planSlug,
-                amount_cents: event.amountCents,
-                currency: event.currency,
-                paid_at: event.paidAt.toISOString(),
-                origem: campaignRow?.campaign_origem ?? null,
-                utm_source: campaignRow?.campaign_utm_source ?? null,
-                utm_medium: campaignRow?.campaign_utm_medium ?? null,
-                utm_campaign: campaignRow?.campaign_utm_campaign ?? null,
-                utm_content: campaignRow?.campaign_utm_content ?? null,
-                campaign_captured_at: capturedAt.toISOString(),
-              },
-              { onConflict: "invoice_key", ignoreDuplicates: true },
-            );
-            if (attributionError) throw new Error("purchase_attribution_failed");
-          }
+          await recordPurchaseAttribution(supabase, {
+            orgId,
+            invoiceKey,
+            subscriptionId: sub.id,
+            planSlug: plan?.slug ?? null,
+            amountCents: event.amountCents,
+            currency: event.currency.toUpperCase(),
+            paidAt: event.paidAt,
+          });
         }
       }
 
       // Meta CAPI + GA4 — Purchase, once per paid invoice (renewals are distinct
-      // invoices, so they count as distinct purchases). The provider called us,
-      // so there is no browser here: we enrich the match with the ad-click
-      // signals captured at checkout (meta_attribution) — email + _fbp/_fbc +
-      // IP/UA + _ga client id. Best-effort: it never blocks reconciliation.
-      if (!alreadyCounted)
+      // invoices, so they count as distinct purchases), and once per SALE for a
+      // split purchase. Best-effort: it never blocks reconciliation.
+      if (!alreadyCounted && (!singlePurchase || saleOpenedHere))
         try {
           const { data: attribution } = await supabase
             .from("meta_attribution")
@@ -559,29 +793,17 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
             )
             .eq("org_id", orgId)
             .maybeSingle();
-          // The LAST touch — the campaign of the checkout that produced this
-          // sale (lib/campaign-params.ts, migration 0112). Kept apart from the
-          // first-touch keys below: the base that already had an account is
-          // only ever credited to a later campaign through these.
+          // The LAST touch — the campaign of the checkout that produced this sale.
           const lastTouch: Record<string, string> = {};
           if (attribution?.campaign_origem) lastTouch.last_origem = attribution.campaign_origem;
           if (attribution?.campaign_utm_source) lastTouch.last_utm_source = attribution.campaign_utm_source;
           if (attribution?.campaign_utm_medium) lastTouch.last_utm_medium = attribution.campaign_utm_medium;
           if (attribution?.campaign_utm_campaign) lastTouch.last_utm_campaign = attribution.campaign_utm_campaign;
           if (attribution?.campaign_utm_content) lastTouch.last_utm_content = attribution.campaign_utm_content;
-          // Which wave/channel produced this sale, and what was actually
-          // bought. Without it a Purchase is an amount with no way back to the
-          // campaign that earned it — and comparing waves is the reason they
-          // are run separately (docs/FUNIL.md T5.0).
           const campaign = await readSignupAttribution(orgId);
           const planFacts: Record<string, string | number> = {};
           if (sub?.period) planFacts.billing_cycle = sub.period;
-          // Slug and code, not UUIDs: these are read by a human in the Events
-          // Manager, and "pro-fundador" answers the founders question by itself.
-          if (sub?.plan_id) {
-            const { data: planRow } = await supabase.from("plans").select("slug").eq("id", sub.plan_id).maybeSingle();
-            if (planRow?.slug) planFacts.plan = planRow.slug;
-          }
+          if (plan?.slug) planFacts.plan = plan.slug;
           if (sub?.coupon_id) {
             const { data: couponRow } = await supabase
               .from("coupons")
@@ -592,44 +814,42 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           }
           await sendMetaConversion({
             eventName: "Purchase",
-            eventId: `${event.provider}:${event.providerInvoiceId}`,
+            eventId: invoiceKey,
             externalId: orgId,
             email: attribution?.email ?? null,
             fbp: attribution?.fbp ?? null,
             fbc: attribution?.fbc ?? null,
             clientIp: attribution?.client_ip ?? null,
             clientUserAgent: attribution?.client_user_agent ?? null,
-            value: event.amountCents / 100,
+            value: saleCents / 100,
             currency: event.currency,
             customData: { ...campaign, ...lastTouch, ...planFacts },
-            // Honest source: the webhook fired this, no browser present. The
-            // match keys above still attribute it to the ad click.
             actionSource: "system_generated",
             eventTime: Math.floor(event.paidAt.getTime() / 1000),
           });
-          // GA4 purchase — stitched to the web session via the _ga client id
-          // captured at checkout (no _ga cookie here). transaction_id = invoice.
           await sendGa4Event({
             clientId: attribution?.ga_client_id ?? null,
             eventName: "purchase",
-            eventId: `${event.provider}:${event.providerInvoiceId}`,
+            eventId: invoiceKey,
             eventTime: Math.floor(event.paidAt.getTime() / 1000),
             params: {
               currency: event.currency,
-              value: event.amountCents / 100,
-              transaction_id: `${event.provider}:${event.providerInvoiceId}`,
+              value: saleCents / 100,
+              transaction_id: invoiceKey,
             },
           });
 
-          // Meta CAPI + GA4 — Subscribe, ONCE per subscription: only on its
-          // FIRST paid invoice (renewals stay Purchase). Lets Meta optimize for
-          // NEW paying customers, not renewals. Packs (no subscription) skip it.
+          // Subscribe, ONCE per subscription: only on its FIRST paid invoice
+          // (renewals stay Purchase), or by the opener of a split purchase. The
+          // kit has no subscription and skips it.
           if (sub) {
-            const { count: paidInvoices } = await supabase
-              .from("invoices")
-              .select("id", { count: "exact", head: true })
-              .eq("subscription_id", sub.id)
-              .eq("status", "paid");
+            const { count: paidInvoices } = singlePurchase
+              ? { count: saleOpenedHere ? 1 : 0 }
+              : await supabase
+                  .from("invoices")
+                  .select("id", { count: "exact", head: true })
+                  .eq("subscription_id", sub.id)
+                  .eq("status", "paid");
             if (paidInvoices === 1) {
               await sendMetaConversion({
                 eventName: "Subscribe",
@@ -640,7 +860,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
                 fbc: attribution?.fbc ?? null,
                 clientIp: attribution?.client_ip ?? null,
                 clientUserAgent: attribution?.client_user_agent ?? null,
-                value: event.amountCents / 100,
+                value: saleCents / 100,
                 currency: event.currency,
                 actionSource: "system_generated",
                 eventTime: Math.floor(event.paidAt.getTime() / 1000),
@@ -650,7 +870,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
                 eventName: "subscribe",
                 eventId: `subscribe:${sub.id}`,
                 eventTime: Math.floor(event.paidAt.getTime() / 1000),
-                params: { currency: event.currency, value: event.amountCents / 100 },
+                params: { currency: event.currency, value: saleCents / 100 },
               });
             }
           }
@@ -684,17 +904,13 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       );
       if (invoiceError) throw new Error("invoice_reconciliation_failed");
       if (sub && ["trialing", "active"].includes(sub.status)) {
-        // The window has to count from a moment the database owns. Without
-        // this stamp the grace period would have to be inferred from
-        // `updated_at`, which any later write silently moves forward.
+        // The window has to count from a moment the database owns.
         const { error: pastDueError } = await supabase
           .from("subscriptions")
           .update({ status: "past_due", past_due_since: new Date().toISOString() })
           .eq("id", sub.id);
         if (pastDueError) throw new Error("subscription_reconciliation_failed");
 
-        // The member has to learn about it here, not by discovering later that
-        // updates stopped.
         const days = await graceDays(supabase);
         await notifyOrg(supabase, orgId, {
           title: "Não conseguimos processar seu pagamento",
@@ -709,19 +925,42 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
     }
 
     case "payment_reverted": {
-      // Money that came back. The invoice must stop reading as paid, and — the
-      // part that actually costs money — anything it BOUGHT has to go with it
-      // (phase 4 adds the kit's access grant to what is reverted).
+      // Money that came back. The invoice stops reading as paid, and what it
+      // BOUGHT goes with it: revert_paid_invoice revokes the kit's grant.
       const { data, error } = await supabase.rpc("revert_paid_invoice", {
         target_provider: event.provider,
         target_provider_invoice_id: event.providerInvoiceId,
         target_kind: event.kind,
       });
       if (error) throw new Error("invoice_reversal_failed");
-      const result = data as { ok?: boolean; code?: string } | null;
+      const result = data as { ok?: boolean; code?: string; orgId?: string; grantsRevoked?: number } | null;
       if (result?.ok !== true) throw new Error("invoice_reversal_failed");
       // An invoice we never recorded is not ours; the RPC says so and we stop.
-      if (result.code === "unknown_invoice") skipForeignEvent(event, "unknown_invoice");
+      if (result.code === "unknown_invoice") {
+        skipForeignEvent(event, "unknown_invoice");
+        break;
+      }
+      // A refunded kit takes the updates with it, unless a subscription still
+      // grants access.
+      if (result.code === "reverted" && result.orgId && Number(result.grantsRevoked) > 0) {
+        await revokeTokensIfAccessEnded(supabase, result.orgId, "canceled");
+        const owner = await workspaceOwner(supabase, result.orgId);
+        await logAuditEvent(supabase, {
+          orgId: result.orgId,
+          actorId: null,
+          action: "billing.grant_reverted",
+          entityType: "invoice",
+          entityId: event.providerInvoiceId,
+          metadata: { provider: event.provider, kind: event.kind, owner },
+        }).catch(() => {
+          // The reversal is already in the database.
+        });
+      }
+      // A refunded split purchase ends now: no provider subscription exists
+      // whose cancellation would end it later.
+      if (result.code === "reverted") {
+        await endRefundedSinglePurchase(supabase, event);
+      }
       break;
     }
   }
@@ -747,9 +986,8 @@ async function processEvent(supabase: ServiceClient, event: BillingEvent): Promi
     attempts?: number;
   } | null;
   if (claim?.code === "already_processed") return false;
-  // Another invocation owns this event inside its 5-minute lease. Answering
-  // 500 here penalizes the provider's queue for doing nothing wrong — and
-  // after a crash it did so for five full minutes, for free.
+  // Another invocation owns this event inside its lease. Answering 500 here
+  // penalizes the provider's queue for doing nothing wrong.
   if (claim?.code === "event_in_progress") return false;
   if (claimError || !claim?.ok || !claim.eventId || !claim.claimToken) return true;
 
@@ -766,12 +1004,8 @@ async function processEvent(supabase: ServiceClient, event: BillingEvent): Promi
   } catch (error) {
     // After enough tries the problem is ours, not a race: keep answering 200
     // so the provider's queue survives, and hand the replay to an operator.
-    // Without a cap a single unreconcilable event suspended the whole
-    // webhook — including the payments that were reconciling fine.
     const attempts = Number(claim.attempts ?? 1);
     const permanent = attempts >= MAX_HANDLER_ATTEMPTS;
-    // The catch used to be silent and wrote a fixed "handler_failed", so the
-    // production incident could be seen but never explained.
     console.error("billing_webhook_handler_failed", {
       provider: event.provider,
       providerEventId: event.providerEventId,
@@ -813,9 +1047,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   let rawBody: string;
   let supabase: ServiceClient;
   try {
-    // Both of these used to run OUTSIDE any try. `createServiceClient()`
-    // throws when its env vars are missing, which produced a 500 with no log
-    // at all — indistinguishable, from the provider's side, from a handler bug.
+    // `createServiceClient()` throws when its env vars are missing; inside the
+    // try it is logged instead of producing a silent 500.
     rawBody = await request.text();
     supabase = createServiceClient();
   } catch (error) {
@@ -850,11 +1083,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
     if (await processEvent(supabase, event)) failed = true;
   }
 
-  // Whatever did not fit the budget finishes after the response is sent. It
-  // cannot ask the provider to resend any more (the 200 is already out), so a
-  // failure here stays in the inbox with its attempt count for an operator —
-  // which is strictly better than the alternative it replaces: blowing the
-  // 10-second window and having the queue interrupted for everyone.
+  // Whatever did not fit the budget finishes after the response is sent. A
+  // failure here stays in the inbox with its attempt count for an operator.
   if (deferred.length > 0) {
     after(async () => {
       for (const event of deferred) {

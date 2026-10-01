@@ -3,10 +3,11 @@ import { Resend } from "resend";
 
 import AdminAccountsDigestEmail, { type AdminAccountsDigestEmailProps } from "./templates/admin-accounts-digest";
 import ContactFormEmail, { ContactFormEmailProps } from "./templates/contact-form";
+import KitReceiptEmail, { KIT_RECEIPT_COPY, type KitReceiptEmailProps } from "./templates/kit-receipt";
 import LeadConfirmEmail, { LEAD_CONFIRM_COPY, type LeadConfirmLocale } from "./templates/lead-confirm";
 import SubscriptionActiveEmail, { type SubscriptionActiveEmailProps } from "./templates/subscription-active";
 
-export type { AdminAccountsDigestEmailProps, LeadConfirmLocale, SubscriptionActiveEmailProps };
+export type { AdminAccountsDigestEmailProps, KitReceiptEmailProps, LeadConfirmLocale, SubscriptionActiveEmailProps };
 
 /** True when transactional email is configured (server-only env var). */
 export const isEmailConfigured = Boolean(process.env.RESEND_API_KEY);
@@ -126,6 +127,28 @@ export async function sendLeadConfirmationEmail({
     to,
     subject: LEAD_CONFIRM_COPY[locale].subject,
     react: createElement(LeadConfirmEmail, { locale, confirmUrl }),
+  });
+  if (error) {
+    return { sent: false, error: error.message };
+  }
+  return { sent: true };
+}
+
+/**
+ * The receipt of the one-time kit, in the buyer's language. Transactional, so
+ * no unsubscribe. Returns { sent: false } without failing when RESEND_API_KEY
+ * is absent: the grant is already in the database and the bell already rang.
+ */
+export async function sendKitReceiptEmail(to: string, props: KitReceiptEmailProps): Promise<SendResult> {
+  if (!isEmailConfigured) {
+    return { sent: false };
+  }
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: DEFAULT_FROM,
+    to,
+    subject: KIT_RECEIPT_COPY[props.locale].subject,
+    react: createElement(KitReceiptEmail, props),
   });
   if (error) {
     return { sent: false, error: error.message };

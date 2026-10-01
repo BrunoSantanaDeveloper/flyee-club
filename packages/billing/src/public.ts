@@ -27,10 +27,13 @@ export type PublicPlan = {
  * table is readable by authenticated users only (RLS), so this goes through
  * the service-role client — read-only, safe fields only.
  *
+ * `currency` narrows the list to the plans sold in it (each offer exists once
+ * per currency: `kit` in BRL, `kit-usd` in USD).
+ *
  * Returns `null` when Supabase is not configured (fresh clone), so callers
  * MUST fall back to placeholder content and keep the page browsable.
  */
-export async function listPublicPlans(): Promise<PublicPlan[] | null> {
+export async function listPublicPlans(options: { currency?: string } = {}): Promise<PublicPlan[] | null> {
   let supabase: ReturnType<typeof createServiceClient>;
   try {
     supabase = createServiceClient();
@@ -38,18 +41,19 @@ export async function listPublicPlans(): Promise<PublicPlan[] | null> {
     return null;
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("plans")
     .select("slug, name, description, kind, family, tier, period, price_cents, currency, trial_days, is_free, limits, sort")
     .eq("is_active", true)
-    // Add-ons (à-la-carte packs) are not tiers: on a public pricing page they
+    // Add-ons are not tiers: on a public pricing page they
     // would read as another plan to choose between.
     .eq("is_addon", false)
     // A limited offer (founders) is active and fully purchasable, but reached
     // by the link the operator sends — publishing its price next to the table
     // price would read as overcharging everybody else (0085).
-    .eq("is_public", true)
-    .order("sort", { ascending: true });
+    .eq("is_public", true);
+  if (options.currency) query = query.eq("currency", options.currency.toUpperCase());
+  const { data, error } = await query.order("sort", { ascending: true });
 
   if (error || !data) return null;
 
@@ -143,7 +147,9 @@ export async function resolvePublicCoupon(code: string): Promise<CheckoutCoupon 
 
   const { data, error } = await supabase.rpc("validate_coupon", { coupon_code: normalized });
   if (error) return null;
-  const row = (data as { id: string; code: string; discount_type: string; discount_value: number }[] | null)?.[0];
+  const row = (
+    data as { id: string; code: string; discount_type: string; discount_value: number; currency: string | null }[] | null
+  )?.[0];
   if (!row) return null;
 
   return {
@@ -151,5 +157,6 @@ export async function resolvePublicCoupon(code: string): Promise<CheckoutCoupon 
     code: row.code,
     discountType: row.discount_type as CheckoutCoupon["discountType"],
     discountValue: row.discount_value,
+    currency: row.currency,
   };
 }

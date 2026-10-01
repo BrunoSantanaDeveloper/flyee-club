@@ -26,15 +26,6 @@ export type DiscountType = "percent" | "fixed";
  */
 export type PaymentMethod = "credit_card" | "pix";
 
-/**
- * The most installments a card purchase may be split into.
- *
- * Shared so the form and the server cannot disagree about what is on offer —
- * a grid showing 6x against a server that caps at 5 is a refused checkout at
- * the last step of the funnel.
- */
-export const MAX_INSTALLMENTS = 5;
-
 export interface CheckoutPlan {
   id: string;
   slug: string;
@@ -67,6 +58,8 @@ export interface CheckoutCoupon {
   discountType: DiscountType;
   /** percent: 1-100; fixed: cents. Applied to the recurring total. */
   discountValue: number;
+  /** The currency of a fixed discount (an amount of money belongs to one); null for a percentage. */
+  currency?: string | null;
 }
 
 /**
@@ -148,6 +141,13 @@ export interface CheckoutResult {
   url: string;
   providerCustomerId?: string;
   providerSubscriptionId?: string;
+  /**
+   * The single charge behind a one-off purchase (the kit, or a yearly plan
+   * split into installments), when the provider names it. For an Asaas
+   * installment purchase this is the INSTALLMENT id, the one every parcel's
+   * webhook carries; otherwise the payment id.
+   */
+  providerPaymentId?: string;
   /** Present only when the charge is PIX and its QR could be read. */
   pix?: PixCharge;
 }
@@ -175,8 +175,8 @@ export type BillingEvent = { providerEventId: string } & (
        * The handler needs it to tell a RENEWAL from a cosmetic update: Stripe
        * re-emits `customer.subscription.updated` for every change, including
        * the two the product itself makes (scheduling and undoing a
-       * cancellation). Stamping "now" on those restarted the audio consumption
-       * window, so cancel + undo handed out a fresh cycle of minutes.
+       * cancellation). Stamping "now" on those restarted the billing cycle,
+       * so cancel + undo pushed the paid-through date forward for free.
        */
       currentPeriodStart?: Date;
       currentPeriodEnd?: Date;
@@ -191,6 +191,13 @@ export type BillingEvent = { providerEventId: string } & (
       provider: BillingProviderName;
       metadata: Partial<CheckoutMetadata>;
       providerSubscriptionId?: string;
+      /**
+       * The one-off charge this payment belongs to, matching
+       * `subscriptions.provider_payment_id`: the installment id for an Asaas
+       * parcel, the payment id for a single charge. Absent on a subscription
+       * cycle.
+       */
+      providerPaymentRef?: string;
       providerInvoiceId: string;
       amountCents: number;
       currency: string;
@@ -202,6 +209,8 @@ export type BillingEvent = { providerEventId: string } & (
       provider: BillingProviderName;
       metadata: Partial<CheckoutMetadata>;
       providerSubscriptionId?: string;
+      /** Same as on `payment_succeeded`: the one-off charge this parcel belongs to. */
+      providerPaymentRef?: string;
       providerInvoiceId: string;
       amountCents: number;
       currency: string;
@@ -216,9 +225,10 @@ export type BillingEvent = { providerEventId: string } & (
       /**
        * The money went back — refunded by us or pulled by the card issuer.
        *
-       * Until this existed the invoice stayed `paid` forever and, worse, the
-       * minute pack it had granted stayed spendable. A pack does not expire by
-       * design, so an un-reverted chargeback is an unlimited free balance.
+       * Until this existed the invoice stayed `paid` forever and, worse, what
+       * it bought stayed usable. The kit does not expire by design, so an
+       * un-reverted chargeback is a permanent free kit; the reversal revokes
+       * the grant the invoice created.
        */
       type: "payment_reverted";
       provider: BillingProviderName;
@@ -273,15 +283,15 @@ export interface PaymentProvider {
  * API, not documented (101 is rejected with `invalid_externalReference`). The
  * obvious encoding, `JSON.stringify(metadata)`, produces 177: three UUIDs plus
  * their long key names. So EVERY Asaas checkout was refused before the
- * customer ever saw a payment page — subscriptions and minute packs alike —
- * and the only trace was a generic "unavailable".
+ * customer ever saw a payment page — subscriptions and one-off purchases
+ * alike — and the only trace was a generic "unavailable".
  *
  * The packed form is the three ids that the webhook actually reads, stripped
  * of their hyphens and joined by a dot: `<org>.<plan>[.<coupon>]`. Worst case
  * 98 characters, which the unit test pins. What it deliberately drops is what
  * nothing consumes: `billing_operation_key` (never read) and `module_ids`
- * (MedChina ships no order-bump modules, and Stripe — whose metadata has no
- * such limit — still carries both).
+ * (no order-bump add-ons are sold, and Stripe — whose metadata has no such
+ * limit — still carries both).
  */
 const HEX32 = /^[0-9a-f]{32}$/u;
 const compactId = (id: string) => id.replace(/-/gu, "").toLowerCase();
