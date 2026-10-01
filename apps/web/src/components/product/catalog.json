@@ -40,7 +40,7 @@
       "name": "TrendSparkline",
       "from": "@/components/product/trend-sparkline",
       "props": "label, data[], plotType?, formatValue?, caption?, tone?",
-      "use": "A SERIES the payload already carries: value + change against the previous point + the curve. Never synthesize a series to decorate. Port of the template's stat-with-sparkline."
+      "use": "A SERIES the payload already carries: value + change against the previous point + the curve. Never synthesize a series to decorate. Port of the template's stat-with-sparkline. The text is the accessible reading (the change is spelled out for screen readers) and the drawing is hidden from assistive technology; only the triangle carries the hue, because accent tones fail contrast as small text."
     },
     {
       "name": "StatTile",
@@ -97,10 +97,22 @@
       "use": "A definition attached to a number. A bare Tooltip on a non-focusable Box disappears on touch and for keyboards — use this instead."
     },
     {
+      "name": "StatusChip",
+      "from": "@/components/product/status-chip",
+      "props": "label, tone? (neutral | primary | positive | attention | info | danger), className?",
+      "use": "A lifecycle state as a NAMED badge: a module version (rascunho, publicada, retirada), a meeting, a roadmap item, a subscription, a lead. The template's tiny pastel button rendered as a span (no focus, reads as text). The tone tints the badge and the word is always text-primary, because the pastel label in the tone itself fails contrast on this palette. Never colour alone, never an outlined Chip for a state."
+    },
+    {
+      "name": "ComparisonTable",
+      "from": "@/components/product/comparison-table",
+      "props": "caption, rowHeader, columns[{key,label,note?,highlight?}], rows[{key,label,note?,muted?,cells[{primary,secondary?,mark?}]}], footer?, legend?, className?",
+      "use": "A few rows compared across a few columns where every cell is a figure (a metric per segment and week, the leader of each metric per week, results per segment). A real <table> with a sticky first column and a keyboard-reachable horizontal scroll. A `muted` row is set in the secondary text colour, never faded with opacity. Not for managing many rows: that is DataTable."
+    },
+    {
       "name": "CommandBlock",
       "from": "@/components/product/command-block",
       "props": "command, copyLabel, copiedLabel, className?",
-      "use": "A terminal command the member runs (npx flyee login, npx flyee add <slug>), with a copy button. Same deep-primary mono body as the marketing TerminalFrame. Never a bare <code> chip for a command the member must type."
+      "use": "A terminal command the member runs (npx flyee login, npx flyee add <slug>), with a copy button. Same deep-band mono body (--background-deep) as the marketing TerminalFrame. Never a bare <code> chip for a command the member must type."
     },
     {
       "name": "DataTable",
@@ -122,11 +134,6 @@
     }
   ],
   "template": [
-    {
-      "name": "Chip de estado (pastel)",
-      "props": "Button size=tiny variant=pastel, label = the state NAME",
-      "use": "A lifecycle state (module version draft/published/yanked, meeting state, subscription status): the state is NAMED, never colour alone. Not packaged yet: recover the shape with `git show ab2e84d:apps/web/src/components/product/consultation-status-chip.tsx` and package it as components/product/status-chip.tsx when the first screen needs it."
-    },
     {
       "name": "Medidor circular (gauge)",
       "props": "CircularProgress variant=\"determinate\" + centred label + outline-grey-100 track ring",

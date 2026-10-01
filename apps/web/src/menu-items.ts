@@ -3,8 +3,9 @@ import { MenuItem } from "@/types";
 /**
  * Production navigation: only destinations that exist. The member area is the
  * home, the catalog (tools and recipes), what changed, and the community
- * (meetings and roadmap). Phase 6 of docs/PLANO-IMPLEMENTACAO.md adds the new
- * admin consoles (catálogo, roadmap, membros, métricas, encontros, leads).
+ * (meetings and roadmap). The admin group, superadmin only, starts with the
+ * consoles of the club itself (members, metrics, catalog, roadmap, meetings,
+ * leads), then money and the platform's plumbing.
  */
 export const leftMenuItems: MenuItem[] = [
   {
@@ -72,11 +73,46 @@ export const leftMenuItems: MenuItem[] = [
         description: "menu-admin-overview-description",
       },
       {
-        id: "admin-organizations",
-        icon: "NiBuilding",
-        label: "menu-admin-organizations",
-        href: "/admin/organizations",
-        description: "menu-admin-organizations-description",
+        id: "admin-members",
+        icon: "NiUsers",
+        label: "menu-admin-members",
+        href: "/admin/membros",
+        description: "menu-admin-members-description",
+      },
+      {
+        id: "admin-metrics",
+        icon: "NiChartLine",
+        label: "menu-admin-metrics",
+        href: "/admin/metricas",
+        description: "menu-admin-metrics-description",
+      },
+      {
+        id: "admin-catalog",
+        icon: "NiCatalog",
+        label: "menu-admin-catalog",
+        href: "/admin/catalogo",
+        description: "menu-admin-catalog-description",
+      },
+      {
+        id: "admin-roadmap",
+        icon: "NiFlag",
+        label: "menu-admin-roadmap",
+        href: "/admin/roadmap",
+        description: "menu-admin-roadmap-description",
+      },
+      {
+        id: "admin-meetings",
+        icon: "NiCalendar",
+        label: "menu-admin-meetings",
+        href: "/admin/encontros",
+        description: "menu-admin-meetings-description",
+      },
+      {
+        id: "admin-leads",
+        icon: "NiEmail",
+        label: "menu-admin-leads",
+        href: "/admin/leads",
+        description: "menu-admin-leads-description",
       },
       {
         id: "admin-billing",

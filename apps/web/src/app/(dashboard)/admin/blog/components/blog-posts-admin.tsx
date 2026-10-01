@@ -2,22 +2,33 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Alert, Box, Button, Chip, FormControl, FormLabel, Input, Switch, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, FormControl, FormLabel, Input, Switch, Tooltip, Typography } from "@mui/material";
 import { GridActionsCellItem, type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 
 import { Field, SelectField } from "@/app/(dashboard)/admin/billing/components/catalog-shared";
 import { slugify } from "@/app/(dashboard)/admin/help/components/help-categories-admin";
 import DataTable from "@/components/data-grid/data-table";
 import EmptyState from "@/components/product/empty-state";
+import StatusChip from "@/components/product/status-chip";
 import { LOCALES } from "@/constants";
 import NiDocumentFull from "@/icons/nexture/ni-document-full";
 import NiPen from "@/icons/nexture/ni-pen";
+import { formatDate } from "@/lib/admin/format";
+import { labelOf, LOCALE_LABEL } from "@/lib/admin/labels";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@flyee/auth/client";
+
+/** `blog_posts.kind` (migration 0007): a blog post, or a news item that also feeds the members' /novidades. */
+const KIND_LABEL: Record<string, string> = { post: "post do blog", news: "novidade" };
+/** `blog_posts.audience`: the public site, or only signed-in members. */
+const AUDIENCE_LABEL: Record<string, string> = { public: "site público", members: "só integrantes" };
 
 type PostRow = {
   id: string;
   locale: string;
+  kind: string;
+  audience: string;
+  translationGroup: string;
   slug: string;
   title: string;
   excerpt: string | null;
@@ -32,6 +43,10 @@ type PostRow = {
 type FormState = {
   id: string | null;
   locale: string;
+  kind: string;
+  audience: string;
+  /** The post in the other language this one translates, or "" for none. */
+  translationOf: string;
   slug: string;
   title: string;
   excerpt: string;
@@ -44,7 +59,10 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   id: null,
-  locale: "en",
+  locale: "pt-BR",
+  kind: "post",
+  audience: "public",
+  translationOf: "",
   slug: "",
   title: "",
   excerpt: "",
@@ -55,7 +73,13 @@ const EMPTY_FORM: FormState = {
   isPublished: false,
 };
 
-/** Blog posts: Markdown per locale, published to /blog with a switch. */
+/**
+ * Blog posts and member news: Markdown per language, published with a switch.
+ * A post is the public blog (/blog); a news item also feeds the members'
+ * /novidades, and "só integrantes" keeps it off the public site. Two posts in
+ * different languages are linked as translations, which is what the language
+ * switch and the hreflang of the public site follow.
+ */
 export default function BlogPostsAdmin() {
   const [rows, setRows] = useState<PostRow[]>([]);
   const [form, setForm] = useState<FormState | null>(null);
@@ -67,7 +91,9 @@ export default function BlogPostsAdmin() {
     const supabase = createClient();
     const { data, error: readError } = await supabase
       .from("blog_posts")
-      .select("id, locale, slug, title, excerpt, body_md, cover_url, author_name, tags, is_published, published_at")
+      .select(
+        "id, locale, kind, audience, translation_group, slug, title, excerpt, body_md, cover_url, author_name, tags, is_published, published_at",
+      )
       .order("created_at", { ascending: false })
       .limit(200);
     if (readError) {
@@ -80,6 +106,9 @@ export default function BlogPostsAdmin() {
       (data ?? []).map((row) => ({
         id: row.id,
         locale: row.locale,
+        kind: row.kind,
+        audience: row.audience,
+        translationGroup: row.translation_group,
         slug: row.slug,
         title: row.title,
         excerpt: row.excerpt,
@@ -103,8 +132,23 @@ export default function BlogPostsAdmin() {
     if (!form || !form.title.trim()) return;
     setError(null);
     const supabase = createClient();
+    // Linking takes the other post's group; unlinking a post that had a
+    // partner starts a group of its own; otherwise the group is left alone.
+    const partner = rows.find((row) => row.id === form.translationOf);
+    const current = rows.find((row) => row.id === form.id);
+    const currentPartner = current
+      ? rows.find((row) => row.translationGroup === current.translationGroup && row.id !== current.id)
+      : undefined;
+    const translationGroup = partner
+      ? partner.translationGroup
+      : form.id && currentPartner && !form.translationOf
+        ? crypto.randomUUID()
+        : undefined;
     const payload = {
       locale: form.locale,
+      kind: form.kind,
+      audience: form.audience,
+      ...(translationGroup ? { translation_group: translationGroup } : {}),
       slug: form.slug.trim() || slugify(form.title),
       title: form.title.trim(),
       excerpt: form.excerpt.trim() || null,
@@ -122,7 +166,11 @@ export default function BlogPostsAdmin() {
       : supabase.from("blog_posts").insert(payload);
     const { error: writeError } = await query;
     if (writeError) {
-      setError(writeError.message);
+      setError(
+        writeError.code === "23505"
+          ? "Já existe um post com esse slug neste idioma, ou o post escolhido como tradução já tem uma tradução neste idioma."
+          : writeError.message,
+      );
       return;
     }
     recordAudit(supabase, form.id ? "admin.blog.post.updated" : "admin.blog.post.created", {
@@ -169,20 +217,27 @@ export default function BlogPostsAdmin() {
     [refresh],
   );
 
-  const openEdit = useCallback((row: PostRow) => {
-    setForm({
-      id: row.id,
-      locale: row.locale,
-      slug: row.slug,
-      title: row.title,
-      excerpt: row.excerpt ?? "",
-      bodyMd: row.bodyMd,
-      coverUrl: row.coverUrl ?? "",
-      authorName: row.authorName ?? "",
-      tags: row.tags.join(", "),
-      isPublished: row.isPublished,
-    });
-  }, []);
+  const openEdit = useCallback(
+    (row: PostRow) => {
+      const partner = rows.find((entry) => entry.translationGroup === row.translationGroup && entry.id !== row.id);
+      setForm({
+        id: row.id,
+        locale: row.locale,
+        kind: row.kind,
+        audience: row.audience,
+        translationOf: partner?.id ?? "",
+        slug: row.slug,
+        title: row.title,
+        excerpt: row.excerpt ?? "",
+        bodyMd: row.bodyMd,
+        coverUrl: row.coverUrl ?? "",
+        authorName: row.authorName ?? "",
+        tags: row.tags.join(", "),
+        isPublished: row.isPublished,
+      });
+    },
+    [rows],
+  );
 
   const columns = useMemo<GridColDef<PostRow>[]>(
     () => [
@@ -218,11 +273,13 @@ export default function BlogPostsAdmin() {
         field: "locale",
         headerName: "Idioma",
         minWidth: 110,
-        renderCell: (params: GridRenderCellParams<PostRow, string>) => (
-          <Box className="flex h-full items-center">
-            <Chip label={params.row.locale} size="small" variant="outlined" />
-          </Box>
-        ),
+        valueGetter: (_, row) => labelOf(LOCALE_LABEL, row.locale),
+      },
+      {
+        field: "kind",
+        headerName: "Tipo",
+        minWidth: 170,
+        valueGetter: (_, row) => `${labelOf(KIND_LABEL, row.kind)} · ${labelOf(AUDIENCE_LABEL, row.audience)}`,
       },
       {
         field: "authorName",
@@ -234,7 +291,7 @@ export default function BlogPostsAdmin() {
         field: "publishedAt",
         headerName: "Publicado em",
         minWidth: 150,
-        valueGetter: (_, row) => (row.publishedAt ? new Date(row.publishedAt).toLocaleDateString() : "—"),
+        valueGetter: (_, row) => formatDate(row.publishedAt),
       },
       {
         field: "status",
@@ -243,12 +300,7 @@ export default function BlogPostsAdmin() {
         valueGetter: (_, row) => (row.isPublished ? "publicado" : "rascunho"),
         renderCell: (params: GridRenderCellParams<PostRow, string>) => (
           <Box className="flex h-full items-center">
-            <Chip
-              label={params.value}
-              size="small"
-              color={params.row.isPublished ? "success" : "default"}
-              variant="outlined"
-            />
+            <StatusChip label={params.value ?? ""} tone={params.row.isPublished ? "positive" : "neutral"} />
           </Box>
         ),
       },
@@ -309,8 +361,39 @@ export default function BlogPostsAdmin() {
             <SelectField
               label="Idioma"
               value={form.locale}
-              options={LOCALES.map((locale) => ({ value: locale, label: locale }))}
-              onChange={(value) => setForm({ ...form, locale: value })}
+              options={LOCALES.map((locale) => ({ value: locale, label: labelOf(LOCALE_LABEL, locale) }))}
+              onChange={(value) => setForm({ ...form, locale: value, translationOf: "" })}
+            />
+            <SelectField
+              label="Tipo"
+              value={form.kind}
+              options={[
+                { value: "post", label: "Post do blog" },
+                { value: "news", label: "Novidade (também em /novidades no painel)" },
+              ]}
+              onChange={(value) => setForm({ ...form, kind: value })}
+            />
+            <SelectField
+              label="Quem vê"
+              value={form.audience}
+              options={[
+                { value: "public", label: "Site público e integrantes" },
+                { value: "members", label: "Só integrantes (fora do site público)" },
+              ]}
+              onChange={(value) => setForm({ ...form, audience: value })}
+            />
+          </Box>
+          <Box className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <SelectField
+              label="Tradução de"
+              value={form.translationOf}
+              options={[
+                { value: "", label: "Nenhum post (sem tradução ligada)" },
+                ...rows
+                  .filter((row) => row.locale !== form.locale && row.id !== form.id)
+                  .map((row) => ({ value: row.id, label: `${row.title} (${labelOf(LOCALE_LABEL, row.locale)})` })),
+              ]}
+              onChange={(value) => setForm({ ...form, translationOf: value })}
             />
             <Field
               label="Slug (vazio = a partir do título)"
@@ -397,7 +480,7 @@ export default function BlogPostsAdmin() {
               <EmptyState
                 icon={<NiDocumentFull size="medium" />}
                 title="Nenhum post ainda"
-                description="Os posts publicados aqui aparecem na página pública /blog — anúncios, guias, ideias sobre o produto."
+                description="Os posts aparecem no blog público. As novidades também aparecem para os integrantes em /novidades, junto com as versões novas das ferramentas."
                 action={{ label: "Novo post", onClick: () => setForm(EMPTY_FORM) }}
                 className="border-none"
               />

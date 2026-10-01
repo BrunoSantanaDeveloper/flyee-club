@@ -1,178 +1,150 @@
-import { summarizeWatch, watchAccounts } from "./admin-jobs";
+import { sendWeeklyDigest } from "./admin-jobs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { MemberTotals } from "@/lib/admin/members";
+import type { SegmentWeekRow } from "@/lib/admin/metrics";
+import { buildWeeklyDigest } from "@/lib/admin/weekly-digest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // The job is server-only and wired to Inngest, Resend and the service role.
-// None of that is what the test is about: the logic worth pinning is WHICH
-// accounts become a digest, and that the same digest never goes out twice.
+// None of that is what the test is about: the logic worth pinning is WHEN the
+// digest goes out, what it says, and that the same week never goes out twice.
 const { notifyUsers, sendDigest } = vi.hoisted(() => ({ notifyUsers: vi.fn(), sendDigest: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@flyee/jobs", () => ({ inngest: { createFunction: () => ({ id: "admin-account-watch" }) } }));
+vi.mock("@flyee/jobs", () => ({ inngest: { createFunction: () => ({ id: "admin-weekly-digest" }) } }));
 vi.mock("@flyee/auth/service", () => ({ createServiceClient: () => ({}) }));
 vi.mock("@/lib/notifications", () => ({ notifyUsers }));
-vi.mock("@flyee/email", () => ({ sendAdminAccountsDigestEmail: sendDigest }));
+vi.mock("@flyee/email", () => ({ sendAdminWeeklyDigestEmail: sendDigest }));
 
-type Account = Record<string, unknown>;
+// Monday 2026-10-05, 08:30 in Brasília: the digest reports the week of 2026-09-28.
+const NOW = new Date("2026-10-05T11:30:00Z").getTime();
 
-const account = (flags: string[], extra: Account = {}): Account => ({
-  orgId: `org-${flags.join("-")}`,
-  name: "Consultório",
-  owner: { name: "Dra. Marina", email: "membro@flyee.invalid" },
-  billing: { planName: "Gratuito", pastDueSince: null },
-  trial: null,
-  minutes: { remaining: 0 },
-  flags,
-  ...extra,
-});
+const ZERO_TOTALS: MemberTotals = {
+  accounts: 0,
+  kit: 0,
+  club: 0,
+  pro: 0,
+  noAccess: 0,
+  pastDue: 0,
+  noDevice: 0,
+  staleUpdate: 0,
+  suspended: 0,
+  cancelScheduled: 0,
+};
 
-const supabaseWith = (accounts: Account[], operators: { id: string }[] = [{ id: "op-1" }]) =>
+function row(week: string, segment: string, overrides: Partial<SegmentWeekRow> = {}): SegmentWeekRow {
+  return {
+    week_start: week,
+    segment,
+    kit_buyers: 0,
+    page_views: 0,
+    page_conversion: null,
+    access_cohort: 0,
+    activated_7d: 0,
+    weekly_active: 0,
+    kit_to_club_60d: 0,
+    payers_90d: 0,
+    revenue_90d_brl: 0,
+    revenue_90d_usd: 0,
+    payers_90d_brl: 0,
+    payers_90d_usd: 0,
+    ...overrides,
+  };
+}
+
+const quietWeeks = ["2026-09-21", "2026-09-28", "2026-10-05"].flatMap((week) =>
+  ["dev", "outro", "unknown"].map((segment) => row(week, segment)),
+);
+
+const busyWeeks = quietWeeks.map((entry) =>
+  entry.week_start === "2026-09-28" && entry.segment === "dev"
+    ? {
+        ...entry,
+        kit_buyers: 3,
+        access_cohort: 4,
+        activated_7d: 2,
+        weekly_active: 5,
+        payers_90d: 3,
+        payers_90d_brl: 3,
+        revenue_90d_brl: 29100,
+      }
+    : entry,
+);
+
+const supabaseWith = (weekly: SegmentWeekRow[], totals: MemberTotals, operators: { id: string }[] = [{ id: "op-1" }]) =>
   ({
-    rpc: vi.fn(async () => ({ data: { accounts }, error: null })),
+    rpc: vi.fn(async (name: string) =>
+      name === "admin_segment_weekly"
+        ? { data: weekly, error: null }
+        : { data: { generatedAt: "", totals, members: [] }, error: null },
+    ),
     from: vi.fn(() => ({ select: () => ({ eq: async () => ({ data: operators, error: null }) }) })),
     auth: { admin: { getUserById: vi.fn(async () => ({ data: { user: { email: "operator@flyee.dev" } } })) } },
   }) as unknown as SupabaseClient;
 
 beforeEach(() => {
-  notifyUsers.mockResolvedValue({ sent: true, created: 1, createdFor: ["op-1"] });
-  sendDigest.mockResolvedValue({ sent: true });
+  notifyUsers.mockReset().mockResolvedValue({ sent: true, created: 1, createdFor: ["op-1"] });
+  sendDigest.mockReset().mockResolvedValue({ sent: true });
 });
 
-describe("the daily operator watch", () => {
-  it("stays silent when nothing needs a decision", async () => {
-    // An alert that arrives every morning stops being read, so a quiet day
-    // produces no notification and no e-mail at all.
-    const outcome = await watchAccounts(supabaseWith([account(["paid"]), account(["idle", "never_activated"])]));
+describe("weekly digest content", () => {
+  it("says nothing about a week with nothing in it", () => {
+    expect(buildWeeklyDigest(quietWeeks, {}, ZERO_TOTALS, NOW)).toBeNull();
+  });
 
-    expect(outcome).toMatchObject({ notified: 0, reason: "nothing-to-report" });
+  it("reports the last COMPLETE week, never the one that just started", () => {
+    const digest = buildWeeklyDigest(busyWeeks, {}, ZERO_TOTALS, NOW);
+    expect(digest?.week).toBe("2026-09-28");
+    expect(digest?.headline).toBe("Semana de 28/09: 3 compras do kit, 2 ativações, 5 com uso semanal");
+    expect(digest?.rows.map((entry) => entry.segment)).toEqual(["Dev", "Outro", "Não informado"]);
+    // The cohort of 28/09 can still activate until 12/10: the rate is marked open.
+    expect(digest?.rows[0]).toMatchObject({ kit: "3", activation: "50%†", weekly: "5", revenue: "R$ 97" });
+  });
+
+  it("goes out for accounts that need someone even in a quiet week", () => {
+    const digest = buildWeeklyDigest(quietWeeks, {}, { ...ZERO_TOTALS, pastDue: 2, staleUpdate: 1 }, NOW);
+    expect(digest?.attention).toEqual([
+      { label: "inadimplentes", count: 2 },
+      { label: "sem atualizar há 25 dias ou mais", count: 1 },
+    ]);
+  });
+});
+
+describe("weekly digest job", () => {
+  it("sends nothing when there is nothing to report", async () => {
+    const outcome = await sendWeeklyDigest(supabaseWith(quietWeeks, ZERO_TOTALS), NOW);
+    expect(outcome.reason).toBe("nothing-to-report");
     expect(notifyUsers).not.toHaveBeenCalled();
     expect(sendDigest).not.toHaveBeenCalled();
   });
 
-  it("reports a trial about to end, with the days and minutes left", async () => {
-    const outcome = await watchAccounts(
-      supabaseWith([
-        account(["trial_active", "trial_ending"], {
-          trial: { endsAt: new Date(Date.now() + 2 * 86_400_000).toISOString(), daysLeft: 2 },
-          minutes: { remaining: 230 },
-        }),
-      ]),
+  it("rings every operator once per week and e-mails only those it just notified", async () => {
+    const outcome = await sendWeeklyDigest(supabaseWith(busyWeeks, ZERO_TOTALS), NOW);
+    expect(outcome).toMatchObject({ notified: 1, emailed: 1, week: "2026-09-28" });
+    expect(notifyUsers).toHaveBeenCalledWith(
+      ["op-1"],
+      expect.objectContaining({ href: "/admin/metricas", sourceKey: "admin-weekly:2026-09-28" }),
     );
-
-    expect(outcome).toMatchObject({ notified: 1, accounts: 1, emailed: 1 });
-    const [ids, input] = notifyUsers.mock.calls[0];
-    expect(ids).toEqual(["op-1"]);
-    expect(input.title).toBe("1 trial terminando hoje");
-    // The alert lands on the accounts it is about, not on the whole book.
-    expect(input.href).toBe("/admin/organizations?filter=trial_ending");
-    expect(input.body).toContain("230 min restantes");
-    expect(sendDigest).toHaveBeenCalledWith("operator@flyee.dev", expect.objectContaining({ headline: input.title }));
+    expect(sendDigest).toHaveBeenCalledWith(
+      "operator@flyee.dev",
+      expect.objectContaining({ appUrl: expect.stringMatching(/\/admin\/metricas$/) }),
+    );
   });
 
-  it("names both problems when the morning has two kinds", async () => {
-    await watchAccounts(
-      supabaseWith([
-        account(["trial_ending"], {
-          trial: { endsAt: new Date().toISOString(), daysLeft: 1 },
-          minutes: { remaining: 10 },
-        }),
-        account(["past_due"], { billing: { planName: "Pro", pastDueSince: "2026-09-10T00:00:00Z" } }),
-      ]),
-    );
-
-    expect(notifyUsers.mock.calls[0][1].title).toBe("1 trial terminando e 1 conta inadimplente hoje");
-  });
-
-  it("forgets a trial that ended weeks ago", async () => {
-    // `trial_over` stays true until she converts; reporting it every morning
-    // would turn the digest into wallpaper.
-    const outcome = await watchAccounts(
-      supabaseWith([
-        account(["trial_over"], {
-          trial: { endsAt: new Date(Date.now() - 20 * 86_400_000).toISOString(), daysLeft: 0 },
-        }),
-      ]),
-    );
-
-    expect(outcome.reason).toBe("nothing-to-report");
-  });
-
-  it("still reports a trial that ended this morning", async () => {
-    const outcome = await watchAccounts(
-      supabaseWith([
-        account(["trial_over"], {
-          trial: { endsAt: new Date(Date.now() - 3 * 3_600_000).toISOString(), daysLeft: 0 },
-        }),
-      ]),
-    );
-
-    expect(outcome).toMatchObject({ accounts: 1, notified: 1 });
-    expect(notifyUsers.mock.calls[0][1].href).toBe("/admin/organizations?filter=trial_over");
-  });
-
-  it("reports a cancellation while a phone call still reverses it", async () => {
-    const outcome = await watchAccounts(
-      supabaseWith([account(["canceling"], { billing: { planName: "Pro", pastDueSince: null, renewalDays: 4 } })]),
-    );
-
-    expect(outcome).toMatchObject({ accounts: 1, notified: 1 });
-    expect(notifyUsers.mock.calls[0][1].href).toBe("/admin/organizations?filter=canceling");
-    expect(notifyUsers.mock.calls[0][1].body).toContain("termina em 4 dias");
-  });
-
-  it("stays quiet about a cancellation whose period ends months from now", async () => {
-    // `cancel_at_period_end` is true from the request until the period ends,
-    // which on a yearly plan is up to a year. Without the window this account
-    // would be mailed every morning until then.
-    const outcome = await watchAccounts(
-      supabaseWith([account(["canceling"], { billing: { planName: "Pro", pastDueSince: null, renewalDays: 240 } })]),
-    );
-
-    expect(outcome).toMatchObject({ notified: 0, reason: "nothing-to-report" });
-    expect(sendDigest).not.toHaveBeenCalled();
-  });
-
-  it("does not report the same account twice when it is both overdue and cancelling", async () => {
-    const outcome = await watchAccounts(
-      supabaseWith([
-        account(["past_due", "canceling"], {
-          billing: { planName: "Pro", pastDueSince: new Date().toISOString(), renewalDays: 3 },
-        }),
-      ]),
-    );
-
-    expect(outcome).toMatchObject({ accounts: 1, notified: 1 });
-    expect(notifyUsers.mock.calls[0][1].href).toBe("/admin/organizations?filter=past_due");
-  });
-
-  it("does not e-mail an operator who already has today's digest", async () => {
-    // The bell's source_key is the fence for the whole digest: a second run
-    // (a retry, a re-deploy of the cron) writes nothing and sends nothing.
+  it("does not e-mail an operator who already has this week's notification", async () => {
     notifyUsers.mockResolvedValue({ sent: true, created: 0, createdFor: [] });
-
-    const outcome = await watchAccounts(
-      supabaseWith([account(["past_due"], { billing: { planName: "Pro", pastDueSince: null } })]),
-    );
-
-    expect(outcome).toMatchObject({ notified: 0, emailed: 0 });
+    const outcome = await sendWeeklyDigest(supabaseWith(busyWeeks, ZERO_TOTALS), NOW);
+    expect(outcome.emailed).toBe(0);
     expect(sendDigest).not.toHaveBeenCalled();
   });
 
-  it("reports the failure instead of pretending it warned somebody", async () => {
+  it("reports a failed read instead of a quiet week", async () => {
     const broken = {
-      rpc: vi.fn(async () => ({ data: null, error: { message: "not_authorized" } })),
+      ...supabaseWith(busyWeeks, ZERO_TOTALS),
+      rpc: vi.fn(async () => ({ data: null, error: { message: "boom" } })),
     } as unknown as SupabaseClient;
-
-    expect(await watchAccounts(broken)).toMatchObject({ notified: 0, error: "not_authorized" });
-  });
-});
-
-describe("the digest headline", () => {
-  it("counts in Portuguese, because the bell is the professional-facing surface", () => {
-    expect(summarizeWatch(1, 0, 0)).toBe("1 trial terminando hoje");
-    expect(summarizeWatch(3, 0, 0)).toBe("3 trials terminando hoje");
-    expect(summarizeWatch(2, 1, 0)).toBe("2 trials terminando e 1 conta inadimplente hoje");
-    expect(summarizeWatch(1, 2, 1)).toBe("1 trial terminando, 2 contas inadimplentes e 1 trial encerrado hoje");
-    expect(summarizeWatch(0, 0, 0)).toBe("Nenhuma conta pede atenção hoje");
+    const outcome = await sendWeeklyDigest(broken, NOW);
+    expect(outcome.error).toBe("boom");
+    expect(notifyUsers).not.toHaveBeenCalled();
   });
 });

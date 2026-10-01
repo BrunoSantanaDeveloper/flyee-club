@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { type ReactNode, type SyntheticEvent, useMemo, useState } from "react";
+import { type ReactNode, type SyntheticEvent, useId, useMemo, useState } from "react";
 
 import {
   Badge,
@@ -122,6 +122,9 @@ function DataTableToolbar({ header, actions, filters, labels, enableExport }: Da
   const openExport = Boolean(anchorElExport);
   const handleClickExport = (event: Event | SyntheticEvent) => setAnchorElExport(event.currentTarget);
   const handleCloseExport = () => setAnchorElExport(null);
+  // The quick filter hands its id to a TextField slot this FilledInput does
+  // not read, so the visible label is tied to the input here instead.
+  const searchId = useId();
 
   return (
     <Toolbar className="min-h-auto border-none">
@@ -220,13 +223,14 @@ function DataTableToolbar({ header, actions, filters, labels, enableExport }: Da
         <Grid container spacing={2.5} className="w-full items-center" size={12}>
           {filters}
           <FormControl variant="filled" size="medium" className="surface mb-0 min-w-48 flex-1">
-            <InputLabel>{labels.search}</InputLabel>
+            <InputLabel htmlFor={searchId}>{labels.search}</InputLabel>
             <QuickFilter
               render={() => (
                 <QuickFilterControl
                   render={({ ref, ...controlProps }, state) => (
                     <FilledInput
                       {...controlProps}
+                      id={searchId}
                       inputRef={ref}
                       endAdornment={
                         <>

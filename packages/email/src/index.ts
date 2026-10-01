@@ -1,13 +1,13 @@
 import { createElement } from "react";
 import { Resend } from "resend";
 
-import AdminAccountsDigestEmail, { type AdminAccountsDigestEmailProps } from "./templates/admin-accounts-digest";
+import AdminWeeklyDigestEmail, { type AdminWeeklyDigestEmailProps } from "./templates/admin-weekly-digest";
 import ContactFormEmail, { ContactFormEmailProps } from "./templates/contact-form";
 import KitReceiptEmail, { KIT_RECEIPT_COPY, type KitReceiptEmailProps } from "./templates/kit-receipt";
 import LeadConfirmEmail, { LEAD_CONFIRM_COPY, type LeadConfirmLocale } from "./templates/lead-confirm";
 import SubscriptionActiveEmail, { type SubscriptionActiveEmailProps } from "./templates/subscription-active";
 
-export type { AdminAccountsDigestEmailProps, KitReceiptEmailProps, LeadConfirmLocale, SubscriptionActiveEmailProps };
+export type { AdminWeeklyDigestEmailProps, KitReceiptEmailProps, LeadConfirmLocale, SubscriptionActiveEmailProps };
 
 /** True when transactional email is configured (server-only env var). */
 export const isEmailConfigured = Boolean(process.env.RESEND_API_KEY);
@@ -53,15 +53,12 @@ export async function sendSubscriptionActiveEmail(
 }
 
 /**
- * The platform operator's digest of accounts that need a decision. Internal
- * mail to our own staff, so it carries no unsubscribe; without RESEND_API_KEY
- * the caller still leaves the same digest in the operator's bell, so the alert
- * degrades instead of disappearing.
+ * The operator's Monday digest: last week's focus metrics per segment and the
+ * accounts that need someone. Internal mail to our own staff, so it carries no
+ * unsubscribe; without RESEND_API_KEY the caller still leaves the same digest
+ * in the operator's bell, so the alert degrades instead of disappearing.
  */
-export async function sendAdminAccountsDigestEmail(
-  to: string,
-  props: AdminAccountsDigestEmailProps,
-): Promise<SendResult> {
+export async function sendAdminWeeklyDigestEmail(to: string, props: AdminWeeklyDigestEmailProps): Promise<SendResult> {
   if (!isEmailConfigured) {
     return { sent: false };
   }
@@ -70,7 +67,7 @@ export async function sendAdminAccountsDigestEmail(
     from: DEFAULT_FROM,
     to,
     subject: `flyee.club · ${props.headline}`,
-    react: createElement(AdminAccountsDigestEmail, props),
+    react: createElement(AdminWeeklyDigestEmail, props),
   });
   if (error) {
     return { sent: false, error: error.message };

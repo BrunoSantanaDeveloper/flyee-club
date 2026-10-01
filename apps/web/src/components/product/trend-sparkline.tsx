@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
+
 import { Box, Typography, useTheme } from "@mui/material";
 import { SparkLineChart } from "@mui/x-charts";
 
@@ -17,9 +19,17 @@ import NiTriangleUp from "@/icons/nexture/ni-triangle-up";
  * going up or down", which a single number cannot — but only when there are
  * real points behind it; never synthesize one to decorate a screen.
  *
- * The decline reads terracotta rather than red, for the same reason the audio
- * and library meters do (docs/DESIGN.md): red belongs to clinical risk and
- * failure, and a falling count is a signal to act, not a failure.
+ * The text is the accessible reading: the value, then the change spelled out
+ * for screen readers ("Queda de 8,3% sobre o ponto anterior") while the eye
+ * gets the triangle. The drawing is a pointer aid, hidden from assistive
+ * technology with the chart's keyboard layer turned off, because that layer
+ * announces an unnamed image until a point is focused.
+ *
+ * Only the triangle carries the hue; the change figure stays in the secondary
+ * text colour, because the accent tones are icon and fill colours and fall
+ * under the contrast floor as small text. A decline takes accent-3 rather than
+ * red: red belongs to risk and failure, and a falling count is a signal to
+ * act, not a failure.
  */
 export default function TrendSparkline({
   label,
@@ -39,6 +49,8 @@ export default function TrendSparkline({
   tone?: "primary" | "secondary";
 }) {
   const { palette } = useTheme();
+  const locale = useLocale();
+  const t = useTranslations("product");
   // The hook derives its y-axis from the data, so a defensive floor keeps an
   // accidental empty series from producing -Infinity instead of a chart.
   const series = data.length > 0 ? data : [0];
@@ -51,6 +63,9 @@ export default function TrendSparkline({
   const change = Number(sparkline.item.change);
   const rising = change > 0;
   const falling = change < 0;
+  const changeText = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 }).format(
+    Math.abs(change) / 100,
+  );
 
   return (
     <Box className="flex flex-col gap-2">
@@ -69,14 +84,17 @@ export default function TrendSparkline({
               ) : (
                 <NiTriangleDown className="text-accent-3" size="medium" />
               )}
-              <Typography variant="body2" className={rising ? "text-success" : "text-accent-3"}>
-                {Math.abs(change)}%
+              <Typography variant="body2" className="text-text-secondary tabular-nums">
+                <span className="sr-only">{t(rising ? "trend-rising" : "trend-falling", { value: changeText })}</span>
+                <span aria-hidden="true">{changeText}</span>
               </Typography>
             </Box>
           )}
         </Box>
       </Box>
-      <SparkLineChart {...sparkline.props} />
+      <Box aria-hidden="true">
+        <SparkLineChart {...sparkline.props} disableKeyboardNavigation />
+      </Box>
       {caption && (
         <Typography variant="body2" className="text-text-secondary">
           {caption}

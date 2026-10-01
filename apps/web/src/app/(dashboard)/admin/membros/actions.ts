@@ -1,129 +1,107 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
+import type { DossierResult } from "@/lib/admin/members";
+import { requireSuperadmin } from "@/lib/admin/session";
 import { recordAudit } from "@/lib/audit";
-import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
 import { type BillingProviderName, getProvider } from "@flyee/billing";
 
-export type UserAdminInfo = {
-  id: string;
-  email: string | null;
-  lastSignInAt: string | null;
-  bannedUntil: string | null;
-  /** True when the user has at least one verified TOTP factor. */
-  hasMfa: boolean;
-};
-
-export type AdminActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: "forbidden" | "not-configured" | string };
-
 /**
- * Server-side superadmin guard for actions that must escalate to the
- * service role (auth admin API). Everything RLS can authorize goes through
- * the normal client instead — this file is only for the escalated paths.
+ * What the members console does to an account. Everything RLS or a database
+ * function can authorize runs under the operator's own session; the service
+ * role is used only where the auth admin API or the Storage API leaves no
+ * other way (bans, second factors, files of a deleted account).
+ *
+ * A server action is a public endpoint: each one checks the role again before
+ * it does anything, whatever the screen that called it showed.
  */
-async function isCallerSuperadmin(): Promise<{ userId: string | null; allowed: boolean }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { userId: null, allowed: false };
-  const { data } = await supabase.from("profiles").select("is_superadmin").eq("id", user.id).maybeSingle();
-  return { userId: user.id, allowed: Boolean(data?.is_superadmin) };
-}
+
+export type AdminActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The floor the product uses for an operator's reason (support access, account deletion). */
+const REASON_MIN = 8;
 
 const isServiceConfigured = () =>
   Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-/**
- * Auth-side info (email, last sign-in, ban state) for the users console.
- * Degrades gracefully: without the service key the console still lists
- * profiles, just without these fields.
- */
-export async function listUserAdminInfo(): Promise<AdminActionResult<UserAdminInfo[]>> {
-  const { allowed } = await isCallerSuperadmin();
-  if (!allowed) return { ok: false, error: "forbidden" };
-  if (!isServiceConfigured()) return { ok: false, error: "not-configured" };
+const refresh = () => revalidatePath("/admin/membros");
 
-  const service = createServiceClient();
-  const users: UserAdminInfo[] = [];
-  let page = 1;
-  // Template-scale cap (1000 users); raise it in a derived project if needed.
-  while (page <= 5) {
-    const { data, error } = await service.auth.admin.listUsers({ page, perPage: 200 });
-    if (error) return { ok: false, error: error.message };
-    users.push(
-      ...data.users.map((user) => ({
-        id: user.id,
-        email: user.email ?? null,
-        lastSignInAt: user.last_sign_in_at ?? null,
-        bannedUntil: (user as { banned_until?: string }).banned_until ?? null,
-        hasMfa: (user.factors ?? []).some((factor) => factor.status === "verified"),
-      })),
-    );
-    if (data.users.length < 200) break;
-    page += 1;
-  }
-  return { ok: true, data: users };
+/** Everything the platform knows about one account, read when the operator opens it. */
+export async function loadMemberDossier(orgId: string): Promise<DossierResult> {
+  if (!UUID.test(orgId)) return { ok: false, code: "invalid" };
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, code: "forbidden" };
+  const { data, error } = await session.supabase.rpc("admin_member_dossier", { target_org: orgId });
+  if (error || !data) return { ok: false, code: "failed" };
+  return data as DossierResult;
 }
 
-/** The floor the rest of the product already uses for an operator's reason
- *  (support access, account deletion). */
-const REASON_MIN = 8;
-
-const cleanReason = (reason: string) => reason.trim();
-
 /**
- * Ban or unban a user platform-wide (Supabase auth ban).
- *
- * The reason is required and lands in the audit metadata: `audit_events` has
- * columns for who and when, and nothing else survives to say WHY an account
- * was cut off — which is the question asked months later.
+ * Ban or unban an account platform-wide (the auth ban). The reason is required
+ * and lands in the audit metadata: the trail has columns for who and when, and
+ * nothing else survives to say WHY an account was cut off.
  */
 export async function setUserBanned(userId: string, banned: boolean, reason: string): Promise<AdminActionResult<null>> {
-  const { userId: callerId, allowed } = await isCallerSuperadmin();
-  if (!allowed) return { ok: false, error: "forbidden" };
+  if (!UUID.test(userId)) return { ok: false, error: "invalid" };
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: "forbidden" };
   if (!isServiceConfigured()) return { ok: false, error: "not-configured" };
-  if (userId === callerId) return { ok: false, error: "Você não pode banir a sua própria conta." };
-  const trimmed = cleanReason(reason);
+  if (userId === session.userId) return { ok: false, error: "self-ban" };
+  const trimmed = reason.trim();
   if (trimmed.length < REASON_MIN) return { ok: false, error: "reason-required" };
 
   const service = createServiceClient();
-  // Supabase has no permanent ban flag: "876000h" ≈ 100 years; "none" lifts it.
-  const { error } = await service.auth.admin.updateUserById(userId, {
-    ban_duration: banned ? "876000h" : "none",
-  });
+  // The auth API has no permanent ban: "876000h" is a century, "none" lifts it.
+  const { error } = await service.auth.admin.updateUserById(userId, { ban_duration: banned ? "876000h" : "none" });
   if (error) return { ok: false, error: error.message };
-  await recordAudit(await createClient(), banned ? "admin.user.banned" : "admin.user.unbanned", {
+
+  // The CLI token server is ours, not the auth provider's: a ban that left the
+  // tokens alive would close the dashboard and keep the machines updating.
+  let workspacesDisconnected = 0;
+  if (banned) {
+    const { data: memberships } = await service.from("memberships").select("org_id").eq("user_id", userId);
+    for (const membership of memberships ?? []) {
+      const { error: revokeError } = await service.rpc("revoke_member_tokens", {
+        target_org: membership.org_id,
+        target_reason: "admin",
+      });
+      if (!revokeError) workspacesDisconnected += 1;
+    }
+  }
+
+  await recordAudit(session.supabase, banned ? "admin.user.banned" : "admin.user.unbanned", {
     entityType: "user",
     entityId: userId,
-    metadata: { reason: trimmed },
+    metadata: { reason: trimmed, ...(banned ? { workspacesDisconnected } : {}) },
   });
+  refresh();
   return { ok: true, data: null };
 }
 
 /**
- * Remove every MFA factor from a user's account — the recovery path when
- * someone loses their authenticator and is locked out at the 2FA step-up.
- * The user can sign in with password alone afterwards and re-enroll.
+ * Removes every second factor of an account: the recovery path for somebody
+ * who lost the authenticator and is stuck at the two-step check.
  */
 export async function resetUserMfa(userId: string, reason: string): Promise<AdminActionResult<null>> {
-  const { userId: callerId, allowed } = await isCallerSuperadmin();
-  if (!allowed) return { ok: false, error: "forbidden" };
+  if (!UUID.test(userId)) return { ok: false, error: "invalid" };
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: "forbidden" };
   if (!isServiceConfigured()) return { ok: false, error: "not-configured" };
   // Removing your own second factor here would cost you support access
-  // (impersonation requires AAL2) without you being told why.
-  if (userId === callerId) return { ok: false, error: "self-mfa" };
-  const trimmed = cleanReason(reason);
+  // (impersonation requires AAL2) without anything saying so.
+  if (userId === session.userId) return { ok: false, error: "self-mfa" };
+  const trimmed = reason.trim();
   if (trimmed.length < REASON_MIN) return { ok: false, error: "reason-required" };
 
   const service = createServiceClient();
   const { data, error } = await service.auth.admin.mfa.listFactors({ userId });
   if (error) return { ok: false, error: error.message };
 
-  // A partial removal used to return before recordAudit: factors were gone and
-  // the trail said nothing. Count what actually went and audit either way.
+  // A partial removal is still audited: factors are gone and the trail must say so.
   let removed = 0;
   let failure: string | null = null;
   for (const factor of data?.factors ?? []) {
@@ -135,7 +113,7 @@ export async function resetUserMfa(userId: string, reason: string): Promise<Admi
     removed += 1;
   }
   if (removed > 0 || !failure) {
-    await recordAudit(await createClient(), "admin.user.mfa_reset", {
+    await recordAudit(session.supabase, "admin.user.mfa_reset", {
       entityType: "user",
       entityId: userId,
       metadata: {
@@ -150,7 +128,41 @@ export async function resetUserMfa(userId: string, reason: string): Promise<Admi
   return { ok: true, data: null };
 }
 
-// ---------- Account deletion (migration 0099) ----------
+/**
+ * Disconnects every machine of an account: all its CLI tokens are revoked, so
+ * each computer has to log in again and only gets back in if the account is
+ * still entitled (`revoke_member_tokens`, which writes its own audit event).
+ * The operator's reason is filed beside it, because that function records a
+ * cause code, not a sentence.
+ */
+export async function revokeMemberTokens(
+  orgId: string,
+  reason: string,
+): Promise<AdminActionResult<{ tokens: number }>> {
+  if (!UUID.test(orgId)) return { ok: false, error: "invalid" };
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: "forbidden" };
+  const trimmed = reason.trim();
+  if (trimmed.length < REASON_MIN) return { ok: false, error: "reason-required" };
+
+  const { data, error } = await session.supabase.rpc("revoke_member_tokens", {
+    target_org: orgId,
+    target_reason: "admin",
+  });
+  if (error) return { ok: false, error: error.message };
+  const result = (data ?? {}) as { ok?: boolean; tokensRevoked?: number };
+  if (result.ok === false) return { ok: false, error: "failed" };
+  await recordAudit(session.supabase, "admin.member.machines_disconnected", {
+    orgId,
+    entityType: "organization",
+    entityId: orgId,
+    metadata: { reason: trimmed, tokensRevoked: result.tokensRevoked ?? 0 },
+  });
+  refresh();
+  return { ok: true, data: { tokens: result.tokensRevoked ?? 0 } };
+}
+
+// ---------- Account deletion (migration 0016) ----------
 
 type DeletionPreview = {
   blockers: string[];
@@ -177,10 +189,10 @@ export type AccountDeletionResult = {
 };
 
 const BLOCKER_MESSAGE: Record<string, string> = {
-  self: "Você não pode excluir a sua própria conta — peça a outra superadmin.",
+  self: "Você não pode excluir a sua própria conta. Peça a outra pessoa com o papel de superadmin.",
   superadmin: "Esta conta tem o papel de superadmin da plataforma. Remova o papel primeiro, depois exclua a conta.",
   shared_workspace:
-    "Ela é responsável por um consultório do qual outras pessoas ainda fazem parte. Transfira a responsabilidade ou remova os outros membros primeiro.",
+    "Esta conta é dona de um workspace do qual outras pessoas ainda fazem parte. Remova as outras pessoas primeiro.",
 };
 
 /** The database answers in codes; the console answers in reasons. */
@@ -198,13 +210,13 @@ function deletionMessage(raw: string): string {
     return "A conta ainda existe: os arquivos só são removidos depois que a própria conta é excluída.";
   }
   if (raw.includes("not_authorized")) {
-    return "Só uma superadmin da plataforma pode excluir contas, e nunca de dentro de uma sessão de suporte.";
+    return "Só quem tem o papel de superadmin pode excluir contas, e nunca de dentro de uma sessão de suporte.";
   }
   // The deletion is one transaction: a refusal from the database means it
-  // rolled back whole. Say so — a raw constraint name leaves the operator
-  // wondering what is already gone.
+  // rolled back whole. Say so, because a raw constraint name leaves the
+  // operator wondering what is already gone.
   if (raw.includes("violates foreign key constraint")) {
-    return `O banco recusou a exclusão e desfez tudo — nada foi excluído, a conta está intacta. (${raw})`;
+    return `O banco recusou a exclusão e desfez tudo: nada foi excluído, a conta está intacta. (${raw})`;
   }
   return raw;
 }
@@ -216,20 +228,24 @@ function isGoneAtProvider(error: unknown): boolean {
 }
 
 const STORAGE_REMOVE_BATCH = 100;
-// The listing is capped by PostgREST's max rows, so a large practice is
-// emptied in passes; a pass that removes nothing ends the loop.
+// The listing is capped by PostgREST's max rows, so a large account is emptied
+// in passes; a pass that removes nothing ends the loop.
 const STORAGE_MAX_PASSES = 50;
 
 /**
  * Removes the files of an account that no longer exists. The list comes from
  * `admin_orphaned_account_storage`, which refuses any workspace or person that
- * still exists — so this service-role delete can only ever reach leftovers.
+ * still exists, so this service-role delete can only ever reach leftovers.
  * What remains is counted from the database, not from the API's answer.
  */
-async function purgeAccountStorage(orgIds: string[], userId: string): Promise<StoragePurgeResult> {
-  const supabase = await createClient();
+async function purgeAccountStorage(
+  session: NonNullable<Awaited<ReturnType<typeof requireSuperadmin>>>,
+  orgIds: string[],
+  userId: string,
+): Promise<StoragePurgeResult> {
   const service = createServiceClient();
-  const list = () => supabase.rpc("admin_orphaned_account_storage", { target_orgs: orgIds, target_user: userId });
+  const list = () =>
+    session.supabase.rpc("admin_orphaned_account_storage", { target_orgs: orgIds, target_user: userId });
 
   let removed = 0;
   for (let pass = 0; pass < STORAGE_MAX_PASSES; pass += 1) {
@@ -258,14 +274,16 @@ async function purgeAccountStorage(orgIds: string[], userId: string): Promise<St
   return { removed, remaining: (left ?? []).length };
 }
 
+const countLabel = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
 /**
- * Permanently deletes a professional's account and everything it holds.
+ * Permanently deletes an account and everything it holds.
  *
- * Order is the design: (1) re-read the preview — the dialog's may be stale;
- * (2) stop the money at the provider BEFORE anything is deleted, so a failure
- * there leaves the account intact; (3) one database transaction removes the
- * workspaces, their change history and the person (0099); (4) the files go
- * through the Storage API afterwards, because storage refuses SQL deletes —
+ * The order is the design: (1) re-read the preview, because the dialog's may
+ * be stale; (2) stop the money at the provider BEFORE anything is deleted, so
+ * a failure there leaves the account intact; (3) one database transaction
+ * removes the workspaces, their change history and the person; (4) the files
+ * go through the Storage API afterwards, because storage refuses SQL deletes,
  * and can be retried, since the listing only ever returns leftovers.
  */
 export async function deleteAccount(
@@ -273,12 +291,13 @@ export async function deleteAccount(
   confirmEmail: string,
   reason: string,
 ): Promise<AdminActionResult<AccountDeletionResult>> {
-  const { userId: callerId, allowed } = await isCallerSuperadmin();
-  if (!allowed) return { ok: false, error: "forbidden" };
+  if (!UUID.test(userId)) return { ok: false, error: "invalid" };
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: "forbidden" };
   if (!isServiceConfigured()) return { ok: false, error: "not-configured" };
-  if (userId === callerId) return { ok: false, error: BLOCKER_MESSAGE.self };
+  if (userId === session.userId) return { ok: false, error: BLOCKER_MESSAGE.self };
 
-  const supabase = await createClient();
+  const { supabase } = session;
   const { data: previewData, error: previewError } = await supabase.rpc("admin_account_deletion_preview", {
     target_user: userId,
   });
@@ -297,7 +316,7 @@ export async function deleteAccount(
         const detail = cancelError instanceof Error ? cancelError.message : String(cancelError);
         return {
           ok: false,
-          error: `Não foi possível cancelar a assinatura ${subscription.provider}, então nada foi excluído: ${detail}`,
+          error: `Não foi possível cancelar a assinatura no ${subscription.provider}, então nada foi excluído: ${detail}`,
         };
       }
     }
@@ -308,7 +327,7 @@ export async function deleteAccount(
     if (markError) {
       return {
         ok: false,
-        error: `A assinatura ${subscription.provider} foi cancelada no provedor, mas registrar isso falhou (${markError.message}). Nada mais foi excluído — tente de novo.`,
+        error: `A assinatura foi cancelada no ${subscription.provider}, mas registrar isso falhou (${markError.message}). Nada mais foi excluído: tente de novo.`,
       };
     }
     canceled += 1;
@@ -327,18 +346,19 @@ export async function deleteAccount(
   if (deleteError) {
     const already =
       canceled > 0
-        ? ` (${plural(canceled, "assinatura no provedor já foi cancelada", "assinaturas no provedor já foram canceladas")}.)`
+        ? ` (${countLabel(canceled, "assinatura no provedor já foi cancelada", "assinaturas no provedor já foram canceladas")}.)`
         : "";
     return { ok: false, error: `${deletionMessage(deleteError.message)}${already}` };
   }
   const deleted = deletedData as { deletedWorkspaces: string[]; counts: Record<string, number> };
 
-  const storage = await purgeAccountStorage(deleted.deletedWorkspaces, userId);
+  const storage = await purgeAccountStorage(session, deleted.deletedWorkspaces, userId);
   await recordAudit(supabase, "admin.account.storage_purged", {
     entityType: "user",
     entityId: userId,
     metadata: { workspaces: deleted.deletedWorkspaces, ...storage },
   });
+  refresh();
 
   return {
     ok: true,
@@ -356,19 +376,16 @@ export async function retryAccountStoragePurge(
   userId: string,
   orgIds: string[],
 ): Promise<AdminActionResult<StoragePurgeResult>> {
-  const { allowed } = await isCallerSuperadmin();
-  if (!allowed) return { ok: false, error: "forbidden" };
+  if (!UUID.test(userId) || orgIds.some((id) => !UUID.test(id))) return { ok: false, error: "invalid" };
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: "forbidden" };
   if (!isServiceConfigured()) return { ok: false, error: "not-configured" };
 
-  const storage = await purgeAccountStorage(orgIds, userId);
-  await recordAudit(await createClient(), "admin.account.storage_purged", {
+  const storage = await purgeAccountStorage(session, orgIds, userId);
+  await recordAudit(session.supabase, "admin.account.storage_purged", {
     entityType: "user",
     entityId: userId,
     metadata: { workspaces: orgIds, retry: true, ...storage },
   });
   return { ok: true, data: storage };
-}
-
-function plural(count: number, one: string, many: string) {
-  return `${count} ${count === 1 ? one : many}`;
 }

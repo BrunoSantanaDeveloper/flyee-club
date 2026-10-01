@@ -3,7 +3,7 @@
 import { slugify } from "./help-categories-admin";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Alert, Box, Button, Chip, FormControl, FormLabel, Input, Switch, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, FormControl, FormLabel, Input, Switch, Tooltip, Typography } from "@mui/material";
 import { GridActionsCellItem, type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 
 import { Field, SelectField } from "@/app/(dashboard)/admin/billing/components/catalog-shared";
@@ -12,6 +12,8 @@ import EmptyState from "@/components/product/empty-state";
 import { LOCALES } from "@/constants";
 import NiDocumentFull from "@/icons/nexture/ni-document-full";
 import NiPen from "@/icons/nexture/ni-pen";
+import { formatDate } from "@/lib/admin/format";
+import { labelOf, LOCALE_LABEL } from "@/lib/admin/labels";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@flyee/auth/client";
 
@@ -21,6 +23,7 @@ type ArticleRow = {
   id: string;
   categoryId: string;
   locale: string;
+  translationGroup: string;
   slug: string;
   title: string;
   excerpt: string | null;
@@ -34,6 +37,8 @@ type FormState = {
   id: string | null;
   categoryId: string;
   locale: string;
+  /** The article in the other language this one translates, or "" for none. */
+  translationOf: string;
   slug: string;
   title: string;
   excerpt: string;
@@ -45,7 +50,8 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   id: null,
   categoryId: "",
-  locale: "en",
+  locale: "pt-BR",
+  translationOf: "",
   slug: "",
   title: "",
   excerpt: "",
@@ -55,8 +61,10 @@ const EMPTY_FORM: FormState = {
 };
 
 /**
- * Help articles: written in Markdown per locale, published with a switch —
- * the public /help page updates without a deploy.
+ * Help articles: written in Markdown per language, published with a switch;
+ * the public help center (/ajuda, /en/help) updates without a deploy. Two
+ * articles in different languages are linked as translations, which is what
+ * the language switch and the hreflang of the public site follow.
  */
 export default function HelpArticlesAdmin() {
   const [rows, setRows] = useState<ArticleRow[]>([]);
@@ -71,7 +79,9 @@ export default function HelpArticlesAdmin() {
     const [{ data: articles, error: readError }, { data: cats }] = await Promise.all([
       supabase
         .from("help_articles")
-        .select("id, category_id, locale, slug, title, excerpt, body_md, sort, is_published, updated_at")
+        .select(
+          "id, category_id, locale, translation_group, slug, title, excerpt, body_md, sort, is_published, updated_at",
+        )
         .order("locale")
         .order("sort"),
       supabase.from("help_categories").select("id, locale, name").order("locale").order("sort"),
@@ -87,6 +97,7 @@ export default function HelpArticlesAdmin() {
         id: row.id,
         categoryId: row.category_id,
         locale: row.locale,
+        translationGroup: row.translation_group,
         slug: row.slug,
         title: row.title,
         excerpt: row.excerpt,
@@ -109,9 +120,22 @@ export default function HelpArticlesAdmin() {
     if (!form || !form.title.trim() || !form.categoryId) return;
     setError(null);
     const supabase = createClient();
+    // Linking takes the other article's group; unlinking an article that had a
+    // partner starts a group of its own; otherwise the group is left alone.
+    const partner = rows.find((row) => row.id === form.translationOf);
+    const current = rows.find((row) => row.id === form.id);
+    const currentPartner = current
+      ? rows.find((row) => row.translationGroup === current.translationGroup && row.id !== current.id)
+      : undefined;
+    const translationGroup = partner
+      ? partner.translationGroup
+      : form.id && currentPartner && !form.translationOf
+        ? crypto.randomUUID()
+        : undefined;
     const payload = {
       category_id: form.categoryId,
       locale: form.locale,
+      ...(translationGroup ? { translation_group: translationGroup } : {}),
       slug: form.slug.trim() || slugify(form.title),
       title: form.title.trim(),
       excerpt: form.excerpt.trim() || null,
@@ -124,7 +148,11 @@ export default function HelpArticlesAdmin() {
       : supabase.from("help_articles").insert(payload);
     const { error: writeError } = await query;
     if (writeError) {
-      setError(writeError.message);
+      setError(
+        writeError.code === "23505"
+          ? "Já existe um artigo com esse slug neste idioma, ou o artigo escolhido como tradução já tem uma tradução neste idioma."
+          : writeError.message,
+      );
       return;
     }
     recordAudit(supabase, form.id ? "admin.help.article.updated" : "admin.help.article.created", {
@@ -171,19 +199,24 @@ export default function HelpArticlesAdmin() {
     [refresh],
   );
 
-  const openEdit = useCallback((row: ArticleRow) => {
-    setForm({
-      id: row.id,
-      categoryId: row.categoryId,
-      locale: row.locale,
-      slug: row.slug,
-      title: row.title,
-      excerpt: row.excerpt ?? "",
-      bodyMd: row.bodyMd,
-      sort: row.sort,
-      isPublished: row.isPublished,
-    });
-  }, []);
+  const openEdit = useCallback(
+    (row: ArticleRow) => {
+      const partner = rows.find((entry) => entry.translationGroup === row.translationGroup && entry.id !== row.id);
+      setForm({
+        id: row.id,
+        categoryId: row.categoryId,
+        locale: row.locale,
+        translationOf: partner?.id ?? "",
+        slug: row.slug,
+        title: row.title,
+        excerpt: row.excerpt ?? "",
+        bodyMd: row.bodyMd,
+        sort: row.sort,
+        isPublished: row.isPublished,
+      });
+    },
+    [rows],
+  );
 
   const formCategories = form ? categories.filter((cat) => cat.locale === form.locale) : [];
 
@@ -224,7 +257,7 @@ export default function HelpArticlesAdmin() {
         headerName: "Caminho",
         flex: 1,
         minWidth: 170,
-        valueGetter: (_, row) => `/help/${row.slug}`,
+        valueGetter: (_, row) => `${row.locale === "en" ? "/en/help" : "/ajuda"}/${row.slug}`,
         renderCell: (params: GridRenderCellParams<ArticleRow, string>) => (
           <Box className="flex h-full items-center">
             <Typography variant="body2" className="text-text-secondary truncate">
@@ -236,18 +269,14 @@ export default function HelpArticlesAdmin() {
       {
         field: "locale",
         headerName: "Idioma",
-        minWidth: 100,
-        renderCell: (params: GridRenderCellParams<ArticleRow, string>) => (
-          <Box className="flex h-full items-center">
-            <Chip label={params.row.locale} size="small" variant="outlined" />
-          </Box>
-        ),
+        minWidth: 110,
+        valueGetter: (_, row) => labelOf(LOCALE_LABEL, row.locale),
       },
       {
         field: "updatedAt",
         headerName: "Atualizado",
         minWidth: 130,
-        valueFormatter: (value: string) => new Date(value).toLocaleDateString(),
+        valueFormatter: (value: string) => formatDate(value),
       },
       {
         // Publish/unpublish is a kill switch for public content: it stays
@@ -307,8 +336,8 @@ export default function HelpArticlesAdmin() {
             <SelectField
               label="Idioma"
               value={form.locale}
-              options={LOCALES.map((locale) => ({ value: locale, label: locale }))}
-              onChange={(value) => setForm({ ...form, locale: value, categoryId: "" })}
+              options={LOCALES.map((locale) => ({ value: locale, label: labelOf(LOCALE_LABEL, locale) }))}
+              onChange={(value) => setForm({ ...form, locale: value, categoryId: "", translationOf: "" })}
             />
             <SelectField
               label="Categoria (mesmo idioma)"
@@ -322,6 +351,17 @@ export default function HelpArticlesAdmin() {
               onChange={(value) => setForm({ ...form, slug: value })}
             />
           </Box>
+          <SelectField
+            label="Tradução de"
+            value={form.translationOf}
+            options={[
+              { value: "", label: "Nenhum artigo (sem tradução ligada)" },
+              ...rows
+                .filter((row) => row.locale !== form.locale && row.id !== form.id)
+                .map((row) => ({ value: row.id, label: `${row.title} (${labelOf(LOCALE_LABEL, row.locale)})` })),
+            ]}
+            onChange={(value) => setForm({ ...form, translationOf: value })}
+          />
           {formCategories.length === 0 && (
             <Alert severity="info" className="neutral bg-background-paper/60!">
               Nenhuma categoria existe neste idioma ainda — crie uma antes na aba Categorias.
@@ -398,7 +438,7 @@ export default function HelpArticlesAdmin() {
               <EmptyState
                 icon={<NiDocumentFull size="medium" />}
                 title="Nenhum artigo de ajuda ainda"
-                description="Escreva o primeiro artigo que as profissionais vão encontrar em /help — comece pela pergunta que o suporte mais responde."
+                description="Escreva o primeiro artigo da central de ajuda. Comece pela pergunta que o suporte mais responde."
                 action={{ label: "Novo artigo", onClick: () => setForm(EMPTY_FORM) }}
                 className="border-none"
               />

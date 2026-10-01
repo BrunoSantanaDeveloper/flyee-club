@@ -312,7 +312,7 @@ O JSON Schema do `flyee.module.json` (draft 2020-12), `$id` `https://flyee.club/
 { "min_cli_version": "0.1.0", "latest_core_version": null, "deprecations": [] }
 ```
 
-Uma CLI abaixo de `min_cli_version` deve pedir atualização antes de qualquer outra chamada. Os valores vêm de `platform_settings.cli`, editável pelo superadmin.
+Uma CLI abaixo de `min_cli_version` deve pedir atualização antes de qualquer outra chamada. `deprecations` é uma lista de até 10 avisos em texto, que a CLI imprime como estão. Os valores vêm de `platform_settings.cli`, editados na aba Entrega de `/admin/catalogo`.
 
 ## 5. Limites
 

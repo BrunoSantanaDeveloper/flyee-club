@@ -11,7 +11,7 @@ import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
 
 /**
- * Superadmin help-center console: articles reach the public /help page the
+ * Superadmin help-center console: articles reach the public help center the
  * moment they are published. RLS is the real gate; the client-side check
  * only improves UX.
  */

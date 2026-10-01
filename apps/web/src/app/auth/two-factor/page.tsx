@@ -148,7 +148,7 @@ export default function TwoFactor() {
                 is nothing to resend here: the code comes from an authenticator
                 app on her phone, not from us. Same shape, true content — the
                 real recovery is a person, because only a platform operator can
-                clear a second factor (admin/organizations). */}
+                clear a second factor (admin/membros). */}
             <Box className="flex flex-col">
               <Typography variant="h6" component="h6">
                 {t("two-factor-lost-title")}

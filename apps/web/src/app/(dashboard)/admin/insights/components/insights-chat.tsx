@@ -17,10 +17,10 @@ type Turn = {
 
 /** Openers that show what this thing is for, so a first-time operator isn't staring at a blank box. */
 const STARTERS = [
-  "Quantas profissionais se cadastraram nos últimos 7 dias?",
+  "Quantas contas foram criadas nos últimos 7 dias, por segmento?",
   "Receita por plano nos últimos 30 dias",
-  "Quais consultórios estão inadimplentes?",
-  "Quantas mensagens os assistentes de IA responderam neste mês?",
+  "Quais contas estão com a assinatura inadimplente?",
+  "Quais ferramentas foram mais executadas nos últimos 30 dias?",
 ];
 
 /**

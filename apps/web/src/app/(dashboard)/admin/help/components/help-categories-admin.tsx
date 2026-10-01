@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Alert, Box, Button, Chip, Switch, Typography } from "@mui/material";
+import { Alert, Box, Button, Switch, Typography } from "@mui/material";
 import { GridActionsCellItem, type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 
 import { Field, SelectField } from "@/app/(dashboard)/admin/billing/components/catalog-shared";
 import DataTable from "@/components/data-grid/data-table";
 import EmptyState from "@/components/product/empty-state";
+import StatusChip from "@/components/product/status-chip";
 import { LOCALES } from "@/constants";
 import NiPen from "@/icons/nexture/ni-pen";
 import NiQuestionHexagon from "@/icons/nexture/ni-question-hexagon";
+import { labelOf, LOCALE_LABEL } from "@/lib/admin/labels";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@flyee/auth/client";
 
@@ -36,7 +38,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   id: null,
-  locale: "en",
+  locale: "pt-BR",
   slug: "",
   name: "",
   description: "",
@@ -193,12 +195,8 @@ export default function HelpCategoriesAdmin() {
       {
         field: "locale",
         headerName: "Idioma",
-        minWidth: 100,
-        renderCell: (params: GridRenderCellParams<HelpCategoryRow, string>) => (
-          <Box className="flex h-full items-center">
-            <Chip label={params.row.locale} size="small" variant="outlined" />
-          </Box>
-        ),
+        minWidth: 110,
+        valueGetter: (_, row) => labelOf(LOCALE_LABEL, row.locale),
       },
       {
         field: "sort",
@@ -213,12 +211,7 @@ export default function HelpCategoriesAdmin() {
         valueGetter: (_, row) => (row.isPublished ? "publicada" : "oculta"),
         renderCell: (params: GridRenderCellParams<HelpCategoryRow, string>) => (
           <Box className="flex h-full items-center">
-            <Chip
-              label={params.value}
-              size="small"
-              color={params.row.isPublished ? "success" : "warning"}
-              variant="outlined"
-            />
+            <StatusChip label={params.value ?? ""} tone={params.row.isPublished ? "positive" : "neutral"} />
           </Box>
         ),
       },
@@ -257,7 +250,7 @@ export default function HelpCategoriesAdmin() {
             <SelectField
               label="Idioma"
               value={form.locale}
-              options={LOCALES.map((locale) => ({ value: locale, label: locale }))}
+              options={LOCALES.map((locale) => ({ value: locale, label: labelOf(LOCALE_LABEL, locale) }))}
               onChange={(value) => setForm({ ...form, locale: value })}
             />
             <Field label="Nome" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
@@ -327,7 +320,7 @@ export default function HelpCategoriesAdmin() {
               <EmptyState
                 icon={<NiQuestionHexagon size="medium" />}
                 title="Nenhuma categoria de ajuda ainda"
-                description="As categorias agrupam os artigos da página pública /help. Comece pelos dois ou três assuntos que as profissionais mais perguntam."
+                description="As categorias agrupam os artigos da central de ajuda pública. Comece pelos dois ou três assuntos que os integrantes mais perguntam."
                 action={{ label: "Nova categoria", onClick: () => setForm(EMPTY_FORM) }}
                 className="border-none"
               />

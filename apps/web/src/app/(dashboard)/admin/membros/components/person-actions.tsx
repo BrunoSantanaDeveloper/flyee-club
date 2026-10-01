@@ -1,6 +1,6 @@
 "use client";
 
-import { resetUserMfa, setUserBanned } from "../actions";
+import { resetUserMfa, revokeMemberTokens, setUserBanned } from "../actions";
 import DeleteAccountDialog from "./delete-account-dialog";
 import ImpersonateDialog from "./impersonate-dialog";
 import SuperadminDialog from "./superadmin-dialog";
@@ -13,6 +13,7 @@ import ConfirmActionDialog from "@/components/product/confirm-action-dialog";
 import NiBinEmpty from "@/icons/nexture/ni-bin-empty";
 import NiCrown from "@/icons/nexture/ni-crown";
 import NiEyeOpen from "@/icons/nexture/ni-eye-open";
+import NiPower from "@/icons/nexture/ni-power";
 import NiShield from "@/icons/nexture/ni-shield";
 import NiShieldCross from "@/icons/nexture/ni-shield-cross";
 import NiUserCheck from "@/icons/nexture/ni-user-check";
@@ -21,36 +22,39 @@ import NiUserCross from "@/icons/nexture/ni-user-cross";
 /** The person an escalated action acts on, however the row was built. */
 export type PersonTarget = {
   userId: string;
+  /** The account's workspace, when it has one: the machines belong to it. */
+  orgId: string | null;
   name: string;
   email: string | null;
   isSuperadmin: boolean;
-  /** Only a verified factor can be reset; the accounts payload does not carry
-   *  it, so a caller without the service-role read passes false. */
+  /** Known only where the dossier was read; the list rows do not carry it. */
   hasMfa: boolean;
   banned: boolean;
+  /** Live machines, when the row knows: nothing to disconnect at zero. */
+  devices: number;
 };
 
 /** The database and the auth API speak in codes; the console speaks in reasons. */
 export const personActionError = (raw: string): string => {
-  if (raw === "forbidden") return "Só uma superadmin da plataforma pode fazer isto.";
+  if (raw === "forbidden") return "Só quem tem o papel de superadmin pode fazer isto.";
   if (raw === "not-configured") {
     return "Defina SUPABASE_SERVICE_ROLE_KEY: esta ação usa a API de administração da autenticação e fica desligada sem ela.";
   }
   if (raw === "reason-required") return "Escreva um motivo com pelo menos 8 caracteres.";
+  if (raw === "self-ban") return "Você não pode bloquear a sua própria conta.";
   if (raw === "self-mfa") {
-    return "Você não pode redefinir o seu próprio 2FA aqui — perderia o acesso de suporte, que exige segundo fator. Refaça o cadastro em Ajustes → Segurança.";
+    return "Você não pode redefinir o seu próprio 2FA aqui: perderia o acesso de suporte, que exige segundo fator. Refaça o cadastro em Configurações → Segurança.";
   }
+  if (raw === "invalid" || raw === "failed") return "Não foi possível concluir. Recarregue a lista e tente de novo.";
   return raw;
 };
 
 /**
- * What each escalated action REALLY does, verified against the code that runs
+ * What each escalated action REALLY does, checked against the code that runs
  * it. These sentences are what the operator will believe and repeat to a
- * customer: the ban writes `banned_until` and nothing else (no session is
- * revoked anywhere in this repo), and the 2FA reset loops over every factor
- * the listing returns, without filtering by status.
+ * member, so each one states what the action leaves untouched as well.
  */
-type ConfirmKind = "ban" | "unban" | "mfa";
+type ConfirmKind = "ban" | "unban" | "mfa" | "disconnect";
 
 const CONFIRM_COPY: Record<
   ConfirmKind,
@@ -66,59 +70,73 @@ const CONFIRM_COPY: Record<
 > = {
   ban: {
     title: (name) => `Bloquear o acesso de ${name} à plataforma?`,
-    intro: "O bloqueio é na conta de autenticação, então vale para o site e para o aplicativo.",
+    intro: "O bloqueio é na conta de autenticação, então vale para o painel e para o login da CLI.",
     consequences: [
       "Novas tentativas de entrar passam a ser recusadas, sem prazo para acabar.",
-      "A tela de entrada não explica o bloqueio: ela vê uma mensagem genérica de erro e não é avisada por nós.",
-      "Esta ação NÃO encerra uma sessão que já esteja aberta — não revogamos o token. Se ela estiver com a tela aberta, não dá para garantir que o acesso pare na hora.",
-      "Enquanto estiver bloqueada, “Entrar como” fica indisponível: para ver a conta por dentro é preciso desbloquear antes.",
+      "Os computadores da conta são desconectados: os tokens da CLI são revogados e o novo login é recusado.",
+      "A tela de entrada não explica o bloqueio: a pessoa vê uma mensagem genérica de erro e não é avisada por nós.",
+      "Uma sessão do painel já aberta no navegador não é encerrada por esta ação: não dá para garantir que ela pare na hora.",
+      "Enquanto durar o bloqueio, “Entrar como” fica indisponível: para ver a conta por dentro é preciso desbloquear antes.",
     ],
     stays: [
-      "Nada é apagado: pacientes, consultas, documentos e a conta seguem intactos.",
-      "A assinatura continua como está — suspender os recursos pagos é outra ação.",
+      "Nada é apagado: compras, lista de computadores e dados da conta seguem intactos.",
+      "A assinatura continua sendo cobrada: suspender ou cancelar é no console de Faturamento.",
+      "As ferramentas já instaladas continuam funcionando na máquina da pessoa.",
       "É reversível: “Desbloquear na plataforma” devolve o acesso, com senha e 2FA intactos.",
     ],
     confirm: "Bloquear na plataforma",
     tone: "danger",
-    placeholder: "Ticket 1234 — uso indevido confirmado",
+    placeholder: "Ticket 1234: uso indevido confirmado",
   },
   unban: {
     title: (name) => `Devolver o acesso de ${name} à plataforma?`,
-    consequences: ["Ela volta a conseguir entrar, com a senha e o 2FA que já tinha."],
+    consequences: [
+      "A pessoa volta a conseguir entrar, com a senha e o 2FA que já tinha.",
+      "Os computadores não voltam sozinhos: cada um precisa de um novo npx flyee login.",
+    ],
     stays: ["Nada além do bloqueio é alterado."],
     confirm: "Desbloquear na plataforma",
     tone: "warning",
-    placeholder: "Ticket 1234 — bloqueio aplicado por engano",
+    placeholder: "Ticket 1234: bloqueio aplicado por engano",
   },
   mfa: {
     title: (name) => `Redefinir o 2FA de ${name}?`,
-    intro: "É o caminho de recuperação de quem perdeu o aparelho e ficou presa na verificação em duas etapas.",
+    intro: "É o caminho de recuperação de quem perdeu o aparelho e não passa mais da verificação em duas etapas.",
     consequences: [
-      "Remove TODOS os fatores de verificação da conta — o código apaga cada fator que a listagem devolver, sem filtrar.",
-      "Ela passa a entrar só com e-mail e senha, e nada a obriga a cadastrar outro aplicativo depois.",
-      "Ela não é avisada: nenhum e-mail, nenhuma notificação no aplicativo.",
-      "O único sinal visível depois é o selo “2FA” sumir da lista.",
+      "Remove TODOS os fatores de verificação da conta.",
+      "A pessoa passa a entrar só com e-mail e senha, e nada a obriga a cadastrar outro aplicativo depois.",
+      "Nenhum aviso é enviado: nem e-mail, nem notificação no painel.",
     ],
     stays: [
       "A senha, a sessão e os dados da conta não são tocados.",
-      "Ela pode cadastrar um novo autenticador quando quiser, em Ajustes → Segurança.",
+      "Um novo autenticador pode ser cadastrado a qualquer momento, em Configurações → Segurança.",
     ],
     confirm: "Redefinir 2FA",
     tone: "danger",
-    placeholder: "Ticket 1234 — perdeu o celular, confirmou identidade por vídeo",
+    placeholder: "Ticket 1234: perdeu o celular, identidade confirmada por vídeo",
+  },
+  disconnect: {
+    title: (name) => `Desconectar todos os computadores de ${name}?`,
+    intro: "Revoga todos os tokens da CLI desta conta de uma vez.",
+    consequences: [
+      "Cada computador precisa de um novo npx flyee login antes da próxima atualização.",
+      "O login só passa se a conta ainda tiver acesso ao catálogo.",
+    ],
+    stays: [
+      "As ferramentas já instaladas continuam funcionando: nada é apagado na máquina de ninguém.",
+      "A lista de computadores e o histórico de uso continuam na conta.",
+      "A assinatura e as compras não mudam.",
+    ],
+    confirm: "Desconectar computadores",
+    tone: "warning",
+    placeholder: "Ticket 1234: notebook perdido",
   },
 };
 
 /**
  * The escalated actions on a PERSON, in one place, so every surface that can
- * reach her offers the same set with the same guards and the same
- * confirmations.
- *
- * Before this, "entrar como / redefinir 2FA / bloquear / excluir" lived only
- * in the professionals tab, while the accounts tab identified its rows BY the
- * professional (name and e-mail) and offered none of them. A support call
- * that arrives with an e-mail therefore cost two searches on two tabs. The
- * hook is what keeps the two surfaces from drifting apart again.
+ * reach an account (the list, the dossier, the people without a workspace)
+ * offers the same set with the same guards and the same confirmations.
  */
 export function usePersonActions({
   selfId,
@@ -128,7 +146,7 @@ export function usePersonActions({
   selfId: string | null;
   /** False when SUPABASE_SERVICE_ROLE_KEY is missing: the auth-admin actions
    *  cannot run, so they are not offered. */
-  serviceAvailable: boolean | null;
+  serviceAvailable: boolean;
   onChanged: () => void;
 }) {
   const { enqueueSnackbar } = useSnackbar();
@@ -142,14 +160,18 @@ export function usePersonActions({
       const result =
         kind === "mfa"
           ? await resetUserMfa(target.userId, reason)
-          : await setUserBanned(target.userId, kind === "ban", reason);
+          : kind === "disconnect"
+            ? await revokeMemberTokens(target.orgId ?? "", reason)
+            : await setUserBanned(target.userId, kind === "ban", reason);
       if (!result.ok) return personActionError(result.error);
       enqueueSnackbar(
         kind === "mfa"
-          ? `2FA de ${target.name} redefinido. Ela entra só com a senha até cadastrar outro aplicativo.`
-          : kind === "ban"
-            ? `${target.name} foi bloqueada na plataforma.`
-            : `${target.name} voltou a ter acesso.`,
+          ? `2FA de ${target.name} redefinido. A conta entra só com a senha até cadastrar outro aplicativo.`
+          : kind === "disconnect"
+            ? `Computadores de ${target.name} desconectados.`
+            : kind === "ban"
+              ? `${target.name}: acesso bloqueado na plataforma.`
+              : `${target.name}: acesso devolvido.`,
         { variant: "success" },
       );
       onChanged();
@@ -158,16 +180,12 @@ export function usePersonActions({
     [enqueueSnackbar, onChanged],
   );
 
-  /**
-   * The guards are the same ones the server enforces, so the menu never
-   * offers what the database will refuse.
-   */
+  /** The guards are the same ones the server enforces, so the menu never offers what will be refused. */
   const buildItems = useCallback(
     (target: PersonTarget) => {
-      const service = Boolean(serviceAvailable);
       const isSelf = target.userId === selfId;
       const items = [];
-      if (service && !isSelf && !target.isSuperadmin && !target.banned) {
+      if (serviceAvailable && !isSelf && !target.isSuperadmin && !target.banned) {
         items.push(
           <GridActionsCellItem
             key="impersonate"
@@ -178,9 +196,20 @@ export function usePersonActions({
           />,
         );
       }
+      if (target.orgId && target.devices > 0) {
+        items.push(
+          <GridActionsCellItem
+            key="disconnect"
+            icon={<NiPower size="medium" />}
+            label="Desconectar todos os computadores"
+            onClick={() => setConfirming({ kind: "disconnect", target })}
+            showInMenu
+          />,
+        );
+      }
       // Never on yourself: wiping your own second factor costs you support
       // access (impersonation requires AAL2) and nothing here would say so.
-      if (service && target.hasMfa && !isSelf) {
+      if (serviceAvailable && target.hasMfa && !isSelf) {
         items.push(
           <GridActionsCellItem
             key="reset-mfa"
@@ -203,7 +232,7 @@ export function usePersonActions({
           />,
         );
       }
-      if (service && !isSelf) {
+      if (serviceAvailable && !isSelf) {
         items.push(
           <GridActionsCellItem
             key="ban"
@@ -215,8 +244,8 @@ export function usePersonActions({
         );
       }
       // Irreversible, and service-role backed. A superadmin has to lose the
-      // role first — the database refuses otherwise.
-      if (service && !isSelf && !target.isSuperadmin) {
+      // role first: the database refuses otherwise.
+      if (serviceAvailable && !isSelf && !target.isSuperadmin) {
         items.push(
           <GridActionsCellItem
             key="delete"
@@ -233,9 +262,8 @@ export function usePersonActions({
   );
 
   // Every dialog is mounted only while open and keyed by the person: kept
-  // permanently mounted they changed identity during the exit fade, and the
-  // impersonation reason — which is audited AND shown to the professional —
-  // survived from one account to the next.
+  // mounted they changed identity during the exit fade, and the impersonation
+  // reason (audited AND shown to the member) survived from one account to the next.
   const dialogs = (
     <>
       {confirming && (
@@ -256,7 +284,6 @@ export function usePersonActions({
       {impersonating && (
         <ImpersonateDialog
           key={impersonating.userId}
-          open
           userId={impersonating.userId}
           userName={impersonating.name}
           onClose={() => setImpersonating(null)}
@@ -266,7 +293,6 @@ export function usePersonActions({
       {roleChange && (
         <SuperadminDialog
           key={`${roleChange.target.userId}-${roleChange.grant}`}
-          open
           userId={roleChange.target.userId}
           userName={roleChange.target.name}
           grant={roleChange.grant}
@@ -294,16 +320,19 @@ export function usePersonActions({
   );
 
   /**
-   * Support access, exposed on its own so a dialog footer can offer it as a
-   * button while the row keeps it in the kebab. Only this one is promoted:
-   * ban, delete and 2FA are rare and destructive, and a footer lined with red
-   * buttons invites the click it should be discouraging.
+   * Support access and the 2FA reset, exposed on their own so the dossier can
+   * offer them as buttons: it is the one place that knows whether the account
+   * has a second factor at all.
    */
   const canImpersonate = useCallback(
-    (target: PersonTarget) =>
-      Boolean(serviceAvailable) && target.userId !== selfId && !target.isSuperadmin && !target.banned,
+    (target: PersonTarget) => serviceAvailable && target.userId !== selfId && !target.isSuperadmin && !target.banned,
     [selfId, serviceAvailable],
   );
+  const canResetMfa = useCallback(
+    (target: PersonTarget) => serviceAvailable && target.hasMfa && target.userId !== selfId,
+    [selfId, serviceAvailable],
+  );
+  const openMfaReset = useCallback((target: PersonTarget) => setConfirming({ kind: "mfa", target }), []);
 
-  return { buildItems, dialogs, canImpersonate, openImpersonation: setImpersonating };
+  return { buildItems, dialogs, canImpersonate, openImpersonation: setImpersonating, canResetMfa, openMfaReset };
 }

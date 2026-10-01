@@ -2,14 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Alert, Box, Chip, Tab, Tabs, Typography } from "@mui/material";
+import { Alert, Box, Tab, Tabs, Typography } from "@mui/material";
 import { GridActionsCellItem, type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 
 import DataTable from "@/components/data-grid/data-table";
 import EmptyState from "@/components/product/empty-state";
+import StatusChip, { type StatusTone } from "@/components/product/status-chip";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiMessages from "@/icons/nexture/ni-messages";
+import { formatDateTime } from "@/lib/admin/format";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@flyee/auth/client";
 
@@ -24,10 +26,11 @@ type CommentRow = {
 
 const STATUSES = ["pending", "approved", "rejected"] as const;
 
-const STATUS_COLOR: Record<string, "warning" | "success" | "default"> = {
-  pending: "warning",
-  approved: "success",
-  rejected: "default",
+/** The moderation state as a named badge: the word carries it, the tint only reinforces it. */
+const STATUS_TONE: Record<string, StatusTone> = {
+  pending: "attention",
+  approved: "positive",
+  rejected: "neutral",
 };
 
 const STATUS_LABEL: Record<CommentRow["status"], string> = {
@@ -134,7 +137,7 @@ export default function BlogCommentsAdmin() {
         field: "createdAt",
         headerName: "Recebido",
         minWidth: 180,
-        valueGetter: (_, row) => new Date(row.createdAt).toLocaleString(),
+        valueGetter: (_, row) => formatDateTime(row.createdAt),
       },
       {
         field: "status",
@@ -143,13 +146,7 @@ export default function BlogCommentsAdmin() {
         valueGetter: (_, row) => STATUS_LABEL[row.status],
         renderCell: (params: GridRenderCellParams<CommentRow, CommentRow["status"]>) => (
           <Box className="flex h-full items-center">
-            <Chip
-              label={STATUS_LABEL[params.row.status]}
-              size="small"
-              color={STATUS_COLOR[params.row.status]}
-              variant="outlined"
-              className="capitalize"
-            />
+            <StatusChip label={STATUS_LABEL[params.row.status]} tone={STATUS_TONE[params.row.status]} />
           </Box>
         ),
       },

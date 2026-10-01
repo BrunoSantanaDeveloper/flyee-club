@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   // Back to where impersonation is started, with the operator's own session —
   // which was never touched.
-  const destination = new URL("/admin/organizations", request.url);
+  const destination = new URL("/admin/membros", request.url);
   destination.searchParams.set("impersonation", reason === "expired" ? "expired" : "ended");
   return NextResponse.redirect(destination);
 }
