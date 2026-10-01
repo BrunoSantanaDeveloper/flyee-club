@@ -1,22 +1,33 @@
-import { metadataCorsOptionsRequestHandler, protectedResourceHandler } from "mcp-handler";
+import { NextResponse } from "next/server";
 
 import { BRAND } from "@/brand";
+import { OAUTH_SCOPES } from "@/lib/oauth/scopes";
 
 /**
- * RFC 9728 protected-resource metadata: tells an MCP client WHICH
- * authorization server protects /api/mcp. The 401 from the MCP endpoint
- * points here via WWW-Authenticate; from here the client walks to the
- * RFC 8414 metadata next door and starts the OAuth dance.
+ * RFC 9728 protected-resource metadata: which authorization server protects
+ * the CLI delivery API (`/api/cli`). A 401 from that API points here through
+ * `WWW-Authenticate`; from here a client walks to the RFC 8414 metadata.
  */
 
-const handler = protectedResourceHandler({
-  authServerUrls: [BRAND.siteUrl],
-  resourceUrl: `${BRAND.siteUrl}/api/mcp`,
-});
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
 
-export { handler as GET };
+export function GET() {
+  return NextResponse.json(
+    {
+      resource: `${BRAND.siteUrl}/api/cli`,
+      authorization_servers: [BRAND.siteUrl],
+      scopes_supported: [...OAUTH_SCOPES],
+      bearer_methods_supported: ["header"],
+      resource_documentation: `${BRAND.siteUrl}/ajuda`,
+    },
+    { headers: CORS_HEADERS },
+  );
+}
 
-const corsHandler = metadataCorsOptionsRequestHandler();
 export function OPTIONS() {
-  return corsHandler();
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
 }

@@ -29,6 +29,7 @@ const nextConfig = {
     "@flyee/db",
     "@flyee/email",
     "@flyee/billing",
+    "@flyee/catalog",
     "@flyee/ai",
     "@flyee/jobs",
     "@flyee/audit",

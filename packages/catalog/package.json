@@ -1,0 +1,18 @@
+{
+  "name": "@flyee/catalog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The flyee.module.json manifest schema and the catalog's version rules, shared by the upload pipeline and the CLI delivery API, and published as JSON Schema for the CLI.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./manifest": "./src/manifest.ts",
+    "./semver": "./src/semver.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76 || ^4.0.0"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test src/catalog.test.ts"
+  }
+}

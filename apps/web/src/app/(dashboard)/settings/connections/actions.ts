@@ -48,7 +48,7 @@ export async function revokeConnection(clientRowId: string): Promise<ActionResul
     .is("revoked_at", null);
   if (error) return { ok: false, error: error.message };
 
-  await recordAudit(supabase, "mcp.connection_revoked", {
+  await recordAudit(supabase, "cli.connection_revoked", {
     orgId,
     entityType: "oauth_client",
     entityId: clientRowId,

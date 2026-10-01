@@ -1,15 +1,12 @@
 /**
- * OAuth scopes of the MCP server (docs/MCP-CONECTORES.md). Pure constants —
- * imported by server code AND by the authorize screen (client-safe).
+ * OAuth scopes of the CLI delivery API (docs/CLI-CONTRACT.md). Pure constants,
+ * imported by server code AND by the consent screens (client-safe).
  *
- * `library:read` is the safe default surface (the MTC library); the two
- * record-touching scopes exist so a future client can ask for LESS than
- * everything. In v1 the consent screen shows and grants what was requested,
- * defaulting to the full set when the client asks for nothing specific —
- * MCP clients typically send no scope parameter.
+ * The CLI asks for all four. A client that asks for nothing specific gets the
+ * full set too, so `npx flyee login` never has to spell them out.
  */
 
-export const OAUTH_SCOPES = ["library:read", "patients:read", "agenda:read"] as const;
+export const OAUTH_SCOPES = ["profile:read", "catalog:read", "modules:download", "telemetry:write"] as const;
 
 export type OauthScope = (typeof OAUTH_SCOPES)[number];
 
@@ -36,7 +33,8 @@ export function hasScope(scope: string, wanted: OauthScope): boolean {
 
 /** i18n keys (product namespace) describing each scope in plain language. */
 export const SCOPE_LABEL_KEYS: Record<OauthScope, string> = {
-  "library:read": "oauth-scope-library",
-  "patients:read": "oauth-scope-patients",
-  "agenda:read": "oauth-scope-agenda",
+  "profile:read": "oauth-scope-profile",
+  "catalog:read": "oauth-scope-catalog",
+  "modules:download": "oauth-scope-download",
+  "telemetry:write": "oauth-scope-telemetry",
 };

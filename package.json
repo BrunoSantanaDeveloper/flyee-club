@@ -19,7 +19,7 @@
     "check:mui-classes": "node scripts/check-mui-classes.mjs",
     "test:ai": "npm test -w @flyee/ai",
     "test:billing": "npm test -w @flyee/billing",
-    "test": "npm run test:ai && npm run test:billing && npm run test:web",
+    "test": "npm run test:ai && npm run test:billing && npm run test:catalog && npm run test:web",
     "test:web": "npm run test -w @flyee/web",
     "test:browser": "npm run test:browser -w @flyee/web",
     "test:e2e": "npm run test:e2e -w @flyee/web",
@@ -39,7 +39,8 @@
     "tokens:generate": "npm run generate -w @flyee/design-tokens",
     "prepare": "husky || true",
     "pre-commit": "lint-staged",
-    "typecheck": "npm run typecheck -w @flyee/web"
+    "typecheck": "npm run typecheck -w @flyee/web",
+    "test:catalog": "npm test -w @flyee/catalog"
   },
   "devDependencies": {
     "husky": "9.1.7",

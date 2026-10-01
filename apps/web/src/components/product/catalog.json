@@ -67,6 +67,12 @@
       "use": "A definition attached to a number. A bare Tooltip on a non-focusable Box disappears on touch and for keyboards — use this instead."
     },
     {
+      "name": "CommandBlock",
+      "from": "@/components/product/command-block",
+      "props": "command, copyLabel, copiedLabel, className?",
+      "use": "A terminal command the member runs (npx flyee login, npx flyee add <slug>), with a copy button. Same deep-primary mono body as the marketing TerminalFrame. Never a bare <code> chip for a command the member must type."
+    },
+    {
       "name": "DataTable",
       "from": "@/components/data-grid/data-table",
       "props": "rows, columns, loading, header?, actions?, filters?, noRowsOverlay, noResultsOverlay, onQuickFilterChange?, initialColumnVisibility?, enableExport?",

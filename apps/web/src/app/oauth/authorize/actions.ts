@@ -46,7 +46,7 @@ export async function approveAuthorization(formData: FormData): Promise<void> {
     }
     redirect(DEFAULTS.appRoot);
   }
-  const { client, scopes } = validation;
+  const { client, scopes, deviceId } = validation;
 
   // The workspace is the session's own (MVP: one per professional).
   const { data: membership } = await supabase
@@ -60,8 +60,7 @@ export async function approveAuthorization(formData: FormData): Promise<void> {
 
   // Same gate the page showed: an active workspace (a free account included:
   // free samples install without a purchase). What each module needs is
-  // checked per call by the delivery API. Phase 3 of docs/PLANO-IMPLEMENTACAO.md
-  // turns this screen into the CLI connection flow.
+  // checked per call by the delivery API.
   const { data: entitlements } = await supabase.rpc("org_entitlements", { target_org: orgId });
   if (!entitlements?.active) {
     redirect(DEFAULTS.appRoot);
@@ -88,16 +87,17 @@ export async function approveAuthorization(formData: FormData): Promise<void> {
     codeChallenge: params.codeChallenge,
     redirectUri: params.redirectUri,
     scope,
+    deviceId,
   });
   if (!issued.ok) {
     redirect(errorRedirectUrl(params.redirectUri, "server_error", issued.description, params.state));
   }
 
-  await recordAudit(supabase, "mcp.connection_authorized", {
+  await recordAudit(supabase, "cli.connection_authorized", {
     orgId: orgId!,
     entityType: "oauth_client",
     entityId: client.id,
-    metadata: { client_name: client.client_name, scope },
+    metadata: { client_name: client.client_name, scope, device_id: deviceId },
   });
 
   const target = new URL(params.redirectUri);

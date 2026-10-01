@@ -55,7 +55,12 @@ export default function TerminalFrame({
       </div>
       {/* The global `code, pre` rule (style/data-display/typography.css) draws
           an inline-code chip; the terminal body undoes it on both elements. */}
-      <pre className="bg-primary-dark m-0 overflow-x-auto rounded-none border-0 px-5 py-5 font-mono text-sm leading-7 sm:px-6 sm:py-6">
+      {/* Focusable because a long line scrolls sideways on a phone, and a
+          scrollable region must be reachable without a mouse. */}
+      <pre
+        tabIndex={0}
+        className="bg-primary-dark focus-visible:outline-primary-light m-0 overflow-x-auto rounded-none border-0 px-5 py-5 font-mono text-sm leading-7 focus-visible:outline-2 sm:px-6 sm:py-6"
+      >
         <code className="flex flex-col rounded-none border-0 bg-transparent p-0">
           {lines.map((line, index) => {
             const kind = line.kind ?? "output";

@@ -36,10 +36,13 @@ const PUBLIC_PREFIXES = [
   // signature / Inngest signing key), so they must NOT hit the auth redirect.
   "/api/webhooks",
   "/api/inngest",
-  // OAuth endpoints authenticate by their own means (registration is open by
-  // spec; the token endpoint verifies PKCE/secret). /oauth/authorize is
-  // deliberately NOT here — the consent screen needs the session.
+  // OAuth endpoints authenticate by their own means (the token endpoint
+  // verifies PKCE, the device code or the refresh token). /oauth/authorize and
+  // /ativar are deliberately NOT here: the consent screens need the session.
   "/api/oauth",
+  // The CLI delivery API authenticates every call with its own bearer token
+  // (lib/cli/gates.ts); a cookie session means nothing there.
+  "/api/cli",
   // SEO surfaces crawlers hit anonymously.
   "/sitemap.xml",
   "/robots.txt",
@@ -70,11 +73,15 @@ const IMPERSONATION_BLOCKED_PREFIXES = [
   "/admin",
   // Authorizing a client (the flyee CLI) mints credentials that OUTLIVE the
   // support visit — a support session must never leave a standing token on
-  // the member's account behind.
+  // the member's account behind. Approving a device code does the same.
   "/oauth",
+  "/ativar",
+  // The CLI API never runs on a cookie session; a support browser has no
+  // business there.
+  "/api/cli",
 ];
 
-/** API routes whose non-GET methods write member work (none yet; phase 3 adds /api/cli). */
+/** API routes whose non-GET methods write member work (none today: member writes go to PostgREST). */
 const IMPERSONATION_READONLY_API: string[] = [];
 
 /** A browser loading a page (not an API call, an asset or a client-side fetch). */

@@ -22,8 +22,8 @@
 
 /* --------- Theme (design tokens: source of truth in packages/design-tokens) --------- */
 @import "@flyee/design-tokens/css/common.css";
-/* MedChina single brand palette lives in green.css (Teal/Camel) — other theme files stay in the package for template merges but are not loaded. */
-@import "@flyee/design-tokens/css/green.css";
+/* MedChina single brand palette lives in orange.css (Orange/Camel) — other theme files stay in the package for template merges but are not loaded. */
+@import "@flyee/design-tokens/css/orange.css";
 @import "@flyee/design-tokens/css/marketing.css";
 
 /* --------- Surfaces --------- */
@@ -126,6 +126,7 @@
 .shadow-inside {
   transition: background-color 0.2s ease-in-out;
 }
+
 .shadow-inside {
   transition: box-shadow 0.2s ease-in-out;
 }
@@ -169,11 +170,13 @@
   }
 
   --animate-wiggle: wiggle 1s ease-in-out infinite;
+
   @keyframes wiggle {
     0%,
     100% {
       transform: rotate(-3deg);
     }
+
     50% {
       transform: rotate(3deg);
     }

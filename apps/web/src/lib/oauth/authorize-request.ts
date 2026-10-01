@@ -1,12 +1,13 @@
 import "server-only";
 
+import { redirectUriMatches } from "@/lib/oauth/redirect";
 import { type OauthScope, resolveRequestedScopes } from "@/lib/oauth/scopes";
-import { getOauthClient, type OauthClientRow } from "@/lib/oauth/server";
+import { getOauthClient, isDeviceId, type OauthClientRow } from "@/lib/oauth/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Shared parse + validation for the /oauth/authorize screen and its server
- * actions. The action NEVER trusts the form's hidden fields on their own —
+ * actions. The action NEVER trusts the form's hidden fields on their own:
  * everything is re-validated against the client registration, so a tampered
  * form cannot smuggle a foreign redirect target past the approval.
  */
@@ -19,6 +20,8 @@ export type AuthorizeParams = {
   codeChallenge: string;
   codeChallengeMethod: string;
   scopeParam: string;
+  /** The CLI's id for this machine (our extension); carried into the token family. */
+  deviceId: string;
 };
 
 const first = (value: string | string[] | undefined): string =>
@@ -33,6 +36,7 @@ export function authorizeParamsFromSearch(source: Record<string, string | string
     codeChallenge: first(source.code_challenge),
     codeChallengeMethod: first(source.code_challenge_method),
     scopeParam: first(source.scope),
+    deviceId: first(source.device_id),
   };
 }
 
@@ -49,14 +53,30 @@ export function authorizeParamsFromForm(form: FormData): AuthorizeParams {
     codeChallenge: read("code_challenge"),
     codeChallengeMethod: read("code_challenge_method"),
     scopeParam: read("scope"),
+    deviceId: read("device_id"),
   };
 }
 
+/** The query string that reproduces a request, for the sign-in round trip. */
+export function authorizeQuery(params: AuthorizeParams): string {
+  const query = new URLSearchParams({
+    response_type: params.responseType,
+    client_id: params.clientId,
+    redirect_uri: params.redirectUri,
+    state: params.state,
+    code_challenge: params.codeChallenge,
+    code_challenge_method: params.codeChallengeMethod,
+    scope: params.scopeParam,
+  });
+  if (params.deviceId) query.set("device_id", params.deviceId);
+  return query.toString();
+}
+
 export type AuthorizeValidation =
-  /** Request is sound — show the consent screen / issue the code. */
-  | { ok: true; client: OauthClientRow; scopes: OauthScope[] }
+  /** Request is sound: show the consent screen / issue the code. */
+  | { ok: true; client: OauthClientRow; scopes: OauthScope[]; deviceId: string | null }
   /**
-   * The client or its redirect target could not be trusted — the ONLY safe
+   * The client or its redirect target could not be trusted: the ONLY safe
    * answer is rendering an error, never redirecting a user to an unverified URL.
    */
   | { ok: false; kind: "render"; error: "invalid_client" | "invalid_redirect" }
@@ -69,7 +89,7 @@ export async function validateAuthorizeRequest(
 ): Promise<AuthorizeValidation> {
   const client = await getOauthClient(service, params.clientId);
   if (!client) return { ok: false, kind: "render", error: "invalid_client" };
-  if (!params.redirectUri || !client.redirect_uris.includes(params.redirectUri)) {
+  if (!redirectUriMatches(client.redirect_uris, params.redirectUri, client.loopback_any_port)) {
     return { ok: false, kind: "render", error: "invalid_redirect" };
   }
   if (params.responseType !== "code") {
@@ -78,7 +98,20 @@ export async function validateAuthorizeRequest(
   if (!params.codeChallenge || params.codeChallengeMethod !== "S256") {
     return { ok: false, kind: "redirect", error: "invalid_request", description: "PKCE with S256 is required." };
   }
-  return { ok: true, client, scopes: resolveRequestedScopes(params.scopeParam) };
+  if (params.deviceId && !isDeviceId(params.deviceId)) {
+    return {
+      ok: false,
+      kind: "redirect",
+      error: "invalid_request",
+      description: "device_id must be 8 to 64 letters, digits, - or _.",
+    };
+  }
+  return {
+    ok: true,
+    client,
+    scopes: resolveRequestedScopes(params.scopeParam),
+    deviceId: params.deviceId || null,
+  };
 }
 
 /** Compose the error redirect back to a VERIFIED redirect_uri. */

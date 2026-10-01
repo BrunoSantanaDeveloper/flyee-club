@@ -1,6 +1,6 @@
 # flyee.club web (apps/web)
 
-Next.js 15 (App Router) + React 19 — the only app of the flyee.club platform: public site, member dashboard, checkout, admin consoles and (from phase 3) the CLI delivery API. See the root `CLAUDE.md`, `docs/PRODUCT.md` and `docs/PLANO-IMPLEMENTACAO.md`.
+Next.js 15 (App Router) + React 19 — the only app of the flyee.club platform: public site, member dashboard, checkout, admin consoles and the CLI delivery API. See the root `CLAUDE.md`, `docs/PRODUCT.md` and `docs/PLANO-IMPLEMENTACAO.md`.
 
 > The database is the baseline in `packages/db/migrations` (`0000`–`0018`, plus the migrations added since, described in `packages/db/README.md`). Prefer the function name when searching for a rule.
 
@@ -66,7 +66,9 @@ Next.js 15 (App Router) + React 19 — the only app of the flyee.club platform: 
 - Supabase through `@flyee/auth` (`client`/`server`/`middleware`/`service`). `src/middleware.ts` refreshes the session and protects everything except the public pages (`matchPublicPath`, from `src/i18n/routing.ts`) and `PUBLIC_PREFIXES`. Without `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` the middleware no-ops and the auth screens show a configuration hint.
 - 2FA (TOTP): enrolled at `/settings/security`; the middleware forces the AAL2 step-up at `/auth/two-factor`.
 - Internal redirects go through `lib/safe-next.ts` (`sanitizeInternalNext`), never a raw `next` parameter.
-- The OAuth 2.1 server (`/oauth/authorize`, `/api/oauth/register`, `/api/oauth/token`, `lib/oauth/*`, opaque tokens with a rotating 30-day refresh) becomes the CLI token server in phase 3: first-party `flyee-cli` client, loopback redirects with any port, device authorization for machines without a browser, revocation, and new scopes (`profile:read`, `catalog:read`, `modules:download`, `telemetry:write`).
+- **CLI token server** (`lib/oauth/*`, `docs/CLI-CONTRACT.md`): one first-party public client, `flyee-cli`, seeded in migration 0010; no dynamic registration. Browser login with PKCE and a loopback redirect on any port (`lib/oauth/redirect.ts`), device authorization (`/api/oauth/device` + `/ativar`, `lib/oauth/device-code.ts`), revocation (`/api/oauth/revoke`). Opaque tokens, one family per machine (`device_id`), access 1 h, refresh 30 days rotated on every use: an expired refresh answers `invalid_grant` with `error_uri` = `/revalidar`, and a login on a machine that held a chain before renders the revalidation screen. Logins, revalidations and expired refreshes are product events (`cli.login`, `token.revalidated`, `update.denied_token_expired`).
+- **Delivery API** (`app/api/cli/*`): every handler runs inside `runCliRequest` (`lib/cli/gates.ts`), which checks token → scope → `org_entitlements` (read on every call) → `X-Flyee-Device` → `cli_rate_allowance`, answers refusals as `{ error, message (member's language, lib/cli/messages.ts), action_url }` and files each call in `cli_requests`. Downloads are 300-second signed URLs from the private `modules` bucket; the CLI verifies size and SHA-256. Catalog reads live in `lib/cli/catalog.ts`.
+- **Packages**: `lib/catalog/package.ts` inspects a ZIP (safe paths, size ceilings, manifest `files` equal to the archive); `lib/catalog/upload.ts` turns a staged upload into a draft version; `lib/catalog/version-actions.ts` publishes, marks stable and yanks (superadmin, audited).
 
 ## Commands (run from the monorepo root)
 
