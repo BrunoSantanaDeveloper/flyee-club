@@ -1,6 +1,7 @@
 "use client";
 
 import AccountCard from "./components/account-card";
+import MemberCard from "./components/member-card";
 import ProfileCard from "./components/profile-card";
 import SettingsMenu from "./components/settings-menu";
 import Link from "next/link";
@@ -14,9 +15,9 @@ import { isSupabaseConfigured } from "@flyee/auth";
 
 /**
  * The member's own account: who they are (name, photo) and how they sign in
- * (email, password). Connections, billing and 2FA have their own pages in the
- * settings menu. Segment, AI tool and language join this page in phase 5 of
- * docs/PLANO-IMPLEMENTACAO.md.
+ * (email, password), plus what the club tailors itself to: segment, AI tool,
+ * language and timezone. Devices, billing and 2FA have their own pages in the
+ * settings menu.
  */
 export default function Settings() {
   const t = useTranslations("product");
@@ -73,6 +74,7 @@ export default function Settings() {
         {isSupabaseConfigured && (
           <>
             <ProfileCard />
+            <MemberCard />
             <AccountCard />
           </>
         )}

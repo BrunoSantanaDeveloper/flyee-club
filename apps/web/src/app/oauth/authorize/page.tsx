@@ -1,17 +1,24 @@
 import { approveAuthorization, denyAuthorization } from "./actions";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { Alert, Box, Button, Divider, List, ListItem, ListItemIcon, ListItemText, Typography } from "@mui/material";
 
 import { ConsentError, ConsentShell } from "@/components/cli/consent-shell";
+import UpsellCard from "@/components/product/upsell-card";
+import { COOKIE_KEYS } from "@/constants";
 import NiBook from "@/icons/nexture/ni-book";
 import NiChartLine from "@/icons/nexture/ni-chart-line";
 import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
 import NiRefresh from "@/icons/nexture/ni-refresh";
 import NiTerminal from "@/icons/nexture/ni-terminal";
 import NiUser from "@/icons/nexture/ni-user";
+import { resolveCurrency } from "@/lib/billing-currency";
 import { type DeviceStatus, readDeviceStatus } from "@/lib/cli/device-status";
+import { OFFER_COPY, REASON_COPY } from "@/lib/member/offer-copy";
+import { loadOfferPlans, type OfferPlan } from "@/lib/member/offers";
+import { loadUpsellFacts } from "@/lib/member/upsell-facts";
 import {
   authorizeParamsFromSearch,
   authorizeQuery,
@@ -19,9 +26,11 @@ import {
   validateAuthorizeRequest,
 } from "@/lib/oauth/authorize-request";
 import { type OauthScope, SCOPE_LABEL_KEYS } from "@/lib/oauth/scopes";
+import { decideUpsell, type UpsellOffer, type UpsellReason } from "@/lib/upsell";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
+import { isTier } from "@flyee/billing/entitlements";
 
 /**
  * The CLI connection screen (docs/CLI-CONTRACT.md). The member arrives here
@@ -112,10 +121,37 @@ export default async function AuthorizePage({
   const revalidating = Boolean(device?.lapsed);
   const deviceName = device?.name || t("oauth-device-unnamed");
 
+  // The revalidation is the one moment a member who has been away is looking:
+  // when their own use earned the next rung, it is offered here too.
+  let offer: { offer: UpsellOffer; reason: UpsellReason; plan: OfferPlan | null } | null = null;
+  const locale = (await getLocale()) === "en" ? "en" : "pt-BR";
+  if (revalidating) {
+    try {
+      const facts = await loadUpsellFacts(supabase, {
+        orgId,
+        tier: isTier(entitlements.tier) ? entitlements.tier : null,
+      });
+      const decided = decideUpsell(facts);
+      if (decided) {
+        const currency = resolveCurrency({ cookie: (await cookies()).get(COOKIE_KEYS.currency)?.value, locale });
+        offer = { ...decided, plan: (await loadOfferPlans(currency))[decided.offer] ?? null };
+      }
+    } catch {
+      offer = null;
+    }
+  }
+  const offerPrice = (plan: OfferPlan | null) => {
+    if (!plan) return null;
+    const price = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: plan.currency,
+      maximumFractionDigits: 0,
+    }).format(plan.priceCents / 100);
+    return plan.period === "monthly" ? t("home-offer-price-monthly", { price }) : t("home-offer-price-once", { price });
+  };
+
   // The connection term in the member's language (EN, then pt-BR, as fallback).
-  const { data: terms } = await service.rpc("current_consent_terms", {
-    p_locale: (await getLocale()) === "en" ? "en" : "pt-BR",
-  });
+  const { data: terms } = await service.rpc("current_consent_terms", { p_locale: locale });
   const term = ((terms ?? []) as { slug: string; title: string; body_md: string }[]).find(
     (row) => row.slug === "cli-connection",
   );
@@ -160,6 +196,20 @@ export default async function AuthorizePage({
         <Alert severity="info" className="neutral bg-background-paper/60!">
           {device.behind > 0 ? t("oauth-revalidate-behind", { count: device.behind }) : t("oauth-revalidate-current")}
         </Alert>
+      ) : null}
+
+      {offer ? (
+        <UpsellCard
+          offer={offer.offer}
+          origin="revalidation"
+          tone={OFFER_COPY[offer.offer].tone}
+          title={t(OFFER_COPY[offer.offer].title)}
+          reason={t(REASON_COPY[offer.reason])}
+          features={OFFER_COPY[offer.offer].features.map((key) => t(key))}
+          priceLabel={offerPrice(offer.plan)}
+          ctaLabel={t("home-offer-cta")}
+          href={offer.plan ? `/assinatura?plan=${offer.plan.slug}` : "/settings/billing?source=revalidation"}
+        />
       ) : null}
 
       <Divider />

@@ -224,6 +224,9 @@ export default function LeftMenu() {
                   className={cn(
                     "absolute flex h-full min-h-full flex-col gap-2 overflow-y-scroll pr-[1rem] pl-[1.375rem]",
                   )}
+                  // A labelled, scrollable navigation region: without the role
+                  // the label is not allowed on a plain div.
+                  role="navigation"
                   tabIndex={0}
                   aria-label={t("menu-subnavigation")}
                 >

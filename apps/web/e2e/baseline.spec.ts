@@ -101,7 +101,21 @@ test("legal pages render the terms in force or say they cannot", async ({ page }
 });
 
 test("protected product routes preserve the intended destination through authentication", async ({ page }) => {
-  for (const route of ["/inicio", "/settings", "/settings/billing", "/settings/security"]) {
+  for (const route of [
+    "/inicio",
+    "/modulos",
+    "/receitas",
+    "/novidades",
+    "/encontros",
+    "/roadmap",
+    "/settings",
+    "/settings/billing",
+    "/settings/security",
+    "/settings/devices",
+    "/onboarding",
+    "/ativar",
+    "/revalidar",
+  ]) {
     await page.goto(route);
     await expect(page).toHaveURL(new RegExp(`/auth/sign-in\\?next=${encodeURIComponent(route)}`));
     await expect(page.getByRole("heading", { name: /entrar|sign in/i })).toBeVisible();
@@ -112,6 +126,36 @@ test("protected product routes preserve the intended destination through authent
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test("the CLI endpoints answer on their own, never through the sign-in redirect", async ({ request, page }) => {
+  // Public by contract (docs/CLI-CONTRACT.md): no session, no redirect.
+  const version = await request.get("/api/cli/version");
+  expect(version.status()).toBe(200);
+  expect(await version.json()).toMatchObject({ min_cli_version: expect.any(String) });
+
+  const schema = await request.get("/api/cli/schema/module");
+  expect(schema.status()).toBe(200);
+  expect((await schema.json()).properties).toHaveProperty("manifest_version");
+
+  const discovery = await (await request.get("/.well-known/oauth-authorization-server")).json();
+  expect(discovery.device_authorization_endpoint).toMatch(/\/api\/oauth\/device$/);
+  expect(discovery.revocation_endpoint).toMatch(/\/api\/oauth\/revoke$/);
+  expect(discovery).not.toHaveProperty("registration_endpoint");
+
+  // A gated endpoint answers the CLI in JSON: a refusal, not an HTML page.
+  const me = await request.get("/api/cli/me", { maxRedirects: 0 });
+  expect([401, 503]).toContain(me.status());
+  expect(await me.json()).toHaveProperty("error");
+
+  const token = await request.post("/api/oauth/token", { form: { grant_type: "refresh_token" }, maxRedirects: 0 });
+  expect(token.status()).toBe(401);
+  expect((await token.json()).error).toBe("invalid_client");
+
+  // The public checksum page renders, and says so when the catalog cannot answer.
+  await page.goto("/verificar/deploy-check%401.2.0");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
 
 test("@a11y core entry and product routes have no critical axe violations", async ({ page }) => {

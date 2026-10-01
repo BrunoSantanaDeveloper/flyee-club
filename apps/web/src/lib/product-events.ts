@@ -1,5 +1,6 @@
 "use client";
 
+import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
 
 /**
@@ -23,19 +24,26 @@ export function trackOffer(event: BrowserEventName, origin: OfferOrigin, offer?:
 }
 
 export function trackProductEvent(event: BrowserEventName, properties: Record<string, string> = {}): void {
-  const supabase = createClient();
-  // A PostgREST builder is a THENABLE: it only issues the request when it is
-  // awaited or `.then()`-ed. Discarding it with `void` silently sends nothing.
-  // Both handlers swallow: telemetry must never reach the user. The database
-  // stamps segment, language and AI tool from the profile and forces the
-  // platform to "web".
-  void supabase
-    .rpc("track_product_event", {
-      target_event: event,
-      target_properties: properties,
-    })
-    .then(
-      () => undefined,
-      () => undefined,
-    );
+  // Telemetry must never reach the user: creating the client throws when
+  // Supabase is not configured, and an offer card calls this while rendering
+  // its screen, so an unguarded call took the whole screen down with it.
+  if (!isSupabaseConfigured) return;
+  try {
+    const supabase = createClient();
+    // A PostgREST builder is a THENABLE: it only issues the request when it is
+    // awaited or `.then()`-ed. Discarding it with `void` silently sends
+    // nothing. Both handlers swallow. The database stamps segment, language
+    // and AI tool from the profile and forces the platform to "web".
+    void supabase
+      .rpc("track_product_event", {
+        target_event: event,
+        target_properties: properties,
+      })
+      .then(
+        () => undefined,
+        () => undefined,
+      );
+  } catch {
+    // Nothing to report to: the screen goes on.
+  }
 }

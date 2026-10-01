@@ -1,4 +1,4 @@
-import { isModuleEntitled } from "@/lib/cli/catalog";
+import { isModuleEntitled } from "@/lib/catalog/read";
 import { cliLinks, runCliRequest } from "@/lib/cli/gates";
 import { trackServerEvent } from "@/lib/product-events-server";
 import { isSemver } from "@flyee/catalog/semver";

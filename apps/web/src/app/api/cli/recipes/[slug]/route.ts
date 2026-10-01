@@ -1,4 +1,4 @@
-import { loadRecipe } from "@/lib/cli/catalog";
+import { loadRecipe } from "@/lib/catalog/read";
 import { cliLinks, runCliRequest } from "@/lib/cli/gates";
 import { requestedLocale } from "@/lib/cli/settings";
 

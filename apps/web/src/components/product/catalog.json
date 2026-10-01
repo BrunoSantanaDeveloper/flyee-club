@@ -19,6 +19,12 @@
       "use": "Every zero-data view: icon + why it is empty + the ONE next action. Never a bare 'no data'."
     },
     {
+      "name": "PageHeader",
+      "from": "@/components/product/page-header",
+      "props": "title, crumbs[{label,href?}], description?, action?",
+      "use": "The title block of every member screen: the page's ONE <h1>, breadcrumbs back to the home, one sentence on what the screen is for, at most one action. Never hand-write an h1 + Breadcrumbs pair again."
+    },
+    {
       "name": "UsageMeter",
       "from": "@/components/product/usage-meter",
       "props": "headline, caption?, segments[{key,label,value,display,tone}], ariaLabel",
@@ -47,6 +53,30 @@
       "from": "@/components/product/home-tiles",
       "props": "href, icon, tone, title, description",
       "use": "A shortcut: full-height tinted icon column (w-16) + title + one-line description. Four across, never two columns."
+    },
+    {
+      "name": "ModuleTile",
+      "from": "@/components/product/module-tile",
+      "props": "href, icon, trail, name, summary, trailLabel, meta?, status?{kind:'free'|'locked',label}",
+      "use": "One tool of the catalog in a grid: StatTile's tinted 72px box (hue from the trail, TRAIL_TONE) over name, two-line summary and a status line (free sample, outside the plan). Use for any grid of modules, in the catalog or inside a recipe."
+    },
+    {
+      "name": "UpsellCard",
+      "from": "@/components/product/upsell-card",
+      "props": "offer, origin, tone?, title, reason, features[], priceLabel, ctaLabel, href",
+      "use": "The next rung of the ladder, shown only when decideUpsell (lib/upsell.ts) says the member's own use earned it. States WHY it is here, what the rung adds and the real price; never a countdown. Records upsell.viewed/upsell.clicked."
+    },
+    {
+      "name": "LessonPlayer",
+      "from": "@/components/product/lesson-player",
+      "props": "lessons[{id,depth,title,durationLabel,isAdvanced,youtubeId,completed}], upgradeHref",
+      "use": "A module's short lessons (usar / abrir o capô) in tabs. The video loads from youtube-nocookie only on play (lesson.started); a lesson the plan does not include shows why and the one way to unlock it, never an empty frame."
+    },
+    {
+      "name": "CatalogIcon",
+      "from": "@/components/product/catalog-icon",
+      "props": "name, size?, className?",
+      "use": "An icon stored by NAME in the database (catalog_modules.icon, catalog_trails.icon). Falls back to the catalog glyph when the icon set lacks the name, so an operator's typo never renders as nothing."
     },
     {
       "name": "TILE_TONE",

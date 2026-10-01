@@ -4,11 +4,11 @@ import { useTranslations } from "next-intl";
 import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
 
 import NiCheckSquare from "@/icons/nexture/ni-check-square";
-import NiPlug from "@/icons/nexture/ni-plug";
+import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiUser from "@/icons/nexture/ni-user";
 import NiWallet from "@/icons/nexture/ni-wallet";
 
-export type SettingsMenuActive = "profile" | "connections" | "billing" | "security";
+export type SettingsMenuActive = "profile" | "devices" | "billing" | "security";
 
 type GroupProps = { label: string };
 
@@ -61,10 +61,10 @@ export default function SettingsMenu({ active }: { active: SettingsMenuActive })
           selected={active === "security"}
         />
         <Item
-          href="/settings/connections"
-          label={t("settings-connections")}
-          icon={<NiPlug size="medium" />}
-          selected={active === "connections"}
+          href="/settings/devices"
+          label={t("settings-devices")}
+          icon={<NiLaptop size="medium" />}
+          selected={active === "devices"}
         />
         <Group label={t("settings-group-payment")} />
         <Item

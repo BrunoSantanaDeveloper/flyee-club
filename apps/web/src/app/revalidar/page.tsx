@@ -83,7 +83,7 @@ export default async function RevalidatePage({
         </Typography>
       </Box>
 
-      <Button color="grey" variant="text" component={Link} href="/settings/connections">
+      <Button color="grey" variant="text" component={Link} href="/settings/devices">
         {t("revalidate-page-devices")}
       </Button>
     </ConsentShell>

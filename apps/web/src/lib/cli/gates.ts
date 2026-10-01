@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 
 import { BRAND } from "@/brand";
+import { verifyUrl } from "@/lib/catalog/links";
 import { type CliErrorCode, type CliLocale, cliMessage } from "@/lib/cli/messages";
 import { hasScope, type OauthScope } from "@/lib/oauth/scopes";
 import { type VerifiedAccess, verifyAccessToken } from "@/lib/oauth/server";
@@ -107,14 +108,10 @@ export type CliDeps = {
 /** Absolute links the CLI prints. */
 export const cliLinks = {
   billing: () => new URL("/settings/billing?source=cli", BRAND.siteUrl).toString(),
-  devices: () => new URL("/settings/connections", BRAND.siteUrl).toString(),
+  devices: () => new URL("/settings/devices", BRAND.siteUrl).toString(),
   support: () => new URL("/contato", BRAND.siteUrl).toString(),
-  /** The public verification page, in the member's language (`/verificar/…` or `/en/verify/…`). */
-  verify: (slug: string, version: string, locale: CliLocale = "pt-BR") =>
-    new URL(
-      `${locale === "en" ? "/en/verify" : "/verificar"}/${encodeURIComponent(`${slug}@${version}`)}`,
-      BRAND.siteUrl,
-    ).toString(),
+  /** The public verification page, in the member's language. */
+  verify: (slug: string, version: string, locale: CliLocale = "pt-BR") => verifyUrl(slug, version, locale),
 };
 
 const NO_STORE = { "Cache-Control": "no-store" };

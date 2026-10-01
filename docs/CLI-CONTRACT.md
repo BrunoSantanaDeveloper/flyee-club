@@ -156,7 +156,7 @@ Corpo de toda recusa:
 | `device_required` | 400 | mandar o header (bug da CLI) |
 | `device_unknown` | 403 | `POST /api/cli/installs` e repetir |
 | `device_revoked`, `device_mismatch` | 403 | login de novo |
-| `device_limit_reached` | 409 | mostrar o limite e o link de gestão |
+| `device_limit_reached` | 409 | mostrar o limite e o link de gestão (`/settings/devices`) |
 | `rate_limited` | 429 | esperar `Retry-After` |
 | `download_limit` | 429 | parar até o dia seguinte |
 | `denied_entitlement` | 403 | mostrar a mensagem e o link de upgrade |

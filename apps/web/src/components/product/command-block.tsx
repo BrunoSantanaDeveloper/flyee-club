@@ -55,8 +55,13 @@ export default function CommandBlock({
         className,
       )}
     >
-      {/* The global `code` rule draws an inline chip; the block undoes it. */}
-      <code className="text-text-contrast min-w-0 flex-1 overflow-x-auto rounded-none border-0 bg-transparent p-0 font-mono text-sm leading-6 whitespace-nowrap select-all">
+      {/* The global `code` rule draws an inline chip; the block undoes it.
+          Focusable because a long command scrolls sideways on a phone, and a
+          scrollable region must be reachable from the keyboard. */}
+      <code
+        tabIndex={0}
+        className="text-text-contrast focus-visible:outline-primary-light min-w-0 flex-1 overflow-x-auto rounded-none border-0 bg-transparent p-0 font-mono text-sm leading-6 whitespace-nowrap select-all focus-visible:outline-2"
+      >
         <span aria-hidden className="text-text-contrast/60 mr-2">
           $
         </span>

@@ -1,6 +1,11 @@
 import { after, NextResponse } from "next/server";
 
-import { revokeTokensIfAccessEnded, trackWorkspaceEvent, workspaceOwner } from "@/lib/billing-lifecycle";
+import {
+  revokeTokensIfAccessEnded,
+  trackUpsellPurchase,
+  trackWorkspaceEvent,
+  workspaceOwner,
+} from "@/lib/billing-lifecycle";
 import { periodEnd, resolveBillingWindow } from "@/lib/billing-window";
 import { sendGa4Event } from "@/lib/ga4-mp";
 import { sendMetaConversion } from "@/lib/meta-capi";
@@ -528,6 +533,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           "subscription.started",
           isTier(plan?.tier) ? { offer: plan.tier } : {},
         );
+        await trackUpsellPurchase(supabase, sub.org_id, plan?.tier);
       }
 
       // Attach order-bump add-ons chosen at checkout (none are sold today).
@@ -649,6 +655,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
             });
           }
           await trackWorkspaceEvent(supabase, orgId, "kit.purchased", { offer: "kit" }, event.paidAt);
+          await trackUpsellPurchase(supabase, orgId, "kit", event.paidAt);
           await notifyKitPurchase(supabase, orgId, {
             amountCents: event.amountCents,
             currency: event.currency.toUpperCase(),
@@ -719,6 +726,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
             isTier(plan?.tier) ? { offer: plan.tier } : {},
             event.paidAt,
           );
+          await trackUpsellPurchase(supabase, sub.org_id, plan?.tier, event.paidAt);
         }
       }
       // What the sale is worth: the whole purchase for a split one (the price

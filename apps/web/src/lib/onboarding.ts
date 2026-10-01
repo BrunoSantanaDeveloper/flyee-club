@@ -1,5 +1,5 @@
 import { DEFAULTS } from "@/config";
-import { computeProgress, type FlowKey, getOnboardingState, type OnboardingStep } from "@flyee/onboarding";
+import { type FlowKey, getOnboardingState, type OnboardingStep } from "@flyee/onboarding";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -15,11 +15,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const ONBOARDING_FLOW = "activation";
 
 /**
- * Where a member who still has steps to do lands after auth. The dedicated
- * onboarding wizard arrives in phase 5 of docs/PLANO-IMPLEMENTACAO.md; until
- * then the app home carries the checklist.
+ * Where a member who has not yet said what they build and which AI they use
+ * lands after auth: the three-question wizard (app/onboarding). Every later
+ * step (access, install, first run) lives in the home's checklist, because
+ * those take days and a wizard on every sign-in would be a wall.
  */
-export const ONBOARDING_ROUTE = DEFAULTS.appRoot;
+export const ONBOARDING_ROUTE = "/onboarding";
 
 /** One member per workspace, so activation is the user's, not the org's. */
 export const ONBOARDING_ORG_SCOPED = false;
@@ -85,7 +86,7 @@ export function buildOnboardingSteps(facts?: ActivationFacts): OnboardingStep[] 
       key: "profile",
       title: "onboarding-step-profile",
       description: "onboarding-step-profile-description",
-      href: "/settings",
+      href: ONBOARDING_ROUTE,
       done: facts?.hasProfileSegment,
     },
     {
@@ -151,8 +152,9 @@ export async function resolvePostAuthDestination(supabase: SupabaseClient, userI
     const state = await getOnboardingState(supabase, key);
     if (state.completedAt) return DEFAULTS.appRoot;
     const facts = await getActivationFacts(supabase);
-    const progress = computeProgress(buildOnboardingSteps(facts), state);
-    return progress.complete ? DEFAULTS.appRoot : ONBOARDING_ROUTE;
+    // Only the profile questions send someone to the wizard; the remaining
+    // steps are the home's checklist.
+    return facts.hasProfileSegment ? DEFAULTS.appRoot : ONBOARDING_ROUTE;
   } catch {
     return DEFAULTS.appRoot;
   }

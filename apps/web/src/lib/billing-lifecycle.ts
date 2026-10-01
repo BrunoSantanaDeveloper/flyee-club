@@ -75,3 +75,36 @@ export async function revokeTokensIfAccessEnded(
   if (error) throw new Error("token_revocation_failed");
   return true;
 }
+
+/** How long after seeing an offer a purchase is still credited to it. */
+const UPSELL_WINDOW_MS = 14 * 86_400_000;
+
+/**
+ * Records `upsell.purchased` when a purchase follows an offer card the
+ * workspace saw or clicked in the last 14 days (`upsell.viewed` /
+ * `upsell.clicked`, components/product/upsell-card.tsx). That is what lets
+ * the offer rule be judged by what it sold, per segment. Telemetry only: it
+ * never throws.
+ */
+export async function trackUpsellPurchase(
+  service: ServiceClient,
+  orgId: string,
+  offer: string | null | undefined,
+  occurredAt?: Date,
+): Promise<void> {
+  if (!offer) return;
+  try {
+    const since = new Date((occurredAt?.getTime() ?? Date.now()) - UPSELL_WINDOW_MS).toISOString();
+    const { data } = await service
+      .from("product_events")
+      .select("id")
+      .eq("org_id", orgId)
+      .in("event_name", ["upsell.viewed", "upsell.clicked"])
+      .gte("created_at", since)
+      .limit(1);
+    if ((data ?? []).length === 0) return;
+    await trackWorkspaceEvent(service, orgId, "upsell.purchased", { offer }, occurredAt);
+  } catch {
+    // Telemetry never decides a billing outcome.
+  }
+}

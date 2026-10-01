@@ -1,4 +1,4 @@
-import { loadCatalog } from "@/lib/cli/catalog";
+import { loadCatalog } from "@/lib/catalog/read";
 import { runCliRequest } from "@/lib/cli/gates";
 import { requestedLocale } from "@/lib/cli/settings";
 

@@ -1,10 +1,10 @@
 import { MenuItem } from "@/types";
 
 /**
- * Production navigation is deliberately small: only destinations that exist.
- * Phase 5 of docs/PLANO-IMPLEMENTACAO.md adds the member screens (módulos,
- * receitas, novidades, encontros, roadmap) and phase 6 the new admin consoles
- * (catálogo, roadmap, membros, métricas, encontros, leads).
+ * Production navigation: only destinations that exist. The member area is the
+ * home, the catalog (tools and recipes), what changed, and the community
+ * (meetings and roadmap). Phase 6 of docs/PLANO-IMPLEMENTACAO.md adds the new
+ * admin consoles (catálogo, roadmap, membros, métricas, encontros, leads).
  */
 export const leftMenuItems: MenuItem[] = [
   {
@@ -14,6 +14,46 @@ export const leftMenuItems: MenuItem[] = [
     description: "menu-inicio-description",
     color: "text-primary",
     href: "/inicio",
+  },
+  {
+    id: "modulos",
+    icon: "NiCatalog",
+    label: "menu-modulos",
+    description: "menu-modulos-description",
+    color: "text-primary",
+    href: "/modulos",
+  },
+  {
+    id: "receitas",
+    icon: "NiListSquare",
+    label: "menu-receitas",
+    description: "menu-receitas-description",
+    color: "text-primary",
+    href: "/receitas",
+  },
+  {
+    id: "novidades",
+    icon: "NiBell",
+    label: "menu-novidades",
+    description: "menu-novidades-description",
+    color: "text-primary",
+    href: "/novidades",
+  },
+  {
+    id: "encontros",
+    icon: "NiCalendar",
+    label: "menu-encontros",
+    description: "menu-encontros-description",
+    color: "text-primary",
+    href: "/encontros",
+  },
+  {
+    id: "roadmap",
+    icon: "NiFlag",
+    label: "menu-roadmap",
+    description: "menu-roadmap-description",
+    color: "text-primary",
+    href: "/roadmap",
   },
   {
     id: "admin",

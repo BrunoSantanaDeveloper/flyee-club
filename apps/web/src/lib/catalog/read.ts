@@ -1,14 +1,15 @@
 import "server-only";
 
-import { cliLinks } from "@/lib/cli/gates";
-import type { CliLocale } from "@/lib/cli/messages";
+import { type CatalogLocale, verifyUrl } from "@/lib/catalog/links";
 import { compareSemver, latestVersion } from "@flyee/catalog/semver";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * What the delivery API reads from the catalog (migration 0008), with the
- * service role and only the released rows: published modules, published (or,
- * for history, yanked) versions, lessons without their video ids.
+ * Reading the catalog (migration 0008): published modules, published (or, for
+ * history, yanked) versions, lessons without their video ids, recipes. Shared
+ * by the CLI delivery API (service role) and the member screens (the member's
+ * session, under row-level security): every column read here is one the
+ * `authenticated` role may select.
  *
  * Texts are stored per language (`{"pt-BR": ..., "en": ...}`) and answered in
  * the requested one, falling back to Portuguese, which every row must have.
@@ -16,7 +17,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Localized = Record<string, string> | null | undefined;
 
-export function localize(value: Localized, locale: CliLocale): string | null {
+export function localize(value: Localized, locale: CatalogLocale): string | null {
   if (!value) return null;
   return value[locale]?.trim() || value["pt-BR"]?.trim() || null;
 }
@@ -103,7 +104,7 @@ function lessonSummary(lesson: LessonRow) {
 
 function moduleSummary(
   module: ModuleRow,
-  locale: CliLocale,
+  locale: CatalogLocale,
   limits: Record<string, unknown>,
   latest: VersionRow | null,
   lessons: LessonRow[],
@@ -149,7 +150,7 @@ function latestByModule(versions: VersionRow[], stableOnly: boolean): Map<string
 /** GET /api/cli/catalog: trails, modules with their latest version and lessons, recipes. */
 export async function loadCatalog(
   service: SupabaseClient,
-  input: { locale: CliLocale; stableOnly: boolean; limits: Record<string, unknown> },
+  input: { locale: CatalogLocale; stableOnly: boolean; limits: Record<string, unknown> },
 ) {
   const [
     { data: trails, error: trailsError },
@@ -245,7 +246,7 @@ export async function loadCatalog(
 /** GET /api/cli/modules/{slug}: one module with its release history. Null when not published. */
 export async function loadModule(
   service: SupabaseClient,
-  input: { slug: string; locale: CliLocale; limits: Record<string, unknown> },
+  input: { slug: string; locale: CatalogLocale; limits: Record<string, unknown> },
 ) {
   const { data: module, error } = await service
     .from("catalog_modules")
@@ -277,6 +278,7 @@ export async function loadModule(
   const latest = latestByModule(versionRows, false).get(row.id) ?? null;
 
   return {
+    id: row.id,
     ...moduleSummary(row, input.locale, input.limits, latest, (lessons ?? []) as LessonRow[]),
     description: localize(row.description_md, input.locale),
     versions: versionRows.map((version) => ({
@@ -286,7 +288,7 @@ export async function loadModule(
       yank_reason: version.yank_reason,
       changelog: localize(version.changelog, input.locale),
       compatible_ais: version.compatible_ais ?? [],
-      verify_url: cliLinks.verify(row.slug, version.version, input.locale),
+      verify_url: verifyUrl(row.slug, version.version, input.locale),
     })),
   };
 }
@@ -294,7 +296,7 @@ export async function loadModule(
 /** GET /api/cli/recipes/{slug}: a recipe, its modules at their latest versions, and the workflow when entitled. */
 export async function loadRecipe(
   service: SupabaseClient,
-  input: { slug: string; locale: CliLocale; limits: Record<string, unknown> },
+  input: { slug: string; locale: CatalogLocale; limits: Record<string, unknown> },
 ) {
   const { data: recipe, error } = await service
     .from("catalog_recipes")
