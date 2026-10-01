@@ -1,0 +1,234 @@
+import "server-only";
+
+import { complaintOnOneLine } from "@/lib/chief-complaint";
+import { consultationWhen, legacyExcerpt } from "@/lib/consultation-when";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * The recorded case of ONE patient, loaded for the library's case-review chat
+ * (PRD §9.9 + item 2 of the out-of-consultation roadmap).
+ *
+ * Loaded with the USER's RLS client on purpose: a patient outside the
+ * professional's workspace simply does not resolve — the database is the
+ * boundary, not this module. The Pro gate is the chat route's job, BEFORE this
+ * loader runs; no consent gate applies here (`ai-processing` authorizes
+ * CAPTURING the consultation, not rereading a record she already wrote).
+ */
+
+const CONSULTATION_LIMIT = 5;
+/** Rough prompt budget for the case block; oldest consultations are cut first. */
+const CASE_CHAR_BUDGET = 8000;
+/**
+ * Per-consultation ceiling for a migrated record. Without it one long import
+ * would spend the whole CASE_CHAR_BUDGET and push every other visit out.
+ */
+const LEGACY_CHAR_BUDGET = 1200;
+
+type PatientAlert = { label?: string; severity?: string };
+
+export interface PatientCase {
+  patientId: string;
+  fullName: string;
+  birthDate: string | null;
+  alerts: PatientAlert[];
+  consultations: {
+    id: string;
+    status: string;
+    startedAt: string | null;
+    scheduledFor: string | null;
+    createdAt: string;
+    chiefComplaint: string | null;
+    /**
+     * A consultation imported from another system keeps its original text here
+     * and is deliberately never parsed into anamnesis fields, so it has NO
+     * answers. Without it the model reads a migrated practice as a row of empty
+     * visits and reports that almost nothing is on record.
+     */
+    legacyBody: string | null;
+    legacySource: string | null;
+    answers: { blockKey: string; fieldKey: string; value: string; source: string; state: string }[];
+    acceptedHypotheses: { pattern: string; correspondence: string; status: string }[];
+    validatedPlanModalities: string[];
+    summary: string | null;
+  }[];
+  /** Consultations that exist but did not fit the prompt budget. */
+  omittedConsultations: number;
+}
+
+export async function loadPatientCase(supabase: SupabaseClient, patientId: string): Promise<PatientCase | null> {
+  const { data: patient } = await supabase
+    .from("patients")
+    .select("id, full_name, birth_date, alerts")
+    .eq("id", patientId)
+    .maybeSingle();
+  if (!patient) return null;
+
+  const { count: totalConsultations } = await supabase
+    .from("consultations")
+    .select("id", { count: "exact", head: true })
+    .eq("patient_id", patientId)
+    .neq("status", "cancelled");
+
+  const { data: consultations } = await supabase
+    .from("consultations")
+    .select("id, status, started_at, scheduled_for, created_at, chief_complaint, summary, legacy_body, legacy_source")
+    .eq("patient_id", patientId)
+    .neq("status", "cancelled")
+    // By when the visit HAPPENED: an imported history shares one created_at
+    // across the whole batch, so ordering by it reasons over an arbitrary row
+    // and dates it with another visit's date.
+    .order("started_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(CONSULTATION_LIMIT);
+
+  const consultationIds = (consultations ?? []).map((row) => row.id as string);
+  const [answers, hypotheses, plans] = consultationIds.length
+    ? await Promise.all([
+        supabase
+          .from("anamnesis_answers")
+          .select("consultation_id, block_key, field_key, value, source, state")
+          // A draft the professional REJECTED is not a record of this patient.
+          // Feeding it back to the model as chart data would let the AI reason
+          // from exactly the material she threw away.
+          .neq("state", "rejected")
+          .in("consultation_id", consultationIds),
+        supabase
+          .from("consultation_hypotheses")
+          .select("consultation_id, pattern, correspondence, status")
+          .in("consultation_id", consultationIds)
+          .in("status", ["accepted", "edited"]),
+        supabase
+          .from("consultation_plans")
+          .select("consultation_id, modalities, status")
+          .in("consultation_id", consultationIds)
+          .eq("status", "validated"),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }];
+
+  return {
+    patientId: patient.id as string,
+    fullName: patient.full_name as string,
+    birthDate: (patient.birth_date as string | null) ?? null,
+    alerts: Array.isArray(patient.alerts) ? (patient.alerts as PatientAlert[]) : [],
+    consultations: (consultations ?? []).map((row) => ({
+      id: row.id as string,
+      status: row.status as string,
+      startedAt: (row.started_at as string | null) ?? null,
+      scheduledFor: (row.scheduled_for as string | null) ?? null,
+      createdAt: row.created_at as string,
+      legacyBody: legacyExcerpt(row.legacy_body as string | null, LEGACY_CHAR_BUDGET),
+      legacySource: (row.legacy_source as string | null) ?? null,
+      chiefComplaint: (row.chief_complaint as string | null) ?? null,
+      summary: (row.summary as string | null) ?? null,
+      answers: (answers.data ?? [])
+        .filter((answer) => answer.consultation_id === row.id)
+        .map((answer) => ({
+          blockKey: answer.block_key as string,
+          fieldKey: answer.field_key as string,
+          value: answer.value as string,
+          source: answer.source as string,
+          state: (answer.state as string) ?? "clear",
+        })),
+      acceptedHypotheses: (hypotheses.data ?? [])
+        .filter((hypothesis) => hypothesis.consultation_id === row.id)
+        .map((hypothesis) => ({
+          pattern: hypothesis.pattern as string,
+          correspondence: hypothesis.correspondence as string,
+          status: hypothesis.status as string,
+        })),
+      validatedPlanModalities: (plans.data ?? [])
+        .filter((plan) => plan.consultation_id === row.id)
+        .flatMap((plan) =>
+          Object.entries((plan.modalities as Record<string, { enabled?: boolean }>) ?? {})
+            .filter(([, modality]) => modality?.enabled)
+            .map(([slug]) => slug),
+        ),
+    })),
+    omittedConsultations: Math.max(0, (totalConsultations ?? 0) - consultationIds.length),
+  };
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  scheduled: "agendada",
+  in_progress: "em atendimento",
+  awaiting_review: "aguardando revisão",
+  draft: "rascunho",
+  finalized: "finalizada",
+};
+
+const originLabel = (source: string) =>
+  source === "professional_voice" || source === "professional" ? "profissional" : "relato";
+
+function describeConsultation(consultation: PatientCase["consultations"][number]): string {
+  const lines: string[] = [];
+  const when = consultationWhen(consultation) ?? consultation.createdAt;
+  lines.push(`Consulta de ${when.slice(0, 10)} (${STATUS_LABEL[consultation.status] ?? consultation.status}):`);
+  if (consultation.chiefComplaint) lines.push(`  Queixa principal: ${complaintOnOneLine(consultation.chiefComplaint)}`);
+  if (consultation.summary) lines.push(`  Resumo da profissional: ${consultation.summary}`);
+  if (consultation.legacyBody) {
+    // Kept as the previous system wrote it and labelled as such: chart data to
+    // reason WITH, never a library source to cite.
+    const from = consultation.legacySource ? ` (${consultation.legacySource})` : "";
+    lines.push(`  Registro migrado do sistema anterior${from}, texto original:`);
+    lines.push(`  ${consultation.legacyBody.replace(/\s*\n+\s*/g, " ")}`);
+  }
+  for (const answer of consultation.answers) {
+    // A value the extraction itself flagged as ambiguous, contradictory or
+    // sensitive must not reach the model wearing the same clothes as a reviewed
+    // one — that is how a doubt becomes a premise.
+    const pending = answer.state === "attention" ? " [requer atenção — não revisado]" : "";
+    lines.push(`  - ${answer.blockKey}.${answer.fieldKey} [${originLabel(answer.source)}]${pending}: ${answer.value}`);
+  }
+  for (const hypothesis of consultation.acceptedHypotheses) {
+    const decided = hypothesis.status === "edited" ? "editada pela profissional" : "aceita pela profissional";
+    lines.push(`  Hipótese ${decided}: ${hypothesis.pattern} (correspondência ${hypothesis.correspondence})`);
+  }
+  if (consultation.validatedPlanModalities.length > 0) {
+    lines.push(`  Plano validado com modalidades: ${consultation.validatedPlanModalities.join(", ")}`);
+  }
+  return lines.join("\n");
+}
+
+/**
+ * The case as a system-prompt block. Newest consultations first; the oldest
+ * are dropped when the budget runs out — recency is what case review needs.
+ */
+export function describePatientCase(patientCase: PatientCase): string {
+  const header: string[] = [`Paciente: ${patientCase.fullName}`];
+  if (patientCase.birthDate) header.push(`Nascimento: ${patientCase.birthDate}`);
+  if (patientCase.alerts.length > 0) {
+    const alerts = patientCase.alerts
+      .map((alert) => alert.label)
+      .filter(Boolean)
+      .join("; ");
+    if (alerts) header.push(`ALERTAS CLÍNICOS: ${alerts}`);
+  }
+
+  const blocks: string[] = [];
+  let budget = CASE_CHAR_BUDGET;
+  for (const consultation of patientCase.consultations) {
+    const block = describeConsultation(consultation);
+    if (block.length > budget) break;
+    blocks.push(block);
+    budget -= block.length;
+  }
+  if (blocks.length === 0 && patientCase.consultations.length > 0) {
+    blocks.push(describeConsultation(patientCase.consultations[0]).slice(0, CASE_CHAR_BUDGET));
+  }
+
+  // The budget used to cut silently, and a model given five of eleven
+  // consultations reads them as the whole history — then answers "não há
+  // registro de..." about something that is simply outside the window.
+  const omitted = patientCase.omittedConsultations + Math.max(0, patientCase.consultations.length - blocks.length);
+  const truncationNotice =
+    omitted > 0
+      ? `\n(Existem mais ${omitted} consulta(s) anterior(es) NÃO incluídas neste recorte. Nunca conclua ausência de algo a partir deste bloco.)`
+      : "";
+
+  return [
+    header.join("\n"),
+    "",
+    blocks.length > 0 ? blocks.join("\n\n") : "(nenhuma consulta registrada além do cadastro)",
+    truncationNotice,
+  ].join("\n");
+}

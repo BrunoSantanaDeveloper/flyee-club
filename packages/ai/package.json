@@ -1,0 +1,20 @@
+{
+  "name": "@flyee/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Instruction-driven assistants behind a ChatProvider interface: Anthropic, Gemini, OpenAI and OpenRouter implementations with streaming and image/audio attachments.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./errors": "./src/errors.ts",
+    "./types": "./src/types.ts",
+    "./strict-schema": "./src/strict-schema.ts"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test src/providers/openai.test.ts src/errors.test.ts src/strict-schema.test.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
+    "@google/genai": "^1.9.0"
+  }
+}

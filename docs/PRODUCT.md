@@ -1,0 +1,322 @@
+# flyee.club — organização, diferenciais e próximos passos
+
+Sep 30, 2026 · @Dev
+
+> **Status:** PRD provisório, movido de `attachments/` em 2026-09-30. Este repositório é a **plataforma** do flyee.club. O **produto** (CLI `npx flyee`, core do harness e conteúdo dos módulos) é um projeto separado que consome a API e o manifesto definidos aqui. As decisões de 2026-09-30 valem sobre o texto original quando houver conflito. Plano de execução: [`docs/PLANO-IMPLEMENTACAO.md`](PLANO-IMPLEMENTACAO.md).
+
+## A ideia organizada
+
+O flyee.club é um clube com um kit de entrada de pagamento único e uma assinatura por cima: o integrante instala o seu harness na IA que já usa e recebe, continuamente, as ferramentas e as atualizações que mantêm tudo funcionando quando Claude, Codex ou as APIs mudam. A cada 30 dias sem atualizar, ele volta ao painel para revalidar o token, e é lá que vê o próximo degrau.
+
+**Tese em uma frase (proposta):** a IA muda toda semana; o flyee.club é o clube que mantém suas ferramentas funcionando e melhorando, na IA que você já usa, em português e inglês.
+
+**O que o integrante recebe**
+
+- **Harness flyee:** um `agent.md` que centraliza skills, workflows e rules e torna cada ferramenta agnóstica de IA (Claude Code, Codex, Gemini CLI, Cursor e o que vier).
+- **Catálogo inteiro, desde o kit:** frameworks, skills e workflows, cada um com página própria no painel. O kit de entrada não limita ferramentas nem atualização; limita acesso (1), aulas avançadas, voto no roadmap e encontros.
+- **Atualização como produto:** quando a IA muda, a ferramenta muda; a cópia de quem saiu envelhece. Atualizar exige um token válido, revalidado no painel a cada 30 dias sem uso.
+- **Aula de uso:** vídeo curto por ferramenta, em português e inglês desde o início; aulas avançadas só na assinatura.
+- **Receitas:** fluxos que encadeiam ferramentas até um resultado.
+- **Novidades:** o que mudou nas IAs e o que isso muda nas ferramentas.
+
+**O que ele não é:** curso com começo e fim, comunidade de networking, marketplace de terceiros, nem ferramenta que gasta crédito de IA do seu lado: o integrante usa o próprio plano ou API.
+
+**Sua vantagem de origem:** cada ferramenta nasceu em produção (MedChina, radar de conteúdo, pipeline de vídeo, o próprio harness). É o que separa o clube de quem monta ferramenta para vender ferramenta.
+
+## Decisões tomadas 2026-09-30
+
+Registradas ao transformar a base copiada do MedChina na plataforma do flyee.club. O detalhe técnico de cada uma está em [`docs/PLANO-IMPLEMENTACAO.md`](PLANO-IMPLEMENTACAO.md).
+
+**Fronteira entre plataforma e produto**
+
+| Peça deste documento | Onde nasce | Observação |
+| --- | --- | --- |
+| Painel flyee.club: login, pagamento em BRL e USD, vitrine, aulas, receitas, changelog, perfil, revalidação do token | Plataforma (este repositório) | Escopo atual |
+| Servidor de pacotes: valida token e plano, entrega a versão com checksum, registra instalação e uso | Plataforma (este repositório) | API `/api/cli/*`; contrato em `docs/CLI-CONTRACT.md`, escrito na fase 3 do plano |
+| Schema do manifesto `flyee.module.json` | Plataforma (este repositório) | Pacote `packages/catalog`, criado na fase 3; o produto o consome |
+| Métricas por segmento, lista de espera, newsletter, encontros, roadmap votado | Plataforma (este repositório) | Escopo atual |
+| Instalador `npx flyee`, core do harness, módulos e receitas como arquivos | Produto (projeto separado) | Fora deste repositório; consome a API e o manifesto |
+| Harness de desenvolvimento deste repositório (`.claude/`, hooks, skills) | Ferramenta interna da plataforma | Nunca distribuído; skills de terceiros ficam só aqui |
+
+**Decisões**
+
+| Tema | Decisão |
+| --- | --- |
+| Base | Este repositório não tem mais vínculo com o template flyee. O escopo npm `@flyee/*` continua, porque flyee é a marca. |
+| Banco | Projeto Supabase novo, com um conjunto enxuto de migrações escrito do zero só com o que é genérico. |
+| Pagamento | Asaas para BRL e Stripe para USD, escolhidos pela moeda de cada compra. |
+| Site público | Completo desde já, bilíngue e indexado: português em `/`, inglês em `/en`, com textos provisórios. |
+| Marca | Provisória: nome flyee.club, logo placeholder, paleta atual e fonte Urbanist. A TT Chocolates, licenciada para o MedChina, sai. |
+| "1 acesso" | Limite de dispositivos por degrau: kit 1, assinatura 3, Pro 5. |
+| Canal de atualização | O mesmo para todos na v1. A separação entre estável e latest fica preparada para depois de medir a conversão kit → assinatura em 60 dias. |
+| Segmentos | Produto próprio, freelancer ou agência, profissional que usa IA todo dia, dev, e "outro" para quem não se encaixa. "Outro" não entra na regra de foco. |
+| Console de perguntas ao banco | `/admin/insights` continua, com uma chave de IA paga pelo operador. Não gasta crédito do integrante. |
+| Vídeos das aulas | YouTube não listado para todas as aulas, inclusive as avançadas. A plataforma só entrega o id do vídeo avançado a quem tem direito; um link repassado continua assistível, e esse risco está aceito. |
+| Nota fiscal | Emitida direto no Asaas. A plataforma não tem lógica fiscal. |
+| Encontros | Por link externo (Zoom, Meet ou transmissão). O painel guarda o link e conta o clique em "entrar" como presença. |
+| Endereços em inglês | Traduzidos já na v1: `/en/pricing`, `/en/how-it-works`, `/en/catalog` e assim por diante. |
+| Termos de uso, privacidade e cookies | Considerados revisados. Entram como versão 1 nos dois idiomas, sem marca de provisório. |
+
+**Premissas adotadas no plano (confirme ou corrija)**
+
+- O kit concede acesso e atualização sem prazo. Quem assina sem ter comprado o kit e cancela perde a atualização; a tela de cancelamento oferece o kit para mantê-la.
+- O Pro é uma família de plano própria, não um complemento da assinatura.
+- Máquinas sem navegador entram pelo fluxo de código de dispositivo, com as mesmas regras de token: 30 dias sem update e revogação no cancelamento.
+- Eventos de uso ficam numa tabela do próprio Supabase e são lidos em `/admin/metricas`. PostHog não entra.
+- Uma conta corresponde a um integrante. Planos por assento ficam para o degrau 5.
+- Vendas em USD pela Stripe: se a nota de exportação for exigida, o operador a emite no Asaas; a plataforma não automatiza.
+- A assinatura anual em USD vale 10 vezes a mensal, como hipótese.
+- Só o site público usa endereços com idioma. O painel do integrante, o admin, o login e o checkout seguem o idioma do perfil, sem `/en`, porque não são indexados.
+
+**Ordem.** Este documento recomenda vender o kit antes de construir o painel. O plano respeita isso: a página de espera é o primeiro deploy e o checkout do kit vem antes do painel completo, então a pré-venda pode começar enquanto o resto da plataforma avança. Construir não é abrir: os planos de assinatura podem ficar ocultos e o card de upsell desligado até o portão destacado da fase 2 (ver "Etapas").
+
+## Mercado: onde está o vão
+
+O concorrente mais próximo tem nome: o Ratos OS vende um `AGENTS.md` com pastas e skills para Claude Code, Codex e Hermes por R$ 97, com um ano de acesso e sem renovação automática. O vão que sobra é exatamente o seu modelo: ninguém vende a atualização contínua como produto, e ninguém entrega em mais de um idioma.
+
+| Oferta | Onde | Preço | O que entrega | Nível |
+| --- | --- | --- | --- | --- |
+| [Ratos OS](https://ratosdeia.com.br/claudeos/) (Ratos de IA / DobraLabs) | BR | R$ 97 único (de R$ 297), 1 ano de acesso | `AGENTS.md` + pastas (clientes, processos, finanças, marca), instalador guiado de 20 min, 33 aulas (8h56), skills de tráfego, conteúdo e propostas; Claude Code, Codex e Hermes | Quem já usa IA todo dia, sem programar |
+| [Comunidade Ratos de IA](https://ratosdeia.com.br/comunidade/) | BR | R$ 597 único (de R$ 697), 1 ano, sem renovação | 4 cursos (82 aulas), WhatsApp VIP, calls com o fundador, fórum curado por agente, skills exclusivas; 350+ membros ativos | Dono de negócio, gestor, marketing, operações |
+| [Ratos de IA, skills avulsas](https://ratosdeia.com.br/) | BR | R$ 57 cada | 24 skills prontas para Claude Code; newsletter semanal grátis como topo de funil | Idem |
+| [Maestros da IA](https://comunidade.maestrosdaia.com/) (Arthur Endo, Lyria Zoccal) | BR | R$ 97/mês | 147 aulas, 329 recursos (100 skills, 56 apps, 12 agentes), encontros semanais | Iniciante a empresário |
+| [Claude Economy](https://claude-economy.vercel.app/) (Marcelo Anders) | BR | R$ 297 único (próximo lote R$ 497) | 12 módulos, 30 skills, 3 agentes, atualização vitalícia, grupo de WhatsApp | Empreendedor e operador |
+| [Automators Club](https://automatorsclub.com.br/) (Matheus Fonseca) | BR | R$ 197 único | 14+ módulos, templates, calls semanais | Iniciante a intermediário |
+| [Claude Code Club](https://skoolmakers.com/communities/category/ia/) (Duncan Rogoff) | Skool | US$ 9/mês | Construir ferramentas com Claude Code sem saber programar; 7.275 membros | Iniciante |
+| [AI Business Hub](https://www.skool.com/ai-leaders-1796/about) (Suleiman Najim) | Skool | US$ 49/mês (US$ 99 após 600 membros) | Curso de Claude, MCPs, skills, templates; 604 membros | Iniciante a avançado |
+| [Early AI-dopters](https://skoolmakers.com/communities/category/ia/) (Mark Kashef) | Skool | US$ 77/mês | Generalista de IA com Claude Code; 1.386 membros | Intermediário |
+| [AI Automations by Jack](https://skoolmakers.com/communities/category/ia/) (Jack Roberts) | Skool | US$ 77/mês | 110+ blueprints; 3.302 membros | Intermediário |
+| [Chase AI+](https://skoolmakers.com/communities/category/ia/) (Chase Hannegan) | Skool | US$ 97/mês | Masterclass de Claude Code, 100+ templates de agentes; 1.365 membros | Agência |
+| [RoboNuggets](https://skoolmakers.com/communities/category/ia/) (Jay E) | Skool | US$ 97/mês | 70+ cursos de IA agêntica; 1.180 membros | Técnico |
+
+**O que a tabela mostra**
+
+- **Ratos OS é o seu espelho mais próximo:** mesmo objeto (um arquivo de agente + skills), mesmo público amplo, mesma exigência de que o usuário pague a própria IA. A diferença é o modelo: eles vendem acesso por um ano; você vende atualização contínua. Sua página precisa dizer isso em uma linha.
+- **O preço de referência caiu:** R$ 97 único na entrada e R$ 597/ano de comunidade no Brasil; US$ 49 a 97/mês fora. Uma assinatura mensal no Brasil precisa parecer barata ao lado de "R$ 97 por um ano".
+- **Todos vendem volume:** "329 recursos", "110+ blueprints", "24 skills". Volume vira commodity; ritmo de atualização não, porque exige alguém operando.
+- **Ninguém é multi-idioma:** os brasileiros vendem só em português; os do Skool, só em inglês. Um catálogo bilíngue desde o dia 1 abre os dois mercados com o mesmo trabalho de engenharia.
+
+**Sobre a validação:** ver concorrentes prova que existe mercado, não que ele compra de você. A validação que conta é pagamento, e ela está na fase 1 das etapas.
+
+## Melhorias na ideia
+
+Cinco ajustes transformam "painel com ícones de ferramentas" em algo difícil de copiar. O mais importante é o primeiro: entrar amplo com uma promessa única e deixar os dados de uso escolherem o foco.
+
+1. **Entrar amplo, focar por medição.** Público definido por nível é vago como promessa de venda, mas serve como porta de entrada. A página vende uma promessa única e abre 3 ou 4 portas por perfil (quem opera produto próprio, freelancer ou agência, profissional que usa Claude ou Codex todo dia, dev); o cadastro registra perfil, IA usada e idioma, e o uso por ferramenta decide o foco.
+   - Os dois níveis viram duas profundidades da mesma ferramenta: **usar** (sem código) e **abrir o capô** (adaptar, estender, integrar).
+2. **Organizar o catálogo pelas etapas que você já domina.** Os ícones ficam, um por módulo; as sete trilhas são o filtro: Planejar, Construir, Publicar, Divulgar, Vender, Escalar, Manter. O integrante entra pela etapa em que está travado.
+3. **A ferramenta vai até a IA, não o integrante até o painel.** O painel continua como vitrine e manual. O uso acontece dentro do Claude Code, Codex, Cursor ou Gemini CLI, pelo seu harness: um `npx flyee` instala o agent.md com skills, workflows e rules, e o mesmo comando atualiza (detalhe na seção de arquitetura).
+4. **Receitas acima de ferramentas.** Ferramenta solta vira commodity; o resultado encadeado não. Ex.: radar, pauta, roteiro e vídeo; ou briefing, página, anúncio e e-mail.
+5. **Aula curta, colada na ferramenta.** Um vídeo por ferramenta e por profundidade, no lugar de curso longo, gravado uma vez em português e traduzido no pipeline de vídeo que você já tem. Menos produção para você, menos tempo até o primeiro resultado para ele.
+
+**Catálogo por etapa do ciclo do produto.** O gráfico original não veio na exportação deste documento. A tabela abaixo foi reconstruída com os módulos citados em "Arquitetura da entrega". O saas-starter aparece entre os primeiros módulos, embora o parágrafo seguinte diga que as etapas de engenharia ainda estão vazias; confirme se ele já está empacotado.
+
+| Etapa | Módulos iniciais |
+| --- | --- |
+| Planejar | vazia |
+| Construir | saas-starter |
+| Publicar | vazia |
+| Divulgar | radar de conteúdo, pauta e roteiro, roteiro HeyGen, takes com mockups de telas, pesquisa de conteúdo automática, copy de redes |
+| Vender | copy de LP e sites |
+| Escalar | vazia |
+| Manter | vazia |
+
+As ferramentas empacotadas até aqui servem marketing e venda; as etapas de engenharia, que são o seu diferencial, ainda estão vazias no catálogo.
+
+## O que você pode não estar considerando
+
+Suas decisões resolvem metade dos riscos da primeira versão (cópia, custo de IA, licença, nome). Sobram oito, e os dois primeiros são os que mais podem atrasar: como o npm vai controlar o acesso e como você vai medir o público para decidir o foco.
+
+| Ponto | Por que importa | Resposta proposta |
+| --- | --- | --- |
+| npm privado não é feito para consumidor | Pacote privado no npm exige [organização paga por usuário](https://docs.npmjs.com/upgrading-to-a-paid-organization-plan/) e conta npm de quem instala. Não serve para vender a centenas de integrantes. | Público no npm só o instalador (`npx flyee`); o conteúdo do plano vem do seu servidor com o token do integrante, versionado e revogável. Você mantém o controle de versões e não expõe o repositório. |
+| Medir o público exige instrumentação desde o dia 1 | "Deixar os dados decidirem" só funciona se houver dado. | Cadastro pede perfil, IA usada e idioma; cada ferramenta registra execução (sem conteúdo); o painel mostra compra, ativação e uso semanal por segmento. |
+| Suporte cresce com integrantes, não com ferramentas | Quebra frequente é o motivo da assinatura, mas também gera pergunta. Se cada quebra vira atendimento, a energia por entrega volta. | Aviso de versão dentro do harness ("sua versão 1.4, atual 1.6, o que mudou"); suporte só assíncrono e coletivo; FAQ gerada das perguntas. |
+| Quem não usa terminal | `npx` alcança quem roda Claude Code, Codex, Cursor ou Gemini CLI. Quem só usa o app do Claude ou do ChatGPT fica de fora; o Ratos OS tem o mesmo limite. | Aceitar o limite na v1 e medir a demanda; segunda porta depois: skills enviadas na conta do Claude e conector MCP para o app. |
+| Multi-idioma dobra o conteúdo, não o código | Ferramenta e harness são os mesmos; aula, página e changelog são dois. | Gravar em português e traduzir vídeo e texto no pipeline que você já tem; inglês só do que estiver estável. |
+| Segurança e confiança | O padrão de skills [não tem assinatura nem revisão obrigatória](https://anomity.ai/blog/agent-skills-open-standard-adoption-governance/), e já houve campanha de skills maliciosas. Um instalador que escreve no computador do integrante pede confiança. | Instalador com changelog, permissões declaradas e checksum; nada sai da máquina sem aviso. Vira diferencial. |
+| Gatilho contra cancelamento tem limite | Criar atrito para cancelar pode ser enquadrado como prática abusiva pelo CDC; mostrar a desvantagem de sair, não. | Gatilho honesto: contador de versões atrás, changelog do que ele perderia, preço de fundador que não volta, plano anual. Cancelar em um clique. |
+| Fiscal e jurídico | Cobrança recorrente em dois países, LGPD, termos de uso, nota fiscal. | Contador antes do primeiro pagamento; termos simples desde a pré-venda; plataforma de pagamento que cobre BRL e USD. |
+
+## Diferenciais
+
+Os diferenciais mais fortes já existem: o harness agnóstico e a atualização contínua. O que falta construir barato é a medição por segmento, que decide o foco; o que fica para depois é a porta para quem não usa terminal.
+
+1. **Nascido em produção.** Cada ferramenta mostra onde roda de verdade e o que já quebrou. Ninguém na amostra prova uso real.
+2. **Atualização como produto.** Ritmo curto, changelog visível, contador de versão dentro do harness; atualizar exige token revalidado a cada 30 dias, o que traz todo integrante de volta ao painel. O Ratos OS vende um ano de acesso e some; você vende presença contínua.
+3. **Catálogo pelo ciclo do produto.** Sete etapas, entrada pela dor do momento.
+4. **Revisado e seguro.** Versão, permissões declaradas, checksum, nada sai da máquina sem aviso.
+5. **Bilíngue desde o dia 1.** Mesmo catálogo em português e inglês; nenhum concorrente da amostra faz isso.
+6. **Harness agnóstico via npm.** Um `agent.md` que roda em Claude Code, Codex, Gemini CLI e Cursor; um comando instala e atualiza. Já está construído.
+7. **Receitas.** Fluxos completos até o resultado, não peças soltas.
+8. **Duas profundidades.** Usar sem código ou abrir o capô.
+9. **Painel de uso e perfil.** Mede quem compra e quem usa por segmento; decide o foco e o que parar de manter.
+10. **Roadmap votado.** Integrantes votam na próxima ferramenta.
+
+**Diferenciais por força e custo de construir.** O gráfico original não veio na exportação. A divisão abaixo foi reconstruída a partir do texto desta seção.
+
+| Quadrante | Diferenciais |
+| --- | --- |
+| Fazer já: custam pouco porque saem do que já existe | 1 nascido em produção, 2 atualização como produto, 3 catálogo pelo ciclo do produto, 5 bilíngue desde o dia 1, 6 harness agnóstico via npm, 9 painel de uso e perfil |
+| Depois | 4 revisado e seguro, 7 receitas, 8 duas profundidades, 10 roadmap votado |
+
+A plataforma dá suporte aos dez desde o início, e checksum e permissões declaradas (item 4) entram já na API de entrega. A divisão acima é de prioridade de produto.
+
+Comece pelo quadrante "Fazer já": seis diferenciais que custam pouco porque saem do que você já faz. O painel de uso é a aposta que decide o foco.
+
+## Arquitetura da entrega
+
+Um cadastro, um comando: o painel emite o token do integrante, `npx flyee` instala e atualiza o harness na máquina dele, e o harness carrega skills, workflows e rules em qualquer IA que leia um `agent.md`. Nada do seu lado gasta crédito de IA.
+
+- **Painel flyee.club (web).** Login, pagamento em BRL e USD, vitrine com os ícones, aulas, receitas, changelog e perfil do integrante (segmento, IA, idioma). Emite o token, revalida a cada 30 dias sem update e o revoga no cancelamento; a tela de revalidação mostra o próximo degrau.
+- **`npx flyee` (pacote público no npm).** Só o instalador é público: pede o token, baixa o pacote do plano do seu servidor, instala o harness e roda `npx flyee update` depois. O controle de versão fica com você, sem repositório exposto e sem exigir conta npm do integrante.
+- **Servidor de pacotes.** Um pacote versionado por plano e idioma, changelog por versão, checksum e registro de instalação e uso por ferramenta. Valida o token a cada `update`: passados 30 dias do último contato, responde "revalide no painel" com o link. As ferramentas já instaladas continuam funcionando; só a atualização espera, e o harness avisa a partir do dia 25.
+- **Harness flyee (`agent.md`).** O que você já construiu: um ponto de entrada que centraliza skills, workflows e rules e torna tudo agnóstico. É o que faz "qualquer IA" ser verdade sem um conector por IA.
+- **Skills soltas.** Arquivo `SKILL.md` avulso, sem harness e sem atualização. Camada de amostra grátis e porta de entrada.
+
+**O limite a aceitar na v1:** `npx` alcança quem usa terminal (Claude Code, Codex, Gemini CLI, Cursor). Quem só usa o app do Claude ou do ChatGPT entra depois, por skills enviadas na conta ou por um conector MCP, quando a medição mostrar que vale.
+
+**Core e módulos:** o harness que existe hoje vira duas coisas. O *core* `flyee` é só o contrato: `agent.md` enxuto, rules, registro de módulos e os comandos `add` e `update`. Cada ferramenta é um *módulo* versionado no seu servidor, instalado sob demanda com `npx flyee add <módulo>`, e é o que aparece como ícone no painel. O starter kit de SaaS é o primeiro módulo da trilha Construir, não o core: quem só quer a ferramenta de vídeo não recebe um esqueleto de SaaS.
+
+| Pergunta | Resposta |
+| --- | --- |
+| Tudo no mesmo harness? | Não. Um `agent.md` que carrega tudo incha o contexto e degrada a IA; uma quebra no módulo de vídeo não pode exigir release do core; e a métrica por segmento precisa do módulo como unidade (quem instala e usa o quê). |
+| Complementos que o integrante adiciona? | Sim. Módulo = pasta com `flyee.module.json` (nome, versão, trilha, tipo, IAs compatíveis, credenciais externas exigidas como HeyGen ou Apify, permissões, aula por idioma, changelog) + skills, workflows e scripts. O core adiciona uma referência ao `agent.md`; nada é concatenado. |
+| Pacotes npm separados? | Não para o integrante: um único instalador público, e os módulos vêm do seu servidor pelo token, com o plano decidindo quais. Internamente, um monorepo com um pacote por módulo dá versionamento independente. |
+| E as receitas? | Um conjunto nomeado de módulos mais um workflow por cima: `npx flyee add receita:video-semanal` instala radar, pauta, roteiro HeyGen e takes de uma vez. |
+| E as trilhas? | Viram filtro e ordem do catálogo, não container. O painel volta a ser a vitrine de ícones que você imaginou: um ícone por módulo, filtrado por etapa. |
+
+Primeiros módulos, pelo que você já tem: saas-starter (Construir); radar de conteúdo, pauta e roteiro, roteiro HeyGen, takes com mockups de telas, pesquisa de conteúdo automática, copy de redes (Divulgar); copy de LP e sites (Vender).
+
+**Arquitetura da entrega.** O diagrama original não veio na exportação. Versão em texto, com a fronteira entre plataforma e produto:
+
+```text
+Painel flyee.club [plataforma]
+  emite o token, revalida após 30 dias sem update, revoga no cancelamento
+      │
+      ├─► npx flyee [produto] ──token──► servidor de pacotes [plataforma]
+      │                                  confere token, plano e versão;
+      │                                  devolve pacote, checksum e manifesto
+      ├─► skills soltas [amostra grátis, sem token e sem atualização]
+      └─► aulas, receitas e changelog [painel]
+
+Harness flyee na máquina do integrante [produto]
+  ──► Claude Code · Codex · Gemini CLI · Cursor (plano ou API do próprio integrante)
+```
+
+O token liga tudo: o painel emite, o instalador usa, o servidor confere. Trinta dias sem update, o token vence e o integrante volta ao painel para revalidar; cancelou, o update para e a versão envelhece.
+
+## Modelo de negócio
+
+A escada tem três degraus claros: um produto de entrada barato para medir quem compra, a assinatura como núcleo, e upsells para quem já usa. Os preços são hipóteses ancoradas no Ratos OS (R$ 97 único, 1 ano) e na comunidade Ratos (R$ 597/ano); como o clube não substitui sua renda no curto prazo, o objetivo dos primeiros seis meses é dado, não receita.
+
+| Degrau | O que é | Para quem | Preço de partida (hipótese) | O que prova |
+| --- | --- | --- | --- | --- |
+| 0 · Amostra | Skills soltas + newsletter bilíngue | Topo de funil | Grátis | Interesse por segmento e idioma |
+| 1 · Kit de entrada (low-ticket) | Harness + catálogo inteiro com atualização contínua + aula de uso por ferramenta; 1 acesso; token revalidado no painel a cada 30 dias sem update | Quem quer testar | R$ 97 único / US$ 29 | Quem paga, por qual porta entra e quem volta para revalidar |
+| 2 · Assinatura flyee | Kit + aulas avançadas, receitas, encontros, voto no roadmap, acesso em mais de uma máquina | Quem usa toda semana e quer ir fundo | R$ 67/mês ou R$ 597/ano; US$ 19/mês; fundador com preço travado | Uso semanal por segmento, conversão kit → assinatura |
+| 3 · Pro | Assinatura + licença comercial + camada "abrir o capô" + ferramentas de cliente | Freelancer e agência | R$ 197/mês / US$ 49 | Quanto do público é profissional de serviço |
+| 4 · Mentoria em grupo | Turma trimestral, ao vivo, sobre operar produto com IA | Assinantes engajados | R$ 997 a 1.997 por turma | Demanda por acesso a você |
+| 5 · Advisory e Time | Meio dia por semana ([plano de agosto](https://claude.ai/code/artifact/a704c98b-1442-45e3-9e3f-dd4ae0f5166c)) e plano por assento | Empresas | Preço público, sob consulta | Teto da escada |
+
+Os preços desta tabela são dados configuráveis, guardados em `plans` e editados em `/admin/billing`, nunca constantes no código. Os valores são hipóteses de partida.
+
+**Upsell é gatilho de uso, não de tempo:** a revalidação de 30 dias é o momento em que todo integrante, até o do kit, passa pelo painel; é ali que a oferta certa aparece. Ofereça a assinatura a quem usa três ou mais trilhas, o Pro a quem instalou em projeto de cliente, a mentoria a quem assiste às aulas avançadas, o advisory a quem pergunta sobre a própria operação.
+
+**Consequência do kit sem limite de ferramentas:** a camada mais forte (ferramenta + atualização) passa a ser vendida uma vez, por R$ 97. A assinatura precisa valer pela camada de profundidade (aulas avançadas, receitas, encontros, voto), que é a que consome sua energia. Duas formas de proteger: canal estável para o kit (atualização mensal) e canal latest para assinantes (semanal, com beta); ou aceitar e medir a conversão kit → assinatura em 60 dias antes de mexer.
+
+**Retenção honesta:** contador de versões atrás dentro do harness, changelog do que a versão dele já perdeu, preço de fundador que não volta e plano anual. Cancelamento em um clique; o gatilho é a perda visível, não o atrito.
+
+**Conta de referência:** 300 kits de entrada a R$ 97 são R$ 29.100 uma vez; 100 assinantes a R$ 67 são R$ 6.700/mês. Taxas e impostos saem daí.
+
+## Métricas e trackers
+
+O foco não tem data: ele é decidido quando os dados cumprirem uma regra combinada antes. Proposta de regra: um segmento lidera em compra do kit, ativação e uso semanal por 4 semanas seguidas, com pelo menos 30 pessoas em cada segmento comparado. Até lá, o catálogo continua amplo.
+
+**O que registrar (eventos, nunca o conteúdo do uso)**
+
+| Momento | Evento | Dimensões | Serve para |
+| --- | --- | --- | --- |
+| Cadastro | conta criada | segmento, IA usada, idioma, origem (UTM), degrau comprado | Quem entra e por onde |
+| Instalação | `npx flyee` rodou | versão, IA detectada, sistema | Ativação técnica |
+| Ativação | primeira ferramenta executada | ferramenta, trilha | Quem passa do install ao uso |
+| Uso | ferramenta executada | ferramenta, trilha, versão instalada | Uso semanal por segmento; o que ninguém usa |
+| Atualização | `update` rodou, ou falhou por token vencido | versão de → para | Ritmo de atualização; quem ficou para trás |
+| Revalidação | token revalidado no painel | dias desde o último update, oferta exibida, clique | Volta ao painel; eficácia da isca |
+| Aula | aula iniciada e concluída | ferramenta, idioma, nível | Onde a aula avançada tem demanda |
+| Upsell | oferta vista, clicada, comprada | degrau de origem → destino | Conversão kit → assinatura → Pro |
+| Saída | cancelamento e motivo | degrau, tempo de casa, uso nos 30 dias anteriores | O que precede o cancelamento |
+
+**As cinco métricas que decidem o foco (uma linha por segmento, toda semana)**
+
+1. Compradores do kit e conversão da página, por porta de entrada.
+2. Ativação em 7 dias: instalou e executou ao menos uma ferramenta.
+3. Uso semanal: executou em 3 das últimas 4 semanas.
+4. Conversão kit → assinatura em 60 dias.
+5. Receita por integrante em 90 dias: kit + assinatura + upsell.
+
+**Onde isso vive:** a v1 não precisa de painel interno. Uma tabela de eventos no seu banco (você já usa Supabase) ou um PostHog auto-hospedado, e uma consulta semanal por segmento numa planilha, bastam até a fase 2. O que não pode faltar é o evento registrado desde o primeiro integrante, com o segmento e o idioma gravados no cadastro.
+
+## Etapas
+
+Venda o kit de entrada antes de construir o painel e deixe o uso por segmento escolher o foco. Cada fase termina num portão; as metas são propostas para você ajustar.
+
+**Roadmap em 5 fases e 4 portões.** O diagrama original não veio na exportação. A tabela foi reconstruída a partir do texto desta seção e precisa da sua confirmação.
+
+| Fase | O que acontece | Portão para seguir |
+| --- | --- | --- |
+| 0 · Preparar (duas semanas) | segmentos e perguntas do cadastro, eventos, inventário, `npx flyee`, página de espera, primeiro conteúdo | página de espera no ar e eventos definidos |
+| 1 · Vender o kit | validação por pagamento | 50 compradores; abaixo disso, estender a fase 1 |
+| 2 · Medir | eventos registrados e lidos por segmento | **portão destacado**: com a leitura por segmento, abrir painel, assinatura e upsell |
+| 3 · Assinatura e upsell | assinatura, aulas avançadas, receitas, encontros, voto | regra de foco cumprida (seção de métricas) |
+| 4 · Foco | catálogo e conteúdo concentrados no segmento líder | — |
+
+O portão destacado é o que libera a assinatura: sem eventos registrados e lidos por segmento, não abra painel nem upsell. O foco em si não tem data; ele dispara pela regra da seção de métricas. Abaixo de 50 compradores, estenda a fase 1; se nenhum segmento se destacar, reveja as portas de entrada, não o produto.
+
+**Próximas duas semanas (fase 0)**
+
+- [ ] Definir os 3 ou 4 segmentos de entrada e as perguntas do cadastro (perfil, IA usada, idioma)
+- [ ] Definir os eventos da seção de métricas e onde ficam registrados
+- [ ] Inventariar as ferramentas por etapa e listar o que fica fora do kit (aulas avançadas, voto, encontros)
+- [ ] Empacotar o harness como `npx flyee`: instalador público + pacote no seu servidor com token de 30 dias
+- [ ] Subir página de espera bilíngue com lista de e-mail
+- [ ] Publicar o primeiro conteúdo (autópsia de produção) apontando para a lista
+
+## Decisões em aberto
+
+Das seis decisões originais, três foram tomadas em 2026-09-30 e estão marcadas. As levantadas no plano da plataforma foram quase todas decididas no mesmo dia.
+
+- [x] **Quais segmentos entram na medição.** Decidido: produto próprio, freelancer ou agência, profissional que usa IA todo dia, dev, e "outro" fora da regra de foco.
+- [ ] **A regra que dispara o foco.** Aceita a proposta (um segmento lidera em compra, ativação e uso semanal por 4 semanas, com 30 ou mais pessoas por segmento) ou prefere outra? O painel de métricas usa a proposta como indicador até você decidir.
+- [x] **O que "1 acesso" significa no kit.** Decidido: um dispositivo no kit, três na assinatura, cinco no Pro.
+- [x] **Canal de atualização do kit.** Decidido: o mesmo canal para todos na v1.
+- [ ] **O que fica aberto.** Quais skills viram amostra grátis e que parte do harness é pública.
+- [ ] **Ordem dos upsells.** Pro (licença comercial) primeiro ou mentoria em grupo primeiro?
+
+**Levantadas no plano da plataforma**
+
+- [x] **Vídeo das aulas avançadas.** Decidido: YouTube não listado para todas as aulas.
+- [x] **Nota fiscal.** Decidido: emitida direto no Asaas.
+- [x] **Encontros.** Decidido: link externo.
+- [x] **Endereços em inglês.** Decidido: traduzidos já na v1.
+- [x] **Revisão jurídica.** Decidido: os termos são considerados revisados.
+- [ ] **Preço anual em USD.** Este documento só traz US$ 19 por mês. A hipótese do plano é 10 vezes a mensal.
+- [ ] **Trial da assinatura.** Nenhum na v1, ou dias de teste pelo provedor mais tarde?
+
+**Do lado do produto (fora deste repositório)**
+
+- [ ] **Licenças do saas-starter.** Um módulo derivado desta base não pode levar a chave do MUI X Premium, que é licenciado por desenvolvedor; cada integrante precisaria da própria licença. O código do template licenciado (a vitrine `/ui` e os ícones Nexture) e as fontes comerciais precisam de checagem de licença antes de qualquer redistribuição.
+- [ ] **Arquivo de entrada do harness.** Este documento fala em `agent.md`. O nome mais difundido é `AGENTS.md`, e cada IA lê o seu próprio arquivo, como o `CLAUDE.md` do Claude Code. O core vai precisar gerar adaptadores por IA, como este repositório já faz em `scripts/sync-agent-harness.mjs`.
+
+## Fontes
+
+- [Ratos OS](https://ratosdeia.com.br/claudeos/), [Comunidade Ratos de IA](https://ratosdeia.com.br/comunidade/) e [Ratos de IA](https://ratosdeia.com.br/)
+- [Skoolmakers: comunidades de IA no Skool](https://skoolmakers.com/communities/category/ia/)
+- [Comunidade Maestros da IA](https://comunidade.maestrosdaia.com/) e [Maestros da IA, implementação](https://implementacao.maestrosdaia.com/)
+- [Claude Economy](https://claude-economy.vercel.app/)
+- [Automators Club](https://automatorsclub.com.br/)
+- [AI Business Hub](https://www.skool.com/ai-leaders-1796/about)
+- [Agent Skills: padrão aberto, adoção e governança](https://anomity.ai/blog/agent-skills-open-standard-adoption-governance/)
+- [ChatGPT e MCP: planos e limites](https://coworker.ai/blog/chatgpt-mcp)
+- [npm: plano pago de organização](https://docs.npmjs.com/upgrading-to-a-paid-organization-plan/)
+- [Claude Code: hospedar e manter marketplace](https://code.claude.com/docs/en/plugins/host-marketplace)

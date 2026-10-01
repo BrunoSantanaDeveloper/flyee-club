@@ -1,0 +1,303 @@
+{
+  "_readme": "Machine-readable catalog of the marketing component library (the Lovable design-system.json idea). The PreToolUse marketing-guard injects a digest of this file into every write/edit under app/(marketing)/** or components/marketing/**, so the full expressive range is in context on every generation — not just the archetypes the model happens to remember. Keep entries in sync when a component's props change; guard lines render as `Name(props) — use`.",
+  "contract": [
+    "Every content block sits in <Section>/<Container>/<SectionHeader> — spacing/width come from marketing tokens, never per-page values",
+    "Tokens only: hsl(var(--token)) / token Tailwind classes; must look right in 4 color themes × light/dark",
+    "Headings: font-display text-display-{2xl,xl,lg,md} (fluid clamp scale, no breakpoint font jumps)",
+    "Copy through the marketing i18n namespace in ALL 6 locales (de,en,es,fr,pt-BR,zh-CN)",
+    "Icons only via @/icons/nexture/ni-* alias; meaningful concept icons, never decoration",
+    "Exactly one <h1> per page (Hero, or SectionHeader/PricingSection as/headingAs=\"h1\")",
+    "New public routes: PUBLIC_PREFIXES (src/middleware.ts) + src/app/sitemap.ts + generateMetadata",
+    "Structured data via <JsonLd> only; Organization/FAQPage/Product already emitted by layout/Faq/PricingSection",
+    "Motion via <Reveal> or useGSAP in client components; transforms + autoAlpha; reduced-motion safe",
+    "Layer scale: compositions are relative isolate with z-0 (back) / z-10 (frame) / z-20 (front); z-30 is reserved for site chrome",
+    "Ambient motion is seasoning: max 4 <Float> + 2 <Parallax> per page, always reduced-motion safe; one orbiting decor at most"
+  ],
+  "tones": {
+    "source": "tone.ts — TONE map + toneAt(index) rotation",
+    "values": ["primary", "secondary", "accent-1", "accent-2", "accent-3", "accent-4"],
+    "rule": "primary is reserved for CTAs and the page's one bold moment; categorical elements (plan tiers, feature families, chart series, icon chips) take accent hues with a CONSISTENT family→hue mapping across the whole site. A 100%-primary page reads monochrome and fails the premium bar."
+  },
+  "components": [
+    {
+      "name": "AnamnesisCard",
+      "file": "anamnesis-card.tsx",
+      "role": "evidence",
+      "props": "title, subtitle?, fields: {label, value?, state: clear|attention|empty, stateLabel}[], source?: {label, quote}, className",
+      "use": "MedChina signature motif (docs/DESIGN.md): structured-anamnesis surface with per-field review states (jade=clear, terracotta=attention, neutral=empty) and optional provenance footnote; the hero frame media and the anamnesis/traceability evidence — fictitious data only (Helena Martins)"
+    },
+    {
+      "name": "PhoneFrame",
+      "file": "phone-frame.tsx",
+      "role": "evidence",
+      "props": "children (screen content), className · RecordingMock{patient, statusLabel, timer, pauseLabel, voiceLabel, finishLabel} · AgendaMock{heading, items: {time, name, note}[]} · StatusMock{title, subtitle, steps: {label, note, state: done|current}[]}",
+      "use": "token phone chrome for the companion-app story (real screenshots when they exist); RecordingMock renders the Modo Consulta screen (recording state + timer + big actions) with translated labels"
+    },
+    {
+      "name": "Section",
+      "file": "section.tsx",
+      "role": "layout",
+      "props": "spacing: default|compact, background: default|paper|primary-soft|contrast|deep, decor: none|glow|grid|gradient-edge|dots|mesh|orbit, bleed, id",
+      "use": "vertical rhythm unit wrapping every block; vary background/decor at least twice along a page (premium bar #3); orbit is the one slowly-alive ambient — max one per page; deep = the blueprint dark band (--primary-dark + text-text-contrast), never pair with light decors"
+    },
+    {
+      "name": "ProductComposition",
+      "file": "product-composition.tsx",
+      "role": "evidence",
+      "props": "frame (ProductFrame/screenshot), satellites: {children, position: top-left|top-right|right|bottom-right|bottom-left|left, depth: front|back, rotate: -6..6, float, floatDelay, parallax, hideBelow}[] (2–4)",
+      "use": "LAYERED hero media — central frame + floating chips overlapping its edges (the reference-site look); collapses to a chip row below md; Hero's timeline choreographs frame then satellites (premium bar #9)"
+    },
+    {
+      "name": "SatelliteChips",
+      "file": "satellite-chips.tsx",
+      "role": "evidence",
+      "props": "KpiChip{label,value,delta?,tone} · TrendChip{label,data?,tone} · AvatarRowChip{names,label} · ReadoutChip{text,tone}",
+      "use": "ready-made satellites for ProductComposition; REAL localized content only — a satellite that lies is worse than none"
+    },
+    {
+      "name": "ProductShot",
+      "file": "product-shot.tsx",
+      "role": "evidence",
+      "props": "name (basename under /images/marketing), alt (translated), sizes, priority (above the fold only), width?, height?",
+      "use": "REAL product screenshot pair (light + -dark) captured by npm run shots:marketing; use inside ProductFrame/Breakout media — real imagery beats any placeholder (premium bar #12)"
+    },
+    {
+      "name": "Band",
+      "file": "band.tsx",
+      "role": "layout",
+      "props": "angle: -2..2, background: contrast|primary-soft|paper, spacing, decor: none|grid|dots, id",
+      "use": "full-bleed ANGLED contrast strip — the diagonal-band breakout; background skews, content stays level; use INSTEAD of <Section> for that block (premium bar #10)"
+    },
+    {
+      "name": "Breakout",
+      "file": "breakout.tsx",
+      "role": "layout",
+      "props": "side: right|left, media, children (copy column)",
+      "use": "media escaping the container to the viewport edge; use inside <Section bleed className=\"overflow-x-clip\">; copy column stays aligned with the site container (premium bar #10)"
+    },
+    {
+      "name": "Float",
+      "file": "float.tsx",
+      "role": "motion",
+      "props": "amplitude?, duration?, delay?, rotate?, className",
+      "use": "gentle infinite oscillation for satellites/decor; reduced-motion static; budget ≤ 4 per page"
+    },
+    {
+      "name": "Parallax",
+      "file": "parallax.tsx",
+      "role": "motion",
+      "props": "speed (yPercent, capped 12), className",
+      "use": "scroll-scrubbed drift for layered media; desktop-only + reduced-motion safe; budget ≤ 2 per page"
+    },
+    {
+      "name": "CountUp",
+      "file": "count-up.tsx",
+      "role": "motion",
+      "props": "value (pre-formatted string), duration?, className",
+      "use": "numbers count up on scroll entry; SSR renders the final string (SEO/no-JS/reduced-motion correct); StatBand uses it internally"
+    },
+    {
+      "name": "InView",
+      "file": "in-view.tsx",
+      "role": "motion",
+      "props": "threshold?, className",
+      "use": "one-shot data-inview attribute on viewport entry — the CSS hook for server-rendered draw-ins (DataVizPlaceholder uses it internally)"
+    },
+    {
+      "name": "Container",
+      "file": "container.tsx",
+      "role": "layout",
+      "props": "className",
+      "use": "token width clamp; Section renders it — direct use only with Section bleed"
+    },
+    {
+      "name": "SectionHeader",
+      "file": "section-header.tsx",
+      "role": "layout",
+      "props": "eyebrow, title, subtitle, align: start|center, as: h1|h2",
+      "use": "standard section heading; as=\"h1\" on the first header of hero-less pages"
+    },
+    {
+      "name": "Hero",
+      "file": "hero.tsx",
+      "funnel": "attention + value proposition",
+      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle, primaryCta, secondaryCta{label, href, icon?}, note?, highlights?: string[] (reassurance chips row, split only)",
+      "use": "owns the page <h1> AND the page's one orchestrated motion moment (built-in load timeline: copy staggers, media rises); split + <ProductFrame glow> is the committed direction for product-heavy pages; media is required in practice (premium bar #1)"
+    },
+    {
+      "name": "ProductFrame",
+      "file": "product-frame.tsx",
+      "role": "evidence",
+      "props": "glow, children (real screenshot via next/image)",
+      "use": "browser chrome for REAL product screenshots; token wireframe placeholder without children; glow = primary halo, the expensive-product hero treatment"
+    },
+    {
+      "name": "DataVizPlaceholder",
+      "file": "data-viz-placeholder.tsx",
+      "role": "evidence",
+      "props": "label",
+      "use": "animated token-driven chart standing in for the screenshot on DATA products; CSS draw-in, reduced-motion safe"
+    },
+    {
+      "name": "FeatureRows",
+      "file": "feature-row.tsx",
+      "funnel": "desire (depth)",
+      "props": "items: {eyebrow?, title, body, bullets?, media, tone}, decor, id",
+      "use": "alternating text↔evidence zig-zag for the 2–4 flagship features; use INSTEAD of a second card grid; decor=\"grid\" makes it the page's technical section"
+    },
+    {
+      "name": "BentoGrid",
+      "file": "bento-grid.tsx",
+      "funnel": "desire (secondary)",
+      "props": "items: {title, body, visual?, featured?, tone} — 4–6 cells",
+      "use": "asymmetric grid; featured cells span 2 columns and carry a visual; breaks equal-card monotony"
+    },
+    {
+      "name": "StatBand",
+      "file": "stat-band.tsx",
+      "funnel": "trust (proof)",
+      "props": "stats: {value (pre-formatted), label, tone} — 3–4 stats",
+      "use": "contrast+grid band of OVERSIZED numbers (display-2xl, mono index, tone gauge bar) that COUNT UP on entry; doubles as a background break; invented stats are worse than none"
+    },
+    {
+      "name": "ProcessSteps",
+      "file": "process-steps.tsx",
+      "funnel": "desire (how it works)",
+      "props": "steps: {icon?, kicker?, title, body, deliverableLabel?, deliverableValue?, tone}, variant: icon|mono",
+      "use": "scannable sequence: ghosted ordinal + meaningful themed icon + optional deliverable, one hue per step; variant=\"mono\" swaps to a mono 0N · kicker label (instrument treatment)"
+    },
+    {
+      "name": "FeatureGrid",
+      "file": "feature-grid.tsx",
+      "funnel": "desire",
+      "props": "features: {icon, title, description, tone}",
+      "use": "benefit-led card grid, meaningful icon per family hue; never the only archetype on a page (premium bar #2)"
+    },
+    {
+      "name": "Testimonials",
+      "file": "testimonials.tsx",
+      "funnel": "trust",
+      "props": "items: {quote, name, role, tone?}",
+      "use": "quotes must carry a concrete outcome (numbers, before/after); initials avatars rotate harmonic hues, no stock photos"
+    },
+    {
+      "name": "LogoCloud",
+      "file": "logo-cloud.tsx",
+      "funnel": "trust",
+      "props": "label, items: {name, logo?}",
+      "use": "client strip; muted wordmarks until real token-tinted SVG logos exist"
+    },
+    {
+      "name": "PricingSection",
+      "file": "pricing-section.tsx",
+      "funnel": "action",
+      "props": "plans (from getDisplayPlans()), ctaLabel, ctaHref, headingAs: h1|h2, decor, id, tiers?: string[] (automation ladder above the grid), footnote? (differentiation line under it)",
+      "use": "real plans, one highlighted anchor, tone per tier; emits Product JsonLd; CTA repeats the page's primary action verbatim; decor=\"glow\" when it leads the page; 1–2 plans auto-center instead of stranding in a 3-up grid"
+    },
+    {
+      "name": "Faq",
+      "file": "faq.tsx",
+      "funnel": "objection handling",
+      "props": "eyebrow?, title, subtitle?, items: {question, answer}, id?, layout: stack|split (sticky intro + list), link?: {label, href}",
+      "use": "REAL purchase objections (price, lock-in, security, migration) answered plainly; emits FAQPage JsonLd"
+    },
+    {
+      "name": "Cta",
+      "file": "cta.tsx",
+      "funnel": "recovery",
+      "props": "title, subtitle, cta, secondaryCta? (deep only), points?: string[] (deep only), kicker?, decor: none|orbit|mesh|dots, variant: panel|deep",
+      "use": "last conversion opportunity as a bordered console panel with primary glow + optional mono kicker; repeats the primary CTA verbatim; decor=\"orbit\" is the classic closer"
+    },
+    {
+      "name": "Reveal",
+      "file": "reveal.tsx",
+      "role": "motion",
+      "props": "stagger, delay, className",
+      "use": "the ONLY sanctioned scroll animation (transforms + autoAlpha, plays once, reduced-motion static); do NOT wrap every section uniformly — one orchestrated GSAP moment per page (premium bar #5)"
+    },
+    {
+      "name": "JsonLd",
+      "file": "json-ld.tsx",
+      "role": "seo",
+      "props": "data (schema.org object)",
+      "use": "the only way to emit structured data; never hand-write an ld+json <script>"
+    },
+    {
+      "name": "Prose",
+      "file": "prose.tsx",
+      "role": "layout",
+      "props": "className, children",
+      "use": "long-form reading rhythm (legal pages, articles) without styling each element by hand"
+    },
+    {
+      "name": "ConsultationMock",
+      "file": "consultation-mock.tsx",
+      "role": "evidence",
+      "props": "labels: {brand, search, kicker, title, reviewChip, tabs[], fields (AnamnesisField[]), changesKicker, changesTitle, changes[], changesCta}, ariaLabel, className",
+      "use": "token mock of the MedChina web record panel (blueprint hero frame): topbar + sidebar + field cards in the field-state hues + dark changes panel; role=img, fictitious data only"
+    },
+    {
+      "name": "NumberStrip",
+      "file": "number-strip.tsx",
+      "role": "trust",
+      "props": "items: {title, body}[] (3-4)",
+      "use": "compact contrast band of numbered reassurance items under camel display ordinals (blueprint trust strip); sits right under the hero"
+    },
+    {
+      "name": "WorkflowDemo",
+      "file": "workflow-demo.tsx",
+      "role": "desire (how it works)",
+      "props": "tabsLabel, conversation/mapping/analysis/plan: WorkflowStepCopy & step-specific evidence strings",
+      "use": "interactive 4-tab consultation-flow demo (Conversa→Anamnese→Análise→Plano): the same fictitious information travelling through the product; client only for tab state, arrow-key accessible"
+    },
+    {
+      "name": "Comparison",
+      "file": "comparison.tsx",
+      "role": "desire",
+      "props": "before/after: {label, title, items[]}",
+      "use": "before/with-product cards joined by a bridge arrow — muted paper card vs deep teal card with camel checks; no blame language"
+    },
+    {
+      "name": "RuledGrid",
+      "file": "ruled-grid.tsx",
+      "role": "desire",
+      "props": "items: {icon?, title, body, tone?, link?: {label, href}}[], columns: 2|3, variant: light|deep|cards",
+      "use": "hairline-ruled cell grid (benefits 3-col light, security 2-col deep) or separated cards (reasoning trio); meaningful concept icons in the family hue"
+    },
+    {
+      "name": "IndexGrid",
+      "file": "index-grid.tsx",
+      "role": "desire",
+      "props": "items: string[], accentEvery?: number",
+      "use": "indexed hairline grid of clinical categories (MTC specialization map) with periodic deep accent cells; camel ordinals"
+    },
+    {
+      "name": "AnamnesisDemo",
+      "file": "anamnesis-demo.tsx",
+      "role": "evidence",
+      "props": "quote: {kicker, text, cite}, connectorLabel, prepared: {kicker, title, countChip, rows: {label, value, state, stateLabel}[], investigation: {title, body}}",
+      "use": "quote → supervised-organization connector → prepared-fields card with the three field states + investigation footnote (absence stays blank); fictitious data only"
+    },
+    {
+      "name": "TraceabilityDemo",
+      "file": "traceability-demo.tsx",
+      "role": "evidence",
+      "props": "kicker, chip, field, value, origin: {kicker, quote, timecode}, actions: {listen, edit, reject, validated}, ariaLabel · SourceLegend{items: {label, tone}[]}",
+      "use": "provenance demo: one anamnesis field, its source audio excerpt and the four review actions (role=img); SourceLegend renders the permanent four-source legend (swatch + text, never color alone)"
+    },
+    {
+      "name": "ConsultationDuo",
+      "file": "consultation-duo.tsx",
+      "role": "evidence",
+      "props": "labels: {web (record panel strings/fields), phone (recording screen strings), notes (two floating notes)}, ariaLabel, className",
+      "use": "the blueprint hero visual ported 1:1: 690×570 token canvas with the web record panel in perspective, overlapping phone recording, orbit ellipses, dashed flow line with travelling dots and floating notes; scales via --duo-scale; role=img, fictitious data only"
+    },
+    {
+      "name": "MobileSequence",
+      "file": "mobile-sequence.tsx",
+      "role": "evidence",
+      "props": "back/front/side (screen contents: AgendaMock/RecordingMock/StatusMock), ariaLabel, className",
+      "use": "blueprint §15.7: three companion-app screens fanned over a faint ring on the deep band (agenda behind, recording front, status right); fixed canvas scaled via --seq-scale; role=img"
+    }
+  ]
+}

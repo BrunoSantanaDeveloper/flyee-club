@@ -1,0 +1,1108 @@
+"use server";
+
+import { cookies, headers } from "next/headers";
+
+import { COOKIE_KEYS } from "@/constants";
+import { recordAudit } from "@/lib/audit";
+import { CAMPAIGN_OFFER_KEY, type CampaignOfferSetting, resolveCampaignOffer } from "@/lib/campaign-offer";
+import { type CampaignParams, decodeCampaignCookie, hasCampaign, pickCampaignParams } from "@/lib/campaign-params";
+import { sendGa4Event } from "@/lib/ga4-mp";
+import { sendMetaConversion } from "@/lib/meta-capi";
+import { getGaClientId, getMetaClientContext } from "@/lib/meta-capi-context";
+import { normalizeCouponCode } from "@/lib/offer-link";
+import { resolvePaymentChoice } from "@/lib/payment-choice";
+import { pendingPixCharge } from "@/lib/pending-pix";
+import { createClient } from "@flyee/auth/server";
+import { createServiceClient } from "@flyee/auth/service";
+import { type CheckoutPlan, defaultProvider, getProvider, type PaymentMethod, type PixCharge } from "@flyee/billing";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+async function requireOrgManager(orgId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated.");
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("role")
+    .eq("org_id", orgId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!membership || !["owner", "admin"].includes(membership.role)) {
+    throw new Error("Only organization owners/admins can manage billing.");
+  }
+  return { supabase, user };
+}
+
+async function appOrigin() {
+  const headerList = await headers();
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "";
+  const proto = headerList.get("x-forwarded-proto") ?? "https";
+  return `${proto}://${host}`;
+}
+
+export type StartCheckoutResult = {
+  url?: string;
+  error?: string;
+  /**
+   * PIX rendered on our page. Absent when the method is not PIX, when the
+   * provider has no PIX, or when the QR could not be read — in every case the
+   * caller falls back to `url`, the hosted invoice, which shows the same QR.
+   */
+  pix?: PixCharge;
+};
+
+export type AppliedCoupon = { id: string; code: string; discountType: "percent" | "fixed"; discountValue: number };
+
+/**
+ * Resolves a campaign code the customer typed (or arrived with) into the
+ * discount the providers will actually apply.
+ *
+ * `validate_coupon` is a SECURITY DEFINER function precisely so this can happen
+ * without exposing the coupons table: an invalid, expired or exhausted code is
+ * indistinguishable from a code that never existed.
+ *
+ * Checked here, BEFORE the payment page, because the alternative is finding out
+ * at the provider — and a partner's audience that was promised a discount would
+ * be looking at the full price with no explanation.
+ */
+export async function validateCouponCode(
+  code: string,
+): Promise<{ coupon?: AppliedCoupon; error?: "coupon_invalid" | "unavailable" }> {
+  const normalized = normalizeCouponCode(code);
+  if (!normalized) return { error: "coupon_invalid" };
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "unavailable" };
+    const { data, error } = await supabase.rpc("validate_coupon", { coupon_code: normalized });
+    if (error) {
+      logBillingFailure("coupon_validation_failed", { code: normalized }, error);
+      return { error: "unavailable" };
+    }
+    const row = (data as AppliedCouponRow[] | null)?.[0];
+    if (!row) return { error: "coupon_invalid" };
+    return {
+      coupon: {
+        id: row.id,
+        code: row.code,
+        discountType: row.discount_type,
+        discountValue: row.discount_value,
+      },
+    };
+  } catch {
+    return { error: "unavailable" };
+  }
+}
+
+type AppliedCouponRow = { id: string; code: string; discount_type: "percent" | "fixed"; discount_value: number };
+
+/**
+ * Is this workspace still inside the personal window that was offered to it?
+ *
+ * Only the conversion offer's own coupon is subject to this: any other code is
+ * a campaign code whose validity lives entirely in the `coupons` row, and this
+ * guard must not have an opinion about it. Both reads are cheap and happen once
+ * per checkout.
+ */
+async function conversionOfferWindowOpen(
+  supabase: SupabaseClient,
+  orgId: string,
+  code: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const { data: setting } = await supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "conversion_offers")
+      .maybeSingle();
+    const configured = normalizeCouponCode((setting?.value as { coupon_code?: string } | null)?.coupon_code ?? "");
+    if (!configured || configured !== normalizeCouponCode(code)) return { ok: true };
+
+    const { data } = await supabase.rpc("current_conversion_offer", { target_org: orgId });
+    const row = data as { active?: boolean; coupon_code?: string } | null;
+    if (row?.active === true && normalizeCouponCode(row.coupon_code ?? "") === configured) return { ok: true };
+    return { ok: false, reason: "conversion_offer_closed" };
+  } catch {
+    // Fails OPEN, like `offerBlock` below and for the same reason: when the
+    // read fails this guard cannot tell whether the code is even the one it
+    // owns, so blocking would break every partner-campaign checkout over a
+    // transient database hiccup. The asymmetry decides it — honouring a
+    // discount slightly past its window during an outage costs one discount;
+    // refusing a code that was promised costs the sale AND the promise.
+    return { ok: true, reason: "conversion_offer_check_failed" };
+  }
+}
+
+/**
+ * Refuses a purchase the workspace must not be able to make.
+ *
+ * `admin_suspended` is the superadmin kill-switch — fraud, chronic default, a
+ * legal hold. `org_audio_allowance` already treats it as absolute, but no
+ * screen or action checked it before starting a checkout: a suspended
+ * workspace could pay for a plan and stay suspended. That is a charge with no
+ * delivery, and a guaranteed refund.
+ *
+ * Returns the error code to answer with, or null when the purchase may go on.
+ */
+async function purchaseBlockedReason(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("admin_suspended")
+    .eq("org_id", orgId)
+    .in("status", ["trialing", "active", "past_due"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.admin_suspended ? "suspended" : null;
+}
+
+/**
+ * Refuses a plan whose limited offer is no longer open.
+ *
+ * Two mechanisms, one answer. The founders condition counts SEATS, which needs
+ * a privileged aggregate over `subscriptions` and therefore an RPC (migration
+ * 0087); the paid-campaign condition only has a DEADLINE, which is a settings
+ * row and a clock (`lib/campaign-offer.ts`). Either way, the landing page reads
+ * the same state this guard reads — so a page can never advertise a condition
+ * the checkout would refuse, nor the reverse, which is how a dated offer
+ * quietly becomes permanent.
+ *
+ * Only applies to the plan an offer NAMES; every other plan is unaffected. A
+ * failure to READ the state deliberately does NOT block: an ordinary checkout
+ * must not break because a campaign is misconfigured.
+ */
+async function offerBlock(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  planSlug: string,
+): Promise<string | null> {
+  try {
+    const [founders, campaign] = await Promise.all([
+      supabase.rpc("founders_offer"),
+      supabase.from("platform_settings").select("value").eq("key", CAMPAIGN_OFFER_KEY).maybeSingle(),
+    ]);
+
+    if (!founders.error && founders.data) {
+      const offer = founders.data as { plan_slug?: string | null; closed?: boolean; reason?: string };
+      if (offer.plan_slug && offer.plan_slug === planSlug && offer.closed) return offer.reason ?? "closed";
+    }
+
+    if (!campaign.error) {
+      const offer = resolveCampaignOffer((campaign.data?.value ?? null) as CampaignOfferSetting | null);
+      // BOTH slugs, not just the default one. A campaign that sells a monthly
+      // and an annual side by side has two plans whose price the deadline
+      // promised; gating only the first would let the annual keep selling
+      // after the condition it was announced under had ended, which is the
+      // fake-scarcity failure the whole mechanism exists to prevent.
+      const named = offer.planSlug === planSlug || offer.annualPlanSlug === planSlug;
+      // `not_configured` names the absence of a campaign, not a closed one:
+      // the plan is then an ordinary catalogue plan and sells normally.
+      if (named && offer.closed && offer.reason !== "not_configured") return offer.reason;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The fiscal identity Asaas requires to create a customer.
+ *
+ * Returned as a typed error rather than the generic "unavailable" because this
+ * is the ONE checkout failure the professional can fix herself — the UI sends
+ * her to the form instead of telling her to try again later.
+ */
+async function loadPayer(supabase: Awaited<ReturnType<typeof createClient>>, orgId: string) {
+  const { data } = await supabase
+    .from("organizations")
+    .select("name, billing_cpf_cnpj, billing_postal_code, billing_address_number, billing_phone")
+    .eq("id", orgId)
+    .single();
+  return {
+    orgName: data?.name ?? "Organization",
+    payer: {
+      document: data?.billing_cpf_cnpj ?? null,
+      postalCode: data?.billing_postal_code ?? null,
+      addressNumber: data?.billing_address_number ?? null,
+      phone: data?.billing_phone ?? null,
+    },
+  };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type ActiveBillingClaim = {
+  service: ReturnType<typeof createServiceClient>;
+  operationId: string;
+  claimToken: string;
+};
+
+/**
+ * Names the cause of a checkout failure in the server log.
+ *
+ * Every failure path below collapses to `{ error: "unavailable" }` on purpose
+ * — provider and configuration detail must not reach the browser. But without
+ * this the cause was not recorded ANYWHERE: diagnosing a customer who could
+ * not subscribe meant reading `billing_operations` in production and guessing
+ * between eight paths that share one code. The message is the operator's, not
+ * the customer's.
+ */
+/**
+ * A short, storable reason for a provider refusal.
+ *
+ * `billing_operations.error_code` was always the literal `provider_unavailable`,
+ * which is true of a rejected payload, a key pointing at the wrong
+ * environment, and an account still under review — three problems with three
+ * different fixes. Reading the real cause meant hunting through hosting logs
+ * during a launch. The provider's own status and error code are short, carry
+ * no customer data, and turn that hunt into one query.
+ */
+function providerFailureCode(error: unknown): string {
+  if (!(error instanceof Error)) return "provider_unavailable";
+  const status = (error as { status?: number }).status;
+  const code = (error as { code?: string }).code;
+  if (status || code) {
+    return `provider_${status ?? "error"}${code ? `_${code}` : ""}`.slice(0, 120);
+  }
+  // Not a provider HTTP failure (a thrown URL parse, a missing key…): keep the
+  // message, trimmed, rather than collapsing it to nothing.
+  return `provider_error_${error.message.replace(/\s+/gu, " ").slice(0, 90)}`;
+}
+
+function logBillingFailure(stage: string, context: Record<string, unknown>, error?: unknown) {
+  console.error("billing_checkout_failed", {
+    stage,
+    ...context,
+    ...(error instanceof Error
+      ? {
+          message: error.message,
+          name: error.name,
+          providerStatus: (error as { status?: number }).status,
+          providerCode: (error as { code?: string }).code,
+        }
+      : error
+        ? { error: String(error) }
+        : {}),
+  });
+}
+
+async function failBillingClaim(claim: ActiveBillingClaim | null, errorCode: string) {
+  if (!claim) return;
+  try {
+    await claim.service.rpc("complete_billing_operation", {
+      target_operation: claim.operationId,
+      target_claim_token: claim.claimToken,
+      target_success: false,
+      target_result: {},
+      target_error_code: errorCode,
+    });
+  } catch {
+    // The short server lease remains the retry boundary if Supabase is down.
+  }
+}
+
+export async function checkoutAvailability(): Promise<boolean> {
+  return defaultProvider() !== null;
+}
+
+/**
+ * The complete set of places a checkout may return to. Adding a destination
+ * means adding it here, which is the point: the provider only ever receives a
+ * path this file wrote.
+ */
+const CHECKOUT_RETURN = { onboarding: "/onboarding", billing: "/settings/billing" } as const;
+
+export async function startCheckout(input: {
+  orgId: string;
+  planId: string;
+  idempotencyKey: string;
+  /** Campaign code, if she typed one or arrived with `?cupom=`. */
+  couponCode?: string | null;
+  /** Chosen in our checkout, so the provider never offers boleto. */
+  paymentMethod?: PaymentMethod | null;
+  /** Card installments; clamped and re-checked server-side. */
+  installments?: number | null;
+  /**
+   * Where the provider sends her back.
+   *
+   * A KEY, never a URL. This value crosses from the browser into the string we
+   * hand the payment provider, so accepting a path would be an open redirect
+   * sitting in the checkout — the one flow where a convincing off-site landing
+   * is worth the most to an attacker.
+   *
+   * Someone buying her first plan has no account to return to yet, so she goes
+   * to the guided trail; someone upgrading from the billing screen goes back to
+   * the screen she left. Defaults to billing, the pre-existing behaviour.
+   */
+  returnTo?: "onboarding" | "billing";
+  /**
+   * The campaign of THIS purchase (last touch), forwarded by /assinar from the
+   * landing link. Re-validated here — it crossed the browser — and stored in
+   * meta_attribution for the Purchase (lib/campaign-params.ts).
+   */
+  campaign?: CampaignParams | null;
+}): Promise<StartCheckoutResult> {
+  let activeClaim: ActiveBillingClaim | null = null;
+  try {
+    const { supabase, user } = await requireOrgManager(input.orgId);
+    if (!UUID.test(input.idempotencyKey)) {
+      logBillingFailure("invalid_idempotency_key", { orgId: input.orgId });
+      return { error: "unavailable" };
+    }
+
+    const blocked = await purchaseBlockedReason(supabase, input.orgId);
+    if (blocked) {
+      logBillingFailure("purchase_blocked", { orgId: input.orgId, reason: blocked });
+      return { error: blocked };
+    }
+
+    const [{ data: planRow }, { orgName, payer }] = await Promise.all([
+      supabase.from("plans").select("*").eq("id", input.planId).eq("is_active", true).single(),
+      loadPayer(supabase, input.orgId),
+    ]);
+    if (!planRow || planRow.is_free) {
+      logBillingFailure("plan_not_purchasable", { orgId: input.orgId, planId: input.planId, found: Boolean(planRow) });
+      return { error: "unavailable" };
+    }
+    // Asaas rejects a customer without cpfCnpj, so this would fail deep inside
+    // the provider call with a generic message. Named here, the UI can send
+    // her to the form that fixes it instead of "try again later".
+    if (!payer.document) {
+      logBillingFailure("missing_billing_document", { orgId: input.orgId });
+      return { error: "billing_profile_required" };
+    }
+
+    // A limited offer has to stop selling when it runs out. The counter on the
+    // landing page and this guard read the SAME function (migration 0087), so
+    // the page can never advertise a seat the checkout would refuse — nor the
+    // reverse, which is how a 30-seat offer quietly becomes 40.
+    const blockedOffer = await offerBlock(supabase, planRow.slug);
+    if (blockedOffer) {
+      logBillingFailure("offer_closed", { orgId: input.orgId, plan: planRow.slug, reason: blockedOffer });
+      return { error: "offer_closed" };
+    }
+
+    // A code that no longer works STOPS the checkout. Dropping it silently and
+    // charging the table price is the one outcome she would never forgive: she
+    // is here because a campaign promised that discount.
+    let coupon: AppliedCoupon | undefined;
+    if (normalizeCouponCode(input.couponCode)) {
+      const validated = await validateCouponCode(input.couponCode ?? "");
+      if (!validated.coupon) {
+        logBillingFailure("coupon_rejected", { orgId: input.orgId, reason: validated.error });
+        return { error: validated.error ?? "coupon_invalid" };
+      }
+      coupon = validated.coupon;
+
+      // The conversion offer promises a PERSONAL window ("this condition is
+      // yours for the next N hours", migration 0088), but `coupons` only has a
+      // shared `valid_until` — nothing in the table can expire for one
+      // workspace and not another. Without this check the countdown on the
+      // home card would be pure decoration: the same code would still be
+      // honoured days later, and "afterwards it goes back to the normal price"
+      // would simply be false.
+      //
+      // This is the repo's own rule applied to a per-org offer: what the screen
+      // announces has to be what the checkout refuses.
+      const window = await conversionOfferWindowOpen(supabase, input.orgId, coupon.code);
+      if (!window.ok) {
+        logBillingFailure("coupon_rejected", { orgId: input.orgId, reason: window.reason });
+        return { error: "coupon_invalid" };
+      }
+    }
+
+    const plan: CheckoutPlan = {
+      id: planRow.id,
+      slug: planRow.slug,
+      name: planRow.name,
+      kind: planRow.kind,
+      period: planRow.period,
+      priceCents: planRow.price_cents,
+      currency: planRow.currency,
+      // MedChina's promotional access is cardless and lives exclusively in
+      // pro_trials/org_audio_allowance; provider checkout never starts it.
+      trialDays: 0,
+      creditAmount: planRow.credit_amount,
+      creditsExpire: planRow.credits_expire,
+      description: planRow.description ?? null,
+    };
+
+    // A PIX already waiting for THIS plan is returned, never duplicated.
+    //
+    // With the QR on our own page, "reload and click again" and "open a second
+    // tab" stopped being rare: each one used to mint a fresh idempotency key
+    // and therefore a SECOND recurring subscription at the provider — the exact
+    // defect `PendingCheckoutCard` was built to close for the hosted invoice.
+    // The key cannot protect this (it lives in component state); the database
+    // can, because the pending subscription row is written at checkout time.
+    if (input.paymentMethod === "pix") {
+      const waiting = await pendingPixCharge(supabase, input.orgId, input.planId);
+      if (waiting?.invoiceUrl) return { url: waiting.invoiceUrl, pix: waiting };
+    }
+
+    const provider = defaultProvider();
+    if (!provider) {
+      logBillingFailure("no_provider_configured", { orgId: input.orgId });
+      return { error: "unavailable" };
+    }
+    const service = createServiceClient();
+    const { data: claimData, error: claimError } = await service.rpc("claim_billing_operation", {
+      target_org: input.orgId,
+      target_actor: user.id,
+      target_kind: "checkout",
+      target_idempotency_key: input.idempotencyKey,
+      target_provider: provider,
+      target_plan: plan.id,
+      target_subscription: null,
+    });
+    const claim = claimData as {
+      ok?: boolean;
+      code?: string;
+      operationId?: string;
+      claimToken?: string;
+      result?: { url?: string };
+    } | null;
+    if (claim?.code === "completed" && claim.result?.url) {
+      // A double click, or a retry with the same key, replays the stored
+      // result — which holds only the url. Without this the person who just saw
+      // a QR would see "go to the payment page" on the second submit: the
+      // screen getting worse with nothing having failed. The QR is not our
+      // state, it is a read of the charge, so it is read again.
+      const replayPix =
+        input.paymentMethod === "pix" ? await pendingPixCharge(supabase, input.orgId, input.planId) : null;
+      return { url: claim.result.url, ...(replayPix ? { pix: replayPix } : {}) };
+    }
+    if (claimError || !claim?.ok || !claim.operationId || !claim.claimToken) {
+      logBillingFailure("claim_rejected", { orgId: input.orgId, provider, code: claim?.code }, claimError);
+      return { error: "unavailable" };
+    }
+    activeClaim = { service, operationId: claim.operationId, claimToken: claim.claimToken };
+
+    const origin = await appOrigin();
+    const providerClient = getProvider(provider);
+    const choice = resolvePaymentChoice({
+      method: input.paymentMethod,
+      installments: input.installments,
+      planPeriod: planRow.period,
+    });
+    const result = await providerClient.createCheckout({
+      idempotencyKey: input.idempotencyKey,
+      orgId: input.orgId,
+      orgName,
+      customerEmail: user.email ?? "",
+      plan,
+      modules: [],
+      paymentMethod: choice.method,
+      installments: choice.installments,
+      // Both providers mirror it natively (Stripe coupon `duration: forever`,
+      // Asaas a discounted subscription value), so the discount rides every
+      // cycle — and the webhook stamps `coupon_id` on the subscription, which
+      // is what makes partner attribution and revenue share possible at all.
+      coupon,
+      payer,
+      // Resolved from a fixed map, so the only paths that can ever reach the
+      // provider are these two.
+      successUrl: `${origin}${CHECKOUT_RETURN[input.returnTo ?? "billing"]}?checkout=success`,
+      cancelUrl: `${origin}${CHECKOUT_RETURN[input.returnTo ?? "billing"]}?checkout=canceled`,
+    });
+
+    const { data: completedData, error: pendingError } = await service.rpc("complete_checkout_billing_operation", {
+      target_operation: claim.operationId,
+      target_claim_token: claim.claimToken,
+      target_plan: plan.id,
+      target_period: plan.period,
+      target_provider_customer: result.providerCustomerId ?? null,
+      target_provider_subscription: result.providerSubscriptionId ?? null,
+      target_checkout_url: result.url,
+    });
+    const completed = completedData as { ok?: boolean; result?: { url?: string } } | null;
+    if (pendingError || !completed?.ok) {
+      // The provider already has a checkout at this point; only the local
+      // bookkeeping failed. Worth shouting about — the customer may be looking
+      // at a payment page we have no record of.
+      logBillingFailure("local_reconciliation_failed", { orgId: input.orgId, planId: input.planId }, pendingError);
+      await failBillingClaim(activeClaim, "local_reconciliation_failed");
+      activeClaim = null;
+      return { error: "unavailable" };
+    }
+    activeClaim = null;
+
+    // A PIX opens the provisional window (migration 0111): she can use the plan
+    // while the bank confirms, once per workspace, for the configured hours.
+    // Best-effort by design — failing to mark it costs her the window, not the
+    // purchase; the charge is created and the webhook still confirms it.
+    if (choice.method === "pix" && result.providerSubscriptionId) {
+      const { error: markError } = await service.rpc("mark_pix_checkout", {
+        target_org: input.orgId,
+        target_provider_subscription: result.providerSubscriptionId,
+      });
+      if (markError) logBillingFailure("pix_mark_failed", { orgId: input.orgId }, markError);
+    }
+
+    await recordAudit(supabase, "subscription.checkout_started", {
+      orgId: input.orgId,
+      entityType: "plan",
+      entityId: plan.id,
+    });
+
+    // Measurement is best-effort and MUST NOT turn a successful checkout into
+    // an error — hence its own try/catch, isolated from the outer handler.
+    try {
+      // Server-side (no Pixel runs on the app); reuses the request's _fbp/_fbc
+      // (set by the marketing-site Pixel, same origin) so it attributes to the
+      // ad click. No clinical data leaves the server.
+      const metaContext = await getMetaClientContext(`${origin}/settings/billing`);
+      const gaClientId = await getGaClientId();
+      // Stash the tracking signals so the browserless Purchase webhook can match
+      // on them later (PIX/boleto confirm out of band; renewals too). Only when
+      // a signal exists (the consent + ad-attribution moment) — so a plain
+      // checkout never wipes a previously stored row.
+      if (metaContext.fbp || metaContext.fbc || gaClientId) {
+        await service.from("meta_attribution").upsert({
+          org_id: input.orgId,
+          fbp: metaContext.fbp ?? null,
+          fbc: metaContext.fbc ?? null,
+          email: user.email ?? null,
+          client_ip: metaContext.clientIp ?? null,
+          client_user_agent: metaContext.clientUserAgent ?? null,
+          ga_client_id: gaClientId,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      // The campaign of THIS purchase, independently of the ad-click signals:
+      // a sale from the live event or /china must be creditable even when the
+      // visitor refused the tracking cookies. An upsert of these columns only,
+      // so it never wipes _fbp/_fbc/e-mail/IP/UA stored above or earlier.
+      // The link of THIS checkout first; without one, the last campaign link she
+      // followed (middleware cookie, 14 days) — an event's button that sent her
+      // to /planos lost its query string on the way through sign-up and billing.
+      const linkCampaign = pickCampaignParams(input.campaign);
+      const campaign = hasCampaign(linkCampaign)
+        ? linkCampaign
+        : decodeCampaignCookie((await cookies()).get(COOKIE_KEYS.lastCampaign)?.value);
+      if (hasCampaign(campaign)) {
+        await service.from("meta_attribution").upsert({
+          org_id: input.orgId,
+          campaign_origem: campaign.origem ?? null,
+          campaign_utm_source: campaign.utm_source ?? null,
+          campaign_utm_medium: campaign.utm_medium ?? null,
+          campaign_utm_campaign: campaign.utm_campaign ?? null,
+          campaign_utm_content: campaign.utm_content ?? null,
+          campaign_captured_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      } else {
+        // A checkout that came from no campaign IS the last touch: it clears
+        // the one before, or a sale weeks after an event would be credited to
+        // it (the webhook records purchases per campaign — migration 0113).
+        // An update, never an insert: no row is created for this.
+        await service
+          .from("meta_attribution")
+          .update({
+            campaign_origem: null,
+            campaign_utm_source: null,
+            campaign_utm_medium: null,
+            campaign_utm_campaign: null,
+            campaign_utm_content: null,
+            campaign_captured_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("org_id", input.orgId)
+          .not("campaign_captured_at", "is", null);
+      }
+      await sendMetaConversion({
+        eventName: "InitiateCheckout",
+        eventId: input.idempotencyKey,
+        email: user.email,
+        externalId: input.orgId,
+        value: plan.priceCents / 100,
+        currency: plan.currency,
+        ...metaContext,
+      });
+      // GA4 begin_checkout — stitched to the web session via the _ga client id.
+      await sendGa4Event({
+        clientId: gaClientId,
+        eventName: "begin_checkout",
+        eventId: input.idempotencyKey,
+        params: { currency: plan.currency, value: plan.priceCents / 100 },
+      });
+    } catch {
+      // Best-effort — the checkout URL returned below is what matters.
+    }
+
+    return { url: completed.result?.url ?? result.url, ...(result.pix ? { pix: result.pix } : {}) };
+  } catch (error) {
+    // The provider call is the likeliest thing to land here, and its message
+    // is the only place the real cause exists — a bad key, a rejected payload,
+    // a base URL that is not a URL. Losing it is what turns "she cannot
+    // subscribe" into an archaeology exercise over billing_operations.
+    logBillingFailure("provider_call_threw", { orgId: input.orgId, planId: input.planId }, error);
+    await failBillingClaim(activeClaim, providerFailureCode(error));
+    // Pix was offered because the account has an active Pix key, but the
+    // provider may still refuse the METHOD on this endpoint. That refusal is
+    // the one failure the customer can route around in a single tap — so it is
+    // named, and the form moves her to the card instead of showing a dead end
+    // on the last step of the funnel.
+    if (input.paymentMethod === "pix" && (error as { code?: string } | null)?.code === "invalid_billingType") {
+      return { error: "pix_unavailable" };
+    }
+    return { error: "unavailable" };
+  }
+}
+
+/**
+ * Buys a one-off pack of audio minutes (migration 0055).
+ *
+ * Deliberately NOT a variant of `startCheckout`: that flow writes a
+ * `subscriptions` row and demands a billing period, both of which are right
+ * for a plan and wrong for a single payment — an org may hold only one live
+ * subscription, so reusing it would fight the tier the customer is already on.
+ *
+ * The commercial rule (a pack tops up a paid plan, it does not replace one) is
+ * checked HERE as well as reported by `org_audio_allowance`. The allowance
+ * drives what the UI offers; this is what actually holds, because a server
+ * action is callable without the UI.
+ */
+export async function startPackCheckout(input: {
+  orgId: string;
+  planId: string;
+  idempotencyKey: string;
+}): Promise<StartCheckoutResult> {
+  let activeClaim: ActiveBillingClaim | null = null;
+  try {
+    const { supabase, user } = await requireOrgManager(input.orgId);
+    if (!UUID.test(input.idempotencyKey)) return { error: "unavailable" };
+
+    const blocked = await purchaseBlockedReason(supabase, input.orgId);
+    if (blocked) {
+      logBillingFailure("purchase_blocked", { orgId: input.orgId, reason: blocked });
+      return { error: blocked };
+    }
+
+    const [{ data: planRow }, { orgName, payer }, { data: allowance }] = await Promise.all([
+      supabase.from("plans").select("*").eq("id", input.planId).eq("is_active", true).single(),
+      loadPayer(supabase, input.orgId),
+      supabase.rpc("org_audio_allowance", { target_org: input.orgId }),
+    ]);
+
+    const packMinutes = Number((planRow?.limits as { audio_minutes_pack?: unknown } | null)?.audio_minutes_pack);
+    if (!planRow || !planRow.is_addon || !Number.isFinite(packMinutes) || packMinutes <= 0) {
+      return { error: "unavailable" };
+    }
+    if ((allowance as { pack_purchasable?: boolean } | null)?.pack_purchasable !== true) {
+      return { error: "plan_required" };
+    }
+    if (!payer.document) {
+      logBillingFailure("missing_billing_document", { orgId: input.orgId });
+      return { error: "billing_profile_required" };
+    }
+
+    const plan: CheckoutPlan = {
+      id: planRow.id,
+      slug: planRow.slug,
+      name: planRow.name,
+      kind: planRow.kind,
+      // No period is what makes the provider charge once instead of
+      // subscribing (Stripe: `mode: "payment"`).
+      period: null,
+      priceCents: planRow.price_cents,
+      currency: planRow.currency,
+      trialDays: 0,
+      creditAmount: planRow.credit_amount,
+      creditsExpire: planRow.credits_expire,
+      description: planRow.description ?? null,
+    };
+    const provider = defaultProvider();
+    if (!provider) {
+      logBillingFailure("no_provider_configured", { orgId: input.orgId });
+      return { error: "unavailable" };
+    }
+    const service = createServiceClient();
+    const { data: claimData, error: claimError } = await service.rpc("claim_billing_operation", {
+      target_org: input.orgId,
+      target_actor: user.id,
+      target_kind: "checkout",
+      target_idempotency_key: input.idempotencyKey,
+      target_provider: provider,
+      target_plan: plan.id,
+      target_subscription: null,
+    });
+    const claim = claimData as {
+      ok?: boolean;
+      code?: string;
+      operationId?: string;
+      claimToken?: string;
+      result?: { url?: string };
+    } | null;
+    if (claim?.code === "completed" && claim.result?.url) return { url: claim.result.url };
+    if (claimError || !claim?.ok || !claim.operationId || !claim.claimToken) {
+      logBillingFailure("claim_rejected", { orgId: input.orgId, provider, code: claim?.code }, claimError);
+      return { error: "unavailable" };
+    }
+    activeClaim = { service, operationId: claim.operationId, claimToken: claim.claimToken };
+
+    const origin = await appOrigin();
+    const result = await getProvider(provider).createCheckout({
+      idempotencyKey: input.idempotencyKey,
+      orgId: input.orgId,
+      orgName,
+      customerEmail: user.email ?? "",
+      plan,
+      modules: [],
+      payer,
+      successUrl: `${origin}/settings/billing?checkout=success`,
+      cancelUrl: `${origin}/settings/billing?checkout=canceled`,
+    });
+
+    const { data: completedData, error: pendingError } = await service.rpc("complete_pack_checkout_billing_operation", {
+      target_operation: claim.operationId,
+      target_claim_token: claim.claimToken,
+      target_plan: plan.id,
+      target_checkout_url: result.url,
+    });
+    const completed = completedData as { ok?: boolean; result?: { url?: string } } | null;
+    if (pendingError || !completed?.ok) {
+      // The provider already has a checkout at this point; only the local
+      // bookkeeping failed. Worth shouting about — the customer may be looking
+      // at a payment page we have no record of.
+      logBillingFailure("local_reconciliation_failed", { orgId: input.orgId, planId: input.planId }, pendingError);
+      await failBillingClaim(activeClaim, "local_reconciliation_failed");
+      activeClaim = null;
+      return { error: "unavailable" };
+    }
+    activeClaim = null;
+
+    // The minutes themselves are granted by the webhook, on the paid invoice —
+    // never here. A checkout that is started is not a checkout that is paid,
+    // and PIX/boleto make that gap minutes or hours wide.
+    await recordAudit(supabase, "billing.audio_pack_checkout_started", {
+      orgId: input.orgId,
+      entityType: "plan",
+      entityId: plan.id,
+      metadata: { minutes: packMinutes },
+    });
+
+    try {
+      const metaContext = await getMetaClientContext(`${origin}/settings/billing`);
+      const gaClientId = await getGaClientId();
+      // Same stash as the subscription checkout. A pack paid by Pix or boleto
+      // confirms out of band, so the webhook has no browser to read signals
+      // from — without this the purchase reached Meta/GA4 unattributed.
+      if (metaContext.fbp || metaContext.fbc || gaClientId) {
+        await service.from("meta_attribution").upsert({
+          org_id: input.orgId,
+          fbp: metaContext.fbp ?? null,
+          fbc: metaContext.fbc ?? null,
+          email: user.email ?? null,
+          client_ip: metaContext.clientIp ?? null,
+          client_user_agent: metaContext.clientUserAgent ?? null,
+          ga_client_id: gaClientId,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      await sendMetaConversion({
+        eventName: "InitiateCheckout",
+        eventId: input.idempotencyKey,
+        email: user.email,
+        externalId: input.orgId,
+        value: plan.priceCents / 100,
+        currency: plan.currency,
+        ...metaContext,
+      });
+      await sendGa4Event({
+        clientId: gaClientId,
+        eventName: "begin_checkout",
+        eventId: input.idempotencyKey,
+        params: { currency: plan.currency, value: plan.priceCents / 100 },
+      });
+    } catch {
+      // Best-effort — the checkout URL returned below is what matters.
+    }
+
+    return { url: completed.result?.url ?? result.url };
+  } catch (error) {
+    // The provider call is the likeliest thing to land here, and its message
+    // is the only place the real cause exists — a bad key, a rejected payload,
+    // a base URL that is not a URL. Losing it is what turns "she cannot
+    // subscribe" into an archaeology exercise over billing_operations.
+    logBillingFailure("provider_call_threw", { orgId: input.orgId, planId: input.planId }, error);
+    await failBillingClaim(activeClaim, providerFailureCode(error));
+    if (error instanceof Error && error.message === "asaas_missing_document") {
+      return { error: "billing_profile_required" };
+    }
+    return { error: "unavailable" };
+  }
+}
+
+/**
+ * Retires a checkout the customer walked away from.
+ *
+ * On Asaas the subscription is created at the START of checkout, before any
+ * payment: closing the tab leaves a live monthly charge that nothing in the
+ * product could see or stop, and the local row sat `incomplete` forever. When
+ * that charge came due, the workspace received a failed invoice for something
+ * it never contracted — with no button anywhere to end it.
+ */
+export async function abandonPendingCheckout(orgId: string, subscriptionId: string): Promise<{ error?: string }> {
+  try {
+    const { supabase } = await requireOrgManager(orgId);
+    const { data, error } = await supabase.rpc("abandon_incomplete_subscription", {
+      target_org: orgId,
+      target_subscription: subscriptionId,
+    });
+    if (error) return { error: "unavailable" };
+    const result = data as { ok?: boolean; provider?: string | null; providerSubscriptionId?: string | null } | null;
+    if (result?.ok !== true) return { error: "unavailable" };
+
+    // Local state is already correct. Stopping the provider is what actually
+    // prevents the charge, but a failure here must not undo the cancellation
+    // the customer just asked for — it is logged and swept by the reaper.
+    if (result.providerSubscriptionId && (result.provider === "stripe" || result.provider === "asaas")) {
+      try {
+        await getProvider(result.provider).cancelSubscription(result.providerSubscriptionId);
+      } catch (providerError) {
+        logBillingFailure("abandon_provider_cancel_failed", { orgId, subscriptionId }, providerError);
+      }
+    }
+    await recordAudit(supabase, "subscription.checkout_abandoned", {
+      orgId,
+      entityType: "subscription",
+      entityId: subscriptionId,
+    });
+    return {};
+  } catch (error) {
+    logBillingFailure("abandon_checkout_threw", { orgId, subscriptionId }, error);
+    return { error: "unavailable" };
+  }
+}
+
+export type PaymentRecoveryResult = { url?: string; error?: "unavailable" | "not_needed" };
+
+/**
+ * Where a workspace with a failed charge actually pays.
+ *
+ * Every dunning surface in the app points at "update your payment", and until
+ * now that led to a page with a plan grid and no way to fix a card — the grace
+ * window counted down on someone who had no action available. Two providers,
+ * two shapes: Stripe has a hosted Billing Portal for the card behind the
+ * subscription; Asaas bills per charge, so the failed invoice's own hosted URL
+ * IS the payment page. Prefer the portal, fall back to the invoice, and say
+ * "unavailable" only when neither exists.
+ */
+export async function startPaymentRecovery(orgId: string): Promise<PaymentRecoveryResult> {
+  try {
+    const { supabase } = await requireOrgManager(orgId);
+
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("id, status, provider, provider_customer_id, provider_subscription_id")
+      .eq("org_id", orgId)
+      .in("status", ["trialing", "active", "past_due"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (sub?.provider === "stripe" && sub.provider_customer_id) {
+      const provider = getProvider("stripe");
+      const url = await provider.billingPortalUrl?.({
+        providerCustomerId: sub.provider_customer_id,
+        providerSubscriptionId: sub.provider_subscription_id ?? undefined,
+        returnUrl: `${await appOrigin()}/settings/billing`,
+      });
+      if (url) return { url };
+    }
+
+    // The most recent unpaid invoice OF THIS SUBSCRIPTION — for Asaas this is
+    // the payment page, and for Stripe the fallback when the portal has no
+    // configuration yet.
+    //
+    // Scoping to the subscription is what keeps the button honest: a
+    // PAYMENT_OVERDUE from an abandoned MINUTE PACK also writes a failed
+    // invoice on the same org, and the unscoped query happily returned it. She
+    // clicked "update payment" to fix her plan and was handed the boleto of a
+    // pack she gave up on — paying it leaves the subscription past_due with
+    // the grace window still running.
+    let invoiceQuery = supabase
+      .from("invoices")
+      .select("invoice_url, status, created_at")
+      .eq("org_id", orgId)
+      .eq("status", "failed")
+      .not("invoice_url", "is", null);
+    if (sub?.id) invoiceQuery = invoiceQuery.eq("subscription_id", sub.id);
+    const { data: invoice } = await invoiceQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (invoice?.invoice_url) return { url: invoice.invoice_url };
+
+    // Nothing to recover: no failed charge on file and no portal.
+    if (sub?.status !== "past_due") return { error: "not_needed" };
+    return { error: "unavailable" };
+  } catch {
+    return { error: "unavailable" };
+  }
+}
+
+function fallbackPeriodEnd(period: string | null): Date {
+  const end = new Date();
+  if (period === "weekly") end.setDate(end.getDate() + 7);
+  else if (period === "yearly") end.setFullYear(end.getFullYear() + 1);
+  else end.setMonth(end.getMonth() + 1);
+  return end;
+}
+
+export async function scheduleSubscriptionCancellation(
+  orgId: string,
+  idempotencyKey: string,
+): Promise<{ error?: string }> {
+  let activeClaim: ActiveBillingClaim | null = null;
+  try {
+    const { supabase, user } = await requireOrgManager(orgId);
+    if (!UUID.test(idempotencyKey)) return { error: "unavailable" };
+
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select(
+        "id, provider, provider_subscription_id, period, current_period_end, cancel_at_period_end, plans(is_free)",
+      )
+      .eq("org_id", orgId)
+      .in("status", ["trialing", "active", "past_due"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!sub) return { error: "unavailable" };
+    const planInfo = sub.plans as unknown as { is_free: boolean } | null;
+    if (planInfo?.is_free) return { error: "unavailable" };
+    if (sub.cancel_at_period_end) return {};
+
+    const providerName = sub.provider ?? defaultProvider();
+    if (!providerName) return { error: "unavailable" };
+    const service = createServiceClient();
+    const { data: claimData, error: claimError } = await service.rpc("claim_billing_operation", {
+      target_org: orgId,
+      target_actor: user.id,
+      target_kind: "cancel",
+      target_idempotency_key: idempotencyKey,
+      target_provider: providerName,
+      target_plan: null,
+      target_subscription: sub.id,
+    });
+    const claim = claimData as {
+      ok?: boolean;
+      code?: string;
+      operationId?: string;
+      claimToken?: string;
+    } | null;
+    if (claim?.code === "completed") return {};
+    if (claimError || !claim?.ok || !claim.operationId || !claim.claimToken) return { error: "unavailable" };
+    activeClaim = { service, operationId: claim.operationId, claimToken: claim.claimToken };
+
+    const storedEnd = sub.current_period_end ? new Date(sub.current_period_end) : null;
+    const expectedPeriodEnd = storedEnd && storedEnd > new Date() ? storedEnd : fallbackPeriodEnd(sub.period);
+    let providerPeriodEnd: Date | undefined;
+    if (sub.provider && sub.provider_subscription_id) {
+      const result = await getProvider(sub.provider).scheduleCancellation(
+        sub.provider_subscription_id,
+        expectedPeriodEnd,
+      );
+      providerPeriodEnd = result.currentPeriodEnd;
+    }
+
+    const currentPeriodEnd = providerPeriodEnd ?? expectedPeriodEnd;
+    const { data: completionData, error: completionError } = await service.rpc("commit_billing_subscription_change", {
+      target_operation: claim.operationId,
+      target_claim_token: claim.claimToken,
+      target_subscription: sub.id,
+      target_kind: "cancel",
+      target_current_period_end: currentPeriodEnd.toISOString(),
+    });
+    const completion = completionData as { ok?: boolean } | null;
+    if (completionError || !completion?.ok) {
+      await failBillingClaim(activeClaim, "local_reconciliation_failed");
+      activeClaim = null;
+      return { error: "unavailable" };
+    }
+    activeClaim = null;
+    await recordAudit(supabase, "subscription.cancellation_scheduled", {
+      orgId,
+      entityType: "subscription",
+      entityId: sub.id,
+      metadata: { currentPeriodEnd: currentPeriodEnd.toISOString() },
+    });
+
+    return {};
+  } catch {
+    await failBillingClaim(activeClaim, "provider_unavailable");
+    return { error: "unavailable" };
+  }
+}
+
+export async function undoSubscriptionCancellation(orgId: string, idempotencyKey: string): Promise<{ error?: string }> {
+  let activeClaim: ActiveBillingClaim | null = null;
+  try {
+    const { supabase, user } = await requireOrgManager(orgId);
+    if (!UUID.test(idempotencyKey)) return { error: "unavailable" };
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("id, provider, provider_subscription_id, cancel_at_period_end, current_period_end")
+      .eq("org_id", orgId)
+      .in("status", ["trialing", "active", "past_due"])
+      .eq("cancel_at_period_end", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!sub || (sub.current_period_end && new Date(sub.current_period_end) <= new Date()))
+      return { error: "unavailable" };
+    const providerName = sub.provider ?? defaultProvider();
+    if (!providerName) return { error: "unavailable" };
+    const service = createServiceClient();
+    const { data: claimData, error: claimError } = await service.rpc("claim_billing_operation", {
+      target_org: orgId,
+      target_actor: user.id,
+      target_kind: "resume",
+      target_idempotency_key: idempotencyKey,
+      target_provider: providerName,
+      target_plan: null,
+      target_subscription: sub.id,
+    });
+    const claim = claimData as {
+      ok?: boolean;
+      code?: string;
+      operationId?: string;
+      claimToken?: string;
+    } | null;
+    if (claim?.code === "completed") return {};
+    if (claimError || !claim?.ok || !claim.operationId || !claim.claimToken) return { error: "unavailable" };
+    activeClaim = { service, operationId: claim.operationId, claimToken: claim.claimToken };
+    if (sub.provider && sub.provider_subscription_id) {
+      await getProvider(sub.provider).resumeSubscription(sub.provider_subscription_id);
+    }
+    const { data: completionData, error: completionError } = await service.rpc("commit_billing_subscription_change", {
+      target_operation: claim.operationId,
+      target_claim_token: claim.claimToken,
+      target_subscription: sub.id,
+      target_kind: "resume",
+      target_current_period_end: null,
+    });
+    const completion = completionData as { ok?: boolean } | null;
+    if (completionError || !completion?.ok) {
+      await failBillingClaim(activeClaim, "local_reconciliation_failed");
+      activeClaim = null;
+      return { error: "unavailable" };
+    }
+    activeClaim = null;
+    await recordAudit(supabase, "subscription.cancellation_undone", {
+      orgId,
+      entityType: "subscription",
+      entityId: sub.id,
+    });
+    return {};
+  } catch {
+    await failBillingClaim(activeClaim, "provider_unavailable");
+    return { error: "unavailable" };
+  }
+}

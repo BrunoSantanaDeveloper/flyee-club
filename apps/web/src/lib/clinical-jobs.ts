@@ -1,0 +1,223 @@
+import { isRetryablePipelineError, processRecording } from "@/lib/clinical-pipeline";
+import { notifyRecordingStatus } from "@/lib/mobile-push";
+import { createServiceClient } from "@flyee/auth/service";
+import { inngest, sendEvent } from "@flyee/jobs";
+
+/**
+ * MedChina's own background job (the template's packages own theirs).
+ * Transcribes a consultation recording and pre-fills its anamnesis.
+ * Registered in app/api/inngest/route.ts.
+ *
+ * Concurrency is capped because each run holds an audio file in memory and
+ * makes two Gemini calls. Retries are 3 (4 attempts) with Inngest's default
+ * exponential backoff: a provider capacity wave ("model overloaded" 503)
+ * typically outlasts one quick retry, and spreading attempts over minutes is
+ * exactly what rides it out. This does NOT retry forever on hopeless cases:
+ * definitive refusals (credits depleted, bad key — provider_rejected) are
+ * non-retryable and fail on the first attempt.
+ */
+export const processRecordingFunction = inngest.createFunction(
+  { id: "medchina-process-recording", retries: 3, concurrency: { limit: 2 } },
+  { event: "medchina/recording.process" },
+  async ({ event, attempt, maxAttempts }) => {
+    const supabase = createServiceClient();
+    const finalAttempt = attempt + 1 >= (maxAttempts ?? 4);
+    const result = await processRecording(supabase, event.data.recordingId, event.data.claimId, { finalAttempt });
+    if (!result.ok && result.code === "processing_already_claimed") {
+      // Another fenced worker owns the recording; this event is superseded,
+      // not a clinical failure and must not emit a failure notification.
+      return result;
+    }
+    if (!result.ok && isRetryablePipelineError(result.code) && !finalAttempt) {
+      // Preserve the live claim and let Inngest retry before surfacing a
+      // transient provider failure to the professional.
+      throw new Error(result.code);
+    }
+    await notifyRecordingStatus(supabase, event.data.recordingId, result.ok ? "recording_ready" : "recording_failed");
+    if (!result.ok && finalAttempt) throw new Error(result.code);
+    return result;
+  },
+);
+
+async function deleteDueRetainedAudio() {
+  const service = createServiceClient();
+  const now = new Date().toISOString();
+  const { data: due } = await service
+    .from("transcriptions")
+    .select("id, audio_path")
+    .eq("retention_policy", "thirty_days")
+    .not("validated_at", "is", null)
+    .not("audio_path", "is", null)
+    .lte("retain_until", now)
+    .order("retain_until", { ascending: true })
+    .limit(25);
+
+  let deleted = 0;
+  let failed = 0;
+  for (const transcription of due ?? []) {
+    if (!transcription.audio_path) continue;
+    const { error: storageError } = await service.storage.from("transcriptions").remove([transcription.audio_path]);
+    if (storageError) {
+      failed += 1;
+      await service
+        .from("transcriptions")
+        .update({ deletion_error: "retention_storage_delete_failed" })
+        .eq("id", transcription.id)
+        .eq("audio_path", transcription.audio_path);
+      continue;
+    }
+
+    const { data: completed, error: completionError } = await service.rpc("complete_retention_audio_deletion", {
+      target_transcription: transcription.id,
+      expected_audio_path: transcription.audio_path,
+    });
+    const result = completed as { ok?: boolean } | null;
+    if (completionError || !result?.ok) {
+      failed += 1;
+      continue;
+    }
+    deleted += 1;
+  }
+  return { deleted, failed };
+}
+
+/** Recover expired processing leases and retry the PHI-free notification
+ * outbox. Both operations are idempotent database claims. */
+export const recoverClinicalDeliveryFunction = inngest.createFunction(
+  { id: "medchina-recover-clinical-delivery", retries: 1, concurrency: { limit: 1 } },
+  { cron: "*/5 * * * *" },
+  async () => {
+    const service = createServiceClient();
+    const now = new Date().toISOString();
+    // ONE deadline for the whole sweep: this cron runs in a single 300s
+    // invocation, and every loop below must stop while there is still time to
+    // return — a recovery mechanism that gets killed mid-flight strands state
+    // exactly like the failures it exists to recover.
+    const sweepStartedAt = Date.now();
+    const sweepExpired = () => Date.now() - sweepStartedAt > 240_000;
+    const { data: stuck } = await service
+      .from("recordings")
+      .select("id, processing_attempts")
+      .eq("status", "processing")
+      .or(`processing_lease_expires_at.is.null,processing_lease_expires_at.lte.${now}`)
+      .limit(5);
+
+    // A reclaim whose preconditions broke for good — the consultation left an
+    // editable state, consent was revoked, the audio is gone. Skipping these
+    // silently (the old behavior) revisited the same zombie every 5 minutes
+    // forever while the UI said "Processando…"; they must settle to 'failed'.
+    const UNRECOVERABLE_CLAIM_CODES = new Set([
+      "invalid_consultation_transition",
+      "consent_required",
+      "recording_not_uploaded",
+    ]);
+    /** Enough reclaim cycles: a row this stubborn is failing, not in flight. */
+    const MAX_PROCESSING_ATTEMPTS = 8;
+
+    const failStuckRecording = async (recordingId: string, code: string) => {
+      await service
+        .from("recordings")
+        .update({
+          status: "failed",
+          error: null,
+          error_code: code,
+          processing_heartbeat_at: null,
+          processing_lease_expires_at: null,
+        })
+        .eq("id", recordingId)
+        .eq("status", "processing");
+      await notifyRecordingStatus(service, recordingId, "recording_failed");
+    };
+
+    let ranInline = false;
+    for (const row of stuck ?? []) {
+      if (sweepExpired()) break;
+      if (Number(row.processing_attempts ?? 0) >= MAX_PROCESSING_ATTEMPTS) {
+        await failStuckRecording(row.id, "processing_attempts_exhausted");
+        continue;
+      }
+      const { data } = await service.rpc("claim_recording_for_processing", { target_recording: row.id });
+      const claim = data as { ok?: boolean; code?: string; claimId?: string } | null;
+      if (!claim?.ok || claim.code !== "claimed" || !claim.claimId) {
+        if (claim?.code && UNRECOVERABLE_CLAIM_CODES.has(claim.code)) {
+          await failStuckRecording(row.id, claim.code);
+        }
+        continue;
+      }
+      const queued = await sendEvent("medchina/recording.process", { recordingId: row.id, claimId: claim.claimId });
+      if (!queued.sent) {
+        // Inline is the no-Inngest fallback and it runs the WHOLE pipeline —
+        // at most ONE per sweep, and only with room to finish. The other
+        // reclaimed rows keep their fresh lease and the next sweep (5 minutes)
+        // picks them up; slower than looping here, but the loop was 5 full
+        // pipelines inside one 300s invocation, which never fit.
+        if (ranInline || sweepExpired()) continue;
+        ranInline = true;
+        const result = await processRecording(service, row.id, claim.claimId);
+        await notifyRecordingStatus(service, row.id, result.ok ? "recording_ready" : "recording_failed");
+      }
+    }
+
+    // Audio the phone delivered that nothing ever picked up. It sits in
+    // 'uploaded' — never 'processing' — so the sweep above cannot see it, and
+    // its only trigger used to be a client-side effect in the consultation tab
+    // that suspends itself when the tab is hidden. The delivery route now
+    // starts the pipeline itself; this is the parachute for when that call did
+    // not survive (a cold start, a lost invocation), which is why the cutoff is
+    // generous: the hot path gets its chance first.
+    let strandedRecovered = 0;
+    const strandedBefore = new Date(sweepStartedAt - 10 * 60_000).toISOString();
+    const { data: stranded } = await service
+      .from("recordings")
+      .select("id")
+      .eq("status", "uploaded")
+      .eq("mode", "ai")
+      .lte("uploaded_at", strandedBefore)
+      .order("uploaded_at", { ascending: true })
+      .limit(3);
+
+    for (const row of stranded ?? []) {
+      if (sweepExpired()) break;
+      const { data } = await service.rpc("claim_recording_for_processing", { target_recording: row.id });
+      const claim = data as { ok?: boolean; code?: string; claimId?: string } | null;
+      // A row still in 'uploaded' is not a zombie of 'processing': a refused
+      // claim (revoked consent, a consultation that moved on) means there is
+      // nothing to do here, never that the capture should be marked failed.
+      if (!claim?.ok || claim.code !== "claimed" || !claim.claimId) continue;
+      strandedRecovered += 1;
+      const queued = await sendEvent("medchina/recording.process", { recordingId: row.id, claimId: claim.claimId });
+      if (!queued.sent) {
+        // Shares the single inline budget with the loop above — one full
+        // pipeline per invocation is all that fits.
+        if (ranInline || sweepExpired()) continue;
+        ranInline = true;
+        const result = await processRecording(service, row.id, claim.claimId);
+        await notifyRecordingStatus(service, row.id, result.ok ? "recording_ready" : "recording_failed");
+      }
+    }
+
+    const { data: outbox } = await service
+      .from("recording_notification_outbox")
+      .select("recording_id, kind, status, lease_expires_at")
+      .in("status", ["pending", "processing"])
+      .order("created_at", { ascending: true })
+      .limit(25);
+    for (const item of outbox ?? []) {
+      if (sweepExpired()) break;
+      if (item.status === "processing" && item.lease_expires_at && item.lease_expires_at > now) continue;
+      await notifyRecordingStatus(service, item.recording_id, item.kind as "recording_ready" | "recording_failed");
+    }
+
+    const retention = sweepExpired() ? { deleted: 0, failed: 0 } : await deleteDueRetainedAudio();
+
+    return {
+      processingRecovered: stuck?.length ?? 0,
+      strandedRecovered,
+      notificationsRetried: outbox?.length ?? 0,
+      retentionDeleted: retention.deleted,
+      retentionFailed: retention.failed,
+    };
+  },
+);
+
+export const clinicalFunctions = [processRecordingFunction, recoverClinicalDeliveryFunction];

@@ -1,0 +1,126 @@
+import Anthropic from "@anthropic-ai/sdk";
+
+import { StructuredOutputError } from "@flyee/ai/errors";
+import {
+  type AssistantConfig,
+  type ChatMessage,
+  type ChatProvider,
+  type StructuredOutput,
+  type UsageSink,
+  reportUsage,
+} from "@flyee/ai/types";
+
+function toAnthropicMessages(messages: ChatMessage[]) {
+  return messages.map((message) => ({
+    role: message.role,
+    content: [
+      ...(message.attachments ?? [])
+        .filter((attachment) => attachment.kind === "image")
+        .map((attachment) => ({
+          type: "image" as const,
+          source: {
+            type: "base64" as const,
+            media_type: attachment.mime as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: attachment.dataBase64,
+          },
+        })),
+      { type: "text" as const, text: message.content || "(no text)" },
+    ],
+  }));
+}
+
+export class AnthropicProvider implements ChatProvider {
+  readonly name = "anthropic" as const;
+
+  supportsAudio(): boolean {
+    // The Anthropic API has no audio input; send audio through a
+    // Gemini-backed assistant or add a transcription step.
+    return false;
+  }
+
+  async *streamChat(config: AssistantConfig, messages: ChatMessage[], onUsage?: UsageSink): AsyncGenerator<string> {
+    const key = process.env.ANTHROPIC_API_KEY;
+    if (!key) throw new Error("ANTHROPIC_API_KEY is not set");
+    // Without these the SDK defaults to 600s per attempt x 3 attempts — half an
+    // hour of a serverless invocation that is capped at 120-300s.
+    const client = new Anthropic({ apiKey: key, timeout: 90_000, maxRetries: 1 });
+
+    const stream = client.messages.stream({
+      model: config.model,
+      max_tokens: config.maxTokens,
+      temperature: config.temperature,
+      system: config.systemPrompt,
+      messages: toAnthropicMessages(messages),
+    });
+
+    for await (const event of stream) {
+      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+        yield event.delta.text;
+      }
+    }
+
+    // Usage only settles on the assembled message: message_start carries the
+    // input count and the deltas accumulate the output one.
+    const final = await stream.finalMessage();
+    reportUsage(onUsage, {
+      tokensIn: final.usage.input_tokens ?? 0,
+      tokensOut: final.usage.output_tokens ?? 0,
+      model: final.model ?? config.model,
+    });
+  }
+
+  async generateStructured(
+    config: AssistantConfig,
+    messages: ChatMessage[],
+    output: StructuredOutput,
+    onUsage?: UsageSink,
+  ): Promise<unknown> {
+    const key = process.env.ANTHROPIC_API_KEY;
+    if (!key) throw new Error("ANTHROPIC_API_KEY is not set");
+    // Without these the SDK defaults to 600s per attempt x 3 attempts — half an
+    // hour of a serverless invocation that is capped at 120-300s.
+    const client = new Anthropic({ apiKey: key, timeout: 90_000, maxRetries: 1 });
+
+    // Forced tool use: the reply IS the tool input, validated against the schema.
+    const response = await client.messages.create({
+      model: config.model,
+      max_tokens: config.maxTokens,
+      temperature: config.temperature,
+      system: config.systemPrompt,
+      messages: toAnthropicMessages(messages),
+      tools: [
+        {
+          name: output.name,
+          description: output.description ?? "Produce the answer in the required structured format.",
+          input_schema: output.schema as Anthropic.Tool["input_schema"],
+        },
+      ],
+      tool_choice: { type: "tool", name: output.name },
+    });
+
+    // Reported before the failure checks below: a call cut at max_tokens or
+    // refused was still billed, and a ledger that counts only successes
+    // understates the bill.
+    reportUsage(onUsage, {
+      tokensIn: response.usage.input_tokens ?? 0,
+      tokensOut: response.usage.output_tokens ?? 0,
+      model: response.model ?? config.model,
+    });
+
+    // Why it stopped decides what the caller can say. A tool input cut at
+    // max_tokens is incomplete JSON, not a refusal, and vice-versa.
+    const stopReason = (response.stop_reason ?? undefined) as string | undefined;
+    if (stopReason === "max_tokens") {
+      throw new StructuredOutputError({ failure: "truncated", provider: "anthropic", finishReason: stopReason });
+    }
+    if (stopReason === "refusal") {
+      throw new StructuredOutputError({ failure: "blocked", provider: "anthropic", finishReason: stopReason });
+    }
+
+    const toolUse = response.content.find((block) => block.type === "tool_use");
+    if (!toolUse || toolUse.type !== "tool_use") {
+      throw new StructuredOutputError({ failure: "empty", provider: "anthropic", finishReason: stopReason });
+    }
+    return toolUse.input;
+  }
+}

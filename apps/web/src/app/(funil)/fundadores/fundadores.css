@@ -1,0 +1,58 @@
+/*
+ * What only the founders offer needs: the seat counter. Everything else it
+ * uses — price block, guarantee, steps, founder card, closed state — lives in
+ * `funil.css`, shared with the other offer pages in this group.
+ */
+
+/* ---------- Seat counter ---------- */
+
+.offer-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 26px 28px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.offer-seats-count {
+  margin: 0;
+  font-family: "TT Chocolates", "Mulish", sans-serif;
+  font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-align: center;
+}
+
+.offer-seats--closed .offer-seats-count {
+  color: var(--muted);
+}
+
+.offer-seats-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--jade-soft);
+}
+
+.offer-seats-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--jade), var(--mint));
+}
+
+.offer-seats--closed .offer-seats-fill {
+  background: var(--muted);
+}
+
+.offer-seats-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-align: center;
+}

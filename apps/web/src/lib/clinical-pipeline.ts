@@ -1,0 +1,385 @@
+import { type ExistingAnswer, extractAnamnesis } from "@/lib/clinical-extraction";
+import { parseTranscriptResult } from "@/lib/transcript";
+import { alertAfterAudioUsage, billableSeconds } from "@/lib/usage";
+import type { ClinicalErrorCode } from "@flyee/clinical";
+import { processTranscription, type TranscriptResult } from "@flyee/transcribe";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * A claimed, idempotent recording pipeline. External provider calls happen
+ * outside a DB transaction; `apply_recording_result` performs the final merge
+ * atomically and refuses stale claims or closed consultations.
+ */
+export type PipelineResult =
+  | { ok: true; transcriptionId: string; answers: number; gaps: number }
+  | { ok: false; code: ClinicalErrorCode };
+
+const RETRYABLE_PIPELINE_ERRORS = new Set<ClinicalErrorCode>([
+  "provider_unavailable",
+  "internal_error",
+  "usage_record_failed",
+]);
+
+export const isRetryablePipelineError = (code: ClinicalErrorCode) => RETRYABLE_PIPELINE_ERRORS.has(code);
+
+/**
+ * How long the WHOLE pipeline may spend inside one invocation.
+ *
+ * The stages — download, transcribe, extract, apply — share a single
+ * serverless invocation capped at maxDuration = 300s. Budgeting them
+ * independently is what broke production: transcription allowed 200s and
+ * extraction up to 360s (120s x 3 SDK retries), so the platform killed the
+ * process before the terminal fail() below could run. The row then kept
+ * status='processing' with a live lease, the professional saw "Processando..."
+ * for hours, and the 5-minute recovery cron re-claimed it in a loop.
+ *
+ * This deadline is the ONE authority every stage reads, and it stops well short
+ * of the platform's cap so that WE end the work and record why.
+ */
+const PIPELINE_BUDGET_MS = Number(process.env.CLINICAL_PIPELINE_BUDGET_MS) || 250_000;
+/**
+ * Time held back from transcription so the EXTRACTION stage still has room.
+ * Without this reservation transcription would spend the whole budget and
+ * extraction would be squeezed into whatever was left — turning a good
+ * transcript into a failed consultation at the very last step.
+ */
+const EXTRACTION_RESERVE_MS = Number(process.env.CLINICAL_EXTRACTION_RESERVE_MS) || 80_000;
+
+type RecordingClaimOutcome = { claimId: string } | { result: PipelineResult };
+
+async function acquireRecordingClaim(supabase: SupabaseClient, recordingId: string): Promise<RecordingClaimOutcome> {
+  const { data: claimData, error: claimError } = await supabase.rpc("claim_recording_for_processing", {
+    target_recording: recordingId,
+  });
+  if (claimError) return { result: { ok: false, code: "internal_error" } };
+
+  const claim = claimData as { ok?: boolean; code?: string; claimId?: string; transcriptionId?: string } | null;
+  if (!claim?.ok) {
+    return {
+      result: {
+        ok: false,
+        code: claim?.code === "consent_required" ? "consent_required" : "recording_invalid_state",
+      },
+    };
+  }
+  if (claim.code === "ready") {
+    return claim.transcriptionId
+      ? { result: { ok: true, transcriptionId: claim.transcriptionId, answers: 0, gaps: 0 } }
+      : { result: { ok: false, code: "internal_error" } };
+  }
+  if (claim.code === "processing_already_claimed") {
+    return { result: { ok: false, code: "processing_already_claimed" } };
+  }
+  return claim.claimId ? { claimId: claim.claimId } : { result: { ok: false, code: "internal_error" } };
+}
+
+type FailureStage = "transcription" | "extraction" | "apply";
+
+async function fail(
+  supabase: SupabaseClient,
+  recordingId: string,
+  claimId: string,
+  code: ClinicalErrorCode,
+  stage: FailureStage,
+  terminal = true,
+): Promise<PipelineResult> {
+  if (!terminal) {
+    await supabase
+      .from("recordings")
+      .update({ error: null, error_code: code, failure_stage: stage })
+      .eq("id", recordingId)
+      .eq("status", "processing")
+      .eq("processing_claim_id", claimId);
+    await heartbeat(supabase, recordingId, claimId);
+    return { ok: false, code };
+  }
+  await supabase
+    .from("recordings")
+    .update({
+      status: "failed",
+      error: null,
+      error_code: code,
+      failure_stage: stage,
+      processing_heartbeat_at: null,
+      processing_lease_expires_at: null,
+    })
+    .eq("id", recordingId)
+    .eq("status", "processing")
+    .eq("processing_claim_id", claimId);
+  return { ok: false, code };
+}
+
+async function heartbeat(supabase: SupabaseClient, recordingId: string, claimId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("heartbeat_recording_processing", {
+    target_recording: recordingId,
+    target_claim_id: claimId,
+  });
+  return !error && Boolean((data as { ok?: boolean } | null)?.ok);
+}
+
+export async function processRecording(
+  supabase: SupabaseClient,
+  recordingId: string,
+  existingClaimId?: string,
+  options: { finalAttempt?: boolean } = {},
+): Promise<PipelineResult> {
+  const finalAttempt = options.finalAttempt ?? true;
+  let claimId = existingClaimId;
+  if (!claimId) {
+    const claimed = await acquireRecordingClaim(supabase, recordingId);
+    if ("result" in claimed) return claimed.result;
+    claimId = claimed.claimId;
+  }
+  if (!claimId) return { ok: false, code: "internal_error" };
+
+  if (!(await heartbeat(supabase, recordingId, claimId))) {
+    // Inngest retries carry the original event payload. A prior attempt may
+    // have transitioned the row to failed and fenced that claim, so reclaim
+    // atomically instead of retrying forever with a dead token.
+    const reclaimed = await acquireRecordingClaim(supabase, recordingId);
+    if ("result" in reclaimed) return reclaimed.result;
+    claimId = reclaimed.claimId;
+    if (!(await heartbeat(supabase, recordingId, claimId))) {
+      return { ok: false, code: "processing_already_claimed" };
+    }
+  }
+
+  const activeClaimId = claimId;
+  // Everything below shares this deadline; each stage takes what is left, and
+  // transcription stops early enough for extraction to still run.
+  const deadlineAt = Date.now() + PIPELINE_BUDGET_MS;
+  const transcriptionDeadlineAt = deadlineAt - EXTRACTION_RESERVE_MS;
+  const reject = (code: ClinicalErrorCode, stage: FailureStage) =>
+    fail(supabase, recordingId, activeClaimId, code, stage, finalAttempt || !isRetryablePipelineError(code));
+
+  const { data: recording, error: loadError } = await supabase
+    .from("recordings")
+    .select(
+      "id, org_id, patient_id, consultation_id, status, audio_path, mime, duration_seconds, created_by, transcription_id, processing_claim_id, processing_clinical_revision",
+    )
+    .eq("id", recordingId)
+    .maybeSingle();
+
+  if (loadError || !recording) return { ok: false, code: "not_found" };
+  if (
+    recording.status !== "processing" ||
+    recording.processing_claim_id !== claimId ||
+    !recording.audio_path ||
+    !recording.consultation_id ||
+    !recording.transcription_id ||
+    recording.processing_clinical_revision == null
+  ) {
+    return { ok: false, code: "recording_invalid_state" };
+  }
+
+  const { data: consented } = await supabase.rpc("has_active_consent", {
+    target_org: recording.org_id,
+    target_patient: recording.patient_id,
+    term_slug: "ai-processing",
+  });
+  if (!consented) return reject("consent_required", "transcription");
+
+  const { data: consultation } = await supabase
+    .from("consultations")
+    .select("id, status, clinical_revision")
+    .eq("id", recording.consultation_id)
+    .maybeSingle();
+  if (!consultation || !["draft", "in_progress", "awaiting_review"].includes(consultation.status)) {
+    return reject("invalid_consultation_transition", "apply");
+  }
+  // The consultation's revision is deliberately NOT compared here. It moves
+  // whenever the professional saves a field, and she is invited to keep
+  // writing while the audio is processed — refusing the result over that
+  // threw away the whole transcription. What protects her work is the
+  // per-field merge inside `apply_recording_result` (0092), not a barrier.
+
+  // ---- 1. Transcribe once -------------------------------------------------
+  const transcriptionId = recording.transcription_id;
+  const { data: beforeTranscription } = await supabase
+    .from("transcriptions")
+    .select("status, result")
+    .eq("id", transcriptionId)
+    .maybeSingle();
+
+  if (beforeTranscription?.status !== "ready") {
+    const transcribed = await processTranscription(
+      supabase,
+      transcriptionId,
+      recording.duration_seconds,
+      transcriptionDeadlineAt,
+    );
+    if (!transcribed.ok) {
+      // The real provider error (model unavailable, quota, bad key) is also
+      // persisted to transcriptions.error, but log it here so a failure is
+      // diagnosable from the server logs instead of an opaque 503.
+      console.error("[pipeline] transcription failed", transcribed.error);
+      // A capacity 503 is worth retrying later (provider_unavailable, in the
+      // retryable set); a definitive refusal — credits depleted, bad key,
+      // model gone — is not, and re-burning attempts on it only delayed the
+      // honest failure the professional needed to see.
+      return reject(transcribed.transient === false ? "provider_rejected" : "provider_unavailable", "transcription");
+    }
+  }
+
+  if (!(await heartbeat(supabase, recordingId, claimId))) {
+    return { ok: false, code: "processing_already_claimed" };
+  }
+
+  const { data: transcriptionRow } = await supabase
+    .from("transcriptions")
+    .select("result")
+    .eq("id", transcriptionId)
+    .maybeSingle();
+  // Sanitize before the prompt sees it: a segment missing `text` used to be
+  // rendered into the transcript as the literal string "undefined", and the
+  // validator that exists for exactly this was only ever used by the viewer.
+  const transcript: TranscriptResult | null = transcriptionRow?.result
+    ? parseTranscriptResult(transcriptionRow.result)
+    : null;
+  if (!transcript?.segments?.length) {
+    return reject("provider_unavailable", "transcription");
+  }
+
+  const consumedSeconds = billableSeconds(transcript, recording.duration_seconds);
+
+  // ---- 2. Extract ---------------------------------------------------------
+  // What a previous recording of this same consultation already wrote. Without
+  // it the second capture only ever saw its own audio, so a field it touched
+  // REPLACED what the first one had captured; with it the model is asked to
+  // complete the chart instead. Only rows the merge may update are used, so
+  // nothing the professional typed is ever put in front of the model.
+  const { data: existingRows } = await supabase
+    .from("anamnesis_answers")
+    .select("block_key, field_key, value, source, state, provenance")
+    .eq("consultation_id", recording.consultation_id);
+  const existing: ExistingAnswer[] = (existingRows ?? []).map((row) => ({
+    blockKey: row.block_key as string,
+    fieldKey: row.field_key as string,
+    value: (row.value as string) ?? "",
+    source: (row.source as string) ?? "",
+    state: (row.state as string) ?? "",
+    provenance: (row.provenance as { transcriptionId?: unknown } | null) ?? null,
+  }));
+
+  // Whether the fertility block applies (0103) — the same function the screen
+  // reads, so the model never writes into a block she cannot see. A failed
+  // lookup keeps it closed.
+  const { data: fertilityCare } = await supabase.rpc("fertility_care_applies", {
+    target_org: recording.org_id,
+    target_patient: recording.patient_id,
+  });
+
+  let extraction;
+  try {
+    extraction = await extractAnamnesis(transcript, deadlineAt, existing, { fertilityCare: fertilityCare === true });
+  } catch {
+    return reject("provider_unavailable", "extraction");
+  }
+
+  // Who is who, resolved once and kept: the extraction computed it, used it to
+  // arbitrate observations, and then threw it away — leaving the transcript
+  // viewer to show opaque "Speaker 1 / Speaker 2" gutters forever.
+  if (extraction.practitionerSpeaker) {
+    await supabase
+      .from("transcriptions")
+      .update({
+        metadata: {
+          practitionerSpeaker: extraction.practitionerSpeaker,
+          extractionModel: extraction.model,
+          extractionPromptVersion: extraction.promptVersion,
+          unverifiedProvenance: extraction.unverified,
+          droppedAnswers: extraction.dropped,
+        },
+      })
+      .eq("id", transcriptionId);
+  }
+
+  if (!(await heartbeat(supabase, recordingId, claimId))) {
+    return { ok: false, code: "processing_already_claimed" };
+  }
+
+  // ---- 3. Merge atomically ------------------------------------------------
+  const answers = extraction.answers.map((answer) => ({
+    blockKey: answer.blockKey,
+    fieldKey: answer.fieldKey,
+    value: answer.value,
+    source: answer.source,
+    state: answer.state,
+    // Hypotheses and plans have recorded model + prompt_version since 0025
+    // (PRD §10.10); the drafts that feed them did not, so a quality regression
+    // could never be traced back to the prompt that caused it.
+    provenance: {
+      ...answer.provenance,
+      model: extraction.model,
+      promptVersion: extraction.promptVersion,
+    },
+  }));
+  // Questions she already worked through and cleared. The apply replaces
+  // `ai_gaps` wholesale, so without this a reprocess — which is a routine
+  // outcome, not an exception — refills the checklist she had emptied and
+  // overrules a decision of hers with a retry.
+  const { data: dismissedRows } = await supabase
+    .from("consultation_gap_dismissals")
+    .select("gap")
+    .eq("consultation_id", recording.consultation_id);
+  const dismissed = new Set((dismissedRows ?? []).map((row) => String(row.gap).trim()));
+  const gaps = extraction.gaps.filter((gap) => !dismissed.has(gap.trim()));
+
+  const { data: appliedData, error: applyError } = await supabase.rpc("apply_recording_result", {
+    target_recording: recording.id,
+    target_transcription: transcriptionId,
+    target_claim_id: claimId,
+    target_answers: answers,
+    target_gaps: gaps,
+    target_billable_seconds: consumedSeconds,
+    // Fills consultations.chief_complaint only while it is still empty (0092).
+    // It drives the patient timeline and every AI prompt, and until now nothing
+    // could write it: the catalog excludes it and the header editor was removed.
+    target_chief_complaint: extraction.chiefComplaint,
+  });
+  if (applyError) {
+    // The atomic RPC may have committed while its HTTP response was lost.
+    // Never turn that already-ready row back into a failure.
+    const { data: recovered } = await supabase
+      .from("recordings")
+      .select("status, transcription_id")
+      .eq("id", recordingId)
+      .maybeSingle();
+    if (recovered?.status === "ready" && recovered.transcription_id) {
+      return {
+        ok: true,
+        transcriptionId: recovered.transcription_id,
+        answers: answers.length,
+        gaps: gaps.length,
+      };
+    }
+    const code = applyError.message.includes("usage_record_failed") ? "usage_record_failed" : "internal_error";
+    return reject(code, "apply");
+  }
+
+  const applied = appliedData as { ok?: boolean; code?: string; answers?: number; gaps?: number } | null;
+  if (!applied?.ok) {
+    const code: ClinicalErrorCode =
+      applied?.code === "consent_required"
+        ? "consent_required"
+        : applied?.code === "clinical_revision_conflict"
+          ? "clinical_revision_conflict"
+          : applied?.code === "invalid_consultation_transition"
+            ? "invalid_consultation_transition"
+            : "recording_invalid_state";
+    return reject(code, "apply");
+  }
+
+  await alertAfterAudioUsage(supabase, recording.org_id);
+
+  // The AI summary is NOT regenerated per recording — it is generated ONCE at
+  // finalization, over ALL recordings joined into the anamnesis (see the
+  // finalize route). Per-recording churn would spend an AI call on every audio.
+
+  return {
+    ok: true,
+    transcriptionId,
+    answers: applied.answers ?? answers.length,
+    gaps: applied.gaps ?? gaps.length,
+  };
+}

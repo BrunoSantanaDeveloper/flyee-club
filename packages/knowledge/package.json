@@ -1,0 +1,20 @@
+{
+  "name": "@flyee/knowledge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Knowledge base with trust levels and pgvector retrieval: chunking, Gemini embeddings, ingestion job and search helpers that feed assistant context.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./jobs": "./src/jobs.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^1.9.0",
+    "@flyee/auth": "*",
+    "@flyee/jobs": "*",
+    "@supabase/supabase-js": "^2.50.0"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test src/chunking.test.ts"
+  }
+}

@@ -1,0 +1,67 @@
+"use client";
+import "@/style/global.css";
+
+import { useTranslations } from "next-intl";
+import { Suspense } from "react";
+
+import { LicenseInfo } from "@mui/x-license";
+
+import Loading from "@/app/loading";
+import AnnouncementBanner from "@/components/layout/announcements/announcement-banner";
+import ContentWrapper from "@/components/layout/containers/content-wrapper";
+import Header from "@/components/layout/containers/header";
+import Main from "@/components/layout/containers/main";
+import ImpersonationBanner from "@/components/layout/impersonation/impersonation-banner";
+import LocaleAutoNotice from "@/components/layout/locale/locale-auto-notice";
+import LeftMenu from "@/components/layout/menu/left-menu";
+import MenuBackdrop from "@/components/layout/menu/menu-backdrop";
+import RecordingSessionProvider from "@/components/product/recording-session-provider";
+import SupportWidget from "@/components/support/support-widget";
+
+LicenseInfo.setLicenseKey(process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY || "");
+
+export default function DashboardLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  const t = useTranslations("product");
+  return (
+    <RecordingSessionProvider exitMessage={t("recorder-leave-warning")}>
+      <a
+        href="#main-content"
+        className="bg-primary text-text-contrast fixed top-3 left-3 z-[2000] -translate-y-20 rounded-lg px-4 py-3 transition-transform focus:translate-y-0"
+      >
+        {t("skip-to-content")}
+      </a>
+      <Header />
+      <LeftMenu />
+      <Main>
+        <ContentWrapper>
+          {/*
+            Above the announcements on purpose: if she cannot read the app, that
+            is the first thing to fix — every other message is unreadable too.
+          */}
+          <LocaleAutoNotice />
+          <AnnouncementBanner />
+          <Suspense fallback={<Loading />}>{children}</Suspense>
+        </ContentWrapper>
+      </Main>
+      <MenuBackdrop />
+      <SupportWidget />
+      {/*
+        Renders only inside a support impersonation (migration 0057), and
+        stays fixed: the operator scrolls, and forgetting whose account you
+        are in is the failure mode worth designing against.
+      */}
+      <ImpersonationBanner />
+      {/*
+        No cookie-consent banner and no ad/analytics tracker on the clinical
+        app: the Meta Pixel / GA4 live ONLY in the marketing layout (LGPD
+        Art. 11 — sensitive health data). In-app funnel events (checkout,
+        trial start, purchase) are sent server-side via the Conversions API
+        (lib/meta-capi.ts), never by a browser tracker over patient routes.
+      */}
+    </RecordingSessionProvider>
+  );
+}

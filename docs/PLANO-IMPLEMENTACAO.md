@@ -1,0 +1,339 @@
+# Plano de implementação da plataforma flyee.club
+
+> Aprovado em 2026-09-30. Nenhuma fase foi executada ainda, exceto o item de `docs/PRODUCT.md` da fase 0 (marcado abaixo). Decisões do usuário, premissas de produto e questões em aberto: [`docs/PRODUCT.md`](PRODUCT.md), seções "Decisões tomadas 2026-09-30" e "Decisões em aberto". Elas são a fonte única; este plano não as repete.
+
+## Contexto
+
+A pasta `C:\AppsProjects\flyee-club` é uma cópia sem `.git` do repositório MedChina (prontuário clínico de MTC), derivado do template flyee. Ela vira a **plataforma** do flyee.club: contas, cobrança, emissão e revalidação de token, API de entrega de pacotes para a CLI, gestão de catálogo e releases, painel do integrante, consoles admin, analytics por segmento, lista de espera, site público bilíngue e legal. O **produto** (`npx flyee`, core do harness, conteúdo dos módulos) nasce depois em outro projeto e consome o contrato de API e o schema de manifesto definidos aqui. O harness de desenvolvimento do repositório (`.claude/*`, hooks, `scripts/sync-agent-harness.mjs`) fica como harness da plataforma; nada dele é distribuído.
+
+Diagnóstico que motiva o plano (três auditorias read-only, 2026-09-30): 76 das 123 migrações, 27 das 83 tabelas, 40 das 58 rotas de API, 130 dos 177 arquivos de `apps/web/src/lib`, 66% das chaves i18n e o app mobile inteiro são clínicos. A camada de plataforma é sólida e fica: auth + 2FA + impersonação, superadmin e consoles, cobrança Stripe/Asaas com webhooks idempotentes, servidor OAuth 2.1 com tokens opacos (refresh de 30 dias rotativo), `product_events` com allowlist, oferta de fundador com vagas reais, motor de eventos ao vivo, leads com LGPD, backups, e-mail, jobs.
+
+## Premissas de implementação
+
+As decisões do usuário e as premissas de produto (kit sem prazo, Pro como família própria, código de dispositivo, bloqueio das aulas pela plataforma, eventos no Supabase, uma conta por integrante, nota fiscal depois, anual em USD igual a 10 vezes a mensal) estão em `docs/PRODUCT.md`. Estas são as premissas que só afetam a execução:
+
+- A Landing DS do MedChina (`clinical-source-home.css`, 4.184 linhas) é abandonada. Todo o site usa `components/marketing/*`: um só sistema, bilíngue por construção e lintado pelos hooks.
+- Workspace = conta pessoal. A regra de uma org por usuário (migração 0061) é mantida, e convites (`invites`, `/invite`) saem da v1.
+- "MedChina" sai de todos os identificadores: eventos Inngest viram `flyee/*`, o `project_id` local vira `flyee-club-local`, a variável `MEDCHINA_ENV_FILE` vira `FLYEE_ENV_FILE` e os locks passam a usar `hashtext('flyee')`.
+- Encontros suportam os dois modos por `provider`: vídeo embutido com presença e link externo.
+- Construir não é abrir: planos de assinatura podem ficar com `is_public = false` e o card de upsell desligado (`platform_settings.upsell.enabled = false`) até o portão destacado da fase 2 do roadmap em `docs/PRODUCT.md`.
+
+## Ordem de execução e marcos
+
+```
+0 identidade → 1 subtração → 2 banco → 7.1 roteamento de locale (só routing+middleware)
+→ 4 cobrança → 3 token/entrega → 5 painel → 6 admin → 7.2 páginas/copy → 8 e-mail/jobs
+```
+
+- Cada fase termina com `npm run typecheck && npm run build && npm run test` verde e um commit.
+- **Primeiro deploy** (marco da fase 0 do brief, "página de espera bilíngue"): após 2 + 7.1 + `/espera` + e-mail de confirmação (parte da fase 8 antecipada).
+- 7.1 vem antes de 5 e 6 para que nenhuma tela nova mude de pasta duas vezes.
+
+---
+
+## Fase 0 — Identidade e desvinculação do template
+
+**Git e projeto**
+- `git init -b main`; primeiro commit = o estado atual da pasta (base herdada + `docs/PRODUCT.md`, este plano e o aviso de transição no `CLAUDE.md`), antes de qualquer remoção. Reescrever em `apps/web/src/components/product/catalog.json` e `components/marketing/catalog.json` as instruções `git show "bd92373^:…"` para apontar ao commit de importação (`git show <sha-import>:<path>`).
+- Apagar `.next/` da raiz, `src/icons/nexture/ni-rocket.tsx` da raiz, `artifacts/product-design/`, `.vercel/project.json` (aponta ao projeto MedChina).
+- `package.json` raiz: `name: "flyee-club"`; remover scripts `dev:mobile`, `build:mobile`, `test:clinical`, `test:whatsapp`, `test:transcribe`, `test:knowledge`, `test:mobile`, `content:mobile*`, `eval:retrieval`, `knowledge:reindex`; `test` = `test:ai && test:catalog && test:web`; `typecheck` só `@flyee/web` (+ `@flyee/catalog` na fase 3).
+- `README.md` raiz: substituir o boilerplate do create-next-app por um README curto da plataforma. `.gitignore`: tirar a regra `depo-hellen.mp4`.
+- `supabase/config.toml`: `project_id = "flyee-club-local"`, remover `additional_redirect_urls = ["medchina://**"]`.
+
+**Marca provisória**
+- `packages/content/src/index.ts` `BRAND`: `name: "flyee.club"`, tagline/description neutras, `mark: "/brand/flyee-mark.png"`, `support.helpCenter: "/ajuda"`.
+- `apps/web/src/components/logo/logo.tsx`: lockup placeholder (wordmark "flyee" + marca simples) mantendo o contrato de tint por token e a API `classNameFull`/`classNameMobile`.
+- `packages/content/brand/*` → placeholders; regenerar `apps/web/public/favicon/*`, `public/favicon.ico`, `public/brand/flyee-mark.png`, `public/images/email/logo.svg`.
+- Fonte: em `apps/web/src/app/layout.tsx` remover o bloco `ttChocolates = localFont(...)` e sua classe no `<html>`; apagar `apps/web/src/fonts/tt-chocolates/` e `apps/web/public/fonts/`. `apps/web/tailwind.config.ts` já resolve `display: var(--font-display, var(--font-heading))`, então Urbanist assume sem outra edição; remover o array `CJK` e seus comentários.
+- Reescrever `CLAUDE.md` raiz e `apps/web/CLAUDE.md` (resumo deste plano: fronteira plataforma/produto, pacotes mantidos, convenções: admin em pt-BR fixo, i18n por caminho, hooks product-screen/marketing-page, runners de migração). Zero menções a template. O cabeçalho, o resumo do produto e o aviso de transição do `CLAUDE.md` raiz já foram atualizados em 2026-09-30; falta o resto do arquivo e o `apps/web/CLAUDE.md`.
+
+**Idiomas: seis → dois**
+- `apps/web/src/constants.ts`: `LOCALES = ["pt-BR", "en"]`, `LOCALE_RANK` com duas entradas.
+- `apps/web/src/i18n/request.ts`: `MESSAGES` com dois imports (reestruturado na 7.1).
+- `apps/web/src/lib/locale-detection.ts`: `LANGUAGE_MAP` `{pt: "pt-BR", en: "en"}`; `COUNTRY_MAP` BR/PT → pt-BR, resto → en; manter `isCrawler`.
+- `packages/content/messages/`: apagar `de/es/fr/zh-CN.json`; apagar `packages/content/mobile-messages/` e o export `./mobile-messages/*` do `package.json` do pacote. A poda de chaves fica para a fase 1.
+- `components/marketing/home-copy/`: apagar `de/es/fr/zh-CN.ts`; `index.ts` mapeia dois; `HomeCopy = typeof homeCopyPtBR` continua a fonte estrutural.
+- `apps/web/src/lib/import/messages.test.ts` → `lib/i18n/messages.test.ts` com `CATALOGS` de dois idiomas e `NAMESPACES = ["product","auth","dashboard","marketing"]`.
+- Apagar `apps/web/public/images/flags/`; `components/layout/user/user-language-switch.tsx` e `components/layout/locale/locale-switch.tsx` passam a seletor textual.
+
+**Harness interno (fica) e linhagem do template (sai)**
+
+| Arquivo | Edição |
+|---|---|
+| `.claude/skills/update-from-template/` | apagar |
+| `.claude/skills/{mobile-screen,building-native-ui,mobile-app-ui-design}/` | apagar (sem app mobile) |
+| `.claude/rules/agent-commands.md`, `.claude/rules/mobile-boundaries.md` | apagar (mapeiam skills inexistentes / app removido) |
+| `.claude/rules/web-boundaries.md` | remover a linha "This is a TEMPLATE…" |
+| `.claude/rules/marketing.md` | remover `(autoridade)`, Landing DS, "six locales", HOME-SPEC/FUNIL; manter regras de hook, `PUBLIC_PREFIXES`, sitemap, SEO, JsonLd (reescritas para dois idiomas e caminho na 7.3) |
+| `.claude/rules/app-ux.md` | manter; trocar palavras "clinical" |
+| `.claude/hooks/marketing-lint.mjs` | remover a regra de caminho `clinical-source-home.(tsx|css)` e o caso especial `(funil)` |
+| `scripts/sync-agent-harness.mjs` | tirar `apps/mobile/CLAUDE.md` do loop `sources`; rodar `npm run harness:sync` (regenera `AGENTS.md` e `.agents/skills`) |
+| hooks `marketing-guard`, `product-screen-guard`, `product-lint`, skills `marketing-page`, `product-screen`, `*-verify`, `.codex/config.toml`, `scripts/test-agent-harness.mjs` | manter (sem referências MedChina, verificado) |
+
+**Infra nova (ações do operador)**: projeto Supabase novo (URL, anon, service role, `DATABASE_URL` pooled 6543; Auth email + Google; SMTP Resend; redirects `https://flyee.club/auth/callback` e localhost); projeto Vercel `flyee-club` via `npx vercel link` (Root `apps/web`, "Include files outside Root Directory" ON, Node 22; secrets `VERCEL_TOKEN/ORG_ID/PROJECT_ID`); Resend com domínio `flyee.club`; app Inngest `flyee`; Asaas produção + webhook token + URL `/api/webhooks/asaas` (`docs/ASAAS-GO-LIVE.md` §1 continua válido); Stripe + `/api/webhooks/stripe`; DNS → Vercel; `NEXT_PUBLIC_SITE_URL=https://flyee.club`; reservar o nome `flyee` no npm.
+
+**Env (`apps/web/.env.example`)**: remover `BILLING_PROVIDER`, `WHATSAPP_*`, `EVOLUTION_*`, `APPLE_TEAM_ID`, `ANDROID_CERT_SHA256`, `NEXT_PUBLIC_POSTHOG_*`, `NEXT_PUBLIC_TITLE`; adicionar `PUBLIC_FORMS_IP_SALT`, `NEXT_PUBLIC_CLI_PACKAGE="flyee"`, `MODULE_UPLOAD_MAX_MB=20`; `NEXT_PUBLIC_STORAGE_PREFIX="fc"`. `scripts/remote-db-gate.mjs`: `MEDCHINA_ENV_FILE` → `FLYEE_ENV_FILE`, lock `hashtext('flyee')`, `application_name`.
+
+**CI/deploy**: `.github/workflows/ci.yml` sem `content:mobile:check` e `build:mobile`; `deploy.yml` sem `apps/mobile/**` em `paths-ignore`; `.husky/pre-commit` e `apps/web/vercel.json` inalterados.
+
+**`docs/`**
+- ✅ **Feito em 2026-09-30.** O brief foi movido de `attachments/` para `docs/PRODUCT.md`, sobrescrevendo o PRD do MedChina (sem histórico, porque ainda não havia git; o original segue no repositório do MedChina). Ajustes: linha de status; seção "Decisões tomadas 2026-09-30" com a fronteira entre plataforma e produto, as decisões e as premissas; os quatro conteúdos embutidos que não vieram na exportação reconstruídos em texto e marcados como reconstrução; nota de preços como dados; "Decisões em aberto" atualizada com as decididas e as novas. `attachments/` voltou a ter só o README, e o resumo do produto no `CLAUDE.md` raiz foi atualizado com um aviso de estado de transição.
+- Apagar `HOME-SPEC.md`, `HOME-ASSISTENTE.md`, `FUNIL.md`, `PAGINA-CHINA.md`, `PAGINA-EVENTO.md`, `IMPORT-EXPORT.md`, `LICENSING-LIBRARY.md`, `STORE-REVIEW.md`, `docs/radar/`.
+- Reescrever depois: `DESIGN.md`, `SEO.md`, `TRACKING.md` (fase 7); `DEPLOY.md` (ids agora); `BILLING-AUDIT.md` vira histórico com cabeçalho apontando para `docs/BILLING.md` (fase 4); `ASAAS-GO-LIVE.md` mantido sem ids MedChina; `MCP-CONECTORES.md` substituído por `docs/CLI-CONTRACT.md` (fase 3).
+
+Saída: `grep -ri "medchina\|update-from-template\|tt-chocolates" --exclude-dir=node_modules` só encontra o cabeçalho histórico de `BILLING-AUDIT.md`.
+
+---
+
+## Fase 1 — Subtração do clínico (ordem importa)
+
+**1.1 Desacoplar primeiro** (`packages/clinical` tem 38 importadores; só dois exports são genéricos):
+- NOVO `apps/web/src/lib/safe-next.ts`: `sanitizeInternalNext(value, fallback = "/inicio")` + `sanitizeCandidate` (de `packages/clinical/src/index.ts` ~348–375) + teste vitest. Importadores a reescrever: `middleware.ts`, `app/auth/callback/route.ts`, as sete páginas `app/auth/*/page.tsx`.
+- NOVO `apps/web/src/lib/remote-state.ts`: `RemoteState<T, E = RemoteError>` e `remoteIdle/Loading/Success/Empty/Error` (~318–336). Sobrevivem como importadores: `settings/billing/page.tsx`, `settings/billing/components/use-billing.ts`, `inicio/page.tsx`.
+- Depois: tirar `@flyee/clinical` de `apps/web/package.json`, `next.config.mjs` `transpilePackages`, scripts raiz; apagar `packages/clinical/`.
+
+**1.2 Pacotes**: apagar `packages/{transcribe,knowledge,whatsapp,connectors,documents}` e `apps/mobile` (+ `.well-known/apple-app-site-association`, `.well-known/assetlinks.json`, `lib/mobile-push.ts`, `lib/mobile-capture-store.ts`, `scripts/generate-mobile-messages.mjs`). Limpar `apps/web/package.json`, `transpilePackages`, `packages/db/src/schema/index.ts` (apagar `schema/{knowledge,connectors,transcriptions,whatsapp,ai}.ts`), `api/inngest/route.ts` (ficam só backup; o resto volta na fase 8), `packages/jobs/src/index.ts` (`JobEvents` só `backup/run.requested` por ora). `packages/ai`: manter `index.ts`, `providers/*`, `types.ts`, `errors.ts`, `strict-schema.ts`; apagar `api/ai/`, `admin/ai/components/{assistants-admin,mcp-admin}.tsx`; `ai-prices-admin.tsx` migra para aba em `/admin/insights` (fase 6). Manter `fields`, `backup`, `audit`, `auth`, `email`, `jobs`, `onboarding`, `design-tokens`, `content`, `db`, `billing`.
+
+**1.3 Rotas (`apps/web/src/app`)**
+- Apagar: `(dashboard)/{agenda,pacientes,consultas,biblioteca,primeiros-passos,assets,applications,docs,ui,invite}`, `(dashboard)/admin/knowledge`, `(dashboard)/settings/{examples,organization}`, `(autoridade)/`, `(funil)/{assinar,fundadores,lei-15345,ao-vivo,components,funil.css}` (pasta do grupo fica vazia para a 7.2), `(marketing)/{migracao,seguranca,legal/garantia,clinical-source-home.css}`, `app/landing-shared.css`, `consentir`, `documento`, `gravar`, `palestra`, `pitch`, `verify/[code]`, `api/{account,ai,consultations,documents,patients,public/capture,public/consent,public/document,public/evento,public/palestra,public/unsubscribe,recordings,transcriptions,webhooks/whatsapp,mcp,billing/start-trial}`, `.well-known/oauth-protected-resource/api/mcp`.
+- Manter: `(dashboard)/{inicio (reescrito na 5), settings, settings/billing, settings/security, settings/connections (renomeado na 5), settings/preferences}`, `(dashboard)/admin/{organizations,billing,audit,insights,backups,announcements,help,blog,support,eventos,leads}` (os dois últimos adaptados na 6), `(marketing)/{page.tsx, como-funciona, recursos → catálogo público, planos, sobre, contato, ajuda, blog, legal/{termos,privacidade,cookies}}`, `auth/*`, `oauth/authorize`, `onboarding`, `assinatura`, `api/{admin/insights, billing/providers, impersonation, inngest, oauth/register, oauth/token, webhooks/[provider]}`, `.well-known/oauth-*`, `sitemap.ts`, `robots.ts`, `opengraph-image`.
+
+**1.4 `lib/`**: apagar os 83 arquivos clínicos + `lib/import/` (padrão: `agenda*`, `anamnesis*`, `clinical-*`, `consultation-*`, `capture-*`, `patient-*`, `practice-*`, `prescription*`, `recording-*`, `transcript*`, `therapeutic-plan`, `hypotheses-access`, `tcm-vocabulary`, `document-kinds`, `plan-*`, `home-guidance*`, `share-link*`, `account-export*`, `import-jobs`, `appointment-reminders*`, `attachment-*`, `audio-allowance`, `usage`, `pro-trial`, `trial-jobs`, `conversion-offer`, `campaign-offer*`, `offer-angles`, `testimonials`, `consents`, `connectors`, `whatsapp-link*`, `mobile-*`, `pdf-theme`, `billing-plan-features`, `command-consultations`, `product-ux-optimization.test`). `live-event*` fica até virar `meeting*` (fase 6); `mcp/` fica até `lib/cli/gates.ts` existir (fase 3). `product-actions.ts` reescrito; `onboarding.ts` reescrito (1.6); `product-events.ts` reescrito (fase 2).
+Manter: `analytics`, `attribution`, `audit`, `billing-cancellation`, `billing-jobs`, `billing-maintenance`, `billing-window`, `campaign-params`, `fetch-all-pages`, `ga4-mp`, `guarantee`, `founders-offer`, `impersonation*`, `locale-*`, `meta-capi*`, `notifications`, `oauth/*`, `payment-choice`, `pending-pix`, `platform-settings`, `public-content`, `signup-attribution`, `utils`, `admin-jobs` (adaptado na 6), `ai-spend` e os testes `asaas-pix`, `invoice-description`, `billing-reference`, `shell-contracts` (reescrito).
+
+**1.5 Componentes**
+- `components/product/`: manter `empty-state`, `setup-wizard`, `onboarding-checklist(-card)`, `onboarding-status-*`, `activation-progress`, `metric-bars`, `usage-meter`, `trend-sparkline`, `home-tiles`, `tile-tone`, `dialog-header`, `confirm-action-dialog`, `info-hint`, `product-markdown`, `step-celebration-dialog`, `picker-locale`, `fields/*`, `README.md`, `catalog.json`; `gate-notice.tsx` vira genérico `{ reason, action }`; apagar o resto (34 arquivos clínicos).
+- `components/marketing/`: apagar `anamnesis-*`, `consultation-*`, `clinical-source-home.tsx`, `traceability-demo`, `workflow-demo`, `mobile-sequence`, `phone-frame`, `home-evidence`, `home-{header,footer,brand,language-switch,language-notice}`, `testimonials`; manter todas as primitivas e arquétipos (`section`, `container`, `section-header`, `hero`, `feature-row`, `feature-grid`, `bento-grid`, `stat-band`, `pricing-section`, `faq`, `cta`, `json-ld`, `site-json-ld`, `reveal`, `float`, `count-up`, `band`, `breakout`, `process-steps`, `product-frame`, `markdown-prose`…).
+- Apagar `components/{pitch,presentation,charts}` (confirmar que só `/ui` importa `charts`), `components/plugins` (manter só o editor usado por `/admin/blog`, se vier daí). `components/layout/containers/header.tsx` sem `CommandPalette`; `components/layout/menu/plan-indicator.tsx` reescrito sobre `use-entitlements` (fase 5); `(dashboard)/layout.tsx` sem `RecordingSessionProvider`.
+
+**1.6 Shell, onboarding, config**
+- `apps/web/src/menu-items.ts`: `inicio`, `modulos` (o catálogo do integrante; `/catalogo` fica para a página pública), `receitas`, `novidades`, `encontros`, `roadmap`, grupo `admin` (sem knowledge/ai; `catalogo`, `roadmap`, `membros`, `metricas` entram na 6); rodapé `settings`.
+- `apps/web/src/lib/onboarding.ts`: `ActivationFacts = { hasProfileSegment, hasAccess, hasDevice, hasFirstExecution }` lidos pela RPC definer `member_activation_facts()` (fase 2; `product_events` é só superadmin, por isso a RPC). Passos: `profile` → `/onboarding`; `access` → `/settings/billing?plan=kit`; `install` → `/inicio#instalar`; `first-run` (fechado pelo evento da CLI). `resolvePostAuthDestination` mantém o contrato (sign-in/sign-up/callback/two-factor).
+- `config.ts`: `appRoot` `/inicio`, `themeColor` `theme-green`. `hooks/`: apagar `use-audio-allowance`, `use-practice-areas`; `use-profile.ts` evento `flyee:profile-updated`.
+
+**1.7 Testes**: apagar os 35 vitest clínicos + os dois do funil; `apps/web/e2e/baseline.spec.ts` troca `/primeiros-passos`, `/agenda`, `/pacientes` por `/catalogo`, `/settings/devices`, `/settings/preferences` (mantém a varredura a11y); `packages/db/tests/*` apagados por inteiro (a fase 2 escreve o novo conjunto).
+
+**1.8 Assets**: apagar `apps/web/public/images/{agenda-*.jpg, anamnese-automatica.jpg, audio-capta-mobile.jpg, china/, medchina-*.webp, palestra/, plataforma.jpg, marketing/clinical-home/, products/, email/product-*.png}`, `public/videos/`, `public/brand/medchina-mark.png`, `public/fonts/`; `images/misc` e `images/avatars` só se ainda referenciados.
+
+**1.9 Poda de chaves i18n**: NOVO `scripts/prune-messages.mjs --check|--write` (CI roda `--check`): coleta chaves de `pt-BR.json`; varre `apps/web/src/**/*.{ts,tsx}` por literais exatos e por prefixos/sufixos dinâmicos (``t(`${x}-name`)``, mapas como `SCOPE_LABEL_KEYS`); remove o resto e espelha em `en.json`; `messages.test.ts` garante paridade e ausência de vazios. Esperado: `product` 2.121 → poucas centenas, `marketing` 602 → ~250, `dashboard` 465 → ~120.
+
+**1.10 `next.config.mjs` e dependências**: `transpilePackages` = `@mui/material-nextjs, @flyee/{content,design-tokens,auth,db,email,billing,ai,jobs,audit,onboarding,backup,catalog}`; remover `serverExternalPackages` (`@react-pdf/renderer`), a substituição webpack do `pptxgenjs` + `lib/node-module-stub.ts`, o bloco de headers de `/consentir`. Tirar de `apps/web/package.json`: `@react-pdf/renderer`, `pptxgenjs`, `mcp-handler`, `@modelcontextprotocol/server`, `tus-js-client`, `html-to-image`, `react-to-print`, `qrcode`, `react-scroll-to-bottom`, `react-syntax-highlighter`, `autosuggest-highlight`, `swiper`, `yet-another-react-lightbox`, `react-draggable`, `@mui/x-data-grid-generator`; `papaparse`, `react-dropzone` e `@vidstack/react` voltam quando as fases 5/6 precisarem.
+
+Saída: build verde com as migrações antigas ainda no lugar; commit "subtract clinical footprint".
+
+---
+
+## Fase 2 — Baseline do banco
+
+**Runners**
+- `scripts/remote-db-gate.mjs` `readAppliedMigrations`: hoje exige `schema_migrations` E `organizations`. Nova regra: nenhum dos dois → bootstrap (`create table public.schema_migrations (version text primary key, applied_at timestamptz default now())`) e segue com conjunto vazio; só o schema sem histórico → erro "banco desconhecido"; ambos → como hoje.
+- `scripts/prepare-supabase-local.mjs`: remover o bootstrap `LEGACY_PRIVILEGES_BOOTSTRAP`. Um projeto Supabase novo é "secure by default" como a imagem local, então **toda migração nova traz grants explícitos** (`grant select on table … to authenticated` ao lado de cada policy; `grant execute on function …`). Manter a renumeração de prefixos duplicados. Atualizar `packages/db/README.md`.
+- Convenções mantidas: `NNNN_nome.sql` gravado por nome completo; RPCs `security definer` com `set search_path = public`; RLS em toda tabela; `enable_row_versioning()` em tabelas de consentimento e dinheiro; pgTAP em `packages/db/tests/NNNN_nome.test.sql`.
+
+**Conjunto de migrações** (cada uma cita a migração MedChina de origem)
+
+| Arquivo | Conteúdo | Origem |
+|---|---|---|
+| `0000_init.sql` | enums `org_role`, `member_segment` (5 valores), `ai_tool` (`claude_code`,`codex`,`gemini_cli`,`cursor`,`other`); `profiles` (+ `is_superadmin`, `segment`, `ai_tool`, `locale` check `pt-BR|en`, `timezone` validado, `marketing_email_opt_out`, `email_unsubscribe_token uuid unique`); `organizations` (+ campos de cobrança BR de 0069); `memberships`; `is_org_member`, `has_org_role`, `is_superadmin`, `slugify`, `set_updated_at`; `handle_new_user` (lê metadata `display_name`, `segment`, `ai_tool`, `locale`; cria SEMPRE a org pessoal com slug `slugify(nome)-<id8>`; sem campo `company`); `create_organization` com guarda de workspace único; `guard_superadmin_flag`; `guard_organization_delete` | 0000, 0001, 0010, 0019, 0036, 0056, 0061, 0069, 0096, 0105 |
+| `0001_audit.sql` | `audit_events`, `record_versions`, `enable_row_versioning`; `consent_terms` (+ `locale`, `body_md`, unique `(slug, locale, version)`, SELECT anon nos ativos); `consent_acceptances` sem policy de insert (só RPC, fecha o bug latente de `/oauth/authorize`); `accept_terms(slugs text[], locale)` (idempotente por versão, recusa impersonado); `current_consent_terms(locale)` com fallback EN → pt-BR; `access_events` + trigger `log_access_event` (+ `impersonated_by`); `set_user_superadmin`; `update_member_profile(display_name, segment, ai_tool, locale, timezone)` auditada | 0005, 0016, 0057, 0096, 0103 |
+| `0002_platform.sql` | `platform_settings`, `notifications` (+ `source_key unique`), `announcements` + dismissals, bucket `avatars`, `backup_runs` + bucket `backups` (sem policies de objeto = só service role) | 0018, 0012, 0011, 0013, 0017 |
+| `0003_billing.sql` | enums (`plan_kind` = `recurring` \| **`access`**; créditos removidos; `coupon_duration`); `plans` (0001 + `is_addon`, `is_public`, **`family`**, **`tier`** check `kit|club|pro`, `currency` check `BRL|USD`; CHECK `access ⇒ period null`); `modules` (add-ons de cobrança; conflito de nome documentado); `coupons` (+ `currency`, `plan_families[]`, `duration`, `duration_months`); `subscriptions` (0001 + 0035 + 0054 + 0032 + 0111 + **`price_cents`, `currency`, `coupon_code_snapshot`, `cancel_reason` enum, `cancel_note`, `provider_payment_id`, `renews`**); `invoices` (+ `fiscal_document_url` reservado); **`entitlement_grants`** (org, kind `kit|license|comp`, plan_id, `limits` snapshot, price, currency, `invoice_key unique`, source, granted_by, note, starts_at, expires_at null, revoked_at, revoke_reason; versionada); `billing_operations` (+ kind `access_checkout`), `billing_webhook_events`; RPCs `validate_coupon(code, plan)`, `claim/complete_billing_operation`, `complete_checkout_billing_operation` (grava snapshot de preço; aceita `provider_payment`), **`complete_access_checkout_billing_operation`** (cópia de `complete_pack_checkout_billing_operation` exigindo `kind='access'`), **`grant_entitlement_on_invoice`** (service role; upsert por `invoice_key`), **`revoke_grant_for_invoice`**, `revert_paid_invoice`, `claim/complete_billing_webhook_event`, `expire_stale_billing_leases`, `abandon_incomplete_subscription`, `update_billing_profile` (CPF opcional), `billing_past_due_grace_ends`, `handle_new_organization` (plano gratuito), `jsonb_merge(_agg)` | 0001, 0032, 0035, 0054, 0055 (padrão), 0067, 0069, 0085, 0109, 0111 |
+| `0004_entitlements.sql` | **`org_entitlements(org)` v2**: guarda membro/superadmin/service_role; base = limites do gratuito `||` cada grant vivo `||` assinatura viva (ou em carência) `||` add-ons; retorna `{active, suspended, status, past_due_grace, grace_ends_at, plan_id, tier, sources[], limits, subscription{...}}`; **`org_has_entitlement(org, key)`**; `founders_offer()` (0087), `set_org_plan` (0067; recusa `access`), **`grant_entitlement(org, plan, note)`** superadmin; seeds `platform_settings` `dunning`, `founders`, `pix_provisional_access`, `guarantee`, `billing` | 0054, 0067, 0087, 0089 |
+| `0005_attribution.sql` | `signup_attribution` (0086), `meta_attribution` (0051/0052), `purchase_attributions` + `purchase_attribution_is_paid` (0113), **`site_page_views`** (day, path, porta, locale, views) + **`count_site_view`** (≤30 portas/dia/path) | 0086, 0051, 0113 |
+| `0006_product_events.sql` | `product_events` (0034 + colunas **`segment`, `locale`, `ai_tool`** estampadas do perfil; CHECK = vocabulário abaixo); **`product_event_sanitize`** (allowlist única de chaves E valores); `track_product_event` (sessão; 120/ator/hora; bloqueado sob impersonação); **`track_product_event_server(actor, org, event, props)`** (só service role; `platform` forçado a `cli`/`server`); **`product_events_daily`** + `rollup_product_events(day)` + `purge_product_events('13 months')` | 0034, 0048, 0054, 0104, 0113 |
+| `0007_content.sql` | `help_categories`, `help_articles` (+ `translation_group`), `blog_posts` (+ `translation_group`, `kind` `post|news`, `audience` `public|members`), `blog_comments`; anon lê `is_published and audience='public'`, membros leem `members` | 0014, 0015 |
+| `0008_catalog.sql` | **`catalog_trails`** (7, seedada; `name`/`description` jsonb por idioma, `icon`, `sort`); **`catalog_modules`** (slug `^[a-z0-9][a-z0-9-]{1,59}$`, trail, type `skill|workflow|framework|tool`, icon, `name`/`summary`/`description_md` jsonb por idioma, `compatible_ais[]`, `external_credentials` jsonb, status `draft|published|archived`, `is_free_sample`, `entitlement_key` default `catalog_access`, sort, published_at); **`catalog_module_versions`** (module, `version` CHECK semver, **`is_stable`**, status `draft|published|yanked`, `storage_path`, `sha256 char(64)`, `size_bytes`, `manifest` jsonb, `changelog` jsonb por idioma, `min_core_version`, `compatible_ais[]`, `permissions` jsonb, published_at, yanked_at, yank_reason; unique (module, version); versionada); **`catalog_lessons`** (module, depth `usar|abrir_o_capo`, locale, title, `video_provider` CHECK `youtube` (decisão: YouTube não listado para todas as aulas), duration, `is_advanced`, sort; unique (module, depth, locale)); **`catalog_lesson_videos`** (lesson_id pk, `youtube_id`): o id do vídeo fica separado dos metadados e a RLS só o entrega para aula avançada a quem tem `org_has_entitlement(org,'advanced_lessons')`; **`lesson_progress`**; **`catalog_recipes`** + **`catalog_recipe_modules`**; bucket `modules` privado sem policies de objeto; RLS: anon lê módulos/versões/receitas/trilhas publicados (metadados são públicos); **`verify_module_version(slug, version)`** anon devolvendo só `{slug, version, is_stable, status, sha256, size_bytes, permissions, compatible_ais, published_at, yanked_at}`; **`catalog_latest_version(module, stable_only)`**; **`record_lesson_progress`** | 0006 (padrão), 0017, 0060 |
+| `0009_roadmap.sql` | `roadmap_items` (title/description jsonb, trail, status `proposed|planned|building|shipped|declined`, votes_count, shipped_module_id), `roadmap_votes` (pk item+user); `cast_roadmap_vote`/`withdraw_roadmap_vote` exigem `roadmap_vote`; trigger mantém o contador | — |
+| `0010_oauth.sql` | `oauth_clients` (+ `first_party`, `loopback_any_port`), `oauth_grants` (+ `device_id`), `oauth_tokens` (+ **`family_id`**, `device_id`, `reminder_sent_at`), **`oauth_device_codes`** (device_code_hash, user_code 8 chars sem 0/O/1/I, scope, expires_at, interval, status `pending|approved|denied|consumed`, user, org); seed do cliente **`flyee-cli`** (público, `redirect_uris` loopback, `first_party`, `loopback_any_port`) | 0088 (parte OAuth) |
+| `0011_delivery.sql` | **`member_devices`** (org, user, `device_id` estável gerado pela CLI, name, os, os_version, ai_tool, cli_version, core_version, `installed_modules` jsonb `[{slug, version}]`, `project_kind` `own|client`, `token_family_id`, first/last_seen, `last_update_at`, revoked_at, reason; unique (user, device_id)); **`cli_requests`** (trilha + janela de rate limit, cópia de `mcp_requests`); **`module_downloads`**; RPCs **`cli_rate_allowance(org)`** (de `platform_settings.cli`: 60/min, 600/h, 200 downloads/dia), **`register_member_device(...)`** (upsert; aplica `limits.devices` → `device_limit_reached`), **`revoke_member_device`**, **`revoke_member_tokens(org, reason)`**, **`member_activation_facts()`** | 0088 (`mcp_requests`/`mcp_rate_allowance`), 0033 (padrão de dispositivos) |
+| `0012_impersonation.sql` | `impersonation_sessions`, `is_impersonated`, `guard_impersonation_readonly` em `roadmap_votes`, `lesson_progress`, `member_devices`, `consent_acceptances`, `oauth_grants`, `oauth_tokens`, `entitlement_grants`; setting `impersonation` | 0057 |
+| `0013_leads.sql` | **`leads`** v2: `email citext unique` (identidade), name, phone opcional, locale, segment, `source` `waitlist|newsletter|contact|meeting`, porta/onda/cupom + utm, snapshot de consentimento, **`confirm_token_hash`**, **`confirmed_at`** (double opt-in), `email_unsubscribe_token`, `opted_out_at`; versionada; RPCs `submit_lead(payload, ip_hash)` (service role; janela por rede de `platform_settings.leads`; nunca reescreve nome de e-mail existente), `confirm_lead`, `unsubscribe_lead`, `purge_lead`, `purge_expired_leads` (não confirmados > 7 dias; opt-out > 6 meses) | 0112 |
+| `0014_meetings.sql` | **`meetings`** (slug, title/description jsonb, starts_at, duration, state `rascunho|inscricoes|ao_vivo|encerrado|arquivado`, provider `zoom|meet|youtube|outro`, `join_url` privado (decisão: encontros por link externo, sem vídeo embutido), `recording_url` (YouTube não listado), published_at; trigger de slug congelado; `updated_by`), **`meeting_registrations`** (user, org, `joined_at`, colunas `*_sent_at` por lembrete; unique); RPCs `register_for_meeting` (exige `meetings`), **`meeting_join(meeting)`** (exige inscrição e entitlement, só a partir de 15 min antes do início; devolve `join_url`, estampa `joined_at` e emite `meeting.attended`), `meetings_overview()`, `meeting_results` (inscritos → clicaram em entrar), `duplicate_meeting`, `delete_meeting`; view `meetings_public` sem `join_url` | 0112/0113 (motor) |
+| `0015_admin.sql` | `admin_metrics()` (sem créditos; + kits 30d, receita por moeda), **`admin_members_overview()`** (reescrita de `admin_accounts_overview` sem minutos/trial: segmento, IA, locale, tier, plano + snapshot, renovação, grants, dispositivos + last_seen, last_update_at, módulos instalados, execuções 30d, receita vitalícia por moeda, atribuição, flags), **`admin_member_dossier(org)`** (regras de privacidade de 0106), `admin_people_without_workspace()` (0108), **`admin_segment_weekly(weeks)`** → (week_start, segment, kit_buyers, page_views, page_conversion, activated_7d, weekly_active, kit_to_club_60d, revenue_90d_brl, revenue_90d_usd) | 0010, 0104, 0106, 0108 |
+| `0016_account_deletion.sql` | preview + `admin_delete_account(user, confirm_email, reason)` (holders-before-held: `lesson_progress`, `roadmap_votes`, `meeting_registrations`, `consent_acceptances`, `oauth_*`, `member_devices`, `entitlement_grants`, depois cascade da org; purga `record_versions`; recusa self/superadmin/owner compartilhado/sessão de suporte/`provider_subscription_live`), `admin_orphaned_account_storage` (só avatars) | 0099, 0101, 0105 |
+| `0017_ai_spend.sql` | `ai_spend` (features `insights|other`), `ai_price_book`, `record_ai_spend`, `reprice_ai_spend`, `admin_ai_spend_overview`; setting `ai_prices` | 0115 |
+| `0018_seed.sql` | planos (hipóteses, `is_public`): `gratuito` (`{catalog_access:0, devices:0}`); `kit` BRL 9700 / USD 2900 (`{catalog_access:1, devices:1, update_channel:'latest', advanced_lessons:0, recipes:0, roadmap_vote:0, meetings:0, commercial_license:0, open_the_hood:0}`); `club-mensal`/`club-anual` BRL 6700/59700, USD 1900/19000 (`{…, devices:3, advanced_lessons:1, recipes:1, roadmap_vote:1, meetings:1}`); `pro-mensal`/`pro-anual` BRL 19700/197000, USD 4900/49000 (`{…club…, devices:5, commercial_license:1, open_the_hood:1}`); `club-fundador-anual` BRL `is_public=false`; settings `support`, `cli` (rate + `min_cli_version`), `leads`, `founders` (desligado), `upsell` (desligado); `consent_terms` pt-BR + en: `terms`, `privacy`, `cookies`, `cli-connection`, `newsletter` (versão 1, considerada revisada por decisão do usuário) | 0001/0109, 0088 |
+
+Drizzle (`packages/db/src/schema/`): manter `profiles`, `organizations`, `billing` (+ grants), `audit`, `announcements`, `notifications`, `help`, `blog`, `access`, `backups`, `oauth`, `onboarding`; adicionar `catalog.ts`, `delivery.ts`, `events.ts`, `leads.ts`, `meetings.ts`. `@flyee/backup` lê `information_schema`, não precisa de edição.
+
+**Vocabulário de `product_events`** (CHECK + allowlist): `account.created`, `profile.completed`, `checkout.started`, `kit.purchased`, `subscription.started`, `upsell.purchased`, `cli.installed`, `cli.login`, `module.installed`, `module.activated`, `tool.executed`, `module.updated`, `update.denied_token_expired`, `update.denied_entitlement`, `token.revalidated`, `lesson.started`, `lesson.completed`, `recipe.installed`, `roadmap.voted`, `meeting.registered`, `meeting.attended`, `upsell.viewed`, `upsell.clicked`, `subscription.cancel_requested`, `subscription.canceled`, `waitlist.joined`, `device.revoked`. Propriedades permitidas (chaves e valores): `platform`, `module` (slug existente no catálogo), `trail`, `version`/`from_version`/`to_version` (semver), `depth`, `lesson_locale`, `ai_tool`, `os`, `cli_version`, `core_version`, `project_kind`, `tier_from`/`tier_to`, `offer`, `reason`, `origin`, `days_since_update` (buckets), `porta`. `segment`/`locale`/`ai_tool` vêm do perfil dentro da RPC, nunca do cliente. `apps/web/src/lib/product-events.ts` reescrito (mantendo o `.then()` obrigatório) + NOVO `lib/product-events-server.ts`.
+
+**pgTAP (`packages/db/tests/`)**: `0001_signup_and_tenancy`, `0002_consent_terms`, `0003_entitlements_merge` (gratuito → kit → club → pro; suspenso; carência; grant revogado; `tier`/`sources`), `0004_access_checkout`, `0005_product_events` (as duas RPCs compartilham a allowlist; módulo desconhecido descartado; 120/h; impersonação bloqueada; rollup + purge), `0006_catalog_versions` (semver; `verify_module_version` não vaza `storage_path`; aula avançada oculta sem entitlement), `0007_cli_delivery` (teto de dispositivos; revogar dispositivo revoga família; `revoke_member_tokens` ao suspender), `0008_roadmap_votes`, `0009_leads_double_opt_in`, `0010_meetings`, `0011_admin_segment_weekly`, `0012_account_deletion` (varredura de FKs portada de 0032), `0013_impersonation_fence`, `0014_founders_offer`, `0015_coupons_currency`, `0016_grants_catalog_scan` (nenhuma tabela `public` legível por `anon` fora da lista).
+
+Saída: `npm run db:prepare && supabase start && npm run test:db` verde; `npm run db:plan:remote` contra o projeto vazio exercita o bootstrap; depois `db:gate:remote`.
+
+---
+
+## Fase 3 — Token e API de entrega (contrato da CLI)
+
+**Escopos e cliente**: `apps/web/src/lib/oauth/scopes.ts` → `["profile:read","catalog:read","modules:download","telemetry:write"]`. Cliente `flyee-cli` seedado. Em `lib/oauth/authorize-request.ts` `validateAuthorizeRequest` e `server.ts` `exchangeAuthorizationCode`: quando `client.loopback_any_port` e ambas as URIs são loopback, comparar ignorando a porta (RFC 8252 §7.3); resto continua match exato.
+
+**Fluxos**: PKCE com navegador (loopback) é o primário (`npx flyee login` abre `/oauth/authorize?client_id=flyee-cli&redirect_uri=http://127.0.0.1:<porta>/callback&code_challenge=…&scope=…&device_id=<uuid>`); **device authorization (RFC 8628)** para máquinas sem navegador: `POST /api/oauth/device` → `{device_code, user_code, verification_uri: /ativar, expires_in 600, interval 5}`; `/ativar` recebe o código e mostra a mesma tela de consentimento; a CLI faz polling em `/api/oauth/token` com `grant_type=urn:ietf:params:oauth:grant-type:device_code`. `POST /api/oauth/revoke` (RFC 7009) para `npx flyee logout`. `/.well-known/oauth-authorization-server` ganha `device_authorization_endpoint`, `revocation_endpoint`, o grant e os escopos; `oauth-protected-resource` passa a `resource = ${siteUrl}/api/cli` (variante `/api/mcp` apagada).
+
+**Revalidação (regra dos 30 dias)**: `OAUTH_REFRESH_TTL_S` continua 30 dias, access 1 h. Cada `npx flyee update` rotaciona o refresh, então "30 dias sem update" == expiração do refresh. `mintTokenPair` carrega `family_id` e `device_id`. Refresh expirado/revogado → `/api/oauth/token` responde `invalid_grant` + `error_uri: https://flyee.club/revalidar?d=<device_id>`; a CLI imprime o link e reinicia o fluxo. `/oauth/authorize` para `flyee-cli` renderiza a **variante de revalidação** quando já houve família: "último update há N dias", versões atrás (`member_devices.installed_modules` vs `catalog_latest_version`), card de upsell (fase 5), aprovar/negar. Aprovar = `accept_terms(['cli-connection'])` + `issueAuthorizationCode` + evento `token.revalidated`. Aviso do dia 25: `GET /api/cli/me` devolve `refresh_expires_at` e `days_until_revalidation` (a CLI avisa); no servidor, cron `lib/token-jobs.ts` manda o e-mail de lembrete e estampa `reminder_sent_at`. Revogação: webhook `subscription_canceled` e o job de liquidação chamam `revoke_member_tokens(org,'canceled')` **só se** `org_entitlements(org).limits.catalog_access = 0` após a mudança (dono do kit mantém); suspensão e exclusão revogam sempre; toda chamada da CLI reconsulta `org_entitlements`.
+
+**Endpoints** (`apps/web/src/app/api/cli/*`, Bearer `mcat_`, JSON, `Cache-Control: no-store`)
+
+| Rota | Escopo | Devolve |
+|---|---|---|
+| `GET /api/cli/me` | profile:read | membro (id, nome, segment, ai_tool, locale), org, tier, limits, token {family_id, refresh_expires_at, days_until_revalidation}, device, `min_cli_version`, `revalidate_url` |
+| `GET /api/cli/catalog?locale=&stable=` | catalog:read | trilhas, módulos (slug, type, trail, nome/sumário no idioma, última versão {version, sha256, size}, compatible_ais, permissions, is_free_sample, entitlement_key, aulas), receitas |
+| `GET /api/cli/modules/{slug}` | catalog:read | detalhe + versões publicadas com changelog no idioma |
+| `GET /api/cli/modules/{slug}/versions/{version}/download` | modules:download | `{url (assinada, 300 s), sha256, size_bytes, manifest}`; grava `module_downloads`; nega yanked/draft/sem entitlement (`denied_entitlement` + `upgrade_url`)/token expirado (evento `update.denied_token_expired`) |
+| `GET /api/cli/recipes/{slug}` | catalog:read | receita + versões resolvidas |
+| `POST /api/cli/installs` | profile:read | `register_member_device` (device_id, name, os, os_version, ai_tool, cli_version, core_version, installed_modules, project_kind) → `{device, limit, live_devices}` ou `device_limit_reached` + URL de gestão |
+| `POST /api/cli/events` | telemetry:write | lote ≤50 `{name, properties, occurred_at}` → `track_product_event_server` |
+| `GET /api/cli/schema/module` | público | JSON Schema do `flyee.module.json` |
+| `GET /api/cli/version` | público | `{min_cli_version, latest_core_version, deprecations}` de `platform_settings.cli` |
+
+Pipeline NOVO `apps/web/src/lib/cli/gates.ts` `runCliRequest(auth, endpoint, {scope, entitlement?, countsDownload?}, execute)` copiado de `lib/mcp/gates.ts`: token (`verifyAccessToken` estendido com `familyId`, `deviceId`) → escopo (`hasScope`) → entitlement (`org_entitlements` via service role) → dispositivo (header `X-Flyee-Device` deve bater com `member_devices` vivo) → rate (`cli_rate_allowance`) → execução → trilha `cli_requests` + `logAuditEvent` em downloads/revogações. Negações respondem `{error, message (idioma do membro), action_url}`. Contexto em `lib/cli/context.ts` (forma de `mcp/context.ts`).
+
+**Manifesto e pacote** (NOVO `packages/catalog`, `@flyee/catalog`, zod): `flyee.module.json` v1 = `manifest_version`, `name` (= slug), `version` (semver), `type`, `trail`, `title`/`summary` {pt-BR, en}, `compatible_ais[]`, `min_core` (range), `entry`, `files[]`, `external_credentials[]` ({name, env, url, required, purpose}), `permissions[]` ({kind `fs:read|fs:write|network|shell|env`, scope, reason}), `lessons` {locale: [{depth, provider, id, duration_s}]}, `changelog` {pt-BR, en}, `license` `member|commercial`. Exporta `moduleManifestSchema`, `parseManifest(bytes)`, `manifestJsonSchema()` + testes vitest. Pacote = ZIP (`fflate` já é dependência), caminho `modules/<slug>/<version>/<slug>-<version>.zip` no bucket privado. Upload admin `POST /api/admin/catalog/versions` (gate superadmin + service role): multipart ≤ `MODULE_UPLOAD_MAX_MB`, unzip, localiza e valida o manifesto, confere `name === slug` e versão inédita, sha256 e tamanho dos bytes originais, `storage.upload(upsert:false)`, insere versão `draft` com manifest/permissions/compatible_ais/changelog copiados, `recordAudit('catalog.version_uploaded')`. Ações `publishVersion`, `markStable`, `yankVersion(reason)`. Download troca `storage_path` por URL assinada de 300 s (padrão de `api/public/document/open/route.ts`). Página pública `/verificar/[ref]` (`ref = <slug>@<version>`) renderiza `verify_module_version()`: sha256, tamanho, estável, permissões, IAs, estado; `noindex`. Documentar tudo em NOVO `docs/CLI-CONTRACT.md` (endpoints, erros, ciclo do token, teto de dispositivos, manifesto, formato do pacote).
+
+---
+
+## Fase 4 — Escada de cobrança
+
+| Lacuna | Mudança |
+|---|---|
+| A · kit (compra única de acesso) | `plans.kind='access'`; NOVO `startAccessCheckout` em `settings/billing/actions.ts` (clone de `startPackCheckout` sem as checagens de pacote; Asaas `/payments` avulso, Stripe Checkout `mode: "payment"`); RPC `complete_access_checkout_billing_operation`; webhook `payment_succeeded` com `plan.kind='access'` → `grant_entitlement_on_invoice` (idempotente por `invoice_key = provider:providerInvoiceId`) + `purchase_attributions` + evento `kit.purchased` + recibo no idioma; `payment_reverted` → `revoke_grant_for_invoice` |
+| B · mensal/anual | `plans.family` + `period`; `listPublicPlans({currency})` devolve os dois períodos; `PricingSection` ganha `periodToggle`; grade de `/settings/billing` idem |
+| C · moeda | `packages/billing/src/index.ts`: apagar `defaultProvider()` e `BILLING_PROVIDER`; NOVO `providerForCurrency(currency)` (BRL→asaas, USD→stripe, só se configurado); `startCheckout` escolhe pelo `plan.currency` e só exige `billing_profile_required` (CPF) quando o provedor é Asaas; moeda escolhida pelo locale (pt-BR→BRL, en→USD) com override por cookie (`?moeda=USD`); admin `plans-admin.tsx` ganha `currency`, `family`, `tier`, `kind` (hoje `currency: "BRL"` fixo); remover BRL fixo em `use-billing.ts` `formatMoney`, `app/assinatura/page.tsx`, `assinatura/payment-choice.tsx`, `pix-payment-panel.tsx`, `admin/billing/components/offer-preview.tsx`, fallback do Stripe; `providers/asaas.ts` mantém BRL como constante com guarda que recusa outra moeda; cupom fixo exige `currency`; `validate_coupon` recusa descasamento; cupom Stripe criado por moeda em `provider_refs` |
+| D · preço travado | `subscriptions.price_cents/currency/coupon_code_snapshot` gravados em `complete_checkout_billing_operation`; edições de preço no admin nunca tocam linhas vivas; `admin_members_overview` lê o snapshot |
+| E · cupons | `plan_families`, `duration`, `duration_months`, `currency`; Asaas não tem cupom → só `duration='forever'` em BRL (`validate_coupon` aplica; `coupons-admin.tsx` explica) |
+| F · trial | `pro_trials`/`start_pro_trial`/`lib/pro-trial.ts`/`trial-jobs.ts` apagados; só o `plans.trial_days` do provedor, seedado 0 (sem trial na v1) |
+| G · créditos | fora do baseline |
+| H · cancelamento | `scheduleSubscriptionCancellation(orgId, key, reason, note)` grava `cancel_reason/cancel_note` e emite `subscription.cancel_requested`; o job de liquidação emite `subscription.canceled`; reembolso fica no painel do provedor (webhook `payment_reverted` já reverte fatura e grant); `lib/guarantee.ts` só exibe o prazo |
+| I · troca de plano | v1: upgrade = novo checkout que supera o antigo (caminho `cancelSupersededAtProvider` existente) com confirmação nomeando os dias perdidos; downgrade = `cancel_at_period_end` + nova assinatura; schema reserva `scheduled_plan_id`/`scheduled_change_at`; proração adiada |
+| J · `hasEntitlement()` | NOVO `packages/billing/src/entitlements.ts` (puro): `ENTITLEMENT_KEYS`, `hasEntitlement(limits, key)`, `limitOf`, `tierOf`; hook `apps/web/src/hooks/use-entitlements.ts` (substitui `use-audio-allowance`); `(marketing)/plans.ts` deriva os bullets das chaves (`pricing-feature-<key>`) |
+| K · NFS-e | decisão: emitida direto no Asaas. A plataforma não tem lógica fiscal; a emissão automática é configurada na conta Asaas. `invoices.fiscal_document_url` fica reservado caso o link da nota passe a ser espelhado depois. Vendas em USD: nota de exportação, se exigida, emitida pelo operador no Asaas |
+| L · webhooks | manter o esqueleto de `api/webhooks/[provider]/route.ts` (`claim/complete_billing_webhook_event`, teto de tentativas); tirar pacotes de minutos, `reopenAudioAlerts`, trial e ofertas de conversão; adicionar ramo de grant, `revoke_member_tokens` quando o acesso cai, e-mails por idioma (fase 8) |
+| N · console | `plans-admin.tsx` (moeda/família/tier/kind; apagar plano só sem assinaturas/grants via `delete_plan`), `subscriptions-admin.tsx` (snapshot, motivo, grants), NOVA aba `grants-admin.tsx` (cortesia de kit via `grant_entitlement`, revogação) |
+| BUG · anual parcelado Asaas | `providers/asaas.ts` (~404): parcelado em plano recorrente cria `/payments` avulso sem `providerSubscriptionId` e a assinatura nunca ativa. Correção: devolver `providerPaymentId`; `complete_checkout_billing_operation` guarda em `provider_payment_id` com `renews=false`; `findSubscription` do webhook casa `payment_succeeded` por `provider_payment_id` ou `installment` id; ativação põe `current_period_end = now()+1 ano` e `cancel_at_period_end=true`; cron avisa 15 dias antes; `MAX_INSTALLMENTS` vira dado (`platform_settings.billing.max_installments`), só para `yearly` em BRL; `payment-choice.test.ts` atualizado |
+
+Também: dividir `settings/billing/actions.ts` (1.108 linhas) em `actions.ts` (checkouts), `actions-cancel.ts`, `actions-recovery.ts`; `/assinatura` ganha `?plan=kit` como porta padrão; escrever `docs/BILLING.md` (escada, roteamento por moeda, grants vs assinaturas, máquina de estados, webhooks, parcelamento, adiados).
+
+---
+
+## Fase 5 — Painel do integrante (skill `product-screen`, goal-first)
+
+| Rota | Trabalho da tela | Reuso |
+|---|---|---|
+| `/onboarding` | escolher segmento · IA · idioma (também capturados no sign-up) → bloco "instalar" com `npx flyee login` e botão copiar | `onboarding/components/onboarding-shell.tsx`, `SetupWizard`, `update_member_profile` |
+| `/inicio` | 1) estado de acesso (nenhum → card do kit; kit/club/pro → "você está no degrau X"), 2) bloco de instalação + estado do token (dias até revalidar, dispositivos), 3) próximo passo (`OnboardingChecklistCard` sobre `lib/onboarding.ts`), 4) faixa de novidades (3 últimas versões), 5) card de upsell só quando a regra dispara | `home-tiles.tsx`, `OnboardingChecklistCard`, `ActivationProgress`, `EmptyState` |
+| `/modulos` | grade de ícones, um por módulo, chips de filtro pelas 7 trilhas + IA + tipo; amostras grátis marcadas. O nome evita conflito com o catálogo público em `/catalogo` | NOVO `components/product/module-tile.tsx`; leitura via RLS |
+| `/modulos/[slug]` | player da aula no YouTube não listado via `@vidstack/react` (idioma; abas usar/abrir o capô; avançada bloqueada por `GateNotice` → upsell, sem o id do vídeo para quem não tem direito), comando `npx flyee add <slug>`, versões + changelog, permissões e credenciais declaradas, link de verificação, IAs compatíveis; `record_lesson_progress` | `product-markdown`, `GateNotice` |
+| `/receitas`, `/receitas/[slug]` | conjuntos nomeados + workflow; `npx flyee add receita:<slug>`; gate `recipes` | mesmos tiles |
+| `/novidades` | união de changelogs publicados + `blog_posts.kind='news'` (audiência membros) | `markdown-prose` |
+| `/encontros`, `/encontros/[slug]` | próximos/passados; inscrição (`register_for_meeting`); botão "entrar" que chama `meeting_join` e abre o link externo; gravação pelo YouTube não listado depois do encontro | RPCs de 0014 |
+| `/roadmap` | itens por status, votar/retirar (gate `roadmap_vote`), "entregue" linka o módulo | `cast_roadmap_vote` |
+| `/settings` | perfil (nome, avatar, **segmento, IA, idioma, fuso**), credenciais | `profile-card.tsx`, `account-card.tsx`; apagar `practice-scope-card.tsx` |
+| `/settings/billing` | escada (kit / club mensal↔anual / pro) na moeda do membro, tier atual + fontes, cancelar (motivo) / desfazer, faturas, perfil de cobrança (CPF só em BRL), checkout pendente, recuperação | `plans-grid.tsx`, `current-subscription.tsx`, `invoices-card.tsx`, `billing-profile-card.tsx`, `pending-checkout-card.tsx`, `payment-recovery-card.tsx`; apagar `minute-packs-card.tsx` |
+| `/settings/devices` (renomeia `connections`) | dispositivos (nome, SO, IA, versão da CLI, módulos, último update, expiração do token) com revogar; instruções de revalidação; teto `limits.devices` | `connections-view.tsx` → `devices-view.tsx`; `revoke_member_device` |
+| `/settings/security`, `/settings/preferences` | inalterados | — |
+| `/ativar` | entrada do `user_code` → consentimento | componentes de `oauth/authorize` |
+
+Shell: `menu-items.ts` (1.6), `plan-indicator.tsx` mostra o tier via `use-entitlements`, header sem paleta de comandos, `LocaleAutoNotice` fica.
+
+**Regra de upsell** (NOVO `lib/upsell.ts` `resolveUpsell(orgId)`, usado por `/inicio` e pela variante de revalidação de `/oauth/authorize`): tier `none` → kit; `kit` com ≥3 trilhas distintas em `tool.executed` nos últimos 30 dias → club; qualquer `member_devices.project_kind='client'` → pro; club com ≥2 aulas avançadas concluídas → marca interesse em mentoria (só evento). NOVO `components/product/upsell-card.tsx` (honesto: o que o próximo degrau adiciona, preço dos planos, sem contagem regressiva a menos que `founders_offer()` esteja aberta). Emite `upsell.viewed`/`upsell.clicked`; o webhook estampa `upsell.purchased` quando uma assinatura ativa para org que viu oferta nos 14 dias anteriores. O card respeita `platform_settings.upsell.enabled` (semeado `false`), para só aparecer depois do portão destacado da fase 2.
+
+---
+
+## Fase 6 — Consoles admin (pt-BR fixo, gate `admin/layout.tsx`)
+
+| Console | Conteúdo | Reuso |
+|---|---|---|
+| `/admin/catalogo` | abas Módulos (CRUD: slug, trilha, tipo, nomes/sumários pt-BR+EN, ícone, IAs, credenciais, status, amostra grátis) · Versões (upload ZIP → valida → draft; publicar; marcar estável; yank; contagem de downloads) · Aulas (depth/locale/provider/id/duração/avançada) · Receitas · Trilhas · Entrega (`platform_settings.cli`) | `components/data-grid/data-table.tsx`, `react-dropzone`, `markdown-prose`, `recordAudit` em toda escrita |
+| `/admin/roadmap` | CRUD de itens, transições de status, votos, vínculo com módulo entregue | — |
+| `/admin/encontros` | `/admin/eventos` adaptado: lista por estado (`meetings_overview()` + `StatTile`), detalhe com Resultados (`meeting_results`: inscritos → clicaram em entrar), Inscritos (membros, sem WhatsApp 1:1), Página (copy bilíngue), Configuração (data, provider, link externo, gravação, arquivar), E-mails (um botão por lembrete, Inngest `flyee/meeting.email` com fallback inline) | `admin/eventos/components/*` renomeados `event-*` → `meeting-*` sem telefone/WhatsApp/cliques por dispositivo; `lib/live-event-email.ts` → `lib/meeting-email.ts` |
+| `/admin/leads` | lista de espera/newsletter: filtros por origem/idioma/segmento/confirmado; opt-out; purga LGPD; export CSV de confirmados e não optados (headers Meta/Resend) | `people-admin.tsx`, `fetch-all-pages.ts` |
+| `/admin/membros` | reescrita da aba Accounts de `/admin/organizations` sobre `admin_members_overview()`: tiles (kit / club / pro / sem acesso / inadimplentes / sem dispositivo / sem update 25d+) como filtros; linhas (membro, segmento, IA, idioma, tier, plano + preço, renovação, dispositivos + último update, execuções 30d, receita); kebab: dossiê (`admin_member_dossier`), impersonar (`impersonate-dialog.tsx`), ban/2FA (`person-actions.tsx`), superadmin (`superadmin-dialog.tsx`), cortesia de kit/plano, revogar tokens, excluir conta (`delete-account-dialog.tsx`); aba Pessoas sem workspace | `orgs-admin.tsx`, `users-admin.tsx`, `account-detail-dialog.tsx` com tipos reescritos |
+| `/admin/metricas` | tabela semanal por segmento de `admin_segment_weekly()`: 1) compradores do kit + conversão por porta (`site_page_views`), 2) ativação 7d, 3) uso semanal (3 das últimas 4), 4) kit→club 60d, 5) receita/integrante 90d por moeda; `TrendSparkline` por coluna; indicador da "regra de foco" (segmento líder em 1–3 por 4 semanas com ≥30 pessoas, `outro` excluído) | `MetricBars`, `TrendSparkline`, `StatTile` |
+| digest semanal | padrão `lib/admin-jobs.ts` → `adminWeeklyDigestFunction` (segunda 08:30 BRT): sino por superadmin (`notifyUsers`, `source_key = admin-weekly:<semana>:<user>`) + e-mail com a tabela; regra "nada a relatar = nenhum envio" | `notifyUsers`, `admin-jobs.test.ts` reescrito |
+| mantidos (aparados) | `/admin` (métricas), `/admin/billing` (fase 4), `/admin/audit` (sem `wa-log-admin`, `processing-failures-admin`), `/admin/insights` (+ aba `ai-prices-admin.tsx`), `/admin/backups`, `/admin/announcements`, `/admin/help` (+ grupo de tradução), `/admin/blog` (+ kind/audience/grupo de tradução), `/admin/support` | — |
+
+---
+
+## Fase 7 — Site público, i18n e SEO
+
+**7.1 Locale por caminho (next-intl), só no site público** — fazer ANTES das fases 5 e 6, em commit próprio sem outras mudanças.
+- Revisão de 2026-09-30, após a decisão de traduzir os endereços já na v1: **só o site público vai para `app/[locale]/`**. O painel, o admin, o login, o checkout, o OAuth e o onboarding ficam fora, com o idioma do perfil ou do cookie, como hoje. Eles não são indexados, então não ganham nada com `/en`, e a mudança fica bem menor.
+- NOVO `apps/web/src/i18n/routing.ts`: `defineRouting({ locales: ["pt-BR","en"], defaultLocale: "pt-BR", localePrefix: "as-needed", pathnames })` com os caminhos internos em português e os externos traduzidos:
+
+  | Interno (pt-BR) | Inglês |
+  |---|---|
+  | `/` | `/en` |
+  | `/planos` | `/en/pricing` |
+  | `/como-funciona` | `/en/how-it-works` |
+  | `/catalogo`, `/catalogo/[slug]` | `/en/catalog`, `/en/catalog/[slug]` |
+  | `/sobre` | `/en/about` |
+  | `/contato` | `/en/contact` |
+  | `/ajuda`, `/ajuda/[slug]` | `/en/help`, `/en/help/[slug]` |
+  | `/blog`, `/blog/[slug]` | `/en/blog`, `/en/blog/[slug]` |
+  | `/legal/termos`, `/legal/privacidade`, `/legal/cookies` | `/en/legal/terms`, `/en/legal/privacy`, `/en/legal/cookies` |
+  | `/espera`, `/espera/confirmar` | `/en/waitlist`, `/en/waitlist/confirm` |
+  | `/verificar/[ref]` | `/en/verify/[ref]` |
+  | `/fundadores` | `/en/founders` |
+
+- `i18n/request.ts`: usa `requestLocale` quando a rota está sob `[locale]`; fora dela, cai em `resolveRequestLocale` (perfil, cookie, cabeçalho). `i18n/navigation.ts` exporta `Link`, `redirect`, `usePathname`, `useRouter`, `getPathname` de `createNavigation(routing)`, usados só pelo site público.
+- Mover para `apps/web/src/app/[locale]/` apenas `(marketing)` e `(funil)`, com `[locale]/layout.tsx` (`setRequestLocale`, `generateStaticParams`). O layout raiz continua em `app/layout.tsx` e lê o idioma com `getLocale()` para o `lang` do `<html>`. `api/`, `.well-known/`, `sitemap.ts`, `robots.ts` e `opengraph-image` ficam em `app/`.
+- `middleware.ts`: o middleware do next-intl roda só quando o caminho, sem o prefixo `/en`, é público de marketing; ele resolve os caminhos traduzidos e redireciona `/pt-BR/*` para `/*`. Em seguida rodam `updateSession` e as regras de cupom, atribuição, campanha, impersonação, MFA e auth, com os cookies dos dois responses mesclados. Novo `PUBLIC_PREFIXES` com as duas formas de cada caminho público (`/planos` e `/en/pricing`…) mais `/auth`, `/api/public`, `/api/impersonation/exit`, `/api/webhooks`, `/api/inngest`, `/api/oauth`, `/api/cli`, `/ativar`, `/sitemap.xml`, `/robots.txt`, `/opengraph-image`, `/.well-known`. `detectLocale` vira sugestão de idioma só em `/` (nunca para crawlers). `IMPERSONATION_BLOCKED_PREFIXES` = `/settings/security`, `/admin`, `/oauth`, `/api/cli`; `IMPERSONATION_READONLY_API` clínico apagado.
+- NOVO `apps/web/src/lib/seo.ts` `alternatesFor(pathname)` usando `getPathname` para gerar `{ canonical, languages: { "pt-BR", en, "x-default" } }` com os caminhos traduzidos, usado em todo `generateMetadata` público; `sitemap.ts` com uma entrada por rota por idioma e `alternates.languages`, incluindo só slugs de ajuda/blog com linha no idioma (`translation_group`).
+- Painel: o seletor de idioma grava `profiles.locale` via `update_member_profile` e o cookie, sem trocar de URL.
+
+**7.2 Páginas** (dois idiomas, indexadas; skill `marketing-page`; só primitivas da biblioteca; Landing DS abandonada; `(funil)` continua sendo o grupo sem chrome para campanhas)
+
+| Rota | Conteúdo (copy provisória do clube) | Dados |
+|---|---|---|
+| `/` | hero (tese do brief), 7 trilhas em `BentoGrid`, "atualização como produto" em `FeatureRows`, como funciona em `ProcessSteps` (cadastro → `npx flyee` → usa na sua IA → `update`), `StatBand` honesto (módulos, versões publicadas, último release — números reais do catálogo), teaser de preços, FAQ, CTA; copy em `home-copy/{pt-BR,en}.ts` | `listPublicPlans`, contagens do catálogo, `count_site_view` com `?porta=` |
+| `/planos` | `PricingSection` com toggle mensal/anual, moeda por idioma (+ seletor), bullets por chave de entitlement, contador de fundador se aberto, prazo de garantia | fase 4 |
+| `/como-funciona` | instalação, token e revalidação, segurança (checksum, permissões declaradas, nada sai da máquina), limites da v1 (só terminal) | — |
+| `/catalogo`, `/catalogo/[slug]` (públicos, só leitura) | módulos publicados por trilha; página com sumário, permissões, IAs, últimas versões, teaser de aula (vídeo só para membros) | RLS anon |
+| `/sobre`, `/contato` | provisórios; contato via `sendContactFormEmail` | existente |
+| `/ajuda`, `/ajuda/[slug]`, `/blog`, `/blog/[slug]` | conteúdo do banco, linhas por idioma, fallback EN, traduções ligadas por `translation_group` | `lib/public-content.ts` |
+| `/legal/{termos,privacidade,cookies}` | renderizados de `consent_terms` (idioma, última versão ativa, versão/data) via `markdown-prose`: o texto aceito É o texto exibido. Versão 1 nos dois idiomas, considerada revisada | 0001 |
+| `/espera` | lista de espera/newsletter bilíngue: e-mail + segmento + idioma + consentimento (`newsletter`), honeypot, `submit_lead`, double opt-in → `/espera/confirmar?t=` → `confirm_lead`; evento `waitlist.joined` | 0013, fase 8 |
+| `/verificar/[ref]` | página de checksum do módulo (fase 3) | — |
+| `/fundadores` (`(funil)`) | oferta de fundador, `noindex`, vagas reais | `founders_offer()` |
+
+**7.3 Docs**: `docs/DESIGN.md` (direção provisória: tokens atuais, escala de `marketing.css`, display Urbanist, só biblioteca, barra premium mantida, guardrails do clube: nunca "nossa IA faz X", sem prova fabricada, preços de dados, paridade bilíngue, claims de segurança só como mecanismos declarados); `docs/SEO.md` (locales por caminho implementados, termos-alvo por idioma, canonical + hreflang, sitemap por idioma, grupos de tradução); `docs/TRACKING.md` (postura relaxada sem dado de saúde: Pixel/GA4 com opt-out no site E no painel, montando `MarketingTrackers`/`MarketingAnalytics`/`CookieConsent` em `(dashboard)/layout.tsx`; CAPI/GA4 server-side para sign_up/purchase; a CLI só manda `product_events`; `CONSENT_VERSION` incrementado; termos de privacidade/cookies atualizados no mesmo commit); `.claude/rules/marketing.md` reescrita para dois idiomas e caminho.
+
+---
+
+## Fase 8 — E-mail, jobs e notificações
+
+- `packages/email/src/index.ts`: todo sender recebe `locale: "pt-BR" | "en"`; assuntos em `SUBJECTS[kind][locale]`; templates recebem objetos `copy` de NOVO `packages/email/src/copy/{pt-BR,en}.ts`. Templates: `member-welcome` (conta criada: passos de instalação), `kit-receipt`, `subscription-active` (reescrito: tier, o que destravou, teto de dispositivos), `subscription-canceled` (motivo, o que fica, o que envelhece), `token-reminder` (dia 25), `module-update-digest` (semanal, só membros com ≥1 dispositivo e sem opt-out; `List-Unsubscribe` via `profiles.email_unsubscribe_token`), `lead-confirm` (double opt-in), `newsletter` (lote de 100 via `resend.batch`; `lib/newsletter-email.ts` a partir de `live-event-email.ts`), `meeting` (lembretes, de `live-event.tsx`), `admin-weekly-digest` (de `admin-accounts-digest.tsx`), `contact-form` (mantido); apagar `org-invite`, `patient-document`, `trial-lifecycle`.
+- Descadastro: `api/public/email/unsubscribe` tratando `profiles.email_unsubscribe_token` e `leads.email_unsubscribe_token`, resposta bilíngue.
+- `packages/jobs/src/index.ts` `JobEvents`: `backup/run.requested`, `flyee/meeting.email`, `flyee/lead.confirm`, `flyee/updates.digest`, `flyee/token.reminder`; `api/inngest/route.ts` serve `adminFunctions`, `billingFunctions`, `meetingFunctions`, `leadFunctions`, `tokenFunctions`, `updatesDigestFunctions`, `productEventsFunctions` (rollup/purge), `backupFunctions`.
+- In-app: `notifyUsers` para ativação, lembrete do dia 25 (`source_key token-reminder:<family>`), nova versão em módulo instalado (semanal), lembretes de encontro.
+- Auth do Supabase via SMTP Resend: templates bilíngues com condicionais Go-template em `{{ .Data.locale }}` (o sign-up envia `locale` na metadata); assunto nos dois idiomas separados por " / ".
+
+---
+
+## Verificação
+
+| Fase | Checagens |
+|---|---|
+| 0 | `npm run harness:check && npm run harness:test`, `typecheck`, `build`; `messages.test.ts` com dois idiomas; grep de "medchina", "update-from-template", "tt-chocolates" vazio fora do cabeçalho histórico |
+| 1 | `typecheck`, `build`, `test` (vitest `safe-next`, cobrança); `scripts/prune-messages.mjs --check`; `e2e/baseline.spec.ts` (home pública, redirect de sign-in preserva `next`, a11y) |
+| 2 | `npm run db:prepare && supabase start && npm run test:db` (16 pgTAP); `db:plan:remote` contra o projeto vazio exercita o bootstrap; `db:gate:remote` |
+| 3 | vitest `packages/catalog/src/manifest.test.ts`, `lib/oauth/*.test.ts` (porta loopback, máquina de estados do device code), `lib/cli/gates.test.ts` (ordem das negações); script `scripts/cli-flow.mjs` (PKCE → token → `/me` → `/catalog` → download → confere sha256 → `/installs` → `/events`); fluxo device code via `/ativar`; expiração forçada (`update oauth_tokens set refresh_expires_at = now()-'1d'`) → `invalid_grant` + `error_uri`; página de revalidação com upsell; cancelar → `revoke_member_tokens` → download negado com `upgrade_url` |
+| 4 | vitest `packages/billing/src/routing.test.ts`, `entitlements.test.ts`, `payment-choice.test.ts`; Playwright: sign-up (segmento/IA/idioma) → `/assinatura?plan=kit` → PIX sandbox Asaas → webhook (fixture) → `/inicio` mostra kit + token → club em USD no `/en` (Stripe test) → cancelar com motivo → liquidação → entitlements caem; fixture do anual 12x ativa; fixture de reembolso revoga o grant |
+| 5 | skill `product-verify` (novo + recorrente, desktop + 375 + 320): onboarding → inicio → modulos → módulo (aula avançada bloqueada) → devices revogar → escada; `product-lint` limpo |
+| 6 | smoke admin num banco local seedado (upload/publicar/yank, ciclo do encontro, export de leads, filtros de membros = tiles, `/admin/metricas` = fixture pgTAP); `admin-jobs.test.ts` |
+| 7 | skill `marketing-verify` (3 larguras × claro/escuro × 2 idiomas); Lighthouse ≥90 perf/SEO em `/`, `/en`, `/planos`, `/en/pricing`; hreflang em toda rota indexada com os caminhos traduzidos (dois idiomas + x-default, canonical próprio); sitemap com os dois idiomas; `/pt-BR/...` → 301; `/en/planos` resolve para `/en/pricing` |
+| 8 | envios de teste no Resend para cada template nos dois idiomas (snapshot do HTML via `@react-email/render`); preview dos templates de auth |
+
+## Riscos
+
+- **next-intl + middleware Supabase**: sem precedente no repo, mas restrito ao site público depois da revisão de 7.1; prototipar com `/`, `/en`, `/planos` e `/en/pricing` antes de mover o resto.
+- **`apps/web/.env` copiado do MedChina**: aponta para o Supabase de produção, a chave Asaas, Meta/GA4 e chaves de IA do MedChina. Um `apps/web/.env.local` com esses valores vazios foi criado em 2026-09-30 para anulá-los. Nunca rodar `db:*:remote` antes de `DATABASE_URL` apontar para o banco do flyee.club.
+- **Grants explícitos**: projeto novo é secure-by-default; o pgTAP `0016_grants_catalog_scan` é a rede de segurança.
+- **Ativação do parcelado Asaas** nunca funcionou: a fixture precisa ser um payload real do sandbox, commitado em `apps/web/src/app/api/webhooks/__fixtures__/`.
+- **Loopback com porta livre** só para clientes `first_party && loopback_any_port`; manter o teste de que cliente comum falha com porta diferente.
+- **Volume de `tool.executed`**: o teto de 120/ator/hora pode cortar uso intenso; o lote de `/api/cli/events` e o rollup diário existem para isso; revisar o teto após a primeira semana real.
+- **Conflito de nome `modules`**: tabela de cobrança já existe; o catálogo usa `catalog_*`.
+
+## Questões em aberto
+
+Registradas em [`docs/PRODUCT.md`](PRODUCT.md), seção "Decisões em aberto". As que mudam a execução: vídeo das aulas avançadas (fases 5 e 6), nota fiscal (fase 4), encontros embutidos ou externos (fases 5 e 6), caminhos em inglês sob `/en` (fase 7) e revisão jurídica dos termos (antes da primeira venda).

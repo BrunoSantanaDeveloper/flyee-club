@@ -1,0 +1,67 @@
+# IDE specific
+# WebStorm
+.idea/
+# VSCode
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Production files
+build/
+
+# Test and local tool output
+test-results/
+playwright-report/
+coverage/
+.expo/
+
+# TypeScript
+*.tsbuildinfo
+
+# Miscellaneous
+*.pem
+
+# Ignore EditorConfig
+.editorconfig
+
+# vercel
+.vercel
+
+# Supabase local runtime and generated migration mirror. Canonical migrations
+# stay in packages/db/migrations.
+supabase/.temp/
+supabase/migrations/*.sql
+
+# typescript
+next-env.d.ts
+
+# local configuration — real keys live here, never in git (.env.example is the tracked reference)
+.env
+.env.local
+.claude/settings.local.json
+
+.vercel
+
+# The Hellen testimony (149 MiB) is served off the site instead — GitHub
+# refuses any blob over 100 MiB. See components/presentation/README.md.
+/apps/web/public/videos/palestra/depo-hellen.mp4
+
+# Inherited MedChina media (deleted in phase 1 of docs/PLANO-IMPLEMENTACAO.md);
+# kept out of git history on purpose.
+/apps/web/public/videos/
