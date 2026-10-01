@@ -51,7 +51,7 @@ export default function CommandBlock({
   return (
     <Box
       className={cn(
-        "bg-primary-dark flex w-full flex-row items-center gap-3 overflow-hidden rounded-2xl py-2 pr-2 pl-4",
+        "bg-background-deep flex w-full flex-row items-center gap-3 overflow-hidden rounded-2xl py-2 pr-2 pl-4",
         className,
       )}
     >

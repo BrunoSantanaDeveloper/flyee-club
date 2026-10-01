@@ -9,7 +9,9 @@ export type TerminalLine = {
 const LINE: Record<NonNullable<TerminalLine["kind"]>, string> = {
   command: "text-text-contrast",
   output: "text-text-contrast/85",
-  success: "text-accent-2-light",
+  // The feedback green, not a categorical accent: a passed check means the same
+  // under any palette, and it clears the deep body with room to spare.
+  success: "text-success-light",
   muted: "text-text-contrast/60",
 };
 
@@ -59,7 +61,7 @@ export default function TerminalFrame({
           scrollable region must be reachable without a mouse. */}
       <pre
         tabIndex={0}
-        className="bg-primary-dark focus-visible:outline-primary-light m-0 overflow-x-auto rounded-none border-0 px-5 py-5 font-mono text-sm leading-7 focus-visible:outline-2 sm:px-6 sm:py-6"
+        className="bg-background-deep focus-visible:outline-primary-light m-0 overflow-x-auto rounded-none border-0 px-5 py-5 font-mono text-sm leading-7 focus-visible:outline-2 sm:px-6 sm:py-6"
       >
         <code className="flex flex-col rounded-none border-0 bg-transparent p-0">
           {lines.map((line, index) => {

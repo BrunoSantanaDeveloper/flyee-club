@@ -38,7 +38,7 @@ const COLUMNS = [
 ] as const;
 
 /**
- * The site closes on the dark primary band. `legalEntity` is the operating
+ * The site closes on the deep band. `legalEntity` is the operating
  * company the terms and the privacy policy point at ("identified in the site
  * footer"); `primaryCta` follows the launch stage like the header.
  */
@@ -52,7 +52,7 @@ export default function MarketingFooter({
   const t = useTranslations("marketing");
 
   return (
-    <footer className="bg-primary-dark text-text-contrast w-full">
+    <footer className="bg-background-deep text-text-contrast w-full">
       <Container className="flex flex-col gap-10 py-12 md:py-16">
         <div className="flex flex-col gap-10 md:flex-row md:justify-between">
           <div className="flex max-w-xs flex-col gap-3">

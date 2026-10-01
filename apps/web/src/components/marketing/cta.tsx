@@ -47,14 +47,15 @@ export default function Cta({
             {subtitle && <p className="text-text-contrast/75 max-w-2xl text-lg leading-7">{subtitle}</p>}
             <div className="mt-2 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               {/* Light button on the deep band: token classes override the
-                  contained-primary look — white surface, deep primary label. */}
+                  contained-primary look — white surface, label in the band's
+                  own colour. */}
               <Button
                 size="large"
                 variant="contained"
                 color="primary"
                 href={cta.href}
                 LinkComponent={Link}
-                className="bg-text-contrast! text-primary-dark! shadow-darker-sm hover:bg-text-contrast/90!"
+                className="bg-text-contrast! text-background-deep! shadow-darker-sm hover:bg-text-contrast/90!"
               >
                 {cta.label}
               </Button>

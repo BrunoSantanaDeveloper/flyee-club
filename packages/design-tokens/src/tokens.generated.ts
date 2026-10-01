@@ -10,6 +10,7 @@ export const common = {
     "main-padding": "16px",
     "background": "34 20% 97%",
     "background-paper": "0 0% 100%",
+    "background-deep": "0 0% 19%",
     "grey-20": "34 14% 97%",
     "grey-25": "34 13% 96%",
     "grey-50": "34 12% 94%",
@@ -83,6 +84,7 @@ export const common = {
   "dark": {
     "background": "0 0% 14%",
     "background-paper": "0 0% 16%",
+    "background-deep": "0 0% 9%",
     "grey-20": "0 0% 18%",
     "grey-25": "0 0% 20%",
     "grey-50": "0 0% 22%",

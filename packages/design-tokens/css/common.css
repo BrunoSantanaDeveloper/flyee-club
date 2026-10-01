@@ -9,9 +9,14 @@
     /* --------- Globals --------- */
 
     /* --------- Background Colors --------- */
-    /* MedChina warm neutrals: light surfaces tinted toward Parchment #eeebe7 */
+    /* Warm neutrals: light surfaces tinted toward parchment (#eeebe7). */
     --background: 34 20% 97%;
     --background-paper: 0 0% 100%;
+    /* The deep band: the site footer, the "deep" sections and every terminal
+       body. A neutral and not a brand hue, so it stays dark whatever palette
+       is loaded: the charcoal of the logo tile (#313131), read with
+       --text-contrast. */
+    --background-deep: 0 0% 19%;
     /* --------- Background Colors --------- */
 
     /* --------- Grey Scales --------- */
@@ -118,6 +123,8 @@
     /* --------- Background Colors --------- */
     --background: 0 0% 14%;
     --background-paper: 0 0% 16%;
+    /* Darker than the page in dark mode, so the band still reads as a well. */
+    --background-deep: 0 0% 9%;
     /* --------- Background Colors --------- */
 
     /* --------- Grey Scales --------- */

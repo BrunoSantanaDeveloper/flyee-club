@@ -1,7 +1,7 @@
 import "@/style/global.css";
 
 import { Metadata } from "next";
-import { Mulish, Urbanist } from "next/font/google";
+import { JetBrains_Mono, Londrina_Solid, Mulish } from "next/font/google";
 import Script from "next/script";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -23,17 +23,36 @@ const mulish = Mulish({
   preload: true,
 });
 
-const urbanist = Urbanist({
+// The brand face: the "flyeeclub" lettermark is set in it. The family ships
+// four static weights only (100, 300, 400 and 900), so a heading class gets
+// the nearest real face, never a synthesised one: font-normal and font-medium
+// render Regular; font-semibold, font-bold and font-extrabold render Black.
+// Add "300" or "100" to the list when a design calls for a lighter display.
+const londrina = Londrina_Solid({
+  weight: ["400", "900"],
   subsets: ["latin"],
   variable: "--font-heading",
   display: "swap",
   preload: true,
 });
 
-// No separate display face while the brand is provisional (decision
-// 2026-09-30): `font-display` falls back to --font-heading (Urbanist) through
-// tailwind.config.ts. A licensed display font, when chosen, is wired here as
-// --font-display with next/font/local.
+// Commands, versions and file names: the `font-mono` utility and every
+// <code>, <pre> and <kbd>. A variable font, so one file covers 100 to 800.
+// Not preloaded: most pages show no mono text above the fold, and an unused
+// preload only competes with the fonts that are. No metric-adjusted fallback
+// either, because that fallback is Arial: while the file loads, the stack in
+// tailwind.config.ts falls to the system mono face and the columns hold.
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
+});
+
+// `font-display` has no face of its own: it falls back to --font-heading
+// (Londrina Solid) through tailwind.config.ts. A separate display face, if one
+// is ever chosen, is wired here as --font-display.
 
 export const metadata: Metadata = {
   metadataBase: new URL(BRAND.siteUrl),
@@ -55,8 +74,9 @@ export const metadata: Metadata = {
       { media: "(prefers-color-scheme: dark)", url: BRAND.favicon.dark },
       { media: "(prefers-color-scheme: light)", url: BRAND.favicon.light },
     ],
-    // A touch icon is a home-screen tile: it needs the PNG mark, not a 32px .ico.
-    apple: BRAND.mark,
+    // A touch icon is a home-screen tile. It has its own full-bleed file: iOS
+    // paints black behind transparent corners and applies its own mask.
+    apple: BRAND.appleIcon,
   },
   /**
    * Lets Google show a full-size image preview instead of the default thumbnail
@@ -78,7 +98,7 @@ export default async function RootLayout({
       lang={locale}
       suppressHydrationWarning
       style={{ "--inner-shadow-opacity": "0.6", "--foreground-opacity": "0.6" } as React.CSSProperties}
-      className={`${mulish.variable} ${urbanist.variable}`}
+      className={`${mulish.variable} ${londrina.variable} ${jetbrains.variable}`}
     >
       <head>
         {/* We need to include the loader CSS directly to avoid flash of unstyled content */}

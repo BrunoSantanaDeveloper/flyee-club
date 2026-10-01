@@ -208,7 +208,7 @@ export default function PricingSection({
                       style={{ backgroundColor: "currentcolor" }}
                     />
                   </span>
-                  <h3 className="text-text-primary font-heading text-xl font-bold">{plan.name}</h3>
+                  <h3 className="text-text-primary font-heading text-xl font-normal">{plan.name}</h3>
                 </div>
                 {plan.description && <p className="text-text-secondary text-sm leading-5">{plan.description}</p>}
               </div>

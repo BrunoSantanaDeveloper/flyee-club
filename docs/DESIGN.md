@@ -1,8 +1,8 @@
-# Design direction (committed, PROVISIONAL) — the flyee.club marketing look
+# Design direction (committed; palette PROVISIONAL) — the flyee.club look
 
 **This file is the single source of the public site's visual direction.** The `marketing-page` skill READS it and builds within it. Every new page, every edit and every added section inherits these decisions so the whole site reads as one system.
 
-**Status (2026-10-01): provisional.** The user decided on 2026-09-30 that the brand is provisional: placeholder logo (`components/logo/logo.tsx`), the current token palette and Urbanist as the display face (`docs/PRODUCT.md`, "Decisões tomadas 2026-09-30"). When the definitive brand exists, the user asks for a "redesign", which rewrites this file first; pages follow.
+**Status (2026-10-01): the logo and the typography are official; the palette is provisional.** On 2026-10-01 the user delivered the official logo (`apps/web/public/brand/`, drawn by `components/logo/logo.tsx`), set the brand type (Londrina Solid for headings and display, JetBrains Mono for commands, Mulish for text) and chose the template's orange palette (`theme-orange`) as a stand-in until the flyee.club palette is written as tokens (`docs/PRODUCT.md`, "Decisões"). When that palette exists, the user asks for a "redesign", which rewrites this file first; pages follow.
 
 ## STRICT MODE — how this governs work
 
@@ -21,12 +21,12 @@
 |---|---|
 | **Direction** | Operational precision with warmth: a well-run developer tool, calm and exact, technical without being cold. |
 | **Why** | The buyer installs a harness in their own terminal and pays for the updates that keep it working. Trust comes from showing the mechanism honestly (versions, changelog, checksum, declared permissions) and from a concrete catalog. The site must feel like a tool that is maintained, never like a course landing page made of promises. |
-| **Display type** | **Urbanist** (`--font-heading`, already loaded in the root layout; `font-display` falls back to it), weights 700/800 at the fluid display scale, `tracking -0.02em`. Provisional: a licensed display face replaces it with the definitive brand. |
-| **Body type** | Mulish (`--font-body`), 16–18px, line-height 1.6. Commands, versions and file names use `font-mono` (system mono stack). |
-| **Palette usage** | The current tokens (`theme-green`), light-first over the warm neutral ground, dark mode through the same tokens. **Primary** carries CTAs and the single bold moment per page. **Secondary** is the warmth layer: eyebrows and editorial accents, sparingly. Categorical meaning is fixed site-wide: the seven trails map Planejar/Construir → `accent-2`, Publicar/Divulgar → `accent-1`, Vender/Escalar → `accent-4`, Manter → `accent-3`; plan tiers map kit → `accent-2`, assinatura → `primary`, Pro → `accent-4`. **Red is reserved for error and risk.** |
+| **Display type** | **Londrina Solid** (`--font-heading`, loaded in the root layout; `font-display` falls back to it), the face of the "flyeeclub" lettermark. The family ships Regular (400) and Black (900) and nothing between them, so every class from `font-semibold` up renders Black. **Black is the display weight**: `text-display-*` and any heading from 24px up (`font-bold`; `font-extrabold` on the hero), `tracking -0.02em` on the display scale. **Regular is the weight of every heading below 24px** (`font-normal`): Black closes up at those sizes, and Regular is already a heavy face. `marketing-lint` flags a small heading in a heavy weight (`[heading-weight]`); the dashboard gets the same split from `style/data-display/typography.css` (MUI `h1`/`h2` Black, `h3`–`h6` Regular). |
+| **Body type** | Mulish (`--font-body`), 16–18px, line-height 1.6. Commands, versions and file names use `font-mono`: JetBrains Mono (`--font-mono`), with the system mono face while the file loads. |
+| **Palette usage** | The provisional tokens (`theme-orange`: orange primary, burnt-orange secondary; accents pink, magenta, violet and blue), light-first over the warm neutral ground, dark mode through the same tokens. **Primary** carries CTAs and the single bold moment per page. **Secondary** is the warmth layer: eyebrows and editorial accents, sparingly. Categorical meaning is fixed site-wide: the seven trails map Planejar/Construir → `accent-2`, Publicar/Divulgar → `accent-1`, Vender/Escalar → `accent-4`, Manter → `accent-3`; plan tiers map kit → `accent-2`, assinatura → `primary`, Pro → `accent-4`. **The deep band** (the footer, `background="deep"`, every terminal body, the command block) is `--background-deep`, a neutral equal to the charcoal of the logo tile: it does not follow the primary, so it stays dark under any palette, and on it the logo is the dark-surface file. **Known limit of the provisional palette** (measured 2026-10-01): a white label on the primary measures 2.04:1 and primary-coloured text on a light surface 1.9–2.0:1, against the 4.5:1 of WCAG AA. The palette that replaces this one has to give primary fills a dark label (the logo's charcoal on this orange measures 6.4:1) and keep primary out of small text. **Red is reserved for error and risk.** |
 | **Depth treatment** | Crisp: `decor="grid"` on the technical chapters, `decor="glow"` (low alpha) on the hero, exactly one `background="contrast"` band, the background changing at least twice down the page. Generous radii, diffuse shadows. |
 | **Layout archetypes** | Hero `layout="split"` + `<ProductComposition>` (a terminal frame in the centre, module tiles and version chips as satellites); `<BentoGrid>` for the seven trails; `<FeatureRows>` for "atualização como produto" and for security; `<ProcessSteps variant="mono">` for the install flow; `<StatBand>` only with real catalog numbers; `<PricingSection>` for the ladder; ONE breakout per page. Never centred-stack + equal-card-grid all the way down. |
-| **Signature element** | **The update moment**: a terminal frame showing `npx flyee update` with a version chip (`1.4 → 1.6`) and one changelog line. It recurs on the home hero, `/como-funciona` and the catalog, and echoes the logo (the open ring = continuous update). |
+| **Signature element** | **The update moment**: a terminal frame showing `npx flyee update` with a version chip (`1.4 → 1.6`) and one changelog line. It recurs on the home hero, `/como-funciona` and the catalog. Its body is the deep band, so it reads as a terminal under any palette. |
 | **Imagery** | Real dashboard screenshots through `<ProductShot>` once the member dashboard exists (`npm run shots:marketing -w @flyee/web`). Until then, token-driven `<ProductFrame>`/terminal compositions with fictitious but plausible data (module names from the catalog). Never stock photos, robots, glowing brains, holograms or other AI clichés; AI vendors are named as text in compatibility lists, never used as decorative logos. |
 | **Motion** | Crisp and short: one orchestrated hero timeline (terminal lines appear → tiles rise → the version chip flips); ambient layer ≤2 `<Float>` satellites and `<CountUp>` only on real numbers; quiet `<Reveal>` elsewhere. All reduced-motion safe. |
 
@@ -37,7 +37,7 @@
 3. Background changes ≥2× along the scroll.
 4. 1440px density check: no viewport >50% empty.
 5. One orchestrated motion moment + a runtime scroll pass (no `<Reveal>` left un-fired).
-6. Display typography is Urbanist at the display scale (`font-display text-display-*`) — the provisional display face — never body-size admin type.
+6. Display typography is Londrina Solid Black at the display scale (`font-display text-display-*`), never body-size admin type; headings below 24px are Londrina Solid Regular.
 7. Harmonic palette in use: at least two hues beyond primary, mapped per the table above, via the `tone` prop.
 8. Show, don't tell: text-heavy sections carry a glance-able visual (meaningful icon, terminal snippet, figure).
 9. The hero media is a LAYERED `<ProductComposition>` (≥2 satellite chips) or a real screenshot — never a flat single rectangle.
@@ -63,5 +63,7 @@ _None ingested._
 ## History
 
 The inherited MedChina direction ("Cuidado Sereno"), its hand-tuned Landing DS (`clinical-source-home.css`) and the commercial TT Chocolates face were retired on 2026-09-30, when this repository became the flyee.club platform. They remain recoverable from the import commit `ab2e84d`.
+
+On 2026-10-01 the placeholder logo (an open ring), Urbanist and the inherited teal palette (`theme-green`) gave way to the official logo, Londrina Solid with JetBrains Mono, and the provisional orange palette. The same change gave the deep band its own token: it used to be the dark primary, which is only dark while the primary is.
 
 Width note: `--container-max: 77.5rem` (1240px) in `packages/design-tokens/css/marketing.css` is committed site-wide.

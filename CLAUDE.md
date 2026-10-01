@@ -30,7 +30,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
   - **Public site** (`app/[locale]/(marketing)`): the waitlist (`/espera`), interim pages (home, `/planos`, `/contato`, `/ajuda`, `/blog`) and the legal pages rendered from `consent_terms`, composed from `components/marketing/*`, in Portuguese at `/` and in English at `/en` with translated addresses (`src/i18n/routing.ts`). Until the launch stage is `open`, every primary CTA leads to the waitlist. Phase 7.2 rebuilds the other pages with the club's copy. Quality is enforced by the `marketing-page` skill (loaded by `.claude/hooks/marketing-guard.mjs`) and the `marketing-lint` hook.
   - **Checkout and auth**: `/assinatura`, `/auth/*`, billing webhooks at `/api/webhooks/[provider]`.
   - **CLI connection and delivery** (`docs/CLI-CONTRACT.md`): the OAuth 2.1 server for the first-party `flyee-cli` client (`/oauth/authorize` with its revalidation variant, `/ativar` for device codes, `/revalidar`, `/api/oauth/{token,device,revoke}`), the delivery API `/api/cli/*` (every call walks `lib/cli/gates.ts`: token → scope → entitlement → device → rate), the package upload `/api/admin/catalog/{uploads,versions}` and the public checksum page `/verificar/[ref]`.
-- `packages/design-tokens` — design system source of truth: the provisional palette in `css/green.css`, neutrals in `css/common.css`, `css/marketing.css` (fluid display scale, section rhythm, motion). See its README.
+- `packages/design-tokens` — design system source of truth: the provisional palette in `css/orange.css` (`theme-orange`), neutrals and the deep band (`--background-deep`) in `css/common.css`, `css/marketing.css` (fluid display scale, section rhythm, motion). See its README.
 - `packages/db` — the SQL baseline with RLS on every table and explicit grants (one organization per member: the personal workspace), the pgTAP suite, and a Drizzle mirror generated from the migrations. See its README.
 - `packages/auth` — Supabase clients (browser/server/middleware/service), 2FA step-up, and the parallel session cookie used by support impersonation.
 - `packages/billing` — the ladder (the kit as a one-time access purchase; membership and Pro, monthly and yearly; every plan in BRL and in USD), subscriptions with price snapshots, entitlement grants, coupons, invoices; Asaas (BRL) and Stripe (USD) behind one `PaymentProvider`, routed by the plan's currency. Pure, client-safe helpers in `@flyee/billing/currency` and `@flyee/billing/entitlements`. See `docs/BILLING.md`.
@@ -41,7 +41,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 - `packages/ai` — chat providers (Anthropic/Gemini/OpenRouter) behind one interface, used by `/admin/insights`; usage feeds the `ai_spend` ledger.
 - `packages/fields` — pure validators/formatters/masks (phone, CPF/CNPJ, CEP, currency; persist digits) + the ViaCEP lookup provider.
 - `packages/onboarding` — activation state machinery; the steps live in `apps/web/src/lib/onboarding.ts`.
-- `packages/content` — `BRAND` (site identity) + the message catalogs `messages/{pt-BR,en}.json`; brand master art in `packages/content/brand/`.
+- `packages/content` — `BRAND` (site identity) + the message catalogs `messages/{pt-BR,en}.json`. The official brand art (the SVGs, as delivered) lives in `apps/web/public/brand/`; every raster is derived from the mark by `npm run brand:assets -w @flyee/web`.
 - `packages/catalog` — the `flyee.module.json` manifest schema (zod, published as JSON Schema at `/api/cli/schema/module`) and the catalog's version rules, shared by the upload pipeline and the delivery API.
 - `docs/` — `PRODUCT.md`, `PLANO-IMPLEMENTACAO.md`, `DEPLOY.md`, `DESIGN.md` (provisional direction), `ASAAS-GO-LIVE.md`, `BILLING.md` (the billing design), `CLI-CONTRACT.md` (the contract the CLI builds against), `BILLING-AUDIT.md` (historical), `SEO.md` and `TRACKING.md` (rewritten in phase 7).
 - `attachments/` — input inbox: drop project material here; agents route each file to its canonical home per `attachments/README.md`.
@@ -55,7 +55,8 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 - Visual identity changes ONLY in `packages/design-tokens/css/*.css`; run `npm run tokens:generate` and commit `tokens.generated.ts` with it.
 - npm workspaces: install dependencies from the root (`npm install`), never inside an app.
 - Icons: Phosphor through the tsconfig alias `@/icons/nexture/*` → `src/icons/phosphor/*` (fallback stubs re-export Nexture).
-- Fonts: Mulish (`--font-body`) and Urbanist (`--font-heading`); `font-display` falls back to Urbanist until a licensed display face is chosen and wired as `--font-display` in the root layout.
+- Fonts: Mulish (`--font-body`), Londrina Solid (`--font-heading`; `font-display` falls back to it) and JetBrains Mono (`--font-mono`). Londrina Solid has two weights, Regular and Black: Black (`font-bold`) for the display scale and headings from 24px up, Regular (`font-normal`) below that.
+- The dark band (footer, deep sections, terminal bodies) is `bg-background-deep`, never the dark primary: it has to stay dark under any palette.
 - Red is reserved for risk and failure.
 
 ## Shared Claude/Codex harness

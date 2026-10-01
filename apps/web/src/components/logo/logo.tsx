@@ -1,29 +1,71 @@
+import symbolLight from "../../../public/brand/flyeeclub-logo.svg";
+import symbolDark from "../../../public/brand/flyeeclub-logo-dark.svg";
+import lockupDark from "../../../public/brand/logo-and-lettermark-dark.svg";
+import lockupLight from "../../../public/brand/logo-and-lettermark-light.svg";
+
 import { BRAND } from "@/brand";
 import { cn } from "@/lib/utils";
 
 /**
- * The single logo component — admin header AND marketing header/footer render this;
- * never create a second logo implementation.
+ * The single logo component: the dashboard header AND the public header and
+ * footer render this; never create a second logo implementation.
  *
- * PROVISIONAL flyee.club mark (decision 2026-09-30: placeholder logo, current
- * palette — docs/PRODUCT.md). Master art: packages/content/brand/logo.svg and
- * mark.svg. The mark is an open ring with a dot in its gap (continuous update),
- * deliberately free of letterforms so it cannot be mistaken for another brand.
+ * The art is the OFFICIAL flyee.club set (delivered 2026-10-01). It lives,
+ * unedited, in apps/web/public/brand/ and is referenced
+ * here, never redrawn:
+ * - the lockup (mark + "flyeeclub" lettermark): logo-and-lettermark-light.svg
+ *   for light surfaces, -dark.svg for dark surfaces, -white.svg and -black.svg
+ *   in one colour;
+ * - the mark alone: flyeeclub-logo.svg (dark tile, for light surfaces) and
+ *   flyeeclub-logo-dark.svg (yellow tile, for dark surfaces).
  *
- * Every colour comes from a token, so the logo follows light/dark mode and a
- * future palette change in @flyee/design-tokens without touching this file.
- * Variants: full (mark + wordmark) and compact mobile mark, toggled via className.
+ * The brand colours belong to the art, so nothing here is tinted by a token.
+ * What follows the theme is WHICH file shows: the light-surface file in light
+ * mode and the dark-surface file under `.dark`. `tone="contrast"` is for the
+ * deep band (the footer, `--background-deep`), which is dark in both modes:
+ * the dark-surface file, always. The one-colour white and black lockups are
+ * part of the set for print and third-party grounds; no screen here needs them.
+ *
+ * Each variant is an <svg> sized by its own attributes, like the drawing it
+ * replaced, so a caller's sizing and display classes keep working. The files
+ * are imported, not addressed by path, so they ship under a hashed URL that
+ * the browser caches for good and a missing file fails the build.
+ * Variants: full (the lockup) and compact (the mark), toggled via className.
  */
 
-function Mark({ tone }: { tone: "default" | "contrast" }) {
-  const tile = tone === "contrast" ? "hsl(var(--text-contrast))" : "hsl(var(--primary))";
-  const ink = tone === "contrast" ? "hsl(var(--primary))" : "hsl(var(--text-contrast))";
+/** What Next resolves an imported image file to. */
+type Art = { src: string; width: number; height: number };
+
+const LOCKUP: { light: Art; dark: Art } = { light: lockupLight, dark: lockupDark };
+const SYMBOL: { light: Art; dark: Art } = { light: symbolLight, dark: symbolDark };
+
+/** Rendered height when the caller passes no size: the 27px of the header rows. */
+const DEFAULT_HEIGHT = 27;
+
+/**
+ * One variant. With `onDeep` the surface is dark whatever the mode, so only the
+ * dark-surface file is drawn; otherwise both are, and the mode picks one.
+ */
+function Variant({ className, art, onDeep }: { className?: string; art: { light: Art; dark: Art }; onDeep: boolean }) {
+  const { light, dark } = art;
   return (
-    <>
-      <rect width="512" height="512" rx="112" fill={tile} />
-      <path d="M384 256A128 128 0 1 1 256 128" fill="none" stroke={ink} strokeWidth="48" strokeLinecap="round" />
-      <circle cx="346.5" cy="165.5" r="34" fill={ink} />
-    </>
+    <svg
+      className={className}
+      width={Math.round((DEFAULT_HEIGHT * light.width) / light.height)}
+      height={DEFAULT_HEIGHT}
+      viewBox={`0 0 ${light.width} ${light.height}`}
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label={BRAND.name}
+    >
+      {onDeep ? null : <image href={light.src} width={light.width} height={light.height} className="dark:hidden" />}
+      <image
+        href={dark.src}
+        width={dark.width}
+        height={dark.height}
+        className={onDeep ? undefined : "hidden dark:inline"}
+      />
+    </svg>
   );
 }
 
@@ -34,51 +76,14 @@ export default function Logo({
 }: {
   classNameFull?: string;
   classNameMobile?: string;
-  /** "contrast": light tile and light wordmark for the deep/dark bands (footer). */
+  /** "contrast": on the deep band (the footer), dark in both modes. */
   tone?: "default" | "contrast";
 }) {
-  const word = tone === "contrast" ? "hsl(var(--text-contrast))" : "hsl(var(--text-primary))";
-  const accent = tone === "contrast" ? "hsl(var(--text-contrast))" : "hsl(var(--primary))";
+  const onDeep = tone === "contrast";
   return (
     <>
-      <svg
-        className={cn(classNameFull)}
-        width="122"
-        height="27"
-        viewBox="0 0 216 48"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        role="img"
-        aria-label={BRAND.name}
-      >
-        <g transform="scale(0.09375)">
-          <Mark tone={tone} />
-        </g>
-        <text
-          x="58"
-          y="35"
-          fontSize="30"
-          fontWeight="700"
-          letterSpacing="-0.6"
-          fill={word}
-          style={{ fontFamily: "var(--font-heading)" }}
-        >
-          flyee<tspan fill={accent}>.club</tspan>
-        </text>
-      </svg>
-
-      <svg
-        className={cn(classNameMobile)}
-        width="27"
-        height="27"
-        viewBox="0 0 512 512"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        role="img"
-        aria-label={BRAND.name}
-      >
-        <Mark tone={tone} />
-      </svg>
+      <Variant className={cn(classNameFull)} art={LOCKUP} onDeep={onDeep} />
+      <Variant className={cn(classNameMobile)} art={SYMBOL} onDeep={onDeep} />
     </>
   );
 }

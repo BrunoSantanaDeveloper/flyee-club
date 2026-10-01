@@ -242,8 +242,15 @@ export const muiTheme = createTheme({
   },
 });
 
+const SHIPPED_THEMES: readonly string[] = Object.values(THEME_OPTIONS);
+
 export default function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useLocalStorage<ThemeVariant>(LS_KEYS.themeColor, DEFAULTS.themeColor);
+  const [storedTheme, setTheme] = useLocalStorage<ThemeVariant>(LS_KEYS.themeColor, DEFAULTS.themeColor);
+  // The stored value outlives a palette change: a browser that visited under
+  // the previous palette still holds its class name, and that stylesheet is no
+  // longer loaded, so applying it would leave the page with no brand colour at
+  // all. Only a palette this build ships is ever applied.
+  const theme = storedTheme && SHIPPED_THEMES.includes(storedTheme) ? storedTheme : DEFAULTS.themeColor;
   const [mode, setMode] = useLocalStorage<ModeVariant>(LS_KEYS.themeMode, DEFAULTS.themeMode);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   // Set the theme and mode on the document element
@@ -252,13 +259,13 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
 
     const preferredSystemMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     const finalMode = mode === "system" ? preferredSystemMode : (mode ?? preferredSystemMode);
-    classList.add(theme ?? DEFAULTS.themeColor, finalMode);
+    classList.add(theme, finalMode);
     setIsDarkMode(finalMode === "dark");
-    const removeList = [...Object.values(THEME_OPTIONS), ...THEME_MODE_OPTIONS].filter(
-      (x) => x !== theme && x !== finalMode,
-    );
-    classList.remove(...removeList);
-  }, [theme, mode]);
+    const stalePalettes = Array.from(classList).filter((name) => name.startsWith("theme-") && name !== theme);
+    const otherModes = THEME_MODE_OPTIONS.filter((name) => name !== finalMode);
+    classList.remove(...stalePalettes, ...otherModes);
+    if (storedTheme !== theme) setTheme(theme);
+  }, [theme, mode, storedTheme, setTheme]);
 
   const [content, setContent] = useLocalStorage<ContentType>(LS_KEYS.contentType, DEFAULTS.contentType);
 
@@ -272,7 +279,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <ThemeContext.Provider
       value={{
-        theme: theme ?? DEFAULTS.themeColor,
+        theme,
         setTheme,
         mode: mode ?? DEFAULTS.themeMode,
         setMode,

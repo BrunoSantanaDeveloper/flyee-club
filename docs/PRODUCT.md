@@ -46,7 +46,7 @@ Registradas ao transformar a base copiada do MedChina na plataforma do flyee.clu
 | Banco | Projeto Supabase novo, com um conjunto enxuto de migrações escrito do zero só com o que é genérico. |
 | Pagamento | Asaas para BRL e Stripe para USD, escolhidos pela moeda de cada compra. |
 | Site público | Completo desde já, bilíngue e indexado: português em `/`, inglês em `/en`, com textos provisórios. |
-| Marca | Provisória: nome flyee.club, logo placeholder, paleta atual e fonte Urbanist. A TT Chocolates, licenciada para o MedChina, sai. |
+| Marca | Nome flyee.club. Logo oficial entregue em 2026-10-01 (`apps/web/public/brand/`). Tipografia definida na mesma data: Londrina Solid nos títulos, JetBrains Mono em comandos e Mulish no texto. Paleta ainda provisória: o tema laranja do template, até a paleta do flyee.club virar tokens. A TT Chocolates, licenciada para o MedChina, saiu. |
 | "1 acesso" | Limite de dispositivos por degrau: kit 1, assinatura 3, Pro 5. |
 | Canal de atualização | O mesmo para todos na v1. A separação entre estável e latest fica preparada para depois de medir a conversão kit → assinatura em 60 dias. |
 | Segmentos | Produto próprio, freelancer ou agência, profissional que usa IA todo dia, dev, e "outro" para quem não se encaixa. "Outro" não entra na regra de foco. |

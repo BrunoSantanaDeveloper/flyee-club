@@ -3,7 +3,7 @@
   "contract": [
     "Every content block sits in <Section>/<Container>/<SectionHeader> — spacing/width come from marketing tokens, never per-page values",
     "Tokens only: hsl(var(--token)) / token Tailwind classes; must look right in the active palette × light/dark",
-    "Headings: font-display text-display-{2xl,xl,lg,md} (fluid clamp scale, no breakpoint font jumps)",
+    "Headings: font-display text-display-{2xl,xl,lg,md} (fluid clamp scale, no breakpoint font jumps). The face has two weights: font-bold (Black) on the display scale, font-normal (Regular) on any heading under 24px",
     "Copy through the marketing i18n namespace in BOTH locales (pt-BR, en)",
     "Icons only via @/icons/nexture/ni-* alias; meaningful concept icons, never decoration",
     "Exactly one <h1> per page (Hero, or SectionHeader/PricingSection as/headingAs=\"h1\")",
@@ -25,7 +25,7 @@
       "file": "section.tsx",
       "role": "layout",
       "props": "spacing: default|compact, background: default|paper|primary-soft|contrast|deep, decor: none|glow|grid|gradient-edge|dots|mesh|orbit, bleed, id",
-      "use": "vertical rhythm unit wrapping every block; vary background/decor at least twice along a page (premium bar #3); orbit is the one slowly-alive ambient — max one per page; deep = the blueprint dark band (--primary-dark + text-text-contrast), never pair with light decors"
+      "use": "vertical rhythm unit wrapping every block; vary background/decor at least twice along a page (premium bar #3); orbit is the one slowly-alive ambient — max one per page; deep = the dark band (--background-deep + text-text-contrast, a neutral that stays dark under any palette), never pair with light decors"
     },
     {
       "name": "ProductComposition",

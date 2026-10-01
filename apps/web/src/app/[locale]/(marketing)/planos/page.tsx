@@ -93,7 +93,7 @@ export default async function PricingPage({
             <NiShieldCheck size="medium" />
           </span>
           <div className="flex flex-col gap-1">
-            <p className="text-text-primary font-heading text-lg font-bold">{t("pricing-guarantee-title")}</p>
+            <p className="text-text-primary font-heading text-lg font-normal">{t("pricing-guarantee-title")}</p>
             <p className="text-text-secondary text-sm leading-6">{t("pricing-guarantee-body")}</p>
           </div>
         </div>

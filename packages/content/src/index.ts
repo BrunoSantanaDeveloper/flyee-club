@@ -3,13 +3,19 @@
  * points to:
  * - name/tagline/description → web metadata, marketing pages, OG image
  * - siteUrl → metadataBase, sitemap.ts, robots.ts (reads NEXT_PUBLIC_SITE_URL)
- * - favicons → apps/web/public/favicon/favicon-{light,dark}.ico + the square `mark`
- * - logo SVGs → apps/web/src/components/logo/logo.tsx and the master art in
- *   packages/content/brand/, plus apps/web/public/images/email/logo.svg
+ * - the art → apps/web/public/brand/, the official SVGs as delivered: the
+ *   lockup (logo-and-lettermark-{light,dark,white,black}.svg) and the mark
+ *   (flyeeclub-logo.svg, flyeeclub-logo-dark.svg). The logo component
+ *   (apps/web/src/components/logo/logo.tsx) references those files, and
+ *   apps/web/public/images/email/logo.svg is the light lockup again.
+ * - every raster below (the square `mark`, the home-screen tile, the three
+ *   .ico files) is DERIVED from the mark: after replacing a master, run
+ *   `npm run brand:assets -w @flyee/web` instead of exporting by hand.
  *
- * The brand is PROVISIONAL (decision 2026-09-30, docs/PRODUCT.md): placeholder
- * logo, current palette. The tagline/description here are the locale-neutral
- * fallbacks; localized copy lives in the `marketing` message namespace.
+ * The logo is official (delivered 2026-10-01). The palette is still
+ * provisional (docs/PRODUCT.md). The tagline/description here are the
+ * locale-neutral fallbacks; localized copy lives in the `marketing` message
+ * namespace.
  */
 export const BRAND = {
   name: "flyee.club",
@@ -38,6 +44,12 @@ export const BRAND = {
    * no media query. Also the Organization logo in the site's JSON-LD.
    */
   mark: "/brand/flyee-mark.png",
+  /**
+   * The home-screen tile (180×180, full bleed). A file of its own because iOS
+   * paints black behind transparent pixels and then applies its own mask, so
+   * the rounded mark would arrive with dark corners.
+   */
+  appleIcon: "/brand/apple-touch-icon.png",
   /**
    * Quick-support channels for the floating widget (web marketing +
    * dashboard). Leave a channel empty ("") to hide it; leave all empty

@@ -14,12 +14,13 @@ const BACKGROUND = {
   /** Elevated band: tinted surface + hairline borders — breaks long same-color scrolls. */
   contrast: "bg-background-paper border-grey-100 border-y",
   /**
-   * Deep teal band (token --primary-dark, white text) — the committed
-   * blueprint's dark moments (mobile / security / final CTA). Content inside
-   * uses text-text-contrast (+ /70 for secondary copy); never pair with the
-   * light decors.
+   * The deep band (token --background-deep, white text): the page's dark
+   * moments (security, the final CTA). Its own neutral token, not the dark
+   * primary, so it stays dark under any palette. Content inside uses
+   * text-text-contrast (+ /70 for secondary copy); never pair with the light
+   * decors.
    */
-  deep: "bg-primary-dark text-text-contrast",
+  deep: "bg-background-deep text-text-contrast",
 } as const;
 
 /**

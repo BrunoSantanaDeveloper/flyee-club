@@ -22,11 +22,13 @@ export const LOCALE_DISPLAY_ORDER: readonly LocaleOption[] = [...LOCALES].sort(
 );
 
 /**
- * A single locked palette (packages/design-tokens/css/green.css), kept as the
- * provisional flyee.club palette until the brand is defined.
+ * A single locked palette (packages/design-tokens/css/orange.css), provisional
+ * by the user's decision of 2026-10-01: the closest template palette to the
+ * official mark until the flyee.club palette is written as tokens. The theme
+ * provider applies only a class listed here, whatever a browser has stored.
  */
 export const THEME_OPTIONS = {
-  GREEN: "theme-green",
+  ORANGE: "theme-orange",
 } as const;
 
 export type ThemeVariant = (typeof THEME_OPTIONS)[keyof typeof THEME_OPTIONS];

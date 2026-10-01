@@ -45,7 +45,7 @@ export default function Comparison({ before, after }: { before: ComparisonSide; 
         </span>
       </div>
 
-      <article className="bg-primary-dark text-text-contrast shadow-darker-lg rounded-3xl p-7 md:p-9">
+      <article className="bg-background-deep text-text-contrast shadow-darker-lg rounded-3xl p-7 md:p-9">
         <p className="text-text-contrast/60 text-xs font-bold tracking-widest uppercase">{after.label}</p>
         <h3 className="font-display text-display-md mt-3 font-bold">{after.title}</h3>
         <ul className="mt-6 flex flex-col">

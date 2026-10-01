@@ -47,7 +47,7 @@
     }
 
     .MuiPickersToolbar-content .MuiDatePickerToolbar-title {
-      @apply font-heading text-lg font-bold;
+      @apply font-heading text-lg font-normal;
     }
   }
 
@@ -93,7 +93,7 @@
   .MuiTimePickerToolbar-hourMinuteLabel {
     @apply items-center;
     .MuiButtonBase-root {
-      @apply font-heading p-0 text-lg font-bold;
+      @apply font-heading p-0 text-lg font-normal;
       &:not(.Mui-selected):not(.Mui-disabled):hover {
         @apply bg-transparent;
         .MuiTypography-root:not(.Mui-selected) {
@@ -119,7 +119,7 @@
   .MuiTimeRangePickerToolbar-container {
     @apply items-center;
     .MuiButtonBase-root {
-      @apply font-heading px-1 py-0 text-lg font-bold;
+      @apply font-heading px-1 py-0 text-lg font-normal;
       &:not(.Mui-selected):not(.Mui-disabled):hover {
         @apply bg-transparent;
         .MuiTypography-root:not(.Mui-selected) {

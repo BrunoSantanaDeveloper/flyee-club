@@ -3,53 +3,73 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { BRAND } from "@/brand";
-import { common, hsl, themes } from "@flyee/design-tokens";
+import { DEFAULTS } from "@/config";
+import { common, hsl, type ThemeName, themes } from "@flyee/design-tokens";
 
 export const alt = `${BRAND.name} — ${BRAND.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-// fs is the only way to reach the font and the mark without the renderer
-// calling back into its own origin, which a build-time render would deadlock.
+// fs is the only way to reach the art without the renderer calling back into
+// its own origin, which a build-time render would deadlock.
 export const runtime = "nodejs";
 
 /**
  * Shared Open Graph card for the public site — the image WhatsApp, LinkedIn and
  * Google show next to the link.
  *
- * It used to be the brand name set in Arial on a full teal gradient: not the
- * committed direction (light-first over Parchment, teal for the bold moment,
- * camel used once — docs/DESIGN.md), and it carried no mark at all. The gradient
- * was also why the mark could never be added to it: half of that mark IS teal,
- * so on a teal ground it disappears.
+ * It carries the official lockup itself, not the name set in a system face:
+ * the lettermark IS the brand's display type, and no font file would say it
+ * better. The ground is the site's light neutral with the primary wash of the
+ * hero, flattened, so the card belongs to the page it links to.
  *
  * Composition is centred rather than left-aligned on purpose. The 1200×630 card
  * is letterboxed into a near-square slot in Google's result and cropped by some
  * feeds; anything pushed to an edge is the first thing lost.
  */
 
-/** `public/` is what ships; `src/fonts` is not traced into the serverless bundle. */
+/** `public/` is what ships; `src/` assets are not traced into the serverless bundle. */
 const publicAsset = (...segments: string[]) => path.join(process.cwd(), "public", ...segments);
 
 /**
- * Both assets are optional by design. A missing font or mark must degrade to a
- * plainer card — an exception here returns no image at all, which costs every
- * link preview on the site, a far worse outcome than Satori's default face.
+ * Every asset is optional by design. A missing file must degrade to a plainer
+ * card — an exception here returns no image at all, which costs every link
+ * preview on the site, a far worse outcome than a card without its logo.
  */
 async function loadAsset(file: string): Promise<Buffer | null> {
   return readFile(file).catch(() => null);
 }
 
+/**
+ * The lockup as an image source the renderer can size. The master declares
+ * `width="100%" height="100%"`, which means nothing outside a page, so the
+ * copy handed over states the size its own viewBox gives. The file on disk is
+ * never touched.
+ */
+function embeddable(svg: string): { src: string; ratio: number } | null {
+  const marker = 'viewBox="';
+  const start = svg.indexOf(marker);
+  if (start < 0) return null;
+  const from = start + marker.length;
+  const [, , width, height] = svg.slice(from, svg.indexOf('"', from)).trim().split(" ").map(Number);
+  if (!width || !height) return null;
+  const sized = svg.replace('width="100%" height="100%"', `width="${width}" height="${height}"`);
+  return { src: `data:image/svg+xml;base64,${Buffer.from(sized).toString("base64")}`, ratio: width / height };
+}
+
+const LOCKUP_WIDTH = 600;
+
 export default async function OpenGraphImage() {
-  const primary = hsl(themes.green.light["primary"]);
-  const secondary = hsl(themes.green.light["secondary"]);
+  // The palette the site itself applies (DEFAULTS.themeColor), never a second
+  // name to keep in step with it.
+  const palette = themes[DEFAULTS.themeColor.slice("theme-".length) as ThemeName].light;
+  const primary = hsl(palette["primary"]);
+  const secondary = hsl(palette["secondary"]);
   const background = hsl(common.light["background"]);
   const textPrimary = hsl(common.light["text-primary"]);
   const textSecondary = hsl(common.light["text-secondary"]);
 
-  // The provisional brand has no display face of its own (decision 2026-09-30),
-  // so the card renders in Satori's default sans until one is licensed.
-  const mark = await loadAsset(publicAsset(...BRAND.mark.split("/").filter(Boolean)));
-  const fonts: { name: string; data: Buffer; weight: 500 | 700; style: "normal" }[] = [];
+  const lockupFile = await loadAsset(publicAsset("brand", "logo-and-lettermark-light.svg"));
+  const lockup = lockupFile ? embeddable(lockupFile.toString("utf8")) : null;
 
   return new ImageResponse(
     (
@@ -65,8 +85,8 @@ export default async function OpenGraphImage() {
           fontFamily: "sans-serif",
         }}
       >
-        {/* The hero glow of the site, flattened: a teal wash behind the lockup
-            so the card has depth without a colour that fights the mark. */}
+        {/* The hero glow of the site, flattened: a primary wash behind the
+            lockup, so the card has depth without a colour that fights it. */}
         <div
           style={{
             position: "absolute",
@@ -74,25 +94,19 @@ export default async function OpenGraphImage() {
             width: 900,
             height: 900,
             borderRadius: 450,
-            background: `radial-gradient(circle, ${hsl(themes.green.light["primary"], 0.14)} 0%, ${hsl(themes.green.light["primary"], 0)} 70%)`,
+            background: `radial-gradient(circle, ${hsl(palette["primary"], 0.16)} 0%, ${hsl(palette["primary"], 0)} 70%)`,
           }}
         />
-        {mark ? (
-          <img
-            width={148}
-            height={148}
-            alt=""
-            src={`data:image/png;base64,${mark.toString("base64")}`}
-            style={{ marginBottom: 34 }}
-          />
-        ) : null}
-        <div style={{ fontSize: 92, fontWeight: 700, letterSpacing: -2, color: textPrimary }}>{BRAND.name}</div>
-        {/* The one camel moment the direction allows per surface. */}
+        {lockup ? (
+          <img width={LOCKUP_WIDTH} height={Math.round(LOCKUP_WIDTH / lockup.ratio)} alt="" src={lockup.src} />
+        ) : (
+          <div style={{ fontSize: 92, fontWeight: 700, letterSpacing: -2, color: textPrimary }}>{BRAND.name}</div>
+        )}
         <div
           style={{
             width: 170,
             height: 4,
-            marginTop: 22,
+            marginTop: 34,
             borderRadius: 2,
             background: `linear-gradient(90deg, ${primary} 0%, ${secondary} 100%)`,
           }}
@@ -112,6 +126,6 @@ export default async function OpenGraphImage() {
         </div>
       </div>
     ),
-    { ...size, ...(fonts.length > 0 ? { fonts } : {}) },
+    size,
   );
 }

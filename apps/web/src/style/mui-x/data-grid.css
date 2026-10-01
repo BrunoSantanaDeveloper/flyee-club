@@ -86,7 +86,7 @@
     @apply m-0 min-h-10 p-0;
 
     .MuiDataGrid-toolbarLabel {
-      @apply font-heading self-start text-xl font-bold;
+      @apply font-heading self-start text-xl font-normal;
     }
 
     .MuiFormControl-root {

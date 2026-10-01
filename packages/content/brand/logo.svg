@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320">
-  <g transform="translate(16 16) scale(0.5625)">
-    <rect width="512" height="512" rx="112" fill="#177C81"/>
-    <path d="M384 256A128 128 0 1 1 256 128" fill="none" stroke="#FFFFFF" stroke-width="48" stroke-linecap="round"/><circle cx="346.5" cy="165.5" r="34" fill="#FFFFFF"/>
-  </g>
-  <text x="344" y="212" font-family="Urbanist, 'Segoe UI', Arial, sans-serif" font-size="168" font-weight="700" letter-spacing="-4" fill="#1F2933">flyee<tspan fill="#177C81">.club</tspan></text>
-</svg>

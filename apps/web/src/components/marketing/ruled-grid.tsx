@@ -46,7 +46,7 @@ export default function RuledGrid({
                   {item.icon}
                 </span>
               )}
-              <h3 className="font-display text-text-primary text-xl leading-6 font-bold">{item.title}</h3>
+              <h3 className="font-display text-text-primary text-xl leading-6 font-normal">{item.title}</h3>
               <p className="text-text-secondary mt-2.5 text-base leading-6">{item.body}</p>
               {item.link && (
                 <Link
@@ -92,7 +92,7 @@ export default function RuledGrid({
             )}
             <h3
               className={cn(
-                "font-display text-lg leading-6 font-bold",
+                "font-display text-lg leading-6 font-normal",
                 deep ? "text-text-contrast" : "text-text-primary",
               )}
             >

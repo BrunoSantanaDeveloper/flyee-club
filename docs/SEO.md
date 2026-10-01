@@ -15,7 +15,7 @@ These ship in the base and rebrand from `@flyee/content` — a new page inherits
 | XML sitemap (public routes only) | `apps/web/src/app/sitemap.ts` |
 | robots + sitemap pointer (crawlers blocked from app/api) | `apps/web/src/app/robots.ts` |
 | `metadataBase` + `%s \| Brand` title template + favicons | `apps/web/src/app/layout.tsx` |
-| Shared Open Graph image (token-driven, 1200×630) | `apps/web/src/app/opengraph-image.tsx` |
+| Shared Open Graph image (the official lockup, 1200×630) | `apps/web/src/app/opengraph-image.tsx`; named again by `publicPageMetadata`, because a page that sets `openGraph` drops the image it inherits |
 | `Organization` + `WebSite` JSON-LD (site-wide) | `components/marketing/site-json-ld.tsx`, mounted by the `[locale]/(marketing)` layout |
 | Canonical + hreflang + Open Graph URL per page | `apps/web/src/lib/seo.ts` (`publicPageMetadata`) |
 | `FAQPage` JSON-LD (from the FAQ items) | `components/marketing/faq.tsx` |

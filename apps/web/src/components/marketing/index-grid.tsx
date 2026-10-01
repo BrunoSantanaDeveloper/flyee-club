@@ -24,13 +24,13 @@ export default function IndexGrid({
             className={cn(
               "flex min-h-14 items-center gap-4 border-r border-b px-4.5 py-3 text-sm font-semibold",
               accent
-                ? "border-grey-100 bg-primary-dark text-text-contrast"
+                ? "border-grey-100 bg-background-deep text-text-contrast"
                 : "border-grey-100 bg-background-paper/40 text-text-secondary",
             )}
           >
             <span
               aria-hidden
-              className={cn("font-display text-sm font-bold", accent ? "text-secondary-light" : "text-secondary")}
+              className={cn("font-display text-sm font-normal", accent ? "text-secondary-light" : "text-secondary")}
             >
               {String(index + 1).padStart(2, "0")}
             </span>

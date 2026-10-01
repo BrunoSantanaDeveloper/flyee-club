@@ -6,6 +6,12 @@
     @apply tracking-normal;
   }
 
+  /*
+    The heading face (Londrina Solid) has two usable weights, Regular and
+    Black, and nothing between them: any class from font-semibold up renders
+    Black. Black carries a title from 24px up; below that its counters close,
+    so the smaller headings are set in Regular, which is already a heavy face.
+  */
   .MuiTypography-h1 {
     @apply font-heading text-5xl font-bold;
   }
@@ -15,19 +21,19 @@
   }
 
   .MuiTypography-h3 {
-    @apply font-heading text-3xl font-bold;
+    @apply font-heading text-3xl font-normal;
   }
 
   .MuiTypography-h4 {
-    @apply font-heading text-2xl font-bold;
+    @apply font-heading text-2xl font-normal;
   }
 
   .MuiTypography-h5 {
-    @apply font-heading text-xl font-bold;
+    @apply font-heading text-xl font-normal;
   }
 
   .MuiTypography-h6 {
-    @apply font-heading text-lg font-bold;
+    @apply font-heading text-lg font-normal;
   }
 
   .MuiTypography-subtitle1 {

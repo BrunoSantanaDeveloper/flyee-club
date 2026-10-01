@@ -12,13 +12,13 @@ const config: Config = {
         sans: ["var(--font-body)", "ui-sans-serif"],
         heading: ["var(--font-heading)", "ui-sans-serif"],
         body: ["var(--font-body)", "ui-sans-serif"],
-        // Marketing display slot: defaults to the heading font (Urbanist while
-        // the brand is provisional); a licensed display font loaded in the root
-        // layout would set --font-display.
+        // Marketing display slot: the heading font (Londrina Solid, the brand
+        // face). A separate display font loaded in the root layout would set
+        // --font-display.
         display: ["var(--font-display, var(--font-heading))", "ui-sans-serif"],
-        // Instrument/data slot (mono eyebrows, readouts, metric indexes).
-        // Optional: derived projects load a mono font via next/font and set
-        // --font-mono; without it this degrades to the system mono stack.
+        // Commands, versions, file names, mono eyebrows and readouts:
+        // JetBrains Mono, set as --font-mono in the root layout. The system
+        // mono stack shows while the file loads.
         mono: ["var(--font-mono, ui-monospace)", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       screens: { sm: "480px", md: "960px", lg: "1280px", xl: "1440px", "2xl": "1640px", "3xl": "1900px" } as Screens,
@@ -127,6 +127,7 @@ const config: Config = {
         background: {
           DEFAULT: "hsl(var(--background))",
           paper: "hsl(var(--background-paper))",
+          deep: "hsl(var(--background-deep))",
         },
         // ---------- Background Colors ---------- //
 

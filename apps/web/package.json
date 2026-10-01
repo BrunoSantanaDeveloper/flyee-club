@@ -11,6 +11,7 @@
     "prettier": "prettier --write './src/**/*.{js,jsx,json,ts,tsx,scss,css,md}'",
     "icons:stubs": "node scripts/generate-icon-stubs.mjs",
     "shots:marketing": "node scripts/marketing-shots.mjs",
+    "brand:assets": "node scripts/brand-assets.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
