@@ -39,6 +39,19 @@ export function languageAlternates(paths: Translations): Record<string, string> 
 export const absoluteUrl = (address: string) => `${BRAND.siteUrl}${address === "/" ? "" : address}`;
 
 /**
+ * The site's social card (app/opengraph-image.tsx). It has to be named here: a
+ * page that sets `openGraph` replaces the object it inherits whole, so the
+ * image the root route file contributes goes with it, and the page is shared
+ * without a picture. Twitter's tags are derived from these by Next.
+ */
+const SOCIAL_CARD = {
+  url: "/opengraph-image",
+  width: 1200,
+  height: 630,
+  alt: `${BRAND.name} — ${BRAND.tagline}`,
+};
+
+/**
  * Canonical, hreflang and Open Graph address of a public page (docs/SEO.md).
  *
  * `path` is the internal (Portuguese) path of the page. Pages whose content
@@ -70,6 +83,7 @@ export function publicPageMetadata({
       alternateLocale: routing.locales
         .filter((language) => language !== current && paths[language])
         .map((language) => OG_LOCALE[language]),
+      images: [SOCIAL_CARD],
     },
   };
 }

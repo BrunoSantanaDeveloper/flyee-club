@@ -16,6 +16,14 @@ test("public pages answer in the language of their address", async ({ page, requ
   await expect(page.locator('link[rel="alternate"][hreflang="pt-BR"]')).toHaveAttribute("href", /\/planos$/);
   await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveAttribute("href", /\/planos$/);
 
+  // A public page is shared with the site's social card. A page that states its
+  // own Open Graph fields drops the image the root route contributes unless
+  // publicPageMetadata names it again, and nothing else shows that it is gone.
+  const card = await page.locator('meta[property="og:image"]').getAttribute("content");
+  expect(card).toMatch(/\/opengraph-image/);
+  const cardImage = await request.get(new URL(card ?? "", "http://localhost").pathname);
+  expect(cardImage.headers()["content-type"]).toContain("image/png");
+
   // Reading a public page in English carries the language into sign-in,
   // which has no locale in its address.
   await page.goto("/auth/sign-in");
