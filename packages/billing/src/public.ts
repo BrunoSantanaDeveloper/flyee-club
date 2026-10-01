@@ -9,11 +9,13 @@ export type PublicPlan = {
   slug: string;
   name: string;
   description: string | null;
-  kind: "recurring" | "credits";
+  kind: "recurring" | "access";
+  /** Groups the same offer across periods and currencies (kit, club, pro, free). */
+  family: string;
+  tier: "kit" | "club" | "pro" | null;
   period: "weekly" | "monthly" | "yearly" | null;
   priceCents: number;
   currency: string;
-  creditAmount: number | null;
   trialDays: number;
   isFree: boolean;
   limits: Record<string, number>;
@@ -38,7 +40,7 @@ export async function listPublicPlans(): Promise<PublicPlan[] | null> {
 
   const { data, error } = await supabase
     .from("plans")
-    .select("slug, name, description, kind, period, price_cents, currency, credit_amount, trial_days, is_free, limits, sort")
+    .select("slug, name, description, kind, family, tier, period, price_cents, currency, trial_days, is_free, limits, sort")
     .eq("is_active", true)
     // Add-ons (à-la-carte packs) are not tiers: on a public pricing page they
     // would read as another plan to choose between.
@@ -59,7 +61,8 @@ export async function listPublicPlans(): Promise<PublicPlan[] | null> {
     period: row.period,
     priceCents: row.price_cents,
     currency: row.currency,
-    creditAmount: row.credit_amount,
+    family: row.family,
+    tier: row.tier,
     trialDays: row.trial_days,
     isFree: row.is_free,
     limits: (row.limits ?? {}) as Record<string, number>,
@@ -90,7 +93,7 @@ export async function getPlanBySlug(slug: string): Promise<PublicPlan | null> {
 
   const { data, error } = await supabase
     .from("plans")
-    .select("slug, name, description, kind, period, price_cents, currency, credit_amount, trial_days, is_free, limits, sort")
+    .select("slug, name, description, kind, family, tier, period, price_cents, currency, trial_days, is_free, limits, sort")
     .eq("slug", slug.trim())
     .eq("is_active", true)
     .maybeSingle();
@@ -105,7 +108,8 @@ export async function getPlanBySlug(slug: string): Promise<PublicPlan | null> {
     period: data.period,
     priceCents: data.price_cents,
     currency: data.currency,
-    creditAmount: data.credit_amount,
+    family: data.family,
+    tier: data.tier,
     trialDays: data.trial_days,
     isFree: data.is_free,
     limits: (data.limits ?? {}) as Record<string, number>,

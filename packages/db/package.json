@@ -9,7 +9,6 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
-    "generate": "drizzle-kit generate",
     "studio": "drizzle-kit studio"
   },
   "dependencies": {

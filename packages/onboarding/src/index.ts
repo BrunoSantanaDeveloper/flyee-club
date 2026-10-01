@@ -2,8 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * A single checklist/wizard step, DEFINED IN THE DERIVED PROJECT'S CODE.
- * Only completion state is persisted (see 0009_onboarding.sql) — the label,
- * link and (optionally) a live done-predicate belong to the product.
+ * Only presentation state is persisted (onboarding_state, migration
+ * 0002_platform.sql) — the label, link and (optionally) a live done-predicate
+ * belong to the product.
  */
 export interface OnboardingStep {
   /** Stable key stored in completed_steps — never reuse across meanings. */
@@ -24,7 +25,6 @@ export interface OnboardingStep {
 
 export interface OnboardingStateRow {
   completedSteps: string[];
-  selectedTrack: "manual" | "demo" | "ai" | null;
   dismissed: boolean;
   completedAt: string | null;
 }
@@ -36,13 +36,13 @@ export interface FlowKey {
   flow: string;
 }
 
-const EMPTY: OnboardingStateRow = { completedSteps: [], selectedTrack: null, dismissed: false, completedAt: null };
+const EMPTY: OnboardingStateRow = { completedSteps: [], dismissed: false, completedAt: null };
 
 /** Read the persisted state for a flow (defaults when the row does not exist yet). */
 export async function getOnboardingState(supabase: SupabaseClient, key: FlowKey): Promise<OnboardingStateRow> {
   const query = supabase
     .from("onboarding_state")
-    .select("completed_steps, selected_track, dismissed, completed_at")
+    .select("completed_steps, dismissed, completed_at")
     .eq("user_id", key.userId)
     .eq("flow", key.flow);
   const scoped = key.orgId ? query.eq("org_id", key.orgId) : query.is("org_id", null);
@@ -50,7 +50,6 @@ export async function getOnboardingState(supabase: SupabaseClient, key: FlowKey)
   if (!data) return EMPTY;
   return {
     completedSteps: (data.completed_steps as string[]) ?? [],
-    selectedTrack: (data.selected_track as OnboardingStateRow["selectedTrack"]) ?? null,
     dismissed: Boolean(data.dismissed),
     completedAt: (data.completed_at as string | null) ?? null,
   };
@@ -84,12 +83,6 @@ export async function completeStep(supabase: SupabaseClient, key: FlowKey, step:
 export const dismissFlow = (supabase: SupabaseClient, key: FlowKey) => upsert(supabase, key, { dismissed: true });
 export const reopenFlow = (supabase: SupabaseClient, key: FlowKey) => upsert(supabase, key, { dismissed: false });
 
-/** Persist the user's preferred way to start without completing any clinical step. */
-export const selectTrack = (
-  supabase: SupabaseClient,
-  key: FlowKey,
-  track: NonNullable<OnboardingStateRow["selectedTrack"]>,
-) => upsert(supabase, key, { selected_track: track, dismissed: false });
 
 /** Sticky completion for flows whose required facts are evaluated outside this generic package. */
 export async function completeFlow(supabase: SupabaseClient, key: FlowKey) {
@@ -97,7 +90,7 @@ export async function completeFlow(supabase: SupabaseClient, key: FlowKey) {
   return state.completedAt ? { ok: true as const } : upsert(supabase, key, { completed_at: new Date().toISOString() });
 }
 
-/** Reset only the requested simulation steps; live clinical facts are never altered. */
+/** Reset only the requested steps; live facts are never altered. */
 export async function resetSteps(supabase: SupabaseClient, key: FlowKey, steps: string[]) {
   const state = await getOnboardingState(supabase, key);
   return upsert(supabase, key, {

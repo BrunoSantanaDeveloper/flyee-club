@@ -77,8 +77,6 @@ const checkout = (paymentMethod: "pix" | "credit_card"): CheckoutInput => ({
     priceCents: 229000,
     currency: "BRL",
     trialDays: 0,
-    creditAmount: null,
-    creditsExpire: false,
     description: null,
   },
   modules: [],

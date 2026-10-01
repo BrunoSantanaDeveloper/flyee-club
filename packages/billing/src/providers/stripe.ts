@@ -48,8 +48,8 @@ export class StripeProvider implements PaymentProvider {
     const stripe = getStripe();
     const { plan, modules, coupon } = input;
     const currency = plan.currency.toLowerCase();
-    // Recurring plans (including per-period credit grants) become Stripe
-    // subscriptions; a credits plan without period is a one-off payment.
+    // Recurring plans become Stripe subscriptions; an access plan (no period,
+    // the kit) is a one-off payment.
     const isSubscription = plan.period !== null;
 
     const metadata: Record<string, string> = {
@@ -159,7 +159,7 @@ export class StripeProvider implements PaymentProvider {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        // One-off payments (credits without period / one-time bumps) have
+        // One-off payments (an access plan / one-time bumps) have
         // no subscription and no invoice.paid — record the payment here.
         if (session.mode === "payment" && session.payment_status === "paid") {
           events.push({

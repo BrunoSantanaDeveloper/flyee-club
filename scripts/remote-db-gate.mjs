@@ -71,6 +71,26 @@ async function getMigrationFiles() {
     .sort((left, right) => left.localeCompare(right));
 }
 
+/**
+ * Which migrations the target already holds.
+ *
+ * Two facts tell four states apart — the history table and the product schema:
+ *
+ *   neither              a brand-new project. Applying bootstraps the history
+ *                        table and the whole baseline goes in as ordinary
+ *                        pending migrations; planning just lists them.
+ *   both                 the normal case.
+ *   history only, EMPTY  a bootstrap that stopped before the first migration
+ *                        committed: continue.
+ *   anything else        refuse. A product schema without history, or a
+ *                        history without schema, is a database this repo did
+ *                        not build, and guessing would mean running DDL
+ *                        against somebody else's data.
+ *
+ * A foreign database that happens to have both (the MedChina project this repo
+ * was copied from) is stopped one step later: its history names files this
+ * repo does not have.
+ */
 async function readAppliedMigrations(sql) {
   const [state] = await sql`
     select
@@ -78,13 +98,29 @@ async function readAppliedMigrations(sql) {
       to_regclass('public.organizations') is not null as has_product_schema
   `;
 
-  if (!state.has_history || !state.has_product_schema) {
-    throw new Error(
-      "The configured database is not an initialized flyee.club database (migration history or product schema missing)",
-    );
+  if (!state.has_history && !state.has_product_schema) {
+    if (shouldApply) {
+      await sql`
+        create table public.schema_migrations (
+          version text primary key,
+          applied_at timestamptz not null default now()
+        )
+      `;
+      // No policy on purpose: only the owner and the service role read it.
+      await sql`alter table public.schema_migrations enable row level security`;
+      console.log("Bootstrapped public.schema_migrations on an empty database.");
+    }
+    return new Set();
+  }
+
+  if (!state.has_history) {
+    throw new Error("Unknown database: a product schema with no migration history. Refusing to touch it.");
   }
 
   const rows = await sql`select version from public.schema_migrations order by version`;
+  if (!state.has_product_schema && rows.length > 0) {
+    throw new Error("Unknown database: a migration history with no product schema. Refusing to touch it.");
+  }
   return new Set(rows.map((row) => row.version));
 }
 

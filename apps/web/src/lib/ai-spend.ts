@@ -3,33 +3,22 @@ import { createServiceClient } from "@flyee/auth/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Records what one AI call cost, in the ledger of migration 0115.
+ * Records what one AI call cost, in the ledger of migration 0017_ai_spend.
  *
- * Every place the platform spends provider money goes through here:
- * transcription, the anamnesis fill, hypotheses, therapeutic plans,
- * attachment analysis, the library chat, embeddings and the superadmin's own
- * /admin/insights questions. The price is applied in the database
+ * The club never spends AI credit on a member's behalf; the platform's only
+ * model calls are the operator's own /admin/insights questions, and each one
+ * goes through here. The price is applied in the database
  * (`record_ai_spend`), never here, so two call sites can never disagree about
  * what a token costs.
  *
  * **This never throws and never awaits anything the caller depends on.**
- * Metering is bookkeeping; a consultation does not fail because a ledger row
- * did not land. Missing service key, missing session, RPC error — all of it
- * ends as a warning in the log and nothing else.
+ * Metering is bookkeeping; an answer does not fail because a ledger row did
+ * not land. Missing service key, missing session, RPC error — all of it ends
+ * as a warning in the log and nothing else.
  */
 
-/** What the money bought — mirrors the `feature` check in 0115. */
-export type AiSpendFeature =
-  | "transcription"
-  | "anamnesis"
-  | "hypotheses"
-  | "plan"
-  | "attachment"
-  | "library"
-  | "case_review"
-  | "embedding"
-  | "insights"
-  | "other";
+/** What the money bought — mirrors the `feature` check in 0017. */
+export type AiSpendFeature = "insights" | "other";
 
 export type AiSpendInput = {
   /** NULL for the platform's own spend (admin insights, shared library). */
@@ -39,12 +28,8 @@ export type AiSpendInput = {
   model: string;
   /** What the provider reported. Absent = the call is recorded unpriced. */
   usage?: ChatUsage | null;
-  /** Audio the recorder measured, for transcription. */
-  audioSeconds?: number;
-  /** The recording / consultation / conversation this belongs to. */
+  /** What the call belongs to, when there is such a row. */
   refId?: string | null;
-  /** True when the units are derived rather than reported by the provider. */
-  estimated?: boolean;
   /**
    * The client to write with. Defaults to the service role, which is what
    * jobs have; a request-scoped caller may pass its own (the RPC accepts a
@@ -78,10 +63,7 @@ export async function recordAiSpend(input: AiSpendInput): Promise<void> {
       target_model: input.usage?.model || input.model,
       target_tokens_in: input.usage?.tokensIn ?? 0,
       target_tokens_out: input.usage?.tokensOut ?? 0,
-      target_audio_seconds: Math.max(0, Math.round(input.audioSeconds ?? 0)),
-      target_audio_tokens: input.usage?.audioTokensIn ?? 0,
       target_ref: input.refId ?? null,
-      target_estimated: input.estimated ?? false,
     });
     if (error) {
       console.warn("[ai-spend] not recorded:", error.message);

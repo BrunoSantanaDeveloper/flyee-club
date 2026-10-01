@@ -39,9 +39,6 @@ export async function getDisplayPlans(coupon?: CheckoutCoupon | null): Promise<P
 
   return plans.map((plan, index) => {
     const features: string[] = [];
-    if (plan.kind === "credits" && plan.creditAmount) {
-      features.push(t("pricing-feature-credits", { count: plan.creditAmount }));
-    }
     // One person per account, so the device ceiling is the plan's real
     // capacity unit (kit 1 / club 3 / pro 5 — docs/PRODUCT.md).
     if (typeof plan.limits.devices === "number" && plan.limits.devices > 0) {

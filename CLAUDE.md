@@ -5,13 +5,13 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 ## Where things stand
 
 - Plan and progress: `docs/PLANO-IMPLEMENTACAO.md` (phases 0–8; the "Andamento" table says what is done). Product decisions and open questions: `docs/PRODUCT.md`.
-- Done: phase 0 (identity, two locales, de-templated harness) and phase 1 (clinical code, mobile app and dead packages removed). Next: phase 2, the new database baseline.
-- **The database still runs the inherited MedChina migrations** (`packages/db/migrations`) until phase 2 replaces them with the baseline `0000`–`0018`. Code written now must not depend on clinical tables, and new schema work goes into the baseline, not on top of the inherited set.
+- Done: phase 0 (identity, two locales, de-templated harness), phase 1 (clinical code, mobile app and dead packages removed) and phase 2 (the database baseline). Next: phase 7.1, path-based locales for the public site.
+- **The database is the flyee.club baseline** (`packages/db/migrations`, `0000`–`0018`, with its pgTAP suite in `packages/db/tests`). It has not been applied to a hosted project yet: that happens once the new Supabase project exists (`npm run db:gate:remote`). New schema work is a new numbered migration on top of it. See `packages/db/README.md`.
 
 ## Safety during the transition
 
 - `apps/web/.env` is inherited and holds **MedChina production credentials** (Supabase, Asaas, Meta, GA4, AI keys). `apps/web/.env.local` blanks every one of them and must stay in place until the new flyee.club services exist. Next.js loads `.env.local` first, so the blank wins.
-- Never run `db:plan:remote`, `db:migrate:remote`, `db:gate:remote` or `test:db:remote` until `.env.local` points at the new flyee.club Supabase project. The gate (`scripts/remote-db-gate.mjs`) reads `.env.local` first and refuses a database it does not recognize, but do not lean on that.
+- Never run `db:plan:remote`, `db:migrate:remote`, `db:gate:remote` or `test:db:remote` until `.env.local` points at the new flyee.club Supabase project. The gate (`scripts/remote-db-gate.mjs`) reads `.env.local` first, bootstraps an EMPTY project, and refuses a database it did not build (the MedChina one included, whose history names files this repo does not have), but do not lean on that.
 - Never commit `.env` or `.env.local`. Commit per plan phase, never push without being asked.
 
 ## Product (summary of docs/PRODUCT.md)
@@ -30,7 +30,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
   - **Public site** (`app/(marketing)`): interim pages (home, `/planos`, `/contato`, `/ajuda`, `/blog`, `/legal/*`) composed from `components/marketing/*`. Phase 7 rebuilds it bilingual with path-based locales. Quality is enforced by the `marketing-page` skill (loaded by `.claude/hooks/marketing-guard.mjs`) and the `marketing-lint` hook.
   - **Checkout and auth**: `/assinatura`, `/auth/*`, `/oauth/authorize` with `/api/oauth/*` (the OAuth 2.1 server that phase 3 turns into the CLI token server), billing webhooks at `/api/webhooks/[provider]`.
 - `packages/design-tokens` — design system source of truth: the provisional palette in `css/green.css`, neutrals in `css/common.css`, `css/marketing.css` (fluid display scale, section rhythm, motion). See its README.
-- `packages/db` — Drizzle schema + SQL migrations with RLS (one organization per member: the personal workspace). See its README.
+- `packages/db` — the SQL baseline with RLS on every table and explicit grants (one organization per member: the personal workspace), the pgTAP suite, and a Drizzle mirror generated from the migrations. See its README.
 - `packages/auth` — Supabase clients (browser/server/middleware/service), 2FA step-up, and the parallel session cookie used by support impersonation.
 - `packages/billing` — plans, subscriptions, coupons, invoices; Asaas and Stripe behind one `PaymentProvider`. Phase 4 adds the one-time access purchase (kit), entitlement grants and routing by currency.
 - `packages/email` — Resend + React Email (server-only); no-ops without `RESEND_API_KEY`, so callers keep a fallback.
@@ -70,7 +70,8 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD), e
 - `npm run test` — `@flyee/ai` node tests + the web vitest suite. `npm run test:e2e` / `test:a11y` — Playwright against a production build.
 - `npm run ci:verify` — everything CI runs: harness checks, MUI class check, typecheck, tests, build.
 - `node scripts/prune-messages.mjs --check|--write|--list` — message catalogs without unused or missing keys (pt-BR is the reference).
-- `npm run db:start` / `db:stop` / `test:db` — local Supabase and the pgTAP suite. The `db:*:remote` scripts are gated: see "Safety during the transition".
+- `npm run test:db:embedded` — migrations + pgTAP on an embedded PostgreSQL 17, no Docker (first run installs it into `.cache/`). `npm run db:start` / `db:stop` / `test:db` — the same through local Supabase (needs Docker). The `db:*:remote` scripts are gated: see "Safety during the transition".
+- `npm run db:schema:pull` — regenerate the Drizzle mirror from the migrations.
 - `npm run tokens:generate` — regenerate the TS token mirror.
 
 ## Platform decisions

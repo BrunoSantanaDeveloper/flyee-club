@@ -5,7 +5,11 @@
  * file free of imports.
  */
 export type BillingProviderName = "stripe" | "asaas";
-export type PlanKind = "recurring" | "credits";
+/**
+ * `recurring`: a subscription (club, pro). `access`: a one-time purchase that
+ * leaves an entitlement grant (the kit).
+ */
+export type PlanKind = "recurring" | "access";
 export type BillingPeriod = "weekly" | "monthly" | "yearly";
 export type ModuleKind = "recurring" | "one_time";
 export type DiscountType = "percent" | "fixed";
@@ -36,13 +40,11 @@ export interface CheckoutPlan {
   slug: string;
   name: string;
   kind: PlanKind;
-  /** Null on a credits plan means a one-time purchase of non-expiring credits. */
+  /** Null on an access plan: a one-time payment, never a provider subscription. */
   period: BillingPeriod | null;
   priceCents: number;
   currency: string;
   trialDays: number;
-  creditAmount: number | null;
-  creditsExpire: boolean;
   /**
    * What the plan includes, in customer-facing words — `plans.description`,
    * superadmin-editable in /admin/billing and possibly empty. Printed on the

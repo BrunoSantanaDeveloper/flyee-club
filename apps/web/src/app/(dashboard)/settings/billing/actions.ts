@@ -354,8 +354,6 @@ export async function startCheckout(input: {
       // No provider trial in v1 (docs/PRODUCT.md, open decision "Trial da
       // assinatura"); phase 4 makes this a plan field read from data.
       trialDays: 0,
-      creditAmount: planRow.credit_amount,
-      creditsExpire: planRow.credits_expire,
       description: planRow.description ?? null,
     };
 

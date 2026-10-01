@@ -1,13 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 
 import { DEFAULTS } from "@/config";
 import { recordAudit } from "@/lib/audit";
 import { authorizeParamsFromForm, errorRedirectUrl, validateAuthorizeRequest } from "@/lib/oauth/authorize-request";
 import { scopesToParam } from "@/lib/oauth/scopes";
 import { issueAuthorizationCode } from "@/lib/oauth/server";
-import { recordConsent } from "@flyee/audit";
+import { acceptTerms } from "@flyee/audit";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
 
@@ -57,36 +58,27 @@ export async function approveAuthorization(formData: FormData): Promise<void> {
   const orgId = (membership?.org_id as string | undefined) ?? null;
   if (!orgId) redirect(DEFAULTS.appRoot);
 
-  // Same gate the page showed and /api/mcp enforces per call: the plan must
-  // include the connector entitlement (plans.limits.mcp_access, 0088).
+  // Same gate the page showed: an active workspace (a free account included:
+  // free samples install without a purchase). What each module needs is
+  // checked per call by the delivery API. Phase 3 of docs/PLANO-IMPLEMENTACAO.md
+  // turns this screen into the CLI connection flow.
   const { data: entitlements } = await supabase.rpc("org_entitlements", { target_org: orgId });
-  const limits = (entitlements?.limits ?? {}) as Record<string, unknown>;
-  if (!entitlements?.active || Number(limits.mcp_access ?? 0) < 1) {
+  if (!entitlements?.active) {
     redirect(DEFAULTS.appRoot);
   }
 
   const scope = scopesToParam(scopes);
 
-  // The professional accepts the versioned connection term (0088) — the data
-  // she queries will travel through her personal ChatGPT/Claude account, and
-  // that fact is recorded like every other consent in the platform.
-  const { data: term } = await service!
-    .from("consent_terms")
-    .select("id")
-    .eq("slug", "external-assistant")
-    .eq("is_active", true)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (term?.id) {
-    await recordConsent(supabase, {
-      orgId: orgId!,
-      termId: term.id as string,
-      subjectType: "organization",
-      subjectId: orgId!,
-      recordedBy: user.id,
-      metadata: { client_name: client.client_name, scope },
-    });
+  // The member accepts the versioned connection term, recorded like every
+  // other consent on the platform (accept_terms, migration 0001).
+  const locale = (await getLocale()) === "en" ? "en" : "pt-BR";
+  const accepted = await acceptTerms(supabase, {
+    slugs: ["cli-connection"],
+    locale,
+    context: { source: "oauth", client_id: client.client_id },
+  });
+  if (!accepted.ok) {
+    redirect(errorRedirectUrl(params.redirectUri, "access_denied", "consent_not_recorded", params.state));
   }
 
   const issued = await issueAuthorizationCode(service!, {

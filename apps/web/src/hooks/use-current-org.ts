@@ -40,12 +40,18 @@ export function useCurrentOrg() {
         setLoading(false);
         return;
       }
-      const { data, error: membershipError } = await supabase
-        .from("memberships")
-        .select("org_id, organizations(timezone)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
+      // One person, one workspace: the oldest membership is THE workspace.
+      // The timezone belongs to the person (profiles.timezone).
+      const [{ data, error: membershipError }, { data: profile }] = await Promise.all([
+        supabase
+          .from("memberships")
+          .select("org_id")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase.from("profiles").select("timezone").eq("id", user.id).maybeSingle(),
+      ]);
       if (membershipError) {
         setOrgId(null);
         setError(true);
@@ -53,8 +59,7 @@ export function useCurrentOrg() {
         return;
       }
       setOrgId(data?.org_id ?? null);
-      const organization = data?.organizations as unknown as { timezone?: string } | null;
-      setTimezone(organization?.timezone || "America/Sao_Paulo");
+      setTimezone((profile?.timezone as string | undefined) || "America/Sao_Paulo");
       setLoading(false);
     } catch {
       setOrgId(null);

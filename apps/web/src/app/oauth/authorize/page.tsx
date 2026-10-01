@@ -1,7 +1,7 @@
 import { approveAuthorization, denyAuthorization } from "./actions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import {
   Alert,
@@ -157,8 +157,7 @@ export default async function AuthorizePage({
   const orgName = (Array.isArray(orgRel) ? orgRel[0]?.name : orgRel?.name) ?? "";
 
   const { data: entitlements } = await supabase.rpc("org_entitlements", { target_org: orgId });
-  const limits = (entitlements?.limits ?? {}) as Record<string, unknown>;
-  if (!entitlements?.active || Number(limits.mcp_access ?? 0) < 1) {
+  if (!entitlements?.active) {
     return (
       <ErrorCard
         title={t("oauth-authorize-error-title")}
@@ -168,14 +167,13 @@ export default async function AuthorizePage({
     );
   }
 
-  const { data: term } = await service
-    .from("consent_terms")
-    .select("title, body")
-    .eq("slug", "external-assistant")
-    .eq("is_active", true)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // The connection term in the member's language (EN, then pt-BR, as fallback).
+  const { data: terms } = await service.rpc("current_consent_terms", {
+    p_locale: (await getLocale()) === "en" ? "en" : "pt-BR",
+  });
+  const term = ((terms ?? []) as { slug: string; title: string; body_md: string }[]).find(
+    (row) => row.slug === "cli-connection",
+  );
 
   const hiddenFields = (
     <>
@@ -237,7 +235,7 @@ export default async function AuthorizePage({
           </Typography>
           <Box className="border-grey-100 max-h-40 overflow-y-auto rounded-lg border p-3">
             <Typography variant="body2" className="text-text-secondary whitespace-pre-line">
-              {term.body as string}
+              {term.body_md}
             </Typography>
           </Box>
         </Box>

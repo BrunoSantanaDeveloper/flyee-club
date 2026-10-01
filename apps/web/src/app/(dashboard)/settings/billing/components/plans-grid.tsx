@@ -25,7 +25,7 @@ import {
 
 import { COOKIE_KEYS } from "@/constants";
 import { clearCouponCookie, normalizeCouponCode, readCouponCookie } from "@/lib/offer-link";
-import { trackCommercialEvent } from "@/lib/product-events";
+import { trackOffer } from "@/lib/product-events";
 import { cn } from "@/lib/utils";
 import { applyDiscount } from "@flyee/billing/types";
 
@@ -116,7 +116,7 @@ export default function PlansGrid({
   useEffect(() => {
     if (!canManage || paidPlans.length === 0 || promptViewed.current) return;
     promptViewed.current = true;
-    trackCommercialEvent("upgrade.prompt_viewed", "billing", "plans");
+    trackOffer("upsell.viewed", "billing");
   }, [canManage, paidPlans.length]);
 
   const offerPlanId = offerPlan?.id ?? null;
@@ -200,7 +200,7 @@ export default function PlansGrid({
    * not exist (see docs/BILLING-AUDIT.md A1).
    */
   const requestChange = (plan: PlanRow) => {
-    trackCommercialEvent("upgrade.prompt_clicked", "billing", "plans");
+    trackOffer("upsell.clicked", "billing");
     if (currentPlan && currentPlan.id !== plan.id) {
       setConfirming(plan);
       return;
@@ -384,7 +384,7 @@ export default function PlansGrid({
                           variant="outlined"
                           href="/contato?assunto=planos"
                           LinkComponent={Link}
-                          onClick={() => trackCommercialEvent("billing.contact_clicked", "billing", "plans")}
+                          onClick={() => trackOffer("upsell.clicked", "billing")}
                         >
                           {t("billing-contact-plan")}
                         </Button>

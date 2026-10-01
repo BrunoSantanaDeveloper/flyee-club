@@ -9,7 +9,7 @@ import { Box, Typography } from "@mui/material";
 import { useCurrentOrg } from "@/hooks/use-current-org";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import NiBadge from "@/icons/nexture/ni-badge";
-import { trackCommercialEvent } from "@/lib/product-events";
+import { trackOffer } from "@/lib/product-events";
 import { cn } from "@/lib/utils";
 import { MenuType } from "@/types";
 
@@ -37,7 +37,7 @@ export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
   useEffect(() => {
     if (!sellable || viewTracked.current) return;
     viewTracked.current = true;
-    trackCommercialEvent("upgrade.prompt_viewed", "menu", "plans");
+    trackOffer("upsell.viewed", "menu");
   }, [sellable]);
 
   if (loading || !entitlements) return null;
@@ -56,7 +56,7 @@ export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
       title={minimal ? title : undefined}
       aria-label={title}
       onClick={() => {
-        if (sellable) trackCommercialEvent("upgrade.prompt_clicked", "menu", "plans");
+        if (sellable) trackOffer("upsell.clicked", "menu");
       }}
       className={cn(
         "hover:bg-grey-25 flex w-full flex-col items-center gap-0.5 rounded-2xl px-2 py-2 transition-colors",

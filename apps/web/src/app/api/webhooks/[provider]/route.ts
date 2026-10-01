@@ -40,14 +40,6 @@ const MAX_HANDLER_ATTEMPTS = 5;
  */
 const INLINE_BUDGET_MS = 6_000;
 
-function periodEnd(from: Date, period: BillingPeriod): Date {
-  const end = new Date(from);
-  if (period === "weekly") end.setDate(end.getDate() + 7);
-  if (period === "monthly") end.setMonth(end.getMonth() + 1);
-  if (period === "yearly") end.setFullYear(end.getFullYear() + 1);
-  return end;
-}
-
 /** Locates the subscription a provider event refers to. */
 async function findSubscription(supabase: ServiceClient, event: { providerSubscriptionId?: string } & BillingEvent) {
   if (event.providerSubscriptionId) {
@@ -444,36 +436,33 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       );
       if (invoiceError) throw new Error("invoice_reconciliation_failed");
 
-      // Credits plans grant credits on every paid cycle (or once, for
-      // one-time purchases of non-expiring credits).
+      // A one-time ACCESS purchase (the kit) is granted HERE, on the paid
+      // invoice and never at checkout start. The grant is idempotent per
+      // invoice, so a resent event grants nothing more, and a refunded kit is
+      // never revived by a late replay (grant_entitlement_on_invoice, 0003).
+      // Phase 4 of docs/PLANO-IMPLEMENTACAO.md adds the receipt e-mail, the
+      // purchase attribution and the `kit.purchased` event.
       const planId = event.metadata.plan_id ?? sub?.plan_id;
       if (planId) {
         const { data: plan, error: planError } = await supabase
           .from("plans")
-          .select("kind, credit_amount, credits_expire, period, name")
+          .select("kind")
           .eq("id", planId)
           .maybeSingle();
         if (planError) throw new Error("plan_reconciliation_failed");
 
-        // Phase 4 of docs/PLANO-IMPLEMENTACAO.md adds the one-time access
-        // purchase (the kit) here, granted on the paid invoice.
-        if (plan?.kind === "credits" && plan.credit_amount) {
-          const expiresAt =
-            plan.credits_expire && plan.period
-              ? periodEnd(event.paidAt, plan.period as BillingPeriod).toISOString()
-              : null;
-          const { error: creditError } = await supabase.from("credit_transactions").upsert(
-            {
-              org_id: orgId,
-              amount: plan.credit_amount,
-              kind: "purchase",
-              description: `${plan.name} — ${event.provider} payment`,
-              expires_at: expiresAt,
-              source_invoice_key: `${event.provider}:${event.providerInvoiceId}`,
-            },
-            { onConflict: "source_invoice_key", ignoreDuplicates: true },
-          );
-          if (creditError) throw new Error("credit_reconciliation_failed");
+        if (plan?.kind === "access") {
+          const { data: granted, error: grantError } = await supabase.rpc("grant_entitlement_on_invoice", {
+            target_org: orgId,
+            target_plan: planId,
+            target_provider: event.provider,
+            target_provider_invoice_id: event.providerInvoiceId,
+            target_price_cents: event.amountCents,
+            target_currency: event.currency.toUpperCase(),
+          });
+          if (grantError || !(granted as { ok?: boolean } | null)?.ok) {
+            throw new Error("grant_reconciliation_failed");
+          }
         }
       }
 

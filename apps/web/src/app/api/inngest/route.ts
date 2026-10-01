@@ -3,14 +3,16 @@
 // a minute.
 export const maxDuration = 60;
 
-import { adminFunctions } from "@/lib/admin-jobs";
 import { billingFunctions } from "@/lib/billing-jobs";
 import { backupFunctions } from "@flyee/backup/jobs";
 import { inngest } from "@flyee/jobs";
 import { serve } from "@flyee/jobs/next";
 
-// Every Inngest function of the platform.
+// Every Inngest function of the platform. The daily operator watch
+// (lib/admin-jobs.ts) is not registered: it reads the inherited accounts
+// overview, which the baseline replaced with admin_members_overview(). Phase 6
+// of docs/PLANO-IMPLEMENTACAO.md brings it back as the weekly segment digest.
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [...adminFunctions, ...billingFunctions, ...backupFunctions],
+  functions: [...billingFunctions, ...backupFunctions],
 });

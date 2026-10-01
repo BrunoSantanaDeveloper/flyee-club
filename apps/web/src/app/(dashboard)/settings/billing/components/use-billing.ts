@@ -46,11 +46,10 @@ export interface PlanRow {
   slug: string;
   name: string;
   description: string | null;
-  kind: "recurring" | "credits";
+  kind: "recurring" | "access";
   period: "weekly" | "monthly" | "yearly" | null;
   priceCents: number;
   currency: string;
-  creditAmount: number | null;
   trialDays: number;
   isFree: boolean;
   audioMinutes: number;
@@ -86,15 +85,6 @@ export interface InvoiceRow {
   createdAt: string;
 }
 
-export interface CreditRow {
-  id: string;
-  amount: number;
-  kind: string;
-  description: string | null;
-  expiresAt: string | null;
-  createdAt: string;
-}
-
 interface BillingDetails {
   subscription: SubscriptionInfo | null;
   pendingCheckout: PendingCheckout | null;
@@ -103,8 +93,6 @@ interface BillingDetails {
   packs: PlanRow[];
   modules: ModuleRow[];
   invoices: InvoiceRow[];
-  creditBalance: number;
-  credits: CreditRow[];
   billingProfile: BillingProfile;
 }
 
@@ -125,8 +113,6 @@ const EMPTY_DETAILS: BillingDetails = {
   packs: [],
   modules: [],
   invoices: [],
-  creditBalance: 0,
-  credits: [],
   billingProfile: EMPTY_PROFILE,
 };
 
@@ -201,16 +187,7 @@ export function useBilling() {
       setDetailsState(remoteLoading(previous));
       const supabase = createClient();
 
-      const [
-        subResult,
-        plansResult,
-        modulesResult,
-        invoicesResult,
-        balanceResult,
-        creditsResult,
-        pendingResult,
-        orgResult,
-      ] = await Promise.all([
+      const [subResult, plansResult, modulesResult, invoicesResult, pendingResult, orgResult] = await Promise.all([
         supabase
           .from("subscriptions")
           .select(
@@ -229,13 +206,6 @@ export function useBilling() {
           .eq("org_id", currentOrgId)
           .order("created_at", { ascending: false })
           .limit(24),
-        supabase.rpc("org_credit_balance", { target_org: currentOrgId }),
-        supabase
-          .from("credit_transactions")
-          .select("*")
-          .eq("org_id", currentOrgId)
-          .order("created_at", { ascending: false })
-          .limit(10),
         // The checkout she started and has not paid yet. `billing_operations`
         // carries the provider's hosted URL, and its RLS already limits the
         // read to the manager who started it.
@@ -255,14 +225,7 @@ export function useBilling() {
       ]);
 
       if (requestId !== detailsRequestRef.current) return;
-      if (
-        subResult.error ||
-        plansResult.error ||
-        modulesResult.error ||
-        invoicesResult.error ||
-        balanceResult.error ||
-        creditsResult.error
-      ) {
+      if (subResult.error || plansResult.error || modulesResult.error || invoicesResult.error) {
         setDetailsState(remoteError("load_failed", previous));
         return;
       }
@@ -303,7 +266,6 @@ export function useBilling() {
         period: p.period,
         priceCents: p.price_cents,
         currency: p.currency,
-        creditAmount: p.credit_amount,
         trialDays: p.trial_days,
         isFree: p.is_free,
         audioMinutes: Number((p.limits as { audio_minutes?: number } | null)?.audio_minutes ?? 0),
@@ -357,15 +319,6 @@ export function useBilling() {
           paidAt: invoice.paid_at,
           createdAt: invoice.created_at,
         })),
-        creditBalance: balanceResult.data ?? 0,
-        credits: (creditsResult.data ?? []).map((tx) => ({
-          id: tx.id,
-          amount: tx.amount,
-          kind: tx.kind,
-          description: tx.description,
-          expiresAt: tx.expires_at,
-          createdAt: tx.created_at,
-        })),
       };
       detailsRef.current = details;
       setDetailsState(remoteSuccess(details));
@@ -408,8 +361,6 @@ export function useBilling() {
     packs: details.packs,
     modules: details.modules,
     invoices: details.invoices,
-    creditBalance: details.creditBalance,
-    credits: details.credits,
     retry: async () => {
       if (orgsState.status === "error") await refreshOrgs(true);
       else await refreshDetails(true);

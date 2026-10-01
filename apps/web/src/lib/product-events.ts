@@ -2,66 +2,37 @@
 
 import { createClient } from "@flyee/auth/client";
 
-export type ProductEventName =
-  | "journey.track_selected"
-  | "journey.track_reentered"
-  | "appointment.started"
-  | "appointment.completed"
-  | "appointment.abandoned"
-  | "patient.created_inline"
-  | "appointment.conflict"
-  | "recording.started"
-  | "recording.interrupted"
-  | "recording.recovered"
-  | "recording.upload_completed"
-  | "recording.processing_completed"
-  | "recording.failed"
-  | "consultation.finalized"
-  | "document.issued"
-  // The consultation screen (0104). It measured nothing about itself: the
-  // product could count library conversations and onboarding tracks and could
-  // not say how many consultations were opened, or where she goes inside one.
-  | "consultation.opened"
-  | "consultation.step_jump"
-  | "consultation.next_action"
-  // Out-of-consultation layer (biblioteca, acervo, briefing, protocols).
-  // These answer the business question the feature set was built on: does
-  // studying between consultations become a habit, and does it drive upgrade?
-  | "library.message_sent"
-  | "library.quota_hit"
-  | "case_review.started"
-  | "acervo.document_opened"
-  | "citation.opened"
-  | "briefing.opened"
-  | "protocol.saved"
-  | "upgrade.prompt_viewed"
-  | "upgrade.prompt_clicked"
-  | "billing.contact_clicked";
+/**
+ * What a signed-in browser may report on its own word (migration
+ * 0006_product_events): only the offers it showed and the offers that were
+ * clicked. Purchases, installs, executions and everything else that counts
+ * toward a metric are written by the server (`lib/product-events-server.ts`),
+ * so no client can inflate them.
+ */
+export type BrowserEventName = "upsell.viewed" | "upsell.clicked";
 
-export type CommercialEventOrigin = "menu" | "consultation" | "home" | "usage" | "billing";
-// Kept in sync with the value allowlist inside `track_product_event`
-// (migration 0054): a feature the RPC does not know is dropped in silence, so
-// the click would be counted without ever saying what it was for.
-export type CommercialEventFeature = "plans" | "audio" | "clinical_reasoning" | "payment" | "audio_pack";
+/** Where the offer was shown. Mirrors the `origin` allowlist of product_event_sanitize. */
+export type OfferOrigin = "home" | "revalidation" | "catalog" | "module" | "billing" | "menu" | "checkout";
 
-export function trackCommercialEvent(
-  event: Extract<ProductEventName, "upgrade.prompt_viewed" | "upgrade.prompt_clicked" | "billing.contact_clicked">,
-  origin: CommercialEventOrigin,
-  feature: CommercialEventFeature,
-): void {
-  trackProductEvent(event, { origin, feature });
+/** Which rung the offer was for. Mirrors the `offer` allowlist. */
+export type OfferKind = "kit" | "club" | "pro" | "mentoring" | "founders";
+
+/** An offer was shown or clicked. `offer` is omitted when the surface shows the whole ladder. */
+export function trackOffer(event: BrowserEventName, origin: OfferOrigin, offer?: OfferKind): void {
+  trackProductEvent(event, offer ? { origin, offer } : { origin });
 }
 
-export function trackProductEvent(event: ProductEventName, properties: Record<string, string> = {}): void {
+export function trackProductEvent(event: BrowserEventName, properties: Record<string, string> = {}): void {
   const supabase = createClient();
   // A PostgREST builder is a THENABLE: it only issues the request when it is
-  // awaited or `.then()`-ed. Discarding it with `void` silently sends nothing
-  // — which is why no product event was ever recorded before this call was
-  // terminated. Both handlers swallow: telemetry must never reach the user.
+  // awaited or `.then()`-ed. Discarding it with `void` silently sends nothing.
+  // Both handlers swallow: telemetry must never reach the user. The database
+  // stamps segment, language and AI tool from the profile and forces the
+  // platform to "web".
   void supabase
     .rpc("track_product_event", {
       target_event: event,
-      target_properties: { ...properties, platform: "web" },
+      target_properties: properties,
     })
     .then(
       () => undefined,

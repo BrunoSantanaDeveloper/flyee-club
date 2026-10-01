@@ -29,7 +29,9 @@ type AdminMetrics = {
   subscriptions: Record<string, number>;
   suspended: number;
   mrr: { currency: string; amount_cents: number }[];
-  credits_consumed_30d: number;
+  kits_30d: number;
+  devices_live: number;
+  active_orgs_7d: number;
 };
 
 const formatMoney = (amountCents: number, currency: string) =>
@@ -248,9 +250,9 @@ export default function AdminOverview() {
           <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
             <StatCard
               icon={<NiCoin size="medium" />}
-              label="Créditos consumidos (30 d)"
-              value={String(metrics?.credits_consumed_30d ?? 0)}
-              hint="Em todas as contas"
+              label="Kits vendidos (30 d)"
+              value={String(metrics?.kits_30d ?? 0)}
+              hint={`${metrics?.devices_live ?? 0} dispositivos conectados, ${metrics?.active_orgs_7d ?? 0} contas ativas em 7 dias`}
               loading={loading}
             />
           </Grid>

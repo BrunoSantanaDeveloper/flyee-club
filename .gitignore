@@ -62,3 +62,6 @@ next-env.d.ts
 # Inherited MedChina media (deleted in phase 1 of docs/PLANO-IMPLEMENTACAO.md);
 # kept out of git history on purpose.
 /apps/web/public/videos/
+
+# Local tool caches (embedded Postgres for npm run test:db:embedded)
+.cache/

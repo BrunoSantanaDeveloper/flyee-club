@@ -33,12 +33,14 @@ type PlanForm = {
   name: string;
   description: string;
   kind: string;
+  /** The offer across periods and currencies: kit, club, pro, free. */
+  family: string;
+  /** The rung it grants; empty for the free plan and add-ons. */
+  tier: string;
   period: string;
   /** Amount in currency units as a numeric string ("199.9"); converted to cents on save. */
   price: string;
   currency: string;
-  credit_amount: number | "";
-  credits_expire: boolean;
   trial_days: number;
   is_free: boolean;
   is_active: boolean;
@@ -67,11 +69,11 @@ const EMPTY: PlanForm = {
   name: "",
   description: "",
   kind: "recurring",
+  family: "",
+  tier: "",
   period: "monthly",
   price: "",
   currency: "BRL",
-  credit_amount: "",
-  credits_expire: false,
   trial_days: 0,
   is_free: false,
   is_active: true,
@@ -122,11 +124,11 @@ export default function PlansAdmin() {
       name: row.name as string,
       description: (row.description as string) ?? "",
       kind: row.kind as string,
+      family: (row.family as string) ?? "",
+      tier: (row.tier as string) ?? "",
       period: (row.period as string) ?? "none",
       price: row.price_cents ? String((row.price_cents as number) / 100) : "",
       currency: row.currency as string,
-      credit_amount: (row.credit_amount as number) ?? "",
-      credits_expire: row.credits_expire as boolean,
       trial_days: row.trial_days as number,
       is_free: row.is_free as boolean,
       is_active: row.is_active as boolean,
@@ -153,11 +155,12 @@ export default function PlansAdmin() {
       name: form.name.trim(),
       description: form.description || null,
       kind: form.kind,
-      period: form.period === "none" ? null : form.period,
+      family: form.family.trim(),
+      tier: form.tier || null,
+      // A one-time access purchase has no period; the database refuses one.
+      period: form.kind === "access" || form.period === "none" ? null : form.period,
       price_cents: Math.round(Number(form.price) * 100) || 0,
       currency: form.currency,
-      credit_amount: form.credit_amount === "" ? null : Number(form.credit_amount),
-      credits_expire: form.credits_expire,
       trial_days: Number(form.trial_days) || 0,
       is_free: form.is_free,
       is_active: form.is_active,
@@ -324,19 +327,44 @@ export default function PlansAdmin() {
               label="Tipo"
               value={form.kind}
               options={[
-                { value: "recurring", label: "Recorrente" },
-                { value: "credits", label: "Créditos" },
+                { value: "recurring", label: "Assinatura (recorrente)" },
+                { value: "access", label: "Acesso (pagamento único, o kit)" },
               ]}
               onChange={(v) => setForm({ ...form, kind: v })}
             />
+            <Field
+              label="Família (kit, club, pro, free)"
+              value={form.family}
+              onChange={(v) => setForm({ ...form, family: v })}
+            />
+            <SelectField
+              label="Degrau"
+              value={form.tier || "none"}
+              options={[
+                { value: "kit", label: "Kit" },
+                { value: "club", label: "Assinatura" },
+                { value: "pro", label: "Pro" },
+                { value: "none", label: "Nenhum (grátis ou adicional)" },
+              ]}
+              onChange={(v) => setForm({ ...form, tier: v === "none" ? "" : v })}
+            />
+            <SelectField
+              label="Moeda"
+              value={form.currency}
+              options={[
+                { value: "BRL", label: "Reais (BRL · Asaas)" },
+                { value: "USD", label: "Dólares (USD · Stripe)" },
+              ]}
+              onChange={(v) => setForm({ ...form, currency: v })}
+            />
             <SelectField
               label="Período"
-              value={form.period}
+              value={form.kind === "access" ? "none" : form.period}
               options={[
                 { value: "weekly", label: "Semanal" },
                 { value: "monthly", label: "Mensal" },
                 { value: "yearly", label: "Anual" },
-                { value: "none", label: "Nenhum (créditos avulsos)" },
+                { value: "none", label: "Nenhum (pagamento único)" },
               ]}
               onChange={(v) => setForm({ ...form, period: v })}
             />
@@ -347,12 +375,6 @@ export default function PlansAdmin() {
               currencySymbol={CURRENCY_SYMBOLS[form.currency] ?? `${form.currency} `}
               value={form.price}
               onChange={(event) => setForm({ ...form, price: event.target.value })}
-            />
-            <Field
-              label="Quantidade de créditos (planos de crédito)"
-              type="number"
-              value={form.credit_amount}
-              onChange={(v) => setForm({ ...form, credit_amount: v === "" ? "" : Number(v) })}
             />
             <Field
               label="Dias de trial (0 = sem trial)"
@@ -368,16 +390,6 @@ export default function PlansAdmin() {
               onChange={(v) => setForm({ ...form, sort: Number(v) })}
             />
             <Box className="flex flex-row flex-wrap gap-4">
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    size="small"
-                    checked={form.credits_expire}
-                    onChange={(e) => setForm({ ...form, credits_expire: e.target.checked })}
-                  />
-                }
-                label="Créditos expiram a cada período"
-              />
               <FormControlLabel
                 control={
                   <Checkbox

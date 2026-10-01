@@ -1,51 +1,73 @@
 # @flyee/db
 
-Multi-tenant database layer for Supabase Postgres: Drizzle schema, SQL migrations with RLS, and a typed server-side client.
+The flyee.club database: hand-written SQL migrations with Row Level Security on every table, a pgTAP suite, and a Drizzle mirror generated from the migrations.
 
-## Model
+## The baseline
 
-- `profiles` — one row per auth user, auto-created by the `handle_new_user` trigger. Signup metadata `company` also bootstraps the user's first organization (owner membership).
-- `organizations` / `memberships` — multi-tenancy core; roles: `owner`, `admin`, `member`.
-- `invites` — token-based org invitations; accepted via the `accept_invite(token)` RPC.
+`migrations/` holds the baseline `0000`–`0018`, written for a new Supabase project. Each file states the inherited MedChina migrations it was rewritten from.
 
-RLS is enabled on every table from day 1. Regular users create orgs through the `create_organization(name, slug)` RPC (security definer), never by direct insert.
+| File | What it holds |
+| --- | --- |
+| `0000_init` | profiles, organizations (one personal workspace per person), memberships, the sign-up trigger, the superadmin and workspace-deletion guards |
+| `0001_audit` | audit trail, row versioning, consent terms per language and `accept_terms()`, sign-in log, `set_user_superadmin()`, `update_member_profile()` |
+| `0002_platform` | platform settings (`is_public` decides who reads a key), notifications, announcements, onboarding state, avatars, backups |
+| `0003_billing` | plans (`recurring` or one-time `access`, BRL or USD), coupons, subscriptions with price snapshots, invoices, entitlement grants, idempotent checkout and webhook functions |
+| `0004_entitlements` | `org_entitlements()`, the single answer to what a workspace may use; `org_has_entitlement()`; the founders offer; comp paths |
+| `0005_attribution` | first-touch and purchase attribution, public page views per day and entry door |
+| `0006_product_events` | usage telemetry: one vocabulary, one property allowlist, a browser writer and a server writer, daily rollup and retention |
+| `0007_content` | help center and blog (`kind`, `audience`, translation groups) |
+| `0008_catalog` | trails, modules, immutable versions, lessons with gated video ids, recipes with gated workflows, the public checksum lookup |
+| `0009_roadmap` | roadmap items and votes |
+| `0010_oauth` | the OAuth 2.1 server: clients, codes, rotating tokens with families, device codes; the `flyee-cli` client |
+| `0011_delivery` | member devices with the device ceiling, the CLI request trail and rate limits, downloads, activation facts |
+| `0012_impersonation` | support visits and the database-level write fence |
+| `0013_leads` | waitlist and newsletter with double opt-in and erasure |
+| `0014_meetings` | live sessions: registrations, the gated join link, lifecycle |
+| `0015_admin` | operator reports: metrics, members, dossier, weekly segment and entry-door reports |
+| `0016_account_deletion` | permanent account deletion |
+| `0017_ai_spend` | the platform's own AI spend ledger |
+| `0018_seed` | plan ladder (prices are hypotheses), settings, legal texts version 1 in pt-BR and en |
 
-## Applying migrations
+## Conventions every migration follows
 
-Migrations live in `migrations/` as plain SQL. With the Supabase CLI linked to your project:
+- **Secure by default.** Nothing in `public` is reachable by the API roles unless the migration grants it: an explicit `grant` beside each table's policies, RLS on every table, and for every function `revoke all ... from public, anon` followed by an explicit `grant execute`. PostgreSQL grants EXECUTE to PUBLIC by default, so the revoke is never optional.
+- Definer functions pin `set search_path = public`.
+- Consent and money tables get `select public.enable_row_versioning('public.<table>')`.
+- A file is recorded by its full name (`NNNN_name.sql`) in `public.schema_migrations`; never rename one that a database already applied.
+- Every behaviour worth keeping gets a pgTAP file in `tests/` (`NNNN_name.test.sql`, wrapped in `begin` … `rollback`).
+- `tests/0016_grants_catalog_scan.test.sql` reads the system catalog: a table or function that becomes reachable by `anon`, a table without RLS, or a definer function without a pinned search path fails it.
+
+## Running the tests
+
+Three ways, same migrations and same tests:
 
 ```bash
-supabase db push            # or copy into supabase/migrations of the derived project
+npm run test:db:embedded   # no Docker: embedded PostgreSQL 17 + a Supabase stand-in (first run installs it into .cache/)
+npm run db:start && npm run test:db   # local Supabase via the CLI (needs Docker)
+npm run test:db:remote     # against DATABASE_URL (see the remote section)
 ```
 
-Or run them directly with psql against the project database.
+`scripts/db-embedded/run.mjs` also takes `--only <name>`, `--no-tests`, `--sql <file>` and `--keep`.
 
-This derived project records applied files in `public.schema_migrations`. When
-Docker is not part of the development environment, the root commands below use
-the remote `DATABASE_URL` from `apps/web/.env` without printing credentials:
+## Applying to a hosted project
+
+`scripts/remote-db-gate.mjs` reads `DATABASE_URL` from `apps/web/.env.local`, then `apps/web/.env` (or `FLYEE_ENV_FILE`), and refuses localhost targets:
 
 ```bash
 npm run db:plan:remote     # read-only list of pending migrations
-npm run db:migrate:remote  # transactional migrations with an advisory lock
-npm run test:db:remote     # transactional pgTAP suite against the current schema
+npm run db:migrate:remote  # transactional migrations under an advisory lock
 npm run db:gate:remote     # migrate, then run pgTAP
 ```
 
-The remote runner refuses localhost targets, applies only files absent from the
-existing history, and records a migration only in the same transaction as its
-SQL. Its pgTAP protocol runner connects directly with Postgres and does not use
-Docker. The test files use `BEGIN`/`ROLLBACK`, so their synthetic clinical rows
-do not persist.
+On an empty project it bootstraps `public.schema_migrations` and applies the whole baseline. It refuses a database that has a product schema without history, or a history naming files this repo does not have. **Do not point it at the inherited MedChina database**: the root `CLAUDE.md` explains the transition safety rules.
 
-**Privilege baseline (local/CI):** the hosted project predates Supabase's 2025
-"secure by default" change, so there every object a migration creates is
-granted to `anon`/`authenticated`/`service_role` automatically, and migrations
-narrow that with explicit revokes (0029/0030/0031/0035/0039/0040/0041…). Newer
-local images ship without those default grants, which would silently produce a
-different privilege model. `npm run db:prepare` therefore generates
-`supabase/migrations/00000000000000_legacy_default_privileges.sql`, restoring
-the legacy default privileges before the first migration runs. If a NEW hosted
-project is ever created, apply that same baseline there before migrating.
+## The Drizzle mirror
+
+`src/schema/schema.ts` and `relations.ts` are generated from the migrations, never edited by hand:
+
+```bash
+npm run db:schema:pull     # applies the migrations to the embedded server and runs drizzle-kit pull
+```
 
 ## Usage
 
@@ -56,10 +78,4 @@ const db = createDb(); // uses DATABASE_URL (Supabase pooler, port 6543)
 const orgs = await db.select().from(organizations);
 ```
 
-**RLS caveat:** `createDb` connects with the `DATABASE_URL` role and bypasses RLS when that role is privileged. Use it in trusted server code only and scope queries by organization. Browser/user-scoped access goes through the Supabase client from `@flyee/auth`, which enforces RLS via the user's JWT.
-
-## Evolving the schema
-
-1. Edit `src/schema/*` (Drizzle definitions).
-2. `npm run generate -w @flyee/db` to produce the next SQL migration (requires `DATABASE_URL`), or write the SQL by hand in `migrations/`.
-3. Keep RLS policies in the same migration as the tables they protect.
+**RLS caveat:** `createDb` connects with the `DATABASE_URL` role and bypasses RLS when that role is privileged. Use it in trusted server code only and scope queries by organization. Browser and user-scoped access go through the Supabase client from `@flyee/auth`, which enforces RLS through the user's JWT.

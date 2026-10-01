@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Alert, Box, Button, Chip, FormControl, Input, Select, Switch, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, FormControl, Select, Switch, Tooltip, Typography } from "@mui/material";
 import { type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 
 import DataTable from "@/components/data-grid/data-table";
@@ -21,8 +21,6 @@ type SubRow = {
   orgName: string;
   planName: string;
   createdAt: string;
-  /** Unspent à-la-carte minutes, so a grant is never made blind. */
-  packMinutes: number;
   planId: string;
   /** A provider-backed subscription cannot be re-planned from here. */
   providerManaged: boolean;
@@ -56,8 +54,7 @@ export default function SubscriptionsAdmin() {
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [grantDraft, setGrantDraft] = useState<Record<string, string>>({});
-  const [granting, setGranting] = useState<string | null>(null);
+
   const [plans, setPlans] = useState<AssignablePlan[]>([]);
   const [planDraft, setPlanDraft] = useState<Record<string, string>>({});
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -65,7 +62,7 @@ export default function SubscriptionsAdmin() {
 
   const refresh = useCallback(async () => {
     const supabase = createClient();
-    const [{ data, error: readError }, { data: packs }, { data: planRows }] = await Promise.all([
+    const [{ data, error: readError }, { data: planRows }] = await Promise.all([
       supabase
         .from("subscriptions")
         .select(
@@ -74,13 +71,10 @@ export default function SubscriptionsAdmin() {
         .in("status", ["trialing", "active", "past_due", "incomplete"])
         .order("created_at", { ascending: false })
         .limit(200),
-      supabase
-        .from("audio_minute_packs")
-        .select("org_id, seconds_total, seconds_consumed")
-        .or("expires_at.is.null,expires_at.gt." + new Date().toISOString()),
-      // Assignable tiers only. An add-on is a one-off pack, not something a
-      // workspace can be subscribed to — `set_org_plan` refuses those anyway,
-      // so offering them here would only produce errors.
+      // Assignable tiers only: recurring plans. An add-on or a one-time access
+      // plan (the kit) is not something a workspace is subscribed to —
+      // `set_org_plan` refuses those anyway, so offering them here would only
+      // produce errors. The kit is given as a grant (entitlement_grants).
       supabase
         .from("plans")
         .select("id, name, is_free, is_addon, kind, period")
@@ -100,12 +94,6 @@ export default function SubscriptionsAdmin() {
 
     setPlans((planRows ?? []).map((plan) => ({ id: plan.id, name: plan.name, isFree: Boolean(plan.is_free) })));
 
-    const remainingByOrg = new Map<string, number>();
-    for (const pack of packs ?? []) {
-      const left = Math.max(0, (pack.seconds_total as number) - (pack.seconds_consumed as number));
-      remainingByOrg.set(pack.org_id as string, (remainingByOrg.get(pack.org_id as string) ?? 0) + left);
-    }
-
     setRows(
       (data ?? []).map((row) => ({
         id: row.id,
@@ -117,7 +105,6 @@ export default function SubscriptionsAdmin() {
         orgName: (row.organizations as unknown as { name: string } | null)?.name ?? "Conta desconhecida",
         planName: (row.plans as unknown as { name: string } | null)?.name ?? "Plano desconhecido",
         createdAt: row.created_at,
-        packMinutes: Math.floor((remainingByOrg.get(row.org_id) ?? 0) / 60),
         planId: row.plan_id,
         providerManaged: Boolean(row.provider_subscription_id),
       })),
@@ -155,43 +142,10 @@ export default function SubscriptionsAdmin() {
   );
 
   /**
-   * Makes a workspace whole after an incident (a failed pipeline that still
-   * billed, a support agreement). Goes through the guarded RPC because the
-   * pack ledger has no client write path at all — and it lands in the audit
-   * trail, which is the point: handing out paid capability is exactly the kind
-   * of act that must be attributable afterwards.
-   */
-  const grantMinutes = useCallback(
-    async (row: SubRow) => {
-      setError(null);
-      const minutes = Number(grantDraft[row.orgId]);
-      if (!Number.isFinite(minutes) || minutes <= 0) {
-        setError("Informe quantos minutos conceder.");
-        return;
-      }
-      setGranting(row.orgId);
-      const supabase = createClient();
-      const { error: rpcError } = await supabase.rpc("grant_audio_minute_pack", {
-        target_org: row.orgId,
-        target_minutes: Math.floor(minutes),
-        target_note: "Concedido pelo console de faturamento",
-      });
-      setGranting(null);
-      if (rpcError) {
-        setError(rpcError.message);
-        return;
-      }
-      setGrantDraft((draft) => ({ ...draft, [row.orgId]: "" }));
-      refresh();
-    },
-    [grantDraft, refresh],
-  );
-
-  /**
    * Puts a workspace on a plan without a checkout — comped accounts, betas,
    * partners, the team's own workspace.
    *
-   * Everything that makes this safe lives in `set_org_plan` (migration 0067):
+   * Everything that makes this safe lives in `set_org_plan` (migration 0004):
    * update instead of insert, NULL period bounds so a comped plan still meters
    * itself, the free plan as the way to "remove" a plan, a refusal when the
    * subscription is provider-backed, and an audit event that records whether
@@ -287,46 +241,6 @@ export default function SubscriptionsAdmin() {
         ),
       },
       {
-        field: "packMinutes",
-        headerName: "Minutos extras",
-        type: "number",
-        minWidth: 140,
-        renderCell: (params: GridRenderCellParams<SubRow, number>) => (
-          <Box className="flex h-full items-center">
-            {params.row.packMinutes > 0 ? (
-              <Chip label={`${params.row.packMinutes} min extras`} size="small" color="secondary" variant="outlined" />
-            ) : (
-              <Typography variant="body2" className="text-text-secondary">
-                —
-              </Typography>
-            )}
-          </Box>
-        ),
-      },
-      {
-        field: "grant",
-        headerName: "Conceder minutos",
-        minWidth: 210,
-        sortable: false,
-        filterable: false,
-        renderCell: (params: GridRenderCellParams<SubRow>) => (
-          <Box className="flex h-full flex-row items-center gap-2">
-            <FormControl className="outlined mb-0 w-24" variant="standard" size="small">
-              <Input
-                placeholder="+ minutos"
-                type="number"
-                inputProps={{ min: 1, "aria-label": `Conceder minutos extras para ${params.row.orgName}` }}
-                value={grantDraft[params.row.orgId] ?? ""}
-                onChange={(e) => setGrantDraft((draft) => ({ ...draft, [params.row.orgId]: e.target.value }))}
-              />
-            </FormControl>
-            <Button size="small" disabled={granting === params.row.orgId} onClick={() => void grantMinutes(params.row)}>
-              {granting === params.row.orgId ? "Concedendo…" : "Conceder"}
-            </Button>
-          </Box>
-        ),
-      },
-      {
         // Comped plan. Disabled rather than hidden when the provider owns
         // the subscription, so the reason is visible instead of the control
         // silently not being there. Downgrading is the same control: pick
@@ -407,7 +321,7 @@ export default function SubscriptionsAdmin() {
         ),
       },
     ],
-    [assignPlan, assigning, grantDraft, grantMinutes, granting, planDraft, plans, toggleSuspended],
+    [assignPlan, assigning, planDraft, plans, toggleSuspended],
   );
 
   return (
