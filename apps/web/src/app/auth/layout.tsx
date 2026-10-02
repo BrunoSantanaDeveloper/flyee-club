@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { Box } from "@mui/material";
 
-import Loading from "@/app/loading";
+import Loading from "@/components/layout/containers/loading-screen";
 import LocaleAutoNotice from "@/components/layout/locale/locale-auto-notice";
 import LocaleSwitch from "@/components/layout/locale/locale-switch";
 

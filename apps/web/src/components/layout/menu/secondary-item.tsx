@@ -6,8 +6,8 @@ import { Dispatch, useCallback, useEffect, useMemo } from "react";
 
 import { Accordion, AccordionDetails, AccordionSummary, Button } from "@mui/material";
 
+import NextureIcons from "@/icons/icon-registry";
 import NiChevronRightSmall from "@/icons/nexture/ni-chevron-right-small";
-import NextureIcons from "@/icons/nexture-icons";
 import { cn, isPathMatch } from "@/lib/utils";
 import { MenuItem } from "@/types";
 

@@ -1,15 +1,15 @@
-"use client";
-import { useRef } from "react";
-
-import { gsap, readMotionToken, tokenSeconds, useGSAP } from "@/components/marketing/motion";
 import { cn } from "@/lib/utils";
 
 /**
- * Gentle infinite oscillation for composition satellites (chips/cards around
- * the hero frame). Compositor-only (y + optional rotation), tiny amplitude,
- * so it stays on for touch devices too; `prefers-reduced-motion` renders it
- * static. Float animates ITS OWN div — entrance timelines animate the outer
- * positioning wrapper, so the transforms never collide.
+ * Gentle oscillation for composition satellites (chips/cards around the hero
+ * frame): y plus an optional rotation, tiny amplitude, so it stays on for
+ * touch devices too. A CSS animation (`animate-mkt-float`, keyframes in
+ * style/global.css), not a script, and it settles after five cycles (see the
+ * note there): the page a visitor is reading ends up doing no work at all,
+ * where a scripted tween restyled every chip on every frame, forever.
+ * `prefers-reduced-motion` renders it static (`motion-safe`). Float animates
+ * ITS OWN div: the hero entrance animates the outer positioning wrapper, so
+ * the transforms never collide.
  */
 export default function Float({
   amplitude,
@@ -30,33 +30,15 @@ export default function Float({
   className?: string;
   children: React.ReactNode;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      const element = ref.current;
-      if (!element) return;
-
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const travel = amplitude ?? parseFloat(readMotionToken("--motion-float-distance", "0.4rem")) * 16;
-        const cycle = duration ?? tokenSeconds("--motion-float-duration", 6);
-        gsap.to(element, {
-          y: -travel,
-          rotation: rotate,
-          duration: cycle / 2, // yoyo halves make one full cycle
-          ease: "sine.inOut",
-          yoyo: true,
-          repeat: -1,
-          delay,
-        });
-      });
-    },
-    { scope: ref },
-  );
+  const style = {
+    ...(amplitude !== undefined && { "--float-travel": `${amplitude}px` }),
+    ...(duration !== undefined && { "--float-cycle": `${duration}s` }),
+    ...(delay !== 0 && { "--float-delay": `${delay}s` }),
+    ...(rotate !== 0 && { "--float-rotate": `${rotate}deg` }),
+  } as React.CSSProperties;
 
   return (
-    <div ref={ref} className={cn(className)}>
+    <div className={cn("motion-safe:animate-mkt-float", className)} style={style}>
       {children}
     </div>
   );

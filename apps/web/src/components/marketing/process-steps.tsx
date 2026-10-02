@@ -63,14 +63,23 @@ export default function ProcessSteps({
               style={{ ["--step-tone" as string]: `var(${tone.cssVar})` }}
             >
               {variant === "mono" ? (
-                <span className="text-text-secondary font-mono text-sm">
-                  {ordinal}
-                  {step.kicker && (
-                    <>
-                      {" · "}
-                      <span className={cn("tracking-wider uppercase", tone.text)}>{step.kicker}</span>
-                    </>
-                  )}
+                // The hue rides on a bar, the StatBand gauge: as small text no
+                // palette hue reaches 4.5:1 on a light ground.
+                <span className="flex flex-col gap-3">
+                  <span
+                    aria-hidden
+                    className="h-1 w-10 rounded-full"
+                    style={{ backgroundColor: "hsl(var(--step-tone))" }}
+                  />
+                  <span className="text-text-secondary font-mono text-sm">
+                    {ordinal}
+                    {step.kicker && (
+                      <>
+                        {" · "}
+                        <span className="text-text-primary tracking-wider uppercase">{step.kicker}</span>
+                      </>
+                    )}
+                  </span>
                 </span>
               ) : (
                 <>
@@ -101,7 +110,7 @@ export default function ProcessSteps({
               {step.deliverableValue && (
                 <div className="border-grey-100 mt-auto border-t pt-4">
                   {step.deliverableLabel && (
-                    <p className={cn("mb-1 text-xs font-semibold tracking-wide uppercase", tone.text)}>
+                    <p className="text-text-secondary mb-1 text-xs font-semibold tracking-wide uppercase">
                       {step.deliverableLabel}
                     </p>
                   )}

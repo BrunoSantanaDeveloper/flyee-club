@@ -1,6 +1,8 @@
 import { ButtonProps } from "@mui/material";
 
-import { IconName } from "@/icons/nexture-icons";
+// Type-only: this module is loaded by the root providers for its enums, and a
+// value import here would ship the whole icon set to every page.
+import type { IconName } from "@/icons/icon-registry";
 
 export type Screens = {
   sm: string;

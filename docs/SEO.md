@@ -1,88 +1,70 @@
-# Search direction (committed) — the SEO baseline, persisted
+# Search direction (committed) — the flyee.club SEO baseline
 
-> **Legado do MedChina, reescrito na fase 7.3 de `docs/PLANO-IMPLEMENTACAO.md`.** Os termos-alvo abaixo são do MedChina e não valem para o flyee.club. A regra de idioma indexável já mudou: desde a fase 7.1 (2026-10-01) o site indexa pt-BR em `/` e inglês em `/en` com endereços traduzidos. As peças são `apps/web/src/i18n/routing.ts` (endereços de cada página nos dois idiomas), `apps/web/src/lib/seo.ts` (`publicPageMetadata`: canonical do idioma lido, hreflang com `x-default` no endereço em português, URL e locale do Open Graph) e `apps/web/src/app/sitemap.ts` (cada página uma vez por idioma, com alternates; ajuda e blog só nos idiomas em que o conteúdo existe). As seções "Indexable language" e "Multilingual SEO" abaixo descrevem o estado anterior e saem na reescrita. As regras técnicas de página (um `<h1>`, metadata localizada, JSON-LD via `<JsonLd>`) continuam valendo.
-
-**This file is the single source of the public site's search direction.** The `marketing-page` skill READS it (the way it reads `docs/DESIGN.md`) when writing titles, descriptions and copy. It records two things: what the base template already guarantees for free, and the per-page target terms MedChina commits to.
+**This file is the single source of the public site's search direction.** The `marketing-page` skill READS it (the way it reads `docs/DESIGN.md`) when writing titles, descriptions and copy. It records what the codebase already guarantees, how the two languages are addressed, and the target terms each page commits to (written 2026-10-01, phase 7.3 of `docs/PLANO-IMPLEMENTACAO.md`; the terms are hypotheses until Search Console has data).
 
 ---
 
-## What the template guarantees automatically (do NOT re-implement)
-
-These ship in the base and rebrand from `@flyee/content` — a new page inherits them without effort:
+## What the codebase guarantees (do NOT re-implement)
 
 | Concern | Where |
 |---|---|
-| XML sitemap (public routes only) | `apps/web/src/app/sitemap.ts` |
-| robots + sitemap pointer (crawlers blocked from app/api) | `apps/web/src/app/robots.ts` |
+| XML sitemap: every indexed page once per language with its alternates, help and blog posts in the languages they exist in, published catalog modules in the languages their name is written in; rebuilt hourly | `apps/web/src/app/sitemap.ts` |
+| robots + sitemap pointer (crawlers kept out of the app and the API) | `apps/web/src/app/robots.ts` |
 | `metadataBase` + `%s \| Brand` title template + favicons | `apps/web/src/app/layout.tsx` |
-| Shared Open Graph image (the official lockup, 1200×630) | `apps/web/src/app/opengraph-image.tsx`; named again by `publicPageMetadata`, because a page that sets `openGraph` drops the image it inherits |
+| Canonical of the language being read, hreflang for every language the page exists in plus `x-default` on the Portuguese address, Open Graph URL, locale and the social card | `apps/web/src/lib/seo.ts` (`publicPageMetadata`) |
+| Shared social card (the official lockup, 1200×630) | `apps/web/src/app/opengraph-image.tsx`, named again by `publicPageMetadata` because a page that sets `openGraph` drops the image it inherits |
 | `Organization` + `WebSite` JSON-LD (site-wide) | `components/marketing/site-json-ld.tsx`, mounted by the `[locale]/(marketing)` layout |
-| Canonical + hreflang + Open Graph URL per page | `apps/web/src/lib/seo.ts` (`publicPageMetadata`) |
+| `BreadcrumbList` JSON-LD on inner pages | `components/marketing/breadcrumb-json-ld.tsx` |
 | `FAQPage` JSON-LD (from the FAQ items) | `components/marketing/faq.tsx` |
 | `Product`/`Offer` JSON-LD (from real billing plans) | `components/marketing/pricing-section.tsx` |
-| One `<h1>` per page contract | `SectionHeader` `as` / `PricingSection` `headingAs` |
+| One `<h1>` per page | `Hero`, or `SectionHeader as="h1"` / `PricingSection headingAs="h1"` |
+| Title, description, canonical and hreflang in `<head>` for every user agent. Next streams metadata into the `<body>` for browsers and for Googlebot by default, where a canonical or hreflang link counts only if the engine renders the page | `apps/web/next.config.mjs` (`htmlLimitedBots: /.*/`) |
+| Real status codes: a missing app, help article or post answers 404 (a page in the language of the address that leads back to the site) and a moved address answers a real redirect, never a 200 with `noindex` or a meta refresh. It holds because no loading boundary sits above the public pages | `apps/web/src/app/layout.tsx` (no `<Suspense>` around the children, no `app/loading.tsx`), `apps/web/src/app/not-found.tsx` |
+
+## Languages and addresses
+
+Path-based since phase 7.1 (2026-10-01): Portuguese at the root, English under `/en` with translated slugs (`/planos` ↔ `/en/pricing`, `/como-funciona` ↔ `/en/how-it-works`, `/catalogo` ↔ `/en/catalog`, `/sobre` ↔ `/en/about`). The addresses of every page in both languages are declared in `apps/web/src/i18n/routing.ts`, which is also what makes a page public to the middleware.
+
+- **Each address is canonical to itself.** The English page is never canonicalized to the Portuguese one (that would tell search engines to drop the translation).
+- **`x-default`** points at the Portuguese address, the default language.
+- **Non-canonical addresses redirect:** `/pt-BR/planos` → `/planos`, `/en/planos` → `/en/pricing`, and an English-only slug typed without the prefix (`/pricing`) → `/en/pricing`.
+- **Content that exists in one language has an address in that language only:** a help article or blog post without a translation (linked by `translation_group`), or a catalog module whose name has no English text. Its other-language address leads to the section index instead of serving the wrong language, and the sitemap and hreflang list only the language it exists in.
+- **Crawlers are never switched:** the language suggestion on the public site offers the other language to a browser that reads it; it never redirects and never changes what a crawler sees.
 
 ## What each page must still do (the on-page layer)
 
-See the `marketing-page` skill's "SEO & discoverability" section — enforced by review:
-exactly one `<h1>` (the page title), a localized title tag (target term + value, ~60 chars) and a distinct 150–160-char description via `generateMetadata`, answer-first copy, the target term in `<h1>`/title/slug/first sentence, internal links to the money page, and structured data via `<JsonLd>` for any new schema-eligible block.
+See the `marketing-page` skill's "SEO & discoverability" section — enforced by review: exactly one `<h1>` (the page title), a localized title tag (target term + value, ~60 chars) and a distinct 150–160-char description via `generateMetadata` spreading `publicPageMetadata({ path, locale })`, answer-first copy, the target term in the `<h1>`, title and first sentence, internal links to the money page, and structured data through `<JsonLd>` for any new schema-eligible block.
 
-**Canonical URL (per page — Next does NOT auto-emit it).** Every page returns
-`alternates: { canonical: "<its own path>" }` from `metadata`/`generateMetadata`
-(resolved against `metadataBase` = `NEXT_PUBLIC_SITE_URL`). This declares the
-preferred URL and prevents duplicate-content splits (query strings, trailing
-slash, the `.vercel.app` alias vs. the custom domain). Dynamic routes build it
-from the slug (`` `/blog/${slug}` ``). A new marketing page without a canonical
-is incomplete.
+## Per-page target terms (hypotheses, both languages indexed)
 
-## Per-page target terms (MedChina — pt-BR is the indexed language)
+Money page first. Terms are used naturally, never stuffed.
 
-Source: `docs/PRODUCT.md` §26/§29 of `docs/HOME-SPEC.md`. Money pages first. Terms are used naturally — never stuffed (HOME-SPEC §29.4).
+| Page | pt-BR term / intent | English term / intent | Funnel role |
+|---|---|---|---|
+| `/planos` · `/en/pricing` | "flyee.club preço", "assinatura skills Claude Code" — commercial | "flyee.club pricing", "Claude Code skills subscription" — commercial | **money page**: the ladder and checkout entry |
+| `/` · `/en` | "skills para Claude Code", "harness para Claude Code e Codex" + brand; title `flyee.club \| Skills e workflows para Claude Code e Codex` | "Claude Code skills", "AI coding harness" + brand; title `flyee.club \| Skills and workflows for Claude Code and Codex` | brand + top of funnel |
+| `/como-funciona` · `/en/how-it-works` | "como instalar skills no Claude Code", "atualizar skills" — informational → commercial | "install Claude Code skills", "update Claude Code skills" | education → plans |
+| `/catalogo` · `/en/catalog` | "catálogo de skills para Claude Code", "workflows para Codex" — commercial investigation | "Claude Code skills catalog", "Codex workflows" | catalog → plans |
+| `/catalogo/<slug>` · `/en/catalog/<slug>` | the module name + "skill para Claude Code" (long tail) | the module name + "Claude Code skill" | module → plans |
+| `/sobre` · `/en/about` | brand + "sobre" — navigational | brand + "about" | trust |
+| `/contato` · `/en/contact` | brand + "contato" | brand + "contact" | navigational |
+| `/ajuda` · `/en/help` | support long tail (DB-managed articles) | same, in English | support + topic cluster |
+| `/blog` · `/en/blog` | topic cluster around Claude Code, Codex and AI changes (DB-managed) | same, in English | authority growth |
+| `/espera` · `/en/waitlist` | brand + "lista de espera" | brand + "waitlist" | pre-launch capture |
+| `/legal/*` | none — not a ranking target | none | trust / compliance |
 
-| Page | Primary term / intent | Funnel role |
-|---|---|---|
-| `/planos` | "prontuário eletrônico MTC preço" / "sistema para acupunturista planos" — commercial | **money page** — checkout entry |
-| `/` (home) | "prontuário para Medicina Tradicional Chinesa" + brand; title: `MedChina \| Prontuário inteligente para Medicina Tradicional Chinesa` (HOME-SPEC §29.1) | brand + top-of-funnel |
-| `/como-funciona` | "como funciona prontuário com IA" / "gravar consulta anamnese automática" — informational→commercial | education → demo → sign-up |
-| `/recursos` | "sistema para acupunturista" / "anamnese MTC" / "plano terapêutico MTC" — commercial investigation | feature depth → plans |
-| `/seguranca` | "prontuário eletrônico LGPD" / "segurança de dados clínicos" — trust investigation | objection handling |
-| `/migracao` | brand + "migração versão anterior" — navigational (existing users) | support / retention |
-| `/ajuda` | long-tail support queries (DB-managed articles) | support + topic cluster |
-| `/blog` | topic cluster around "acupuntura prontuário", "gestão clínica MTC" (DB-managed) | authority growth |
-| `/sobre` | brand + "sobre" | brand / navigational |
-| `/contato` | brand + "contato" | navigational |
-| `/legal/*` | none — not a ranking target | trust / compliance |
-| `/china` | "prontuário de Medicina Chinesa" + "Lei 15.345" + "Congresso de MTC Xinjiang" — authority / press; title `O prontuário brasileiro de MTC apresentado na China · MedChina` | authority → subscribe (`CtaClick`) |
+**Not indexed** (`noindex`, out of the sitemap, named in its exclusion comment): `/espera/confirmar` (a one-time confirmation link), `/verificar/<module>@<version>` (a checksum lookup reached from the CLI and the module pages) and the campaign pages of `app/[locale]/(funil)/` (`/fundadores`), reached by the link the operator sends. Indexing is decided by each page's `metadata` + `sitemap.ts`, never by the route group.
 
-Structured data note (HOME-SPEC §29.5): the home may add `SoftwareApplication` via `<JsonLd>`; never mark up ratings, reviews or availability that are not actually published.
+**Structured data notes:** inner pages emit `BreadcrumbList`; the pricing section emits `Product`/`Offer` from real plans (the list price, never a campaign price); FAQ sections emit `FAQPage`. Never mark up ratings, reviews, member counts or availability that are not published.
 
-**Landing pages and indexing (2026-09-26).** Indexing is a decision of each page's `metadata` + `sitemap.ts` + `PUBLIC_PREFIXES`, never of the route group. Two groups hold Landing DS pages: `(funil)` (offer/campaign/event pages — `/assinar`, `/fundadores`, `/lei-15345` and every later live event at `/ao-vivo/<slug>`: `noindex`, out of the sitemap, FUNIL D10) and `(autoridade)` (permanent, **indexed** landing pages with the home's own header and footer — `/china`, with `Article` JSON-LD whose `publisher` points at the site-wide `Organization` `@id`, and an image only when a real stage photo exists). `/palestra/publica` (the congress deck for the public) is `noindex` like `/palestra`: it is reached from `/china`, not from search.
+## Constraints
 
-## Architecture constraints (decisions, not page edits)
-
-- **Indexable language:** i18n is cookie-based, so search and AI crawlers only ever see `DEFAULTS.locale` = **`pt-BR`** (set at init). A genuinely multilingual, indexable site needs `/[locale]/` routing + `hreflang` — an architecture change, not a page edit. See "Multilingual SEO" below for what exists today and what that change would take.
-
-## Multilingual SEO — what is done, and the plan for the rest (written 2026-09-18)
-
-**What shipped (2026-09-18).** The home is translated into all six locales (`components/marketing/home-copy/`), carries a language switcher, and picks a first-visit language from the request itself (`lib/locale-detection.ts` → `lib/locale-request.ts`): `Accept-Language` first, Vercel's `x-vercel-ip-country` as a fallback, with the visitor's own choice — the cookie — always winning. This serves people who arrive by link, WeChat, WhatsApp or an ad. **It does nothing for organic search**, and deliberately so: `detectLocale` returns `null` for any crawler, so Googlebot, Baiduspider and every link-preview fetcher still get pt-BR. Serving a crawler another language on the same URL would put content in the index that no URL can return.
-
-**Why the switch is safe for the current ranking.** One URL, one canonical (`/`), one indexable language. Nothing about the pt-BR index changes; the localized renders are invisible to crawlers by construction.
-
-**What indexable Chinese would require** — the work, in the order it has to happen:
-
-1. **Route group** `app/(marketing)/[locale]/` wrapping the existing pages, with `generateStaticParams` over `LOCALES` and a middleware rule that keeps `/` as the un-prefixed pt-BR root (a prefix on the default locale would 301 every existing inbound link and every ad URL).
-2. **`hreflang` on every page**: `alternates.languages` in each `generateMetadata`, all locales cross-referencing each other plus `x-default` → pt-BR. Wrong or partial hreflang is worse than none — it splits authority instead of consolidating it.
-3. **Canonical per locale**: each localized URL is canonical to ITSELF, never to the pt-BR one (a cross-language canonical tells Google to drop the translation).
-4. **`sitemap.ts` per locale**, including the DB-managed `/ajuda` and `/blog` slugs that actually have a translated row — a sitemap entry for an untranslated page is a soft-404 in another language.
-5. **The informational pages' translations become load-bearing.** The `marketing` namespace is already complete in all six, but it was written for an in-app switcher, not for search: titles and descriptions per locale need a pass against real query intent in that language.
-6. **The locale cookie stops deciding the language on prefixed routes** — the URL does. The cookie survives only as the redirect preference for `/`, and the detection above becomes a SUGGESTION banner ("查看中文版 →" pointing at `/zh-CN/`) instead of a content switch.
-7. **Content that is not translated must not get a URL.** `/legal/*` and the consent terms are pt-BR by law and product decision (`consent_terms` has no locale column, see `apps/web/CLAUDE.md`) — those routes stay single-language and out of the alternates set.
-
-**Cost note before doing it:** Google is blocked in mainland China, so organic acquisition there means Baidu, which needs its own webmaster registration, an ICP filing for a China-hosted domain, and treats a non-Chinese-hosted site poorly. Decide whether the target is Chinese speakers OUTSIDE China (Google works; steps 1–7 are enough) or inside it (a separate infrastructure question, not an SEO one).
-- **`NEXT_PUBLIC_SITE_URL`** must be set in production (no trailing slash). Without it, `sitemap.ts`, `robots.ts`, the OG image and every JSON-LD `@id`/`url` fall back to `http://localhost:3000`.
-- **Route slugs are Portuguese** (short, no accents — HOME-SPEC §28): `/planos`, `/como-funciona`, `/recursos`, `/seguranca`, `/migracao`, `/sobre`, `/contato`, `/ajuda`.
+- **`NEXT_PUBLIC_SITE_URL`** must be set in production (no trailing slash). Without it the sitemap, robots, the social card and every JSON-LD `@id`/`url` fall back to `http://localhost:3000`.
+- **Internal paths are Portuguese** (short, no accents): pages live in folders named after the Portuguese path, and links use them through `LocaleLink`, which writes the address of the language being read.
+- **Catalog texts in English are optional in the database** (only the Portuguese name is required), which is why the English catalog lists only modules with English text. Writing both languages in `/admin/catalogo` is what puts a module on both sides.
 
 ## Open items
 
-- No quantitative claims anywhere until real data exists (HOME-SPEC §33.5); plan facts (minutes, trial) are the only numbers allowed.
-- Blog/help clusters grow in the admin consoles (`/admin/blog`, `/admin/help`) — no deploy needed.
+- Search Console for both languages after the first deploy (the property covers `/` and `/en`), then revisit the target terms with real queries.
+- Lighthouse ≥ 90 on performance and SEO for `/`, `/en`, `/planos` and `/en/pricing` on the deployed site (phase 7 verification).
+- Blog and help clusters grow in the admin consoles (`/admin/blog`, `/admin/help`) — no deploy needed.

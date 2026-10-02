@@ -10,9 +10,9 @@
     "New public pages: folder under app/[locale]/(marketing) named after the Portuguese path + declared in src/i18n/routing.ts (pt-BR and English addresses) + src/app/sitemap.ts when indexed + generateMetadata spreading publicPageMetadata (lib/seo.ts)",
     "Internal links through <LocaleLink> (also as MUI LinkComponent) with the Portuguese path: it renders the address of the language being read; /auth/* and external URLs pass through",
     "Structured data via <JsonLd> only; Organization/FAQPage/Product already emitted by layout/Faq/PricingSection",
-    "Motion via <Reveal> or useGSAP in client components; transforms + autoAlpha; reduced-motion safe",
+    "Motion is CSS first: the hero entrance (built into <Hero>), <Float>, <Reveal> (a transition started by watchEntry in motion.ts), <CountUp>; transform + opacity; reduced-motion safe. No scripted timeline, no ScrollTrigger: GSAP is loaded by <Parallax> alone, on demand",
     "Layer scale: compositions are relative isolate with z-0 (back) / z-10 (frame) / z-20 (front); z-30 is reserved for site chrome",
-    "Ambient motion is seasoning: max 4 <Float> + 2 <Parallax> per page, always reduced-motion safe; one orbiting decor at most"
+    "Ambient motion is seasoning and it ends: max 4 <Float> + 2 <Parallax> per page, always reduced-motion safe; one orbiting decor at most; never an animation that runs forever (an idle page must do no work)"
   ],
   "tones": {
     "source": "tone.ts — TONE map + toneAt(index) rotation",
@@ -25,14 +25,14 @@
       "file": "section.tsx",
       "role": "layout",
       "props": "spacing: default|compact, background: default|paper|primary-soft|contrast|deep, decor: none|glow|grid|gradient-edge|dots|mesh|orbit, bleed, id",
-      "use": "vertical rhythm unit wrapping every block; vary background/decor at least twice along a page (premium bar #3); orbit is the one slowly-alive ambient — max one per page; deep = the dark band (--background-deep + text-text-contrast, a neutral that stays dark under any palette), never pair with light decors"
+      "use": "vertical rhythm unit wrapping every block; vary background/decor at least twice along a page (premium bar #3); orbit is the one slowly-alive ambient — max one per page; deep = the dark band (--background-deep + text-text-contrast, a neutral that stays dark under any palette), never pair with light decors; always clips horizontal overflow (overflow-x-clip, not hidden: sticky columns keep working), so a frame glow or the orbit ring never widens the page at 375px"
     },
     {
       "name": "ProductComposition",
       "file": "product-composition.tsx",
       "role": "evidence",
       "props": "frame (ProductFrame/screenshot), satellites: {children, position: top-left|top-right|right|bottom-right|bottom-left|left, depth: front|back, rotate: -6..6, float, floatDelay, parallax, hideBelow}[] (2–4)",
-      "use": "LAYERED hero media — central frame + floating chips overlapping its edges (the reference-site look); collapses to a chip row below md; Hero's timeline choreographs frame then satellites (premium bar #9)"
+      "use": "LAYERED hero media — central frame + floating chips overlapping its edges (the reference-site look); collapses to a chip row below md; the hero entrance (CSS) choreographs the frame and then the satellites (premium bar #9)"
     },
     {
       "name": "SatelliteChips",
@@ -67,21 +67,21 @@
       "file": "float.tsx",
       "role": "motion",
       "props": "amplitude?, duration?, delay?, rotate?, className",
-      "use": "gentle infinite oscillation for satellites/decor; reduced-motion static; budget ≤ 4 per page"
+      "use": "gentle oscillation for satellites/decor: a CSS animation on the compositor that settles after five cycles (an endless one keeps the main thread ticking while any IntersectionObserver is alive); reduced-motion static; budget ≤ 4 per page; no script, usable from server components"
     },
     {
       "name": "Parallax",
       "file": "parallax.tsx",
       "role": "motion",
       "props": "speed (yPercent, capped 12), className",
-      "use": "scroll-scrubbed drift for layered media; desktop-only + reduced-motion safe; budget ≤ 2 per page"
+      "use": "scroll-scrubbed drift for layered media; desktop-only + reduced-motion safe; budget ≤ 2 per page; the only component that loads GSAP (and ScrollTrigger), on demand, so a page without it downloads neither"
     },
     {
       "name": "CountUp",
       "file": "count-up.tsx",
       "role": "motion",
       "props": "value (pre-formatted string), duration?, className",
-      "use": "numbers count up on scroll entry; SSR renders the final string (SEO/no-JS/reduced-motion correct); StatBand uses it internally"
+      "use": "numbers count up when they enter the viewport (a short frame loop, started by watchEntry); SSR renders the final string (SEO/no-JS/reduced-motion correct); StatBand uses it internally"
     },
     {
       "name": "InView",
@@ -108,8 +108,8 @@
       "name": "Hero",
       "file": "hero.tsx",
       "funnel": "attention + value proposition",
-      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle, primaryCta (unless action), secondaryCta{label, href, icon?}, action? (replaces the buttons with the conversion itself, e.g. the waitlist form), note?, highlights?: string[] (reassurance chips row, split only)",
-      "use": "owns the page <h1> AND the page's one orchestrated motion moment (built-in load timeline: copy staggers, media rises); split + <ProductFrame glow> is the committed direction for product-heavy pages; media is required in practice (premium bar #1)"
+      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle, primaryCta (unless action), secondaryCta{label, href, icon?}, action? (replaces the buttons with the conversion itself, e.g. the waitlist form), note?, highlights?: string[] (reassurance chips row, split only), strip?: {label, items: string[]} (center layout only: a labelled row of names under the note, e.g. the AIs the apps run on)",
+      "use": "owns the page <h1> AND the page's one orchestrated motion moment: the entrance is CSS keyed on data-hero (style/layout/marketing-motion.css), copy line by line, then the media, then the satellites of a composition, starting with the first paint; a server component (no script of its own); split + <ProductFrame glow> is the committed direction for product-heavy pages; media is required in practice (premium bar #1)"
     },
     {
       "name": "ProductFrame",
@@ -129,15 +129,15 @@
       "name": "FeatureRows",
       "file": "feature-row.tsx",
       "funnel": "desire (depth)",
-      "props": "items: {eyebrow?, title, body, bullets?, media, tone}, decor, id",
-      "use": "alternating text↔evidence zig-zag for the 2–4 flagship features; use INSTEAD of a second card grid; decor=\"grid\" makes it the page's technical section"
+      "props": "items: {eyebrow?, title, body, bullets?, media, tone}, decor, id, children? (what closes the same chapter, one row gap under the rows: the store grid under the featured app)",
+      "use": "alternating text↔evidence zig-zag for the 2–4 flagship features; use INSTEAD of a second card grid; decor=\"grid\" makes it the page's technical section; the eyebrow is text-coloured with a hue bar (no palette hue passes as small text on a light ground)"
     },
     {
       "name": "BentoGrid",
       "file": "bento-grid.tsx",
       "funnel": "desire (secondary)",
-      "props": "items: {title, body, visual?, featured?, tone} — 4–6 cells",
-      "use": "asymmetric grid; featured cells span 2 columns and carry a visual; breaks equal-card monotony"
+      "props": "items: {title, body, visual?, featured?, tone} — 4–7 cells",
+      "use": "asymmetric grid; featured cells span 2 columns and carry a visual; breaks equal-card monotony; the seven trails of the home fill three rows (two featured)"
     },
     {
       "name": "StatBand",
@@ -151,7 +151,7 @@
       "file": "process-steps.tsx",
       "funnel": "desire (how it works)",
       "props": "steps: {icon?, kicker?, title, body, deliverableLabel?, deliverableValue?, tone}, variant: icon|mono",
-      "use": "scannable sequence: ghosted ordinal + meaningful themed icon + optional deliverable, one hue per step; variant=\"mono\" swaps to a mono 0N · kicker label (instrument treatment)"
+      "use": "scannable sequence: ghosted ordinal + meaningful themed icon + optional deliverable, one hue per step; variant=\"mono\" swaps to a mono 0N · kicker label (instrument treatment); in mono the hue rides on a bar above the label and the kicker keeps the text colour"
     },
     {
       "name": "FeatureGrid",
@@ -185,7 +185,7 @@
       "name": "Cta",
       "file": "cta.tsx",
       "funnel": "recovery",
-      "props": "title, subtitle, cta, secondaryCta? (deep only), points?: string[] (deep only), kicker?, decor: none|orbit|mesh|dots, variant: panel|deep",
+      "props": "title, subtitle, cta, secondaryCta? (deep: a second button; panel: a text link beside the button), points?: string[] (deep only), kicker?, decor: none|orbit|mesh|dots, variant: panel|deep",
       "use": "last conversion opportunity as a bordered console panel with primary glow + optional mono kicker; repeats the primary CTA verbatim; decor=\"orbit\" is the classic closer"
     },
     {
@@ -193,7 +193,7 @@
       "file": "reveal.tsx",
       "role": "motion",
       "props": "stagger, delay, className",
-      "use": "the ONLY sanctioned scroll animation (transforms + autoAlpha, plays once, reduced-motion static); do NOT wrap every section uniformly — one orchestrated GSAP moment per page (premium bar #5)"
+      "use": "the ONLY sanctioned scroll animation: a CSS transition (transform + opacity) that plays once when the block reaches 85% of the viewport height; a block already on screen when the page hydrates is left alone (hiding it would make visible content blink); reduced-motion static; do NOT wrap every section uniformly — one orchestrated moment per page, the hero entrance (premium bar #5)"
     },
     {
       "name": "JsonLd",
@@ -227,8 +227,22 @@
       "name": "RuledGrid",
       "file": "ruled-grid.tsx",
       "role": "desire",
-      "props": "items: {icon?, title, body, tone?, link?: {label, href}}[], columns: 2|3, variant: light|deep|cards",
-      "use": "hairline-ruled cell grid (benefits 3-col light, security 2-col deep) or separated cards (reasoning trio); meaningful concept icons in the family hue"
+      "props": "items: {icon?, title, body, tone?, link?: {label, href}, badge?, meta?}[], columns: 2|3|4, variant: light|deep|cards; RuledCard (named export) is one card of the cards variant, for grids that arrange cards themselves (StoreGrid)",
+      "use": "hairline-ruled cell grid (benefits 3-col light, security 2-col deep) or separated cards (the module cards of /catalogo: badge beside the icon, a mono meta line for the version and AIs, a trailing link); meaningful concept icons in the family hue; the hue stays on the icon and the arrow, never on the words"
+    },
+    {
+      "name": "StoreGrid",
+      "file": "store-grid.tsx",
+      "role": "desire",
+      "props": "label (names the chip group for assistive technology), allLabel, categories: {slug, label, tone, description?}[], items: {key, category: string|null, card: ReactNode}[], columns: 3|4",
+      "use": "the app store grid with its category filter (docs/HOME-COPY.md): every card is rendered on the server and stays in the HTML, the chips (buttons with aria-pressed, the selected one inverted) only hide the other categories, and the selected category shows its one-line description; category null shows under every filter (the request card); cards are usually <RuledCard>; one column on phones"
+    },
+    {
+      "name": "AppStorePreview",
+      "file": "app-store-preview.tsx",
+      "role": "evidence",
+      "props": "apps: {slug, name, category, tone, icon}[], categories: string[], allLabel, installLabel, label (the accessible name: the preview is role=img)",
+      "use": "the home hero evidence: a still picture of the store (category chips + app tiles) built from the real published apps, inside <ProductFrame glow> in a ProductComposition with real-number satellites; never padded with invented apps"
     },
     {
       "name": "IndexGrid",

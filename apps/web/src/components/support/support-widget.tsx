@@ -15,7 +15,6 @@ import NiQuestionHexagon from "@/icons/nexture/ni-question-hexagon";
 import type { SupportChannels } from "@/lib/platform-settings";
 import { cn } from "@/lib/utils";
 import { isSupabaseConfigured } from "@flyee/auth";
-import { createClient } from "@flyee/auth/client";
 
 /**
  * Floating quick-support button (marketing site + dashboard). Channels are
@@ -63,6 +62,10 @@ export default function SupportWidget({ support }: { support?: SupportChannels }
     if (support || !isSupabaseConfigured) return;
     let cancelled = false;
     const load = async () => {
+      // Loaded here, not at the top: the public layouts pass `support` and
+      // never reach this line, and a static import shipped the whole database
+      // client to every anonymous visitor.
+      const { createClient } = await import("@flyee/auth/client");
       const supabase = createClient();
       const { data } = await supabase.from("platform_settings").select("value").eq("key", "support").maybeSingle();
       const value = (data?.value ?? null) as Partial<SupportChannels> | null;

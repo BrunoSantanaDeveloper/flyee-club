@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 
 import { useLayoutContext } from "@/components/layout/layout-context";
+import { DEFAULTS } from "@/config";
 import { isPathMatch } from "@/lib/utils";
 import { leftMenuItems } from "@/menu-items";
 import { leftMenuBottomItems } from "@/menu-items";
@@ -17,6 +18,19 @@ export default function Main({ children }: PropsWithChildren) {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // The shell animates its own resizing (the menu opening and closing) with
+  // --layout-duration. It is set a moment after the shell mounts, so the first
+  // layout does not animate into place. It is set here and not by the root
+  // theme provider: writing a custom property on <html> restyles the whole
+  // document, and a public page has no shell to animate.
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => document.documentElement.style.setProperty("--layout-duration", `${DEFAULTS.transitionDuration}ms`),
+      200,
+    );
+    return () => window.clearTimeout(timer);
   }, []);
 
   const [activeItem, setActiveItem] = useState<MenuItem | undefined>(undefined);

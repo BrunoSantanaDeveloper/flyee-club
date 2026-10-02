@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { NextRequest, NextResponse } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { COOKIE_KEYS } from "@/constants";
 
@@ -122,5 +122,62 @@ describe("middleware: locale routing of the public site", () => {
     );
     expect(response.cookies.get(COOKIE_KEYS.locale)?.value).toBe("en");
     expect(response.cookies.get(COOKIE_KEYS.localeAuto)?.value).toBe("en");
+  });
+});
+
+describe("middleware: visits of the entry doors table", () => {
+  const BROWSER = { ...DOCUMENT, "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0" };
+  const views: { path: string; origem: string | null; locale: string }[] = [];
+  const pending: Promise<unknown>[] = [];
+  const event = { waitUntil: (promise: Promise<unknown>) => void pending.push(promise) } as never;
+
+  beforeEach(() => {
+    views.length = 0;
+    pending.length = 0;
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-key");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        expect(url).toBe("https://project.supabase.co/rest/v1/rpc/count_site_view");
+        const body = JSON.parse(String(init.body));
+        views.push({ path: body.target_path, origem: body.target_origem, locale: body.target_locale });
+        return new Response(null, { status: 204 });
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  const visit = async (path: string, headers: Record<string, string> = BROWSER) => {
+    await middleware(request(path, headers), event);
+    await Promise.all(pending);
+    return views;
+  };
+
+  it("counts a page load under its internal path, language and door", async () => {
+    expect(await visit("/en/pricing?origem=youtube")).toEqual([{ path: "/planos", origem: "youtube", locale: "en" }]);
+  });
+
+  it("falls back to the door of the first visit, then to none", async () => {
+    const firstTouch = `${COOKIE_KEYS.attribution}=${encodeURIComponent(JSON.stringify({ origem: "parceiro" }))}`;
+    expect(await visit("/planos", { ...BROWSER, cookie: firstTouch })).toEqual([
+      { path: "/planos", origem: "parceiro", locale: "pt-BR" },
+    ]);
+    views.length = 0;
+    expect(await visit("/")).toEqual([{ path: "/", origem: null, locale: "pt-BR" }]);
+  });
+
+  it("does not count crawlers, prefetches, redirects, client fetches or signed-in members", async () => {
+    await visit("/planos", { ...DOCUMENT, "user-agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" });
+    await visit("/planos", { ...BROWSER, "sec-purpose": "prefetch" });
+    await visit("/pt-BR/planos");
+    await visit("/planos", { accept: "*/*", rsc: "1", "user-agent": BROWSER["user-agent"] });
+    session.user = { id: "member" };
+    await visit("/planos");
+    expect(views).toEqual([]);
   });
 });

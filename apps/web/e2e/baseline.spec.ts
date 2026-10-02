@@ -58,6 +58,44 @@ test("public pages answer in the language of their address", async ({ page, requ
   expect(sitemap).toContain('hreflang="x-default"');
 });
 
+test.describe("a browser that reads the other language", () => {
+  // The suite's own browser announces itself as headless, which the site
+  // treats as a crawler: this is an ordinary browser set to English.
+  test.use({
+    locale: "en-US",
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+  });
+
+  test("is offered that language without the page moving, until it answers", async ({ page }) => {
+    await page.goto("/planos");
+    const offer = page.getByText("This page is also available in English.");
+    await expect(offer).toBeVisible();
+
+    // The bar sits above the header. It is decided from <head>, before the
+    // first paint: shown after hydration it pushed the whole page down.
+    const shifted = await page.evaluate(
+      () =>
+        new Promise<number>((resolve) => {
+          let total = 0;
+          new PerformanceObserver((list) => {
+            for (const entry of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) {
+              if (!entry.hadRecentInput) total += entry.value;
+            }
+          }).observe({ type: "layout-shift", buffered: true });
+          setTimeout(() => resolve(total), 1500);
+        }),
+    );
+    expect(shifted).toBeLessThan(0.05);
+
+    await page.getByRole("button", { name: "Dismiss" }).click();
+    await expect(offer).toBeHidden();
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(offer).toBeHidden();
+  });
+});
+
 test("the waitlist is the primary action until the site opens", async ({ page }) => {
   // Without a readable launch stage the site stays in the waitlist stage.
   await page.goto("/");
@@ -105,6 +143,92 @@ test("legal pages render the terms in force or say they cannot", async ({ page }
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     // No database in this run: never another text dressed as the terms.
     await expect(page.locator("main")).toContainText(/não conseguimos carregar|couldn't load/i);
+  }
+});
+
+test("the site menu leads to the store, how it works and pricing in the language being read", async ({ page }) => {
+  const sites = [
+    {
+      home: "/",
+      menu: { Apps: "/catalogo", "Como funciona": "/como-funciona", Preços: "/planos" },
+      footer: { Apps: "/catalogo", Sobre: "/sobre", "Lista de espera": "/espera" },
+    },
+    {
+      home: "/en",
+      menu: { Apps: "/en/catalog", "How it works": "/en/how-it-works", Pricing: "/en/pricing" },
+      footer: { Apps: "/en/catalog", About: "/en/about", Waitlist: "/en/waitlist" },
+    },
+  ];
+  for (const site of sites) {
+    await page.goto(site.home);
+    // The footer first: an open drawer hides the rest of the page from assistive technology.
+    for (const [name, href] of Object.entries(site.footer)) {
+      await expect(page.locator("footer").getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
+    }
+    // Below the md breakpoint the menu lives in the drawer.
+    const opener = page.getByRole("button", { name: /abrir menu|open menu/i });
+    const narrow = await opener.isVisible();
+    if (narrow) await opener.click();
+    const menu = narrow ? page.locator(".MuiDrawer-paper") : page.locator("header nav");
+    for (const [name, href] of Object.entries(site.menu)) {
+      await expect(menu.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
+    }
+  }
+});
+
+test("how it works, the app store and about render in both languages without remote data", async ({
+  page,
+  request,
+}) => {
+  for (const [route, lang] of [
+    ["/como-funciona", "pt-BR"],
+    ["/en/how-it-works", "en"],
+    ["/sobre", "pt-BR"],
+    ["/en/about", "en"],
+  ]) {
+    await page.goto(route);
+    await expect(page.locator("html")).toHaveAttribute("lang", lang);
+    await expect(page.locator("h1")).toHaveCount(1);
+    await expect(page.locator("main")).not.toContainText(/MISSING_MESSAGE|\[object Object\]|undefined/);
+  }
+
+  // No database in this run: the store says it could not load, never an empty shelf.
+  for (const route of ["/catalogo", "/en/catalog", "/catalogo/deploy-check", "/en/catalog/deploy-check"]) {
+    await page.goto(route);
+    await expect(page.getByRole("heading", { level: 1 }), route).toHaveText(
+      /a loja não carregou agora|the store did not load right now/i,
+    );
+  }
+
+  // An address that cannot name an app answers a real 404, not a page saying so with a 200.
+  const unknown = await request.get("/catalogo/Not_An_App");
+  expect(unknown.status()).toBe(404);
+  // And the 404 reads in the language of the address. Next builds that page in
+  // the browser, where the script that lifts the loader overlay never runs.
+  await page.goto("/en/catalog/Not_An_App");
+  await expect(page.locator("#initial-loader")).toBeHidden();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
+  await expect(page.getByRole("link", { name: "Go to the home page" })).toHaveAttribute("href", "/en");
+
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  for (const path of ["/como-funciona", "/en/how-it-works", "/catalogo", "/en/catalog", "/sobre", "/en/about"]) {
+    expect(sitemap, path).toContain(`${path}<`);
+  }
+  // The funnel pages stay out of the index.
+  expect(sitemap).not.toContain("/fundadores");
+  expect(sitemap).not.toContain("/en/founders");
+});
+
+test("the founders page stays out of search and explains a closed offer", async ({ page }) => {
+  for (const route of ["/fundadores", "/en/founders"]) {
+    await page.goto(route);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+    // No database in this run: the offer reads as not open, never as open with made-up seats.
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      /a oferta de fundador não está aberta|the founders offer is not open/i,
+    );
+    // A funnel page carries no site menu.
+    await expect(page.locator("header nav")).toHaveCount(0);
   }
 });
 
@@ -176,6 +300,11 @@ test("@a11y core entry and product routes have no critical axe violations", asyn
     "/en",
     "/en/pricing",
     "/espera",
+    "/como-funciona",
+    "/en/how-it-works",
+    "/catalogo",
+    "/sobre",
+    "/fundadores",
     "/legal/termos",
     "/inicio",
     "/settings/billing",

@@ -72,7 +72,7 @@ A page can follow every rule below and still look like a beginner site if it is 
 2. **≥2 layout archetypes beyond the centered stack** across the page (Hero `layout="split"`, `FeatureRows` zig-zag, `BentoGrid`, `StatBand`...). Centered-stack + card-grid repeated is the anti-direction.
 3. **The background changes at least twice along the scroll** (`decor="glow" | "grid" | "gradient-edge"`, `background="contrast" | "paper"`). No flat single-color void from top to bottom.
 4. **Density check at 1440px**: scroll the whole page — no viewport-height stretch may be >50% empty. Fix by tightening spacing, adding an anchor visual, or merging sections; never by padding with filler copy.
-5. **One orchestrated motion moment** (GSAP timeline on the hero: staggered copy + media entrance) instead of uniform scroll-reveals everywhere. Then RUN the page and scroll it end to end: a `<Reveal>` that never fires leaves a permanent hole — every section must actually appear.
+5. **One orchestrated motion moment** (the hero entrance: staggered copy, then the media, built into `<Hero>` as CSS so it starts with the first paint) instead of uniform scroll-reveals everywhere. Then RUN the page and scroll it end to end: a `<Reveal>` that never fires leaves a permanent hole — every section must actually appear.
 6. **Display typography is not the admin font** (Pass 0.3).
 7. **Harmonic palette, not monochrome** — the theme ships 6 hues designed to combine (`primary`, `secondary`, `accent-1..4`, all with light/dark variants). Primary is reserved for CTAs and the bold moment; categorical elements (plan tiers, feature families, chart series, icon chips) take accent tones via the `tone` prop (`components/marketing/tone.ts`) with a CONSISTENT meaning-mapping across the page and site (the same family keeps the same hue everywhere). A page where every tinted element is primary reads flat and monochrome — it FAILS. Never invent hues outside the token palette.
 8. **Show, don't tell** — the reader scans, they don't read. Every text-heavy section must carry a visual that conveys its meaning AT A GLANCE, so the point lands without reading the body: a MEANINGFUL icon (the concept, not decoration), a figure, a chart, or a conceptual illustration. Feature families and process steps always lead with such an icon in their family hue (`FeatureGrid`, `ProcessSteps`, `BentoGrid`). A wall of cards that are title+paragraph only FAILS.
@@ -171,10 +171,11 @@ Rules:
 
 ## Motion
 
-- Only through `<Reveal>` (`components/marketing/reveal.tsx`) or a GSAP `useGSAP` block in a client component. Transforms + `autoAlpha` only — never animate width/height/top/left.
-- Wrap in `gsap.matchMedia()` honoring `prefers-reduced-motion: reduce` (static and fully visible). Degrade heavy scroll animation on touch devices.
-- Durations/easing/distance come from the motion tokens. ScrollTrigger plays once, near-viewport start.
-- For GSAP API details, defer to the installed `gsap-*` skills (`.claude/skills/gsap-*`).
+- Only through the library's motion components: the hero entrance (CSS, `style/layout/marketing-motion.css`), `<Reveal>` (a CSS transition started when the block reaches the viewport), `<Float>` (a CSS animation that settles after a few cycles), `<CountUp>`, and `<Parallax>`. Transform + opacity only — never animate width/height/top/left.
+- **No scripted timelines and no ScrollTrigger on a page.** A script can only start after hydration, so it hides content the visitor is already reading and animates it back seconds late on a phone; a ScrollTrigger per block measures the page with forced layouts. New motion is CSS (keyframes or a transition) plus `watchEntry` from `components/marketing/motion.ts` when it must wait for the viewport. GSAP is loaded by `<Parallax>` alone, on demand.
+- **Nothing animates forever.** Chromium produces a main-thread frame for every tick of a running animation while any IntersectionObserver is watching something (link prefetching always is), so an endless ambient loop keeps a phone working on an idle page. Give ambient motion an iteration count.
+- Honor `prefers-reduced-motion: reduce` (static and fully visible): `motion-safe:` for CSS, `prefersReducedMotion()` in a component.
+- Durations/easing/distance come from the motion tokens. A reveal plays once, at 85% of the viewport height, and leaves alone a block that is already on screen when the page hydrates.
 
 ## Before finishing
 

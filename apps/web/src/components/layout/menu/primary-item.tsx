@@ -5,7 +5,7 @@ import { memo, useMemo, useState } from "react";
 
 import { Box, Button, Tooltip, Typography } from "@mui/material";
 
-import NextureIcons from "@/icons/nexture-icons";
+import NextureIcons from "@/icons/icon-registry";
 import { cn, isPathMatch } from "@/lib/utils";
 import { MenuItem, MenuType } from "@/types";
 

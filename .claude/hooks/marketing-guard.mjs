@@ -54,7 +54,10 @@ process.stdin.on("end", () => {
 
   const isMarketing = extractToolPaths(input)
     .map(normalizeToolPath)
-    .some((path) => /\/app\/(?:\[locale\]\/)?\(marketing\)\//.test(path) || /\/components\/marketing\//.test(path));
+    .some(
+      (path) =>
+        /\/app\/(?:\[locale\]\/)?\((?:marketing|funil)\)\//.test(path) || /\/components\/marketing\//.test(path),
+    );
   if (!isMarketing) process.exit(0);
 
   const reminder = [

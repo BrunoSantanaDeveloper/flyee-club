@@ -269,13 +269,6 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
 
   const [content, setContent] = useLocalStorage<ContentType>(LS_KEYS.contentType, DEFAULTS.contentType);
 
-  useEffect(() => {
-    setTimeout(
-      () => document.documentElement.style.setProperty("--layout-duration", `${DEFAULTS.transitionDuration}ms`),
-      200,
-    );
-  }, []);
-
   return (
     <ThemeContext.Provider
       value={{

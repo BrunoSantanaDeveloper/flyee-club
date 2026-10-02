@@ -6,10 +6,12 @@ import { Suspense } from "react";
 
 import { LicenseInfo } from "@mui/x-license";
 
-import Loading from "@/app/loading";
+import CookieConsent from "@/components/consent/cookie-consent";
+import DashboardTrackers from "@/components/consent/dashboard-trackers";
 import AnnouncementBanner from "@/components/layout/announcements/announcement-banner";
 import ContentWrapper from "@/components/layout/containers/content-wrapper";
 import Header from "@/components/layout/containers/header";
+import Loading from "@/components/layout/containers/loading-screen";
 import Main from "@/components/layout/containers/main";
 import ImpersonationBanner from "@/components/layout/impersonation/impersonation-banner";
 import LocaleAutoNotice from "@/components/layout/locale/locale-auto-notice";
@@ -56,10 +58,12 @@ export default function DashboardLayout({
       */}
       <ImpersonationBanner />
       {/*
-        The analytics posture of the dashboard is decided in phase 7 of
-        docs/PLANO-IMPLEMENTACAO.md (docs/TRACKING.md): until then no browser
-        tracker mounts here; funnel events stay server-side.
+        The Pixel and GA4 run in the member area under the same opt-out as the
+        public site, never on the admin consoles (docs/TRACKING.md). The notice
+        is the same one, so a refusal here is a refusal everywhere.
       */}
+      <CookieConsent />
+      <DashboardTrackers />
     </>
   );
 }

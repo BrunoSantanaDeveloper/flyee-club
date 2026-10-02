@@ -143,8 +143,14 @@ export default function Section({
   className?: string;
   children: React.ReactNode;
 }) {
+  // overflow-x-clip: a decorative layer (a frame glow, the orbit ring) may
+  // reach past the container but never widens the page at 375px. Clip, not
+  // hidden: it creates no scroll container, so sticky columns keep working.
   return (
-    <section id={id} className={cn("relative w-full", SPACING[spacing], BACKGROUND[background], className)}>
+    <section
+      id={id}
+      className={cn("relative w-full overflow-x-clip", SPACING[spacing], BACKGROUND[background], className)}
+    >
       {DECOR[decor]}
       <div className="relative">{bleed ? children : <Container>{children}</Container>}</div>
     </section>

@@ -26,6 +26,16 @@ const isSupported = (value: string | undefined | null): value is LocaleOption =>
   !!value && (LOCALES as readonly string[]).includes(value);
 
 /**
+ * True for a request to a page of the public site (app/[locale]). The
+ * middleware runs next-intl only for those addresses, and next-intl marks the
+ * request it routed with this header (the same one that gives the request
+ * config its `requestLocale`).
+ */
+export async function isPublicPageRequest(): Promise<boolean> {
+  return (await headers()).has("x-next-intl-locale");
+}
+
+/**
  * The single answer to "which language is this request in, and who decided?"
  *
  * Both the i18n request config (src/i18n/request.ts) and the public pages that

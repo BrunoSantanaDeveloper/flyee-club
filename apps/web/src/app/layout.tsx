@@ -5,16 +5,34 @@ import { JetBrains_Mono, Londrina_Solid, Mulish } from "next/font/google";
 import Script from "next/script";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import { Suspense } from "react";
 
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 
-import Loading from "@/app/loading";
 import { BRAND } from "@/brand";
 import BackgroundWrapper from "@/components/layout/containers/background-wrapper";
+import InitialLoaderGuard from "@/components/layout/containers/initial-loader-guard";
 import SnackbarWrapper from "@/components/layout/containers/snackbar-wrapper";
 import LayoutContextProvider from "@/components/layout/layout-context";
+import { DEFAULTS } from "@/config";
+import { LOCAL_STORAGE_KEYS } from "@/constants";
+import { languageOfferScript } from "@/lib/language-offer";
+import { isPublicPageRequest } from "@/lib/locale-request";
 import ThemeProvider from "@/theme/theme-provider";
+
+/**
+ * Runs before the first paint. The server renders the palette and mode classes
+ * on <html> with the defaults, and the tokens are scoped to those classes, so
+ * the page has its colours from the first paint; this script only corrects the
+ * mode for a browser that stored another choice (the mode switcher, or
+ * "system"). The theme provider keeps the classes in sync afterwards. Before,
+ * the provider added them after hydration: until then the page had no palette
+ * at all, which is what the loader overlay existed to hide.
+ */
+const THEME_BOOT = `(function(){try{var d=document.documentElement,m=JSON.parse(localStorage.getItem(${JSON.stringify(
+  LOCAL_STORAGE_KEYS.themeMode,
+)})||"null")||${JSON.stringify(
+  DEFAULTS.themeMode,
+)};if(m==="system")m=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if((m==="dark"||m==="light")&&!d.classList.contains(m)){d.classList.remove("light","dark");d.classList.add(m)}}catch(e){}})()`;
 
 const mulish = Mulish({
   subsets: ["latin"],
@@ -93,26 +111,37 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  // The loader overlay covers the page until the window load event. A public
+  // page arrives complete and styled, so covering it only delays what the
+  // visitor can already read (on a slow phone, by several seconds). The
+  // signed-in areas keep it: their shell settles after hydration.
+  const showLoader = !(await isPublicPageRequest());
   return (
     <html
       lang={locale}
       suppressHydrationWarning
       style={{ "--inner-shadow-opacity": "0.6", "--foreground-opacity": "0.6" } as React.CSSProperties}
-      className={`${mulish.variable} ${londrina.variable} ${jetbrains.variable}`}
+      className={`${mulish.variable} ${londrina.variable} ${jetbrains.variable} ${DEFAULTS.themeColor} ${
+        DEFAULTS.themeMode === "dark" ? "dark" : "light"
+      }`}
     >
       <head>
-        {/* We need to include the loader CSS directly to avoid flash of unstyled content */}
-        <link rel="stylesheet" href="/initial-loader.css" />
-
-        {/* Load the loader script directly for fastest execution */}
-        <Script id="loader-script" src="/initial-loader.js" strategy="beforeInteractive" />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        {/* Public pages only: whether to offer the other language, decided before the first paint. */}
+        {!showLoader && <script dangerouslySetInnerHTML={{ __html: languageOfferScript() }} />}
+        {/* The loader CSS is linked directly so the overlay is styled before anything paints. */}
+        {showLoader && <link rel="stylesheet" href="/initial-loader.css" />}
+        {showLoader && <Script id="loader-script" src="/initial-loader.js" strategy="beforeInteractive" />}
       </head>
       <body className="antialiased">
-        {/* Initial loader */}
-        <div id="initial-loader">
-          <div className="spinner"></div>
-        </div>
-        {/* Initial loader end */}
+        {showLoader && (
+          <>
+            <div id="initial-loader">
+              <div className="spinner"></div>
+            </div>
+            <InitialLoaderGuard />
+          </>
+        )}
         <AppRouterCacheProvider
           options={{
             key: "css",
@@ -124,9 +153,14 @@ export default async function RootLayout({
             <NextIntlClientProvider messages={messages}>
               <LayoutContextProvider>
                 <BackgroundWrapper />
-                <SnackbarWrapper>
-                  <Suspense fallback={<Loading />}>{children}</Suspense>
-                </SnackbarWrapper>
+                {/*
+                  No loading boundary here, and no app/loading.tsx: a boundary
+                  above the public pages sends the first bytes before a page
+                  can call notFound() or redirect(), so a missing app answered
+                  200 with a noindex tag and a moved address a meta refresh.
+                  Each signed-in area keeps its own boundary in its layout.
+                */}
+                <SnackbarWrapper>{children}</SnackbarWrapper>
               </LayoutContextProvider>
             </NextIntlClientProvider>
           </ThemeProvider>

@@ -429,6 +429,7 @@ import NiWind from "@/icons/nexture/ni-wind";
 import NiWorld from "@/icons/nexture/ni-world";
 import NiZoomIn from "@/icons/nexture/ni-zoom-in";
 import NiZoomOut from "@/icons/nexture/ni-zoom-out";
+import type { NextureIconsProps } from "@/icons/nexture-icons";
 
 export const IconMap = {
   NiAI,
@@ -863,21 +864,19 @@ export const IconMap = {
 };
 
 export type IconName = keyof typeof IconMap;
-export type IconSize = "large" | "medium" | "small" | "tiny" | number;
-export type IconVariant = "outlined" | "contained";
-
-export type NextureIconsProps = {
-  variant?: IconVariant;
-  className?: string;
-  size?: IconSize;
-  strokeWidth?: number;
-  oneTone?: boolean;
-};
 
 export type NextureIconsPropsComponent = NextureIconsProps & {
   icon: IconName;
 };
 
+/**
+ * An icon chosen by NAME (the dashboard menu, an icon the operator typed into
+ * the catalog). This module imports every icon of the set, so importing it
+ * from a client component ships all of them: use it only where the name is
+ * data. Everything else imports the one icon it renders
+ * (`@/icons/nexture/ni-*`), and the props and size helpers live in
+ * `nexture-icons.ts`, which imports no icon.
+ */
 const NextureIcons: React.FC<NextureIconsPropsComponent> = ({
   icon,
   size = 20,
@@ -894,28 +893,6 @@ const NextureIcons: React.FC<NextureIconsPropsComponent> = ({
   return (
     <IconComponent variant={variant} size={size} className={className} strokeWidth={strokeWidth} oneTone={oneTone} />
   );
-};
-
-export const sizeHelper = (size: NextureIconsProps["size"]) => {
-  if (typeof size === "number") {
-    return size;
-  } else if (size === "large") {
-    return 24;
-  } else if (size === "small" || size === "tiny") {
-    return 16;
-  } else {
-    return 20;
-  }
-};
-
-export const strokeSizeHelper = (size: number) => {
-  if (size === 36) {
-    return 1;
-  } else if (size >= 20) {
-    return 1.5;
-  } else if (size < 20) {
-    return 1.75;
-  }
 };
 
 export default NextureIcons;

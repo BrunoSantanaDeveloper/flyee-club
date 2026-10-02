@@ -1,7 +1,7 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
-import { gsap, tokenSeconds, useGSAP } from "@/components/marketing/motion";
+import { prefersReducedMotion, tokenSeconds, watchEntry } from "@/components/marketing/motion";
 import { cn } from "@/lib/utils";
 
 /**
@@ -78,34 +78,44 @@ export default function CountUp({
 }) {
   const ref = useRef<HTMLSpanElement>(null);
 
-  useGSAP(
-    () => {
-      const element = ref.current;
-      if (!element) return;
-      const parsed = parseFormatted(value);
-      if (!parsed) return;
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const parsed = parseFormatted(value);
+    if (!parsed || prefersReducedMotion()) return;
 
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        element.textContent = formatNumber(0, parsed);
-        const counter = { current: 0 };
-        gsap.to(counter, {
-          current: parsed.target,
-          duration: duration ?? tokenSeconds("--motion-duration-4", 1.6),
-          ease: "power2.out",
-          scrollTrigger: { trigger: element, start: "top 85%", once: true },
-          onUpdate: () => {
-            element.textContent = formatNumber(counter.current, parsed);
-          },
-          // Land on the exact original string (rounding drift is not allowed).
-          onComplete: () => {
-            element.textContent = value;
-          },
-        });
-      });
-    },
-    { scope: ref, dependencies: [value] },
-  );
+    let frame = 0;
+    const count = () => {
+      const total = (duration ?? tokenSeconds("--motion-duration-4", 1.6)) * 1000;
+      const started = performance.now();
+      const tick = (now: number) => {
+        const progress = Math.min(1, (now - started) / total);
+        // Ease out (cubic): fast at first, settling on the number.
+        const eased = 1 - (1 - progress) ** 3;
+        // Land on the exact original string (rounding drift is not allowed).
+        element.textContent = progress < 1 ? formatNumber(parsed.target * eased, parsed) : value;
+        if (progress < 1) frame = requestAnimationFrame(tick);
+      };
+      element.textContent = formatNumber(0, parsed);
+      frame = requestAnimationFrame(tick);
+    };
+
+    const stop = watchEntry(element, {
+      // On screen: count now. Below: wait at zero. Above: the reader is past
+      // it, so the real value stays.
+      onPlaced: (position) => {
+        if (position === "visible") count();
+        else if (position === "below") element.textContent = formatNumber(0, parsed);
+      },
+      onEnter: count,
+    });
+
+    return () => {
+      stop();
+      cancelAnimationFrame(frame);
+      element.textContent = value;
+    };
+  }, [value, duration]);
 
   return (
     <span className={cn("tabular-nums", className)} aria-label={value}>

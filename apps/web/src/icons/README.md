@@ -4,7 +4,9 @@ The template ships with the **Nexture** set (`nexture/`, 449 SVG components) and
 
 ## The contract
 
-Every icon — original or adapter — is a default-exported component accepting `NextureIconsProps` (`size`, `variant`, `className`, `oneTone`; see [nexture-icons.tsx](nexture-icons.tsx)). Pages import icons as `@/icons/nexture/ni-*`, and the string-name registry (`IconMap`, used by menus) resolves through the same alias. **Never import an external icon library directly in pages** — always go through an adapter folder that implements the contract.
+Every icon — original or adapter — is a default-exported component accepting `NextureIconsProps` (`size`, `variant`, `className`, `oneTone`; see [nexture-icons.ts](nexture-icons.ts)). Pages import icons as `@/icons/nexture/ni-*`, and the string-name registry (`IconMap` and the `NextureIcons` component, in [icon-registry.tsx](icon-registry.tsx)) resolves through the same alias. **Never import an external icon library directly in pages** — always go through an adapter folder that implements the contract.
+
+Two files, on purpose. `nexture-icons.ts` holds the props type and the size helpers and imports no icon: every icon file imports it, so whatever it pulled in would ship with each icon. `icon-registry.tsx` imports the WHOLE set; a client component that imports it ships every icon to the browser. Use it only where the icon name is data (the dashboard menu, an icon the operator typed into the catalog). Until 2026-10-01 both lived in one file, and importing any single icon loaded all 429 on every page.
 
 ## Switching a project to Phosphor
 

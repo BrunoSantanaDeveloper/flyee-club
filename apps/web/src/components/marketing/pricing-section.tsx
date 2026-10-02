@@ -94,6 +94,9 @@ export default function PricingSection({
 }) {
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
   const visiblePlans = periodToggle ? plans.filter((plan) => !plan.cycle || plan.cycle === period) : plans;
+  // The plan names sit one level under the section title: h2 when the title
+  // is the page <h1> (/planos), h3 otherwise. A fixed h3 skipped a level there.
+  const PlanHeading = headingAs === "h1" ? "h2" : "h3";
   return (
     <Section id={id} decor={decor}>
       {plans
@@ -124,7 +127,7 @@ export default function PricingSection({
             "mx-auto -mt-4 mb-10 flex w-fit flex-row items-center gap-2 rounded-full px-4 py-2 text-sm font-bold",
             // Never red: a coupon that no longer works is disappointing news,
             // not a risk or a failure (docs/DESIGN.md colour contract).
-            couponNotice.applied ? "bg-primary/10 text-primary" : "bg-grey-50 text-text-secondary",
+            couponNotice.applied ? "bg-primary/10 text-text-primary" : "bg-grey-50 text-text-secondary",
           )}
         >
           <NiTag size="small" className="flex-none" />
@@ -166,7 +169,7 @@ export default function PricingSection({
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-xs",
-                      selected ? "bg-text-contrast/20" : "bg-secondary/10 text-secondary",
+                      selected ? "bg-text-contrast/20" : "bg-secondary/10 text-text-primary",
                     )}
                   >
                     {periodToggle.yearlyNote}
@@ -208,7 +211,7 @@ export default function PricingSection({
                       style={{ backgroundColor: "currentcolor" }}
                     />
                   </span>
-                  <h3 className="text-text-primary font-heading text-xl font-normal">{plan.name}</h3>
+                  <PlanHeading className="text-text-primary font-heading text-xl font-normal">{plan.name}</PlanHeading>
                 </div>
                 {plan.description && <p className="text-text-secondary text-sm leading-5">{plan.description}</p>}
               </div>
@@ -218,7 +221,7 @@ export default function PricingSection({
                   <p className="flex flex-row items-center gap-2">
                     <span className="text-text-secondary text-base line-through">{plan.originalPrice}</span>
                     {plan.discountLabel && (
-                      <span className="bg-secondary/10 text-secondary rounded-full px-2 py-0.5 text-xs font-bold">
+                      <span className="bg-secondary/10 text-text-primary rounded-full px-2 py-0.5 text-xs font-bold">
                         {plan.discountLabel}
                       </span>
                     )}

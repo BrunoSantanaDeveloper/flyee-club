@@ -72,7 +72,6 @@ export default function LanguageSwitch({
       fullWidth={fullWidth}
       className={className}
       href={equivalentAddress(pathname, target)}
-      aria-label={t("language-switch-label")}
       startIcon={<NiWorld size="small" />}
       onClick={(event) => {
         event.preventDefault();
@@ -80,7 +79,13 @@ export default function LanguageSwitch({
         window.location.assign(alternateAddress(pathname, target));
       }}
     >
+      {/*
+        The accessible name starts with the visible word and then says what the
+        link does: a name that drops the visible label fails voice control
+        ("click English") and WCAG 2.5.3.
+      */}
       <span lang={target}>{t("language-switch-name")}</span>
+      <span className="sr-only">, {t("language-switch-label")}</span>
     </Button>
   );
 }

@@ -27,6 +27,20 @@ const FEATURE_LABEL: Record<FeatureKey, string> = {
   open_the_hood: "pricing-feature-open_the_hood",
 };
 
+/**
+ * What a plan unlocks, as message keys: each on/off right of `plans.limits`,
+ * then the computer count. Shared by the pricing cards and the founders offer,
+ * so a plan edited in /admin/billing reads the same everywhere.
+ */
+export function planFeatureKeys(limits: Record<string, number>): { key: string; values?: { count: number } }[] {
+  const keys: { key: string; values?: { count: number } }[] = enabledFeatures(limits).map((key) => ({
+    key: FEATURE_LABEL[key as FeatureKey],
+  }));
+  const devices = limitOf(limits, "devices");
+  if (devices > 0) keys.push({ key: "pricing-feature-devices", values: { count: devices } });
+  return keys;
+}
+
 export type DisplayPricing = {
   plans: PublicPlanDisplay[];
   /** Present when the plans come in monthly and yearly cycles. */
@@ -90,9 +104,7 @@ export async function getDisplayPlans({
 
   const display = plans.map((plan): PublicPlanDisplay => {
     const tier = isTier(plan.tier) ? plan.tier : null;
-    const features = enabledFeatures(plan.limits).map((key) => t(FEATURE_LABEL[key as FeatureKey]));
-    const devices = limitOf(plan.limits, "devices");
-    if (devices > 0) features.push(t("pricing-feature-devices", { count: devices }));
+    const features = planFeatureKeys(plan.limits).map(({ key, values }) => t(key, values));
 
     const payableCents = applyDiscount(plan.priceCents, planCoupon);
     const discounted = payableCents !== plan.priceCents;

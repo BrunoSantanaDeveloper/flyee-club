@@ -29,6 +29,7 @@ export default function FeatureRows({
   subtitle,
   items,
   decor = "none",
+  children,
 }: {
   id?: string;
   eyebrow?: string;
@@ -37,6 +38,12 @@ export default function FeatureRows({
   items: FeatureRowItem[];
   /** Section depth layer — the committed direction puts decor="grid" on one technical section per page. */
   decor?: "none" | "glow" | "grid" | "gradient-edge";
+  /**
+   * What closes the same chapter under the rows (the store grid under the
+   * featured app), one row gap below them. A second <Section> there would put
+   * two section paddings between the halves and read as a new chapter.
+   */
+  children?: React.ReactNode;
 }) {
   return (
     <Section id={id} decor={decor}>
@@ -49,7 +56,16 @@ export default function FeatureRows({
             <Reveal key={item.title} className="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-14">
               <div className={index % 2 === 1 ? "md:order-2" : undefined}>
                 {item.eyebrow && (
-                  <p className={cn("mb-3 text-sm font-semibold tracking-wide uppercase", tone.text)}>{item.eyebrow}</p>
+                  // The family hue on a bar, the words in a text colour: no palette
+                  // hue reaches 4.5:1 as small text on a light ground.
+                  <p className="text-text-secondary mb-3 flex items-center gap-2.5 text-sm font-semibold tracking-wide uppercase">
+                    <span
+                      aria-hidden
+                      className="h-1 w-6 flex-none rounded-full"
+                      style={{ backgroundColor: `hsl(var(${tone.cssVar}))` }}
+                    />
+                    {item.eyebrow}
+                  </p>
                 )}
                 <h3 className="font-display text-display-md text-text-primary font-bold">{item.title}</h3>
                 <p className="text-text-secondary mt-3 leading-7">{item.body}</p>
@@ -68,6 +84,7 @@ export default function FeatureRows({
             </Reveal>
           );
         })}
+        {children}
       </div>
     </Section>
   );

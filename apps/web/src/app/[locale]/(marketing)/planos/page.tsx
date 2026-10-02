@@ -9,11 +9,13 @@ import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Container from "@/components/marketing/container";
 import Cta from "@/components/marketing/cta";
 import Faq from "@/components/marketing/faq";
+import LocaleLink from "@/components/marketing/locale-link";
 import PricingSection from "@/components/marketing/pricing-section";
 import { COOKIE_KEYS } from "@/constants";
 import { localizeHref } from "@/i18n/routing";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import { resolveCurrency } from "@/lib/billing-currency";
+import { getFoundersOffer } from "@/lib/founders-offer";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
 import { publicPageMetadata } from "@/lib/seo";
@@ -33,12 +35,13 @@ export default async function PricingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [t, locale, params, cookieStore, stage] = await Promise.all([
+  const [t, locale, params, cookieStore, stage, founders] = await Promise.all([
     getTranslations("marketing"),
     getLocale(),
     searchParams,
     cookies(),
     getLaunchStage(),
+    getFoundersOffer(),
   ]);
   // The visitor's own pick (a `?moeda=` link, kept by the middleware) wins;
   // otherwise the page language decides: Portuguese BRL, English USD.
@@ -85,6 +88,19 @@ export default async function PricingPage({
             : undefined
         }
       />
+
+      {/* The founders price, only while it is open and with the database's own
+          seat count (founders_offer(), the same number the checkout enforces). */}
+      {founders && !founders.closed ? (
+        <Container>
+          <p className="text-text-primary mx-auto mb-6 max-w-2xl text-center text-base leading-6">
+            {t("pricing-founders-open", { left: founders.seatsLeft, total: founders.seatsTotal })}{" "}
+            <LocaleLink href="/fundadores" className="font-semibold underline">
+              {t("pricing-founders-link")}
+            </LocaleLink>
+          </p>
+        </Container>
+      ) : null}
 
       {/* Risk reversal, next to the price (blueprint: reduce perceived risk). */}
       <Container>

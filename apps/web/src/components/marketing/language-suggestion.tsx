@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 
 import { Button, IconButton } from "@mui/material";
 
@@ -13,9 +12,8 @@ import {
   otherLocale,
   rememberLanguageAnswer,
 } from "@/components/marketing/language-switch";
-import { LOCAL_STORAGE_KEYS } from "@/constants";
 import NiCross from "@/icons/nexture/ni-cross";
-import { isCrawler, localeFromAcceptLanguage } from "@/lib/locale-detection";
+import { LANGUAGE_OFFER_ATTRIBUTE } from "@/lib/language-offer";
 
 /**
  * "This page is also in English": the public site's answer to a browser that
@@ -27,32 +25,30 @@ import { isCrawler, localeFromAcceptLanguage } from "@/lib/locale-detection";
  * reader is assumed to read, so each catalog holds them in the OTHER language
  * (the pt-BR catalog in English, the English one in Portuguese).
  *
- * Decided in the browser after mount (navigator.languages), so the server
- * render is identical for everyone and nothing here varies the cache. Shown
- * once: following it, closing it or using the switch answers it for good.
+ * Decided in the browser (navigator.languages), so the server render is
+ * identical for everyone and nothing here varies the cache, but decided
+ * BEFORE the first paint: the bar is always rendered, hidden, and the script
+ * of lib/language-offer.ts (in <head>) marks <html> when it applies. The bar
+ * sits above the header; revealing it after hydration pushed the whole page
+ * down under a visitor who was already reading it. Shown once: following it,
+ * closing it or using the switch answers it for good.
  */
 export default function LanguageSuggestion() {
   const t = useTranslations("marketing");
   const locale = useLocale();
   const pathname = usePathname();
-  const [visible, setVisible] = useState(false);
   const target = otherLocale(locale);
 
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(LOCAL_STORAGE_KEYS.languageSuggestion)) return;
-    } catch {
-      return; // Without storage the answer could not be kept: do not ask.
-    }
-    if (isCrawler(navigator.userAgent)) return;
-    const reads = localeFromAcceptLanguage((navigator.languages ?? [navigator.language]).join(","));
-    setVisible(reads === target);
-  }, [target]);
-
-  if (!visible) return null;
+  const answer = () => {
+    rememberLanguageAnswer();
+    document.documentElement.removeAttribute(LANGUAGE_OFFER_ATTRIBUTE);
+  };
 
   return (
-    <div lang={target} aria-live="polite" className="bg-background-paper border-grey-100 w-full border-b">
+    <div
+      lang={target}
+      className="bg-background-paper border-grey-100 hidden w-full border-b [[data-language-offer]_&]:block"
+    >
       <Container className="flex flex-row items-center justify-between gap-3 py-2">
         <p className="text-text-primary text-sm leading-5">{t("language-suggest-message")}</p>
         <div className="flex flex-none flex-row items-center gap-1">
@@ -63,20 +59,13 @@ export default function LanguageSuggestion() {
             href={equivalentAddress(pathname, target)}
             onClick={(event) => {
               event.preventDefault();
-              rememberLanguageAnswer();
+              answer();
               window.location.assign(alternateAddress(pathname, target));
             }}
           >
             {t("language-suggest-action")}
           </Button>
-          <IconButton
-            size="small"
-            aria-label={t("language-suggest-dismiss")}
-            onClick={() => {
-              rememberLanguageAnswer();
-              setVisible(false);
-            }}
-          >
+          <IconButton size="small" aria-label={t("language-suggest-dismiss")} onClick={answer}>
             <NiCross size="small" />
           </IconButton>
         </div>

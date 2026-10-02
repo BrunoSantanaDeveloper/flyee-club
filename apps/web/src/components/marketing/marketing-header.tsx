@@ -11,13 +11,13 @@ import Link from "@/components/marketing/locale-link";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiMenu from "@/icons/nexture/ni-menu";
 
-// Only routes that exist. Phase 7.2 of docs/PLANO-IMPLEMENTACAO.md adds
-// "Como funciona" and "Catálogo" as those pages are built. The hrefs are the
-// internal (Portuguese) paths; LocaleLink writes the address of the language.
+// The menu of docs/HOME-COPY.md: the app store, how it works and pricing (help
+// and the blog live in the footer). The hrefs are the internal (Portuguese)
+// paths; LocaleLink writes the address of the language being read.
 const NAV_LINKS = [
+  { key: "nav-catalog", href: "/catalogo" },
+  { key: "nav-how-it-works", href: "/como-funciona" },
   { key: "nav-pricing", href: "/planos" },
-  { key: "footer-help", href: "/ajuda" },
-  { key: "footer-blog", href: "/blog" },
 ] as const;
 
 /**

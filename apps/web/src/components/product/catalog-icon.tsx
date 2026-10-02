@@ -1,4 +1,5 @@
-import NextureIcons, { IconMap, type IconName, type IconSize } from "@/icons/nexture-icons";
+import NextureIcons, { IconMap, type IconName } from "@/icons/icon-registry";
+import type { IconSize } from "@/icons/nexture-icons";
 
 /**
  * A catalog icon stored by name (`catalog_modules.icon`, `catalog_trails.icon`):

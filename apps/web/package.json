@@ -35,7 +35,6 @@
     "@flyee/fields": "*",
     "@flyee/jobs": "*",
     "@flyee/onboarding": "*",
-    "@gsap/react": "^2.1.2",
     "@mui/lab": "9.0.0-beta.5",
     "@mui/material": "9.1.2",
     "@mui/material-nextjs": "9.1.1",

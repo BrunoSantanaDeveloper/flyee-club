@@ -1,6 +1,7 @@
 "use client";
 
 import { COOKIE_KEYS, LOCAL_STORAGE_KEYS } from "@/constants";
+import { GA4_ID, META_PIXEL_ID } from "@/lib/tracker-snippets";
 
 /**
  * Marketing analytics — OPT-OUT model.
@@ -12,15 +13,12 @@ import { COOKIE_KEYS, LOCAL_STORAGE_KEYS } from "@/constants";
  * `analyticsOptOut` cookie — read both server-side (to skip rendering the
  * scripts) and here (to stop emitting events and disable the loaded SDKs).
  *
- * Today the trackers live ONLY in the marketing layout; docs/TRACKING.md
- * (phase 7.3 of docs/PLANO-IMPLEMENTACAO.md) decides whether the member area
- * mounts them too. Money-funnel events (sign-up, purchase) go SERVER-side via
- * the Conversions API / Measurement Protocol. This module only fires PageView /
- * ViewContent on the public site.
+ * The member area loads the same snippets after the page is interactive, and
+ * never on the admin consoles (components/consent/dashboard-trackers.tsx,
+ * docs/TRACKING.md). Money-funnel events (sign-up, purchase) go SERVER-side via
+ * the Conversions API / Measurement Protocol; the CLI sends only product
+ * events to the platform, never to an ad tracker.
  */
-
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() || null;
-const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID?.trim() || null;
 
 /** Any tracker configured — the cookie notice renders only then. */
 export const ANALYTICS_ENABLED = Boolean(META_PIXEL_ID || GA4_ID);
@@ -54,7 +52,7 @@ declare global {
 }
 
 /** True once the visitor has opted out (cookie set by the notice). */
-function isOptedOut(): boolean {
+export function isAnalyticsOptedOut(): boolean {
   if (typeof document === "undefined") return false;
   return document.cookie.split("; ").some((entry) => entry === `${COOKIE_KEYS.analyticsOptOut}=1`);
 }
@@ -91,7 +89,7 @@ export interface TrackOptions {
 
 /** Fire a marketing event on the browser trackers. No-op if opted out. */
 export function track(event: string, props?: Record<string, unknown>, options?: TrackOptions): void {
-  if (typeof window === "undefined" || isOptedOut()) return;
+  if (typeof window === "undefined" || isAnalyticsOptedOut()) return;
   if (META_PIXEL_ID && window.fbq) {
     const method = META_STANDARD_EVENTS.has(event) ? "track" : "trackCustom";
     if (options?.eventId) window.fbq(method, event, props, { eventID: options.eventId });
@@ -102,7 +100,7 @@ export function track(event: string, props?: Record<string, unknown>, options?: 
 
 /** Fire a PageView on SPA route changes. No-op if opted out. */
 export function trackPageView(path: string): void {
-  if (typeof window === "undefined" || isOptedOut()) return;
+  if (typeof window === "undefined" || isAnalyticsOptedOut()) return;
   if (META_PIXEL_ID) window.fbq?.("track", "PageView");
   if (GA4_ID) window.gtag?.("event", "page_view", { page_path: path });
 }
@@ -111,8 +109,10 @@ export function trackPageView(path: string): void {
  * Bump when the privacy policy changes materially — the notice re-appears.
  * 3 (2026-09-26): the policy now covers people who register for our events
  * (privacy-1/3/4/6/7/8/10), including the optional ad-audience consent.
+ * 4 (2026-10-01): the Pixel and GA4 also load in the member area (the privacy
+ * policy and the cookie policy, version 2, migration 0022).
  */
-export const CONSENT_VERSION = 3;
+export const CONSENT_VERSION = 4;
 
 export interface ConsentState {
   analytics: boolean;

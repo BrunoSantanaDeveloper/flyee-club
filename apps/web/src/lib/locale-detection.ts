@@ -36,12 +36,13 @@ export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 /** Countries whose official language is Portuguese. Everything else maps to English. */
 const LUSOPHONE_COUNTRIES = new Set(["BR", "PT", "AO", "MZ", "CV", "GW", "ST", "TL"]);
 
-const BOT_PATTERN =
+/** Exported for the one place that has to test it outside this module: the inline script of lib/language-offer.ts. */
+export const CRAWLER_PATTERN =
   /bot|crawl|spider|slurp|bingpreview|baidu|yandex|sogou|bytespider|petalbot|duckduck|facebookexternalhit|whatsapp|telegram|twitter|linkedinbot|discord|embedly|quora|pinterest|applebot|headlesschrome|lighthouse|chrome-lighthouse|ahrefs|semrush|mj12|dotbot|screaming frog|curl|wget|python-requests|axios|go-http-client|node-fetch|monitoring|uptime|pingdom|gtmetrix|vercel-screenshot|prerender/i;
 
 export function isCrawler(userAgent: string | null | undefined): boolean {
   if (!userAgent) return true; // No UA at all is a script, not a browser.
-  return BOT_PATTERN.test(userAgent);
+  return CRAWLER_PATTERN.test(userAgent);
 }
 
 /** The best locale we ship for an `Accept-Language` header, or null. */

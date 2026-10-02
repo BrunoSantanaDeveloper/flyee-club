@@ -1,0 +1,165 @@
+import { cache } from "react";
+
+import type { CatalogLocale } from "@/lib/catalog/links";
+import { loadCatalog, loadModule } from "@/lib/catalog/read";
+import { createAnonClient } from "@/lib/public-content";
+
+/**
+ * The catalog as anybody reads it on the public site: /catalogo, the module
+ * pages, the numbers of the home and the sitemap. Published rows only, through
+ * the anonymous client and row-level security (migration 0008), with the same
+ * reader as the CLI API and the member screens (lib/catalog/read.ts).
+ *
+ * That reader falls back to Portuguese when a text has no English version,
+ * which is right for a member and wrong for a public address: an address in a
+ * language serves that language (docs/SEO.md). So a module or recipe whose
+ * NAME has no English text stays out of the English pages and out of the
+ * English half of the sitemap, and its English address leads to the catalog.
+ *
+ * "unavailable" (no Supabase, an error) is never rendered as an empty catalog.
+ */
+
+type Localized = Record<string, string> | null | undefined;
+
+const hasText = (value: Localized, locale: CatalogLocale) =>
+  typeof value?.[locale] === "string" && value[locale].trim() !== "";
+
+export type CatalogStats = {
+  /** Modules readable in the language. */
+  modules: number;
+  /** Published versions of those modules (yanked ones excluded). */
+  versions: number;
+  /** When the newest of those versions was published. */
+  lastReleaseAt: string | null;
+};
+
+export type PublicCatalog = Awaited<ReturnType<typeof loadCatalog>> & { stats: CatalogStats };
+
+export type PublicCatalogResult = { kind: "ready"; catalog: PublicCatalog } | { kind: "unavailable" };
+
+export type CatalogRows = {
+  modules: { id: string; slug: string; name: Localized }[];
+  versions: { module_id: string; published_at: string | null }[];
+  recipes: { slug: string; name: Localized }[];
+};
+
+/**
+ * The part of the catalog readable in `locale` and its numbers. Pure: the
+ * rows carry the raw texts that the shared reader already collapsed with its
+ * Portuguese fallback.
+ */
+export function readableCatalog(
+  catalog: Awaited<ReturnType<typeof loadCatalog>>,
+  rows: CatalogRows,
+  locale: CatalogLocale,
+): PublicCatalog {
+  const readable = rows.modules.filter((row) => hasText(row.name, locale));
+  const readableIds = new Set(readable.map((row) => row.id));
+  const readableSlugs = new Set(readable.map((row) => row.slug));
+  const readableRecipes = new Set(rows.recipes.filter((row) => hasText(row.name, locale)).map((row) => row.slug));
+  const released = rows.versions.filter((row) => readableIds.has(row.module_id));
+  const lastReleaseAt = released
+    .map((row) => row.published_at)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+
+  return {
+    ...catalog,
+    modules: catalog.modules.filter((module) => readableSlugs.has(module.slug)),
+    recipes: catalog.recipes
+      .filter((recipe) => readableRecipes.has(recipe.slug))
+      .map((recipe) => ({ ...recipe, modules: recipe.modules.filter((slug) => readableSlugs.has(slug)) })),
+    stats: { modules: readableSlugs.size, versions: released.length, lastReleaseAt: lastReleaseAt ?? null },
+  };
+}
+
+async function readPublicCatalog(locale: CatalogLocale): Promise<PublicCatalogResult> {
+  const client = createAnonClient();
+  if (!client) return { kind: "unavailable" };
+  try {
+    const [catalog, modules, versions, recipes] = await Promise.all([
+      loadCatalog(client, { locale, stableOnly: false, limits: {} }),
+      client.from("catalog_modules").select("id, slug, name").eq("status", "published"),
+      client.from("catalog_module_versions").select("module_id, published_at").eq("status", "published"),
+      client.from("catalog_recipes").select("slug, name").eq("status", "published"),
+    ]);
+    if (modules.error || versions.error || recipes.error) return { kind: "unavailable" };
+    const rows = {
+      modules: (modules.data ?? []) as CatalogRows["modules"],
+      versions: (versions.data ?? []) as CatalogRows["versions"],
+      recipes: (recipes.data ?? []) as CatalogRows["recipes"],
+    };
+    return { kind: "ready", catalog: readableCatalog(catalog, rows, locale) };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
+/** Read once per request, however many components of the page ask. */
+export const loadPublicCatalog = cache(readPublicCatalog);
+
+export type PublicModule = NonNullable<Awaited<ReturnType<typeof loadModule>>> & {
+  trailName: string | null;
+  /** The languages this module can be read in, for hreflang. */
+  languages: CatalogLocale[];
+};
+
+export type PublicModuleResult =
+  | { kind: "ready"; module: PublicModule }
+  /** Not published (or never existed). */
+  | { kind: "missing" }
+  /** Published, but with no text in the language of the address. */
+  | { kind: "untranslated" }
+  | { kind: "unavailable" };
+
+async function readPublicModule(slug: string, locale: CatalogLocale): Promise<PublicModuleResult> {
+  const client = createAnonClient();
+  if (!client) return { kind: "unavailable" };
+  try {
+    const [module, names, trails] = await Promise.all([
+      loadModule(client, { slug, locale, limits: {} }),
+      client.from("catalog_modules").select("name").eq("slug", slug).eq("status", "published").maybeSingle(),
+      client.from("catalog_trails").select("slug, name"),
+    ]);
+    if (names.error || trails.error) return { kind: "unavailable" };
+    if (!module || !names.data) return { kind: "missing" };
+    const name = names.data.name as Localized;
+    if (!hasText(name, locale)) return { kind: "untranslated" };
+
+    const trail = (trails.data ?? []).find((row) => row.slug === module.trail);
+    const trailNames = (trail?.name ?? null) as Localized;
+    return {
+      kind: "ready",
+      module: {
+        ...module,
+        trailName: trailNames?.[locale]?.trim() || trailNames?.["pt-BR"]?.trim() || null,
+        languages: (["pt-BR", "en"] as const).filter((language) => hasText(name, language)),
+      },
+    };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
+/** Read once per request: the page and its metadata both ask for the module. */
+export const loadPublicModule = cache(readPublicModule);
+
+export type SitemapModule = { slug: string; languages: CatalogLocale[]; updatedAt: string | null };
+
+/** Every published module with the languages its page exists in. Empty without Supabase. */
+export async function listCatalogForSitemap(): Promise<SitemapModule[]> {
+  const client = createAnonClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from("catalog_modules")
+    .select("slug, name, updated_at")
+    .eq("status", "published")
+    .order("sort");
+  if (error || !data) return [];
+  return data.map((row) => ({
+    slug: row.slug as string,
+    languages: (["pt-BR", "en"] as const).filter((language) => hasText(row.name as Localized, language)),
+    updatedAt: (row.updated_at as string | null) ?? null,
+  }));
+}

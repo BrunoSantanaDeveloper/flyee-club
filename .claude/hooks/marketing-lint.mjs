@@ -71,8 +71,12 @@ const COPY_FILE_PATTERNS = [/\/components\/marketing\/home-copy\//];
  */
 const SATORI_IMAGE_PATTERN = /\/(opengraph|twitter)-image\.tsx$/;
 
-/** The public pages: app/[locale]/(marketing)/** (path-based locales, phase 7.1). */
-const MARKETING_PAGES = /\/app\/(?:\[locale\]\/)?\(marketing\)\//;
+/**
+ * The public pages: app/[locale]/(marketing)/** (path-based locales, phase 7.1)
+ * and the campaign pages of app/[locale]/(funil)/**, which compose the same
+ * library without the site chrome (docs/DESIGN.md: one design system).
+ */
+const MARKETING_PAGES = /\/app\/(?:\[locale\]\/)?\((?:marketing|funil)\)\//;
 
 function lint(filePath, content) {
   const p = filePath.replace(/\\/g, "/");

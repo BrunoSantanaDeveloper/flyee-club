@@ -69,6 +69,7 @@
 @import "./layout/scrollbar.css";
 @import "./layout/image-list.css";
 @import "./layout/backgrounds.css";
+@import "./layout/marketing-motion.css";
 
 /* --------- Feedback --------- */
 @import "./feedback/alert.css";
@@ -166,6 +167,32 @@
 
     100% {
       transform: translateY(0);
+    }
+  }
+
+  /*
+    The ambient drift of the marketing satellites (components/marketing/float.tsx):
+    half a cycle up, half a cycle back, on a sine ease. The element sets
+    --float-travel, --float-cycle, --float-delay and --float-rotate when it
+    departs from the motion tokens. Transform only, so the compositor runs it.
+
+    Ten half cycles (thirty seconds with the token), not forever. The browser
+    produces a main-thread frame for every tick of a running animation while
+    any IntersectionObserver is watching something, and one always is (link
+    prefetching, the scroll reveals): an endless drift kept a phone working on
+    an idle page. An even count ends where it started, at rest.
+  */
+  --animate-mkt-float: mkt-float calc(var(--float-cycle, var(--motion-float-duration, 6s)) / 2)
+    cubic-bezier(0.37, 0, 0.63, 1) var(--float-delay, 0s) 10 alternate;
+
+  @keyframes mkt-float {
+    from {
+      transform: translateY(0) rotate(0deg);
+    }
+
+    to {
+      transform: translateY(calc(var(--float-travel, var(--motion-float-distance, 0.4rem)) * -1))
+        rotate(var(--float-rotate, 0deg));
     }
   }
 

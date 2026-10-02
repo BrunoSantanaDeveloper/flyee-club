@@ -8,13 +8,13 @@ import Link from "@/components/marketing/locale-link";
 import type { LegalEntity } from "@/lib/platform-settings";
 import { formatCnpj } from "@flyee/fields";
 
-// Only routes that exist. Phase 7.2 of docs/PLANO-IMPLEMENTACAO.md adds
-// "Como funciona", "Catálogo", "Sobre" and "Lista de espera" as those pages
-// are built.
+// Internal (Portuguese) paths, written in the reader's language by LocaleLink.
 const COLUMNS = [
   {
     titleKey: "footer-product",
     links: [
+      { key: "nav-catalog", href: "/catalogo" },
+      { key: "nav-how-it-works", href: "/como-funciona" },
       { key: "nav-pricing", href: "/planos" },
       { key: "footer-blog", href: "/blog" },
     ],
@@ -24,11 +24,13 @@ const COLUMNS = [
     links: [
       { key: "nav-sign-in", href: "/auth/sign-in" },
       { key: "footer-help", href: "/ajuda" },
+      { key: "footer-waitlist", href: "/espera" },
     ],
   },
   {
     titleKey: "footer-company",
     links: [
+      { key: "nav-about", href: "/sobre" },
       { key: "nav-contact", href: "/contato" },
       { key: "footer-terms", href: "/legal/termos" },
       { key: "footer-privacy", href: "/legal/privacidade" },

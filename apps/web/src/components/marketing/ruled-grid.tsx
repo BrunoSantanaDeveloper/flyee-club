@@ -12,7 +12,53 @@ export type RuledGridItem = {
   tone?: Tone;
   /** Optional trailing text link (e.g. "Ver como é explicado" → #rastreabilidade). */
   link?: { label: string; href: string };
+  /** Cards variant: a short label beside the icon, in the item's hue (e.g. "Amostra grátis"). */
+  badge?: string;
+  /** Cards variant: one mono line under the body for identifiers (a version, the AIs it runs on). */
+  meta?: string;
 };
+
+/**
+ * One card of the `cards` variant, exported for grids that arrange cards
+ * themselves (the filtered store grid, components/marketing/store-grid.tsx).
+ */
+export function RuledCard({ item }: { item: RuledGridItem }) {
+  const tone = TONE[item.tone ?? "primary"];
+  return (
+    <article className="border-grey-100 bg-background-paper flex h-full w-full flex-col rounded-3xl border p-7">
+      {(item.icon || item.badge) && (
+        <div className="mb-5 flex flex-row items-center justify-between gap-3">
+          {item.icon ? (
+            <span className={cn("inline-grid h-12 w-12 place-items-center rounded-2xl", tone.softBg, tone.text)}>
+              {item.icon}
+            </span>
+          ) : (
+            <span />
+          )}
+          {item.badge && (
+            <span className={cn("rounded-full px-3 py-1 text-xs font-bold", tone.softBg, "text-text-primary")}>
+              {item.badge}
+            </span>
+          )}
+        </div>
+      )}
+      <h3 className="font-display text-text-primary text-xl leading-6 font-normal">{item.title}</h3>
+      <p className="text-text-secondary mt-2.5 text-base leading-6">{item.body}</p>
+      {item.meta && <p className="text-text-secondary mt-3 font-mono text-xs leading-5">{item.meta}</p>}
+      {item.link && (
+        // The label keeps the text colour and only the arrow takes the
+        // hue: no palette hue reaches 4.5:1 as small text on a light ground.
+        <Link
+          href={item.link.href}
+          className="text-text-primary mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-bold hover:underline"
+        >
+          {item.link.label}
+          <NiArrowRight size="small" className={tone.text} />
+        </Link>
+      )}
+    </article>
+  );
+}
 
 /**
  * Blueprint's ruled grid: cells separated by hairlines instead of card gaps —
@@ -26,40 +72,24 @@ export default function RuledGrid({
   variant = "light",
 }: {
   items: RuledGridItem[];
-  columns?: 2 | 3;
+  /** 4 is for short cards (the app store grid): two per row from `sm`, four from `lg`. */
+  columns?: 2 | 3 | 4;
   /** light = hairline grid on the page ground; deep = hairline grid on the deep band; cards = separated rounded cards. */
   variant?: "light" | "deep" | "cards";
 }) {
-  const cols = columns === 2 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3";
+  const cols =
+    columns === 2
+      ? "sm:grid-cols-2"
+      : columns === 4
+        ? "sm:grid-cols-2 lg:grid-cols-4"
+        : "sm:grid-cols-2 lg:grid-cols-3";
 
   if (variant === "cards") {
     return (
       <Reveal stagger={0.08} className={cn("grid grid-cols-1 gap-5", cols)}>
-        {items.map((item) => {
-          const tone = TONE[item.tone ?? "primary"];
-          return (
-            <article key={item.title} className="border-grey-100 bg-background-paper rounded-3xl border p-7">
-              {item.icon && (
-                <span
-                  className={cn("mb-5 inline-grid h-12 w-12 place-items-center rounded-2xl", tone.softBg, tone.text)}
-                >
-                  {item.icon}
-                </span>
-              )}
-              <h3 className="font-display text-text-primary text-xl leading-6 font-normal">{item.title}</h3>
-              <p className="text-text-secondary mt-2.5 text-base leading-6">{item.body}</p>
-              {item.link && (
-                <Link
-                  href={item.link.href}
-                  className={cn("mt-4 inline-flex items-center gap-1.5 text-sm font-bold", tone.text)}
-                >
-                  {item.link.label}
-                  <NiArrowRight size="small" />
-                </Link>
-              )}
-            </article>
-          );
-        })}
+        {items.map((item) => (
+          <RuledCard key={item.title} item={item} />
+        ))}
       </Reveal>
     );
   }

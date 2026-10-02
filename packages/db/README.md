@@ -30,6 +30,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0019_launch` | after the baseline: the public site's launch stage (`waitlist` until the kit is on sale) and the operating company shown in the footer |
 | `0020_coupon_redemption` | coupon uses counted atomically per purchase (`redeem_coupon`), kit and split purchases included |
 | `0021_admin_consoles` | what the phase 6 consoles read: payers per currency in the weekly segment report, catalog usage per module and version (`admin_catalog_stats`), meeting registrants (`admin_meeting_registrants`) |
+| `0022_tracking_terms` | version 2 of the privacy and cookie policies, in both languages: the Pixel and GA4 also load in the member area (version 1 switched off, never edited) |
 
 ## Conventions every migration follows
 

@@ -27,7 +27,7 @@ export default function Cta({
   title: string;
   subtitle?: string;
   cta: { label: string; href: string };
-  /** Deep variant only: subordinate text link beside the button ("Ver demonstração"). */
+  /** Subordinate text link beside the button ("Voltar aos apps", "Fale com a gente"). */
   secondaryCta?: { label: string; href: string };
   /** Deep variant only: short risk-reducing reassurances under the actions. */
   points?: string[];
@@ -99,16 +99,19 @@ export default function Cta({
             {kicker && <p className="text-primary font-mono text-xs tracking-widest uppercase">{kicker}</p>}
             <h2 className="font-display text-display-lg text-text-primary max-w-2xl font-bold">{title}</h2>
             {subtitle && <p className="text-text-secondary max-w-xl text-lg leading-6">{subtitle}</p>}
-            <Button
-              size="large"
-              variant="contained"
-              color="primary"
-              href={cta.href}
-              LinkComponent={Link}
-              className="mt-2"
-            >
-              {cta.label}
-            </Button>
+            <div className="mt-2 flex flex-col items-center gap-4 sm:flex-row">
+              <Button size="large" variant="contained" color="primary" href={cta.href} LinkComponent={Link}>
+                {cta.label}
+              </Button>
+              {secondaryCta && (
+                <Link
+                  href={secondaryCta.href}
+                  className="text-text-primary border-text-primary/30 hover:border-text-primary border-b pb-0.5 text-sm font-semibold transition-colors"
+                >
+                  {secondaryCta.label}
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </Reveal>

@@ -32,7 +32,7 @@ for (const route of routes) {
       // Emulating the OS color scheme is the supported way to render dark.
       if (dark) await page.emulateMedia({ colorScheme: "dark" });
       await page.goto(BASE + route, { waitUntil: "networkidle" });
-      // Scroll the full page in steps so every ScrollTrigger reveal fires, then return to top.
+      // Scroll the full page in steps so every reveal fires, then return to top.
       await page.evaluate(async () => {
         for (let y = 0; y < document.body.scrollHeight; y += 400) {
           window.scrollTo(0, y);

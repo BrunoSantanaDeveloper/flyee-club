@@ -5,6 +5,14 @@ const withNextIntl = createNextIntlPlugin();
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Metadata always in <head>, for every user agent. By default Next streams
+  // it into the <body> for browsers and for Googlebot and keeps it in <head>
+  // only for link-preview bots; a canonical or hreflang link outside <head>
+  // counts for a search engine only if it renders the page, and audits read
+  // the page as having no description. The public pages are rendered whole
+  // before the first byte (no loading boundary above them), so this delays
+  // nothing.
+  htmlLimitedBots: /.*/,
   // Vercel's default build container is 8 GB. This app is large (MUI X Premium,
   // many admin/marketing routes), and parallel static-generation workers
   // collectively exhausted the container (SIGKILL / OOM) after a successful

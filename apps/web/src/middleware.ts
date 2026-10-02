@@ -1,15 +1,21 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 
 import { DEFAULTS } from "@/config";
 import { COOKIE_KEYS } from "@/constants";
 import { localizeHref, matchPublicPath, routing } from "@/i18n/routing";
-import { ATTRIBUTION_COOKIE_MAX_AGE, encodeAttribution, readAttributionFromUrl } from "@/lib/attribution";
+import {
+  ATTRIBUTION_COOKIE_MAX_AGE,
+  decodeAttribution,
+  encodeAttribution,
+  readAttributionFromUrl,
+} from "@/lib/attribution";
 import { CURRENCY_COOKIE_MAX_AGE, CURRENCY_PARAM, normalizeCurrency } from "@/lib/billing-currency";
 import { encodeCampaignCookie, hasCampaign, LAST_CAMPAIGN_MAX_AGE, pickCampaignParams } from "@/lib/campaign-params";
-import { detectLocale, LOCALE_COOKIE_MAX_AGE } from "@/lib/locale-detection";
+import { detectLocale, isCrawler, LOCALE_COOKIE_MAX_AGE } from "@/lib/locale-detection";
 import { COUPON_COOKIE_MAX_AGE, COUPON_PARAM, normalizeCouponCode } from "@/lib/offer-link";
 import { sanitizeInternalNext } from "@/lib/safe-next";
+import { countSiteView, isSpeculativeLoad, viewDoor } from "@/lib/site-views";
 import { IMPERSONATION_MARKER_COOKIE, parseImpersonationMarker } from "@flyee/auth";
 import { updateSession } from "@flyee/auth/middleware";
 
@@ -88,7 +94,7 @@ const IMPERSONATION_READONLY_API: string[] = [];
 const isDocumentRequest = (request: NextRequest) =>
   request.method === "GET" && (request.headers.get("accept") ?? "").includes("text/html");
 
-export async function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest, event?: NextFetchEvent) {
   const { pathname, search } = request.nextUrl;
   const requestedPath = `${pathname}${search}`;
   const publicPage = matchPublicPath(pathname);
@@ -298,6 +304,29 @@ export async function middleware(request: NextRequest) {
     // request headers after updateSession rewrote them.
     const intlResponse = handleI18nRouting(request);
     for (const cookie of sessionResponse.cookies.getAll()) intlResponse.cookies.set(cookie);
+
+    // One visit of the entry doors table (/admin/metricas): a page load by a
+    // person who is not signed in. A redirect is not a view (its target is),
+    // and neither is a crawler or a browser prefetching ahead of a click.
+    // Counted after the response, so the page never waits on it.
+    const counts =
+      readsPublicPage &&
+      !user &&
+      !intlResponse.headers.get("location") &&
+      !isCrawler(request.headers.get("user-agent")) &&
+      !isSpeculativeLoad(request.headers);
+    if (counts && event) {
+      event.waitUntil(
+        countSiteView({
+          path: publicPage.internal,
+          origem: viewDoor(
+            request.nextUrl.searchParams.get("origem"),
+            decodeAttribution(request.cookies.get(COOKIE_KEYS.attribution)?.value),
+          ),
+          locale: publicPage.locale,
+        }),
+      );
+    }
     return withVisitCookies(intlResponse);
   }
 
