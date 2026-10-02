@@ -137,6 +137,45 @@ test("the confirmation link never leaves its token in the address", async ({ pag
   await expect(page.getByText("Este link expirou ou já foi usado.")).toBeVisible();
 });
 
+test("an unsubscribe link asks before acting and never leaves its token in the address", async ({ page, request }) => {
+  const token = "0b1c2d3e-4f50-4a61-8b72-9c8d7e6f5a4b";
+
+  // A member's link: the weekly summary, in Portuguese.
+  await page.goto(`/api/public/email/unsubscribe?k=m&t=${token}`);
+  await expect(page).toHaveURL(/\/descadastro$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Parar de receber as novidades?");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  const stop = page.getByRole("button", { name: "Parar de receber" });
+  await expect(stop).toBeVisible();
+  // No database in this run: the page says it could not, instead of claiming it did.
+  await stop.click();
+  await expect(page.getByText("Não foi possível concluir agora. Tente de novo em instantes.")).toBeVisible();
+
+  // A contact of the list, reading English: its own words, at the English address.
+  await page.goto(`/api/public/email/unsubscribe?k=l&t=${token}&l=en`);
+  await expect(page).toHaveURL(/\/en\/unsubscribe$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Leave the flyee.club list?");
+  await expect(page.getByRole("button", { name: "Leave the list" })).toBeVisible();
+
+  // A link that is not one of ours arms nothing, and disarms what was there.
+  await page.goto("/api/public/email/unsubscribe?k=m&t=not-a-token");
+  await expect(page).toHaveURL(/\/descadastro$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Este link expirou");
+  await expect(page.getByRole("button", { name: "Parar de receber" })).toHaveCount(0);
+
+  // The one-click post of a mail client answers by itself, never through sign-in.
+  const malformed = await request.post("/api/public/email/unsubscribe?k=m&t=not-a-token", { maxRedirects: 0 });
+  expect(malformed.status()).toBe(400);
+  const oneClick = await request.post(`/api/public/email/unsubscribe?k=m&t=${token}`, {
+    maxRedirects: 0,
+    form: { "List-Unsubscribe": "One-Click" },
+  });
+  // 503 here because this run has no database; with one it is 200.
+  expect(oneClick.status()).toBe(503);
+  expect(await oneClick.json()).toEqual({ error: "unavailable" });
+});
+
 test("legal pages render the terms in force or say they cannot", async ({ page }) => {
   for (const route of ["/legal/termos", "/en/legal/terms", "/legal/privacidade", "/legal/cookies"]) {
     await page.goto(route);
@@ -305,6 +344,7 @@ test("@a11y core entry and product routes have no critical axe violations", asyn
     "/catalogo",
     "/sobre",
     "/fundadores",
+    "/descadastro",
     "/legal/termos",
     "/inicio",
     "/settings/billing",

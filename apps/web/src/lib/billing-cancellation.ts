@@ -1,4 +1,5 @@
 import { revokeTokensIfAccessEnded, trackWorkspaceEvent } from "@/lib/billing-lifecycle";
+import { notifySubscriptionEnded } from "@/lib/billing-notices";
 import { createServiceClient } from "@flyee/auth/service";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
@@ -20,14 +21,17 @@ async function ensureFreeSubscription(supabase: ServiceClient, orgId: string) {
  * end has ended. Safe to retry because only live scheduled rows are selected.
  *
  * This is where a cancellation becomes real (docs/BILLING.md): the workspace
- * returns to the free plan, `subscription.canceled` is recorded, and the CLI
- * tokens are revoked only if nothing else (the kit) still grants access.
+ * returns to the free plan, `subscription.canceled` is recorded, the CLI
+ * tokens are revoked only if nothing else (the kit) still grants access, and
+ * the member is told what stays and what stops.
  */
 export async function settleDueBillingCancellations() {
   const supabase = createServiceClient();
   const { data: due, error } = await supabase
     .from("subscriptions")
-    .select("id, org_id, provider, provider_subscription_id, cancel_reason, plans(tier)")
+    .select(
+      "id, org_id, plan_id, provider, provider_subscription_id, cancel_reason, cancellation_requested_at, renews, current_period_end, plans(tier)",
+    )
     .eq("cancel_at_period_end", true)
     .in("status", ["trialing", "active", "past_due"])
     .lte("current_period_end", new Date().toISOString());
@@ -60,6 +64,14 @@ export async function settleDueBillingCancellations() {
           ...(tier ? { tier_from: tier } : {}),
         });
         await revokeTokensIfAccessEnded(supabase, subscription.org_id, "canceled");
+        // A purchase split into installments ends by itself when its period
+        // does; anything else scheduled to end was the member's own request.
+        await notifySubscriptionEnded(supabase, {
+          orgId: subscription.org_id,
+          planId: subscription.plan_id,
+          cause: subscription.renews === false && !subscription.cancellation_requested_at ? "term" : "requested",
+          endedAt: subscription.current_period_end,
+        });
       }
       settled += 1;
     } catch (settleError) {

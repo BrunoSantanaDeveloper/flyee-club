@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteMeeting, duplicateMeeting, setMeetingState } from "../../actions";
+import { deleteMeeting, duplicateMeeting, sendMeetingEmails, setMeetingState } from "../../actions";
 import MeetingFormDialog from "../../components/meeting-form-dialog";
 import { MEETING_TONE } from "../../components/meetings-admin-view";
 import { useRouter } from "next/navigation";
@@ -22,19 +22,58 @@ import NiUsers from "@/icons/nexture/ni-users";
 import { textOf } from "@/lib/admin/catalog";
 import { formatDateTime, formatNumber, formatPercent, ratio } from "@/lib/admin/format";
 import { labelOf, MEETING_PROVIDER_LABEL, MEETING_STATE_LABEL, SEGMENT_LABEL } from "@/lib/admin/labels";
-import { type MeetingDetail, type MeetingRegistrant, type MeetingResults, nextStates } from "@/lib/admin/meetings";
+import {
+  type MeetingDetail,
+  type MeetingEmails,
+  type MeetingRegistrant,
+  type MeetingResults,
+  nextStates,
+} from "@/lib/admin/meetings";
 import type { ConsoleState } from "@/lib/admin/session";
+import { MEETING_EMAIL_KINDS, type MeetingEmailKind, type MeetingEmailWindow } from "@/lib/meeting-email-kinds";
 
 export type MeetingAdminState = ConsoleState<{
   meeting: MeetingDetail | null;
   results: MeetingResults;
   registrants: MeetingRegistrant[];
+  emails: MeetingEmails;
 }>;
+
+/** The four messages of a meeting, as the operator reads them: what each is and when it goes out by itself. */
+const EMAIL_LABEL: Record<MeetingEmailKind, { label: string; when: string }> = {
+  confirmation: { label: "Confirmação da inscrição", when: "Sai na hora, para quem acabou de se inscrever." },
+  day: { label: "Lembrete de 24 horas", when: "Sai a partir de 24 horas antes do início." },
+  hour: { label: "Lembrete da última hora", when: "Sai nos 60 minutos antes do início." },
+  recording: { label: "Aviso da gravação", when: "Sai depois do encerramento, quando há link da gravação." },
+};
+
+/** Why a message cannot be sent right now, in the operator's words. */
+function emailClosedReason(kind: MeetingEmailKind, sendWindow: MeetingEmailWindow): string | null {
+  if (sendWindow.open) return null;
+  switch (sendWindow.why) {
+    case "no-date":
+      return "Defina a data do encontro.";
+    case "no-recording":
+      return "Cole o link da gravação.";
+    case "too-early":
+      return kind === "day" ? "Abre 24 horas antes do início." : "Abre 60 minutos antes do início.";
+    case "too-late":
+      return "A janela deste lembrete já passou.";
+    default:
+      return kind === "recording"
+        ? "Disponível depois de encerrar o encontro."
+        : kind === "hour"
+          ? "Disponível com as inscrições abertas ou ao vivo."
+          : "Disponível com as inscrições abertas.";
+  }
+}
 
 /**
  * One meeting: what members read, when it happens, the room link, and then
  * who registered and who came. The state buttons follow the order the operator
- * runs a meeting in: open registrations, go live, end, archive.
+ * runs a meeting in: open registrations, go live, end, archive. The e-mails
+ * card shows how far each message of the meeting has gone and lets the
+ * operator send one now, inside its window, to whoever has not received it.
  */
 export default function MeetingAdminView({ state, id }: { state: MeetingAdminState; id: string }) {
   const router = useRouter();
@@ -130,7 +169,7 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
     );
   }
 
-  const { meeting, results, registrants } = state;
+  const { meeting, results, registrants, emails } = state;
   const slugFrozen = Boolean(meeting.publishedAt) || registrants.length > 0;
   const canDelete = meeting.state === "rascunho" && !meeting.publishedAt && registrants.length === 0;
 
@@ -143,6 +182,28 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
       enqueueSnackbar(success, { variant: "success" });
       refresh();
     }
+  };
+
+  const sendEmails = async (kind: MeetingEmailKind) => {
+    setBusy(true);
+    const result = await sendMeetingEmails(meeting.id, kind);
+    setBusy(false);
+    if (!result.ok) {
+      enqueueSnackbar(result.error, { variant: "error" });
+      return;
+    }
+    const { queued, emailed } = result.data;
+    enqueueSnackbar(
+      queued
+        ? "Envio colocado na fila. Os números desta tela mudam em instantes."
+        : emailed === 0
+          ? "Ninguém a avisar agora: quem podia receber esta mensagem já recebeu."
+          : emailed === 1
+            ? "1 e-mail enviado."
+            : `${formatNumber(emailed)} e-mails enviados.`,
+      { variant: queued || emailed > 0 ? "success" : "info" },
+    );
+    refresh();
   };
 
   const duplicate = async () => {
@@ -253,6 +314,52 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
             <Typography variant="body2" className="text-text-secondary">
               “Entrar” é o clique que abre a sala pela plataforma. Quanto tempo cada pessoa ficou, a plataforma não
               sabe: a sala é de outra ferramenta.
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <Card component="section" aria-labelledby="meeting-emails-title">
+          <CardContent className="flex flex-col gap-4">
+            <Typography id="meeting-emails-title" variant="h6" component="h2" className="mb-0">
+              E-mails
+            </Typography>
+            <MetricBars
+              spacing="dense"
+              total={results.registered}
+              items={MEETING_EMAIL_KINDS.map((kind) => {
+                const closed = emailClosedReason(kind, emails[kind].window);
+                const everyone = results.registered > 0 && emails[kind].sent >= results.registered;
+                return {
+                  key: kind,
+                  label: EMAIL_LABEL[kind].label,
+                  value: emails[kind].sent,
+                  hint: EMAIL_LABEL[kind].when,
+                  action: (
+                    <>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="grey"
+                        disabled={busy || closed !== null || results.registered === 0 || everyone}
+                        onClick={() => sendEmails(kind)}
+                        aria-label={`Enviar agora: ${EMAIL_LABEL[kind].label}`}
+                      >
+                        Enviar agora
+                      </Button>
+                      {closed || everyone ? (
+                        <Typography variant="body2" className="text-text-secondary">
+                          {closed ?? "Todos já receberam."}
+                        </Typography>
+                      ) : null}
+                    </>
+                  ),
+                };
+              })}
+            />
+            <Typography variant="body2" className="text-text-secondary">
+              O número é quantas pessoas inscritas já receberam cada mensagem. Cada uma vai uma só vez por pessoa, no
+              idioma e no fuso de quem recebe, e sai sozinha na hora indicada. “Enviar agora” escreve só para quem ainda
+              não recebeu.
             </Typography>
           </CardContent>
         </Card>

@@ -53,7 +53,7 @@ Money page first. Terms are used naturally, never stuffed.
 | `/espera` · `/en/waitlist` | brand + "lista de espera" | brand + "waitlist" | pre-launch capture |
 | `/legal/*` | none — not a ranking target | none | trust / compliance |
 
-**Not indexed** (`noindex`, out of the sitemap, named in its exclusion comment): `/espera/confirmar` (a one-time confirmation link), `/verificar/<module>@<version>` (a checksum lookup reached from the CLI and the module pages) and the campaign pages of `app/[locale]/(funil)/` (`/fundadores`), reached by the link the operator sends. Indexing is decided by each page's `metadata` + `sitemap.ts`, never by the route group.
+**Not indexed** (`noindex`, out of the sitemap, named in its exclusion comment): `/espera/confirmar` (a one-time confirmation link), `/descadastro` (reached only from the unsubscribe link of an e-mail), `/verificar/<module>@<version>` (a checksum lookup reached from the CLI and the module pages) and the campaign pages of `app/[locale]/(funil)/` (`/fundadores`), reached by the link the operator sends. Indexing is decided by each page's `metadata` + `sitemap.ts`, never by the route group.
 
 **Structured data notes:** inner pages emit `BreadcrumbList`; the pricing section emits `Product`/`Offer` from real plans (the list price, never a campaign price); FAQ sections emit `FAQPage`. Never mark up ratings, reviews, member counts or availability that are not published.
 

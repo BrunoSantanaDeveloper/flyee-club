@@ -1,6 +1,7 @@
 "use client";
 
-import { exportSubscribedLeads, optOutLead, purgeLead } from "../actions";
+import { exportSubscribedLeads, optOutLead, purgeLead, resumeNewsletter } from "../actions";
+import NewsletterDialog from "./newsletter-dialog";
 import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { useCallback, useMemo, useState } from "react";
@@ -19,13 +20,24 @@ import NiBinEmpty from "@/icons/nexture/ni-bin-empty";
 import NiClock from "@/icons/nexture/ni-clock";
 import NiEmail from "@/icons/nexture/ni-email";
 import NiEmailOpen from "@/icons/nexture/ni-email-open";
+import NiSendRight from "@/icons/nexture/ni-send-right";
 import NiUserMinus from "@/icons/nexture/ni-user-minus";
+import { textOf } from "@/lib/admin/catalog";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/admin/format";
 import { labelOf, LEAD_SOURCE_LABEL, LOCALE_LABEL, SEGMENT_LABEL } from "@/lib/admin/labels";
 import { type AdminLead, LEAD_STATUS_LABEL, type LeadStatus, leadStatus } from "@/lib/admin/leads";
+import { NEWSLETTER_STATUS_LABEL, type NewsletterSend, type NewsletterStatus } from "@/lib/admin/newsletter";
 import type { ConsoleState } from "@/lib/admin/session";
 
-export type LeadsState = ConsoleState<{ leads: AdminLead[] }>;
+export type LeadsState = ConsoleState<{ leads: AdminLead[]; sends: NewsletterSend[] }>;
+
+/** A send that stopped is something to act on, not a failure of the product: attention, never red. */
+const SEND_TONE: Record<NewsletterStatus, StatusTone> = {
+  queued: "info",
+  sending: "info",
+  sent: "positive",
+  failed: "attention",
+};
 
 type Filter = "all" | LeadStatus;
 
@@ -66,19 +78,27 @@ const FILTERS: { key: Filter; label: string; hint: string; icon: React.ReactNode
 
 /**
  * The people who left an e-mail before having an account: the waitlist and the
- * newsletter. The operator comes to see how the list grows, to export who may
- * be mailed, and to act on a person's request (stop mailing, erase).
+ * newsletter. The operator comes to see how the list grows, to write to who
+ * confirmed, to export who may be mailed, and to act on a person's request
+ * (stop mailing, erase).
+ *
+ * `canSend` is whether this environment has an e-mail provider: without one
+ * the list can still be read and exported, and the screen says why it cannot
+ * be written to.
  */
-export default function LeadsView({ state }: { state: LeadsState }) {
+export default function LeadsView({ state, canSend }: { state: LeadsState; canSend: boolean }) {
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [purging, setPurging] = useState<AdminLead | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const [resuming, setResuming] = useState<string | null>(null);
   const refresh = useCallback(() => router.refresh(), [router]);
 
   const leads = useMemo(() => (state.kind === "ready" ? state.leads : []), [state]);
+  const sends = useMemo(() => (state.kind === "ready" ? state.sends : []), [state]);
   const counts = useMemo(() => {
     const result: Record<Filter, number> = { all: leads.length, subscribed: 0, pending: 0, opted_out: 0 };
     for (const lead of leads) result[leadStatus(lead)] += 1;
@@ -100,6 +120,22 @@ export default function LeadsView({ state }: { state: LeadsState }) {
     },
     [enqueueSnackbar, refresh],
   );
+
+  const resume = async (send: NewsletterSend) => {
+    setResuming(send.id);
+    const result = await resumeNewsletter(send.id);
+    setResuming(null);
+    if (!result.ok) enqueueSnackbar(result.error, { variant: "error" });
+    else {
+      enqueueSnackbar(
+        result.data.queued
+          ? "Envio retomado na fila. Só quem ainda não recebeu é avisado."
+          : "Envio retomado. Recarregue em instantes para ver o andamento.",
+        { variant: "success" },
+      );
+      refresh();
+    }
+  };
 
   const exportCsv = async () => {
     setExporting(true);
@@ -220,11 +256,11 @@ export default function LeadsView({ state }: { state: LeadsState }) {
         state.kind === "ready" ? (
           <Button
             variant="contained"
-            startIcon={<NiArrowInDown size="medium" />}
-            onClick={exportCsv}
-            disabled={exporting || counts.subscribed === 0}
+            startIcon={<NiSendRight size="medium" />}
+            onClick={() => setWriting(true)}
+            disabled={!canSend || counts.subscribed === 0}
           >
-            {exporting ? "Exportando…" : "Exportar confirmados (CSV)"}
+            Escrever para a lista
           </Button>
         ) : undefined
       }
@@ -281,12 +317,88 @@ export default function LeadsView({ state }: { state: LeadsState }) {
         </Box>
       </Grid>
 
+      {!canSend ? (
+        <Grid size={12}>
+          <Alert severity="warning" className="neutral bg-background-paper/60!">
+            Este ambiente não tem provedor de e-mail configurado (RESEND_API_KEY): a lista pode ser lida e exportada,
+            mas não dá para escrever para ela por aqui.
+          </Alert>
+        </Grid>
+      ) : null}
+
+      {sends.length > 0 ? (
+        <Grid size={12}>
+          <Card component="section" aria-labelledby="leads-sends-title">
+            <CardContent className="flex flex-col gap-3">
+              <Typography id="leads-sends-title" variant="h6" component="h2" className="mb-0">
+                Mensagens para a lista
+              </Typography>
+              <Box component="ul" className="m-0 flex list-none flex-col p-0">
+                {sends.map((send) => (
+                  <Box
+                    component="li"
+                    key={send.id}
+                    className="border-grey-100 flex flex-col gap-2 border-b py-3 last:border-b-0 md:flex-row md:items-center md:gap-4"
+                  >
+                    <Box className="flex min-w-0 flex-1 flex-col">
+                      <Typography variant="subtitle2" component="span" className="truncate">
+                        {textOf(send.subject, "Sem assunto")}
+                      </Typography>
+                      <Typography variant="body2" className="text-text-secondary">
+                        {formatDateTime(send.createdAt)}
+                        {" · "}
+                        {send.source ? `só ${labelOf(LEAD_SOURCE_LABEL, send.source)}` : "todos os confirmados"}
+                        {send.status === "failed" && send.lastError ? ` · parou em: ${send.lastError}` : ""}
+                      </Typography>
+                    </Box>
+                    <Box className="flex flex-none flex-row flex-wrap items-center gap-2">
+                      <StatusChip label={NEWSLETTER_STATUS_LABEL[send.status]} tone={SEND_TONE[send.status]} />
+                      <Typography variant="body2" className="text-text-secondary tabular-nums">
+                        {send.delivered === 1 ? "1 entregue" : `${formatNumber(send.delivered)} entregues`}
+                      </Typography>
+                      {send.status !== "sent" ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="grey"
+                          disabled={!canSend || resuming !== null}
+                          onClick={() => resume(send)}
+                          aria-label={`Retomar envio: ${textOf(send.subject, "sem assunto")}`}
+                        >
+                          {resuming === send.id ? "Retomando…" : "Retomar envio"}
+                        </Button>
+                      ) : null}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+              <Typography variant="body2" className="text-text-secondary">
+                Retomar continua de onde o envio parou: quem já recebeu não recebe de novo.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      ) : null}
+
       <Grid size={12}>
         <Alert severity="info" className="neutral bg-background-paper/60!">
           O consentimento destes contatos cobre e-mails de novidades enviados pela Resend: lançamentos, mudanças nas IAs
-          e convites para encontros. Por isso a exportação traz só os confirmados que não se descadastraram, no formato
-          de importação de contatos da Resend. Ele não cobre públicos de anúncio: não use esta lista em Meta, Google ou
-          outra rede.
+          e convites para encontros. Por isso o envio e a exportação alcançam só os confirmados que não se
+          descadastraram; o CSV sai no formato de importação de contatos da Resend. Ele não cobre públicos de anúncio:
+          não use esta lista em Meta, Google ou outra rede.
+          {/* Under the text, not beside it: on a phone a button in the alert's action slot leaves the text a column a few words wide. */}
+          <Box className="mt-3">
+            <Button
+              variant="outlined"
+              color="grey"
+              size="small"
+              startIcon={<NiArrowInDown size="medium" />}
+              onClick={exportCsv}
+              disabled={exporting || counts.subscribed === 0}
+            >
+              {exporting ? "Exportando…" : "Exportar confirmados (CSV)"}
+            </Button>
+          </Box>
         </Alert>
       </Grid>
 
@@ -330,6 +442,22 @@ export default function LeadsView({ state }: { state: LeadsState }) {
           </CardContent>
         </Card>
       </Grid>
+
+      {writing ? (
+        <NewsletterDialog
+          onClose={() => setWriting(false)}
+          onSent={(queued) => {
+            setWriting(false);
+            enqueueSnackbar(
+              queued
+                ? "Envio colocado na fila. O andamento aparece em Mensagens para a lista."
+                : "Envio iniciado. Recarregue em instantes para ver o andamento.",
+              { variant: "success" },
+            );
+            refresh();
+          }}
+        />
+      ) : null}
 
       {purging ? (
         <ConfirmActionDialog

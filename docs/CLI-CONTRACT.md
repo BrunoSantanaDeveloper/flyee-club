@@ -108,6 +108,7 @@ Resposta de sucesso do endpoint de token:
 - Refresh expirado ou revogado responde `invalid_grant` com `error_uri` apontando para `/revalidar?d=<device_id>`. A CLI mostra o link e recomeça o login (2.1), que abre a tela de revalidação.
 - Reapresentar um refresh já girado revoga a família inteira daquele computador (reuso de token roubado). Duas renovações simultâneas com o mesmo refresh caem nesse caso: a CLI deve serializar a renovação.
 - `GET /api/cli/me` devolve `token.days_until_revalidation`. A partir de 5 dias, a CLI avisa que é hora de atualizar.
+- A plataforma avisa por conta própria, porque um computador parado não roda a CLI: cerca de 5 dias antes de a conexão vencer, o integrante recebe um aviso no sino do painel e um e-mail com o comando `npx flyee update`, uma vez por vencimento (`lib/token-jobs.ts`). Renovar a conexão zera a contagem, e o aviso volta a valer para o vencimento seguinte.
 - Um novo login no mesmo computador revoga a família anterior dele.
 
 ### 2.4 Logout

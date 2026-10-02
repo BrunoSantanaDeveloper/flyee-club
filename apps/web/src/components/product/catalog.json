@@ -33,7 +33,7 @@
     {
       "name": "MetricBars",
       "from": "@/components/product/metric-bars",
-      "props": "items[{key,label,value,tone?,hint?}], total?, spacing?",
+      "props": "items[{key,label,value,tone?,hint?,action?}], total?, spacing?",
       "use": "Two to six counters that describe one population (a status funnel, accepted/edited/rejected, failures by stage). Replaces a sentence of counts. Port of the template's Application Status."
     },
     {

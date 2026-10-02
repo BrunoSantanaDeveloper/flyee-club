@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { Box, Chip, Typography } from "@mui/material";
 
 import { cn } from "@/lib/utils";
@@ -19,6 +21,12 @@ export type MetricBarItem = {
   tone?: MetricBarTone;
   /** Optional one-line note under the label (whose side the queue is on). */
   hint?: string;
+  /**
+   * Optional control that acts on this part, under its bar (e.g. "send now" to
+   * the people a count has not reached). One per row at most: a row is a
+   * counter first.
+   */
+  action?: ReactNode;
 };
 
 const BAR_TONE: Record<MetricBarTone, string> = {
@@ -86,6 +94,7 @@ export default function MetricBars({
                 style={{ width: `${item.value > 0 ? Math.max(1, share) : 0}%` }}
               />
             </Box>
+            {item.action ? <Box className="flex flex-row flex-wrap items-center gap-2">{item.action}</Box> : null}
           </Box>
         );
       })}

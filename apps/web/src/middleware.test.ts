@@ -125,6 +125,39 @@ describe("middleware: locale routing of the public site", () => {
   });
 });
 
+describe("middleware: what a person reaches from an e-mail", () => {
+  const LINK = "/api/public/email/unsubscribe?k=m&t=0b1c2d3e-4f50-4a61-8b72-9c8d7e6f5a4b";
+
+  it("lets the unsubscribe address through without a session, as a link and as a one-click post", async () => {
+    const followed = await middleware(request(LINK));
+    expect(followed.headers.get("location")).toBeNull();
+    const posted = await middleware(
+      new NextRequest(new URL(LINK, "http://localhost"), {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "List-Unsubscribe=One-Click",
+      }) as never,
+    );
+    expect(posted.headers.get("location")).toBeNull();
+  });
+
+  it("serves the page the link lands on in both languages", async () => {
+    const portuguese = await middleware(request("/descadastro"));
+    expect(pathOf(portuguese.headers.get("x-middleware-rewrite"))).toBe("/pt-BR/descadastro");
+    const english = await middleware(request("/en/unsubscribe"));
+    expect(pathOf(english.headers.get("x-middleware-rewrite"))).toBe("/en/descadastro");
+    // The English address typed without its prefix still reads English.
+    expect(pathOf((await middleware(request("/unsubscribe"))).headers.get("location"))).toBe("/en/unsubscribe");
+  });
+
+  it("opens nothing else under /api to a visitor without a session", async () => {
+    for (const closed of ["/api/admin/insights", "/api/billing/providers", "/api/publicity"]) {
+      const response = await middleware(request(closed));
+      expect(pathOf(response.headers.get("location")), closed).toBe("/auth/sign-in");
+    }
+  });
+});
+
 describe("middleware: visits of the entry doors table", () => {
   const BROWSER = { ...DOCUMENT, "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0" };
   const views: { path: string; origem: string | null; locale: string }[] = [];

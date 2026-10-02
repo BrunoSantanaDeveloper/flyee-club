@@ -3,11 +3,25 @@ import { EventSchemas, Inngest } from "inngest";
 /**
  * Platform-wide event map. Packages and apps/web declare their events here so
  * every `inngest.send` and function trigger stays typed. flyee.club events use
- * the `flyee/` prefix (phase 8 of docs/PLANO-IMPLEMENTACAO.md adds them).
+ * the `flyee/` prefix; the functions they start live in apps/web/src/lib/*-jobs.ts.
  */
 export type JobEvents = {
   /** Run a logical database backup now (@flyee/backup); also fires on a daily cron. */
   "backup/run.requested": { data: Record<string, never> };
+  /**
+   * Send one message of a live session (confirmation, day or hour reminder,
+   * recording) to whoever has not received it yet; `userId` narrows it to the
+   * person who just registered. Also fires from a 10-minute cron.
+   */
+  "flyee/meeting.email": {
+    data: { meetingId: string; kind: "confirmation" | "day" | "hour" | "recording"; userId?: string };
+  };
+  /** Send the weekly summary of new versions now; also fires on a weekly cron. */
+  "flyee/updates.digest": { data: Record<string, never> };
+  /** Remind the machines whose connection is about to expire now; also fires on a daily cron. */
+  "flyee/token.reminder": { data: Record<string, never> };
+  /** Deliver a message the operator wrote to the confirmed list (newsletter_sends). */
+  "flyee/newsletter.send": { data: { sendId: string } };
 };
 
 export const isInngestConfigured = Boolean(process.env.INNGEST_EVENT_KEY && process.env.INNGEST_SIGNING_KEY);

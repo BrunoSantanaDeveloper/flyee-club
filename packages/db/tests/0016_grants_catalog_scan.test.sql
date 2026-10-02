@@ -98,6 +98,7 @@ select is(
     'billing_webhook_events',
     'lead_submissions',
     'meta_attribution',
+    'newsletter_deliveries',
     'oauth_device_codes',
     'oauth_grants'
   ],

@@ -454,6 +454,7 @@ export const subscriptions = pgTable("subscriptions", {
 	billingOperationId: uuid("billing_operation_id"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	termNoticeSentAt: timestamp("term_notice_sent_at", { withTimezone: true, mode: 'string' }),
 }, (table) => [
 	uniqueIndex("subscriptions_billing_operation_unique_idx").using("btree", table.billingOperationId.asc().nullsLast().op("uuid_ops")).where(sql`(billing_operation_id IS NOT NULL)`),
 	index("subscriptions_cancellation_due_idx").using("btree", table.currentPeriodEnd.asc().nullsLast().op("timestamptz_ops")).where(sql`((cancel_at_period_end = true) AND (status = ANY (ARRAY['trialing'::subscription_status, 'active'::subscription_status, 'past_due'::subscription_status])))`),
@@ -1536,6 +1537,33 @@ export const meetingRegistrations = pgTable("meeting_registrations", {
 	pgPolicy("meeting_registrations_select_superadmin", { as: "permissive", for: "select", to: ["authenticated"] }),
 ]);
 
+export const newsletterSends = pgTable("newsletter_sends", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	subject: jsonb().notNull(),
+	bodyMd: jsonb("body_md").notNull(),
+	source: text(),
+	status: text().default('queued').notNull(),
+	delivered: integer().default(0).notNull(),
+	lastError: text("last_error"),
+	createdBy: uuid("created_by"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	startedAt: timestamp("started_at", { withTimezone: true, mode: 'string' }),
+	finishedAt: timestamp("finished_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [profiles.id],
+			name: "newsletter_sends_created_by_fkey"
+		}).onDelete("set null"),
+	pgPolicy("newsletter_sends_select_superadmin", { as: "permissive", for: "select", to: ["authenticated"], using: sql`is_superadmin()` }),
+	check("newsletter_sends_subject_check", sql`CHECK (i18n_ok(subject`),
+	check("newsletter_sends_body_md_check", sql`CHECK (i18n_ok(body_md`),
+	check("newsletter_sends_source_check", sql`(source IS NULL) OR (source = ANY (ARRAY['waitlist'::text, 'newsletter'::text, 'contact'::text, 'meeting'::text]))`),
+	check("newsletter_sends_status_check", sql`status = ANY (ARRAY['queued'::text, 'sending'::text, 'sent'::text, 'failed'::text])`),
+	check("newsletter_sends_delivered_check", sql`delivered >= 0`),
+	check("newsletter_sends_languages", sql`(subject <> '{}'::jsonb) AND (body_md <> '{}'::jsonb)`),
+]);
+
 export const aiSpend = pgTable("ai_spend", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	orgId: uuid("org_id"),
@@ -1613,6 +1641,25 @@ export const catalogRecipeModules = pgTable("catalog_recipe_modules", {
    FROM catalog_recipes r
   WHERE ((r.id = catalog_recipe_modules.recipe_id) AND (r.status = 'published'::text))))` }),
 	pgPolicy("catalog_recipe_modules_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"] }),
+]);
+
+export const newsletterDeliveries = pgTable("newsletter_deliveries", {
+	sendId: uuid("send_id").notNull(),
+	leadId: uuid("lead_id").notNull(),
+	claimedAt: timestamp("claimed_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("newsletter_deliveries_lead_idx").using("btree", table.leadId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.sendId],
+			foreignColumns: [newsletterSends.id],
+			name: "newsletter_deliveries_send_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.leadId],
+			foreignColumns: [leads.id],
+			name: "newsletter_deliveries_lead_id_fkey"
+		}).onDelete("cascade"),
+	primaryKey({ columns: [table.sendId, table.leadId], name: "newsletter_deliveries_pkey"}),
 ]);
 
 export const roadmapVotes = pgTable("roadmap_votes", {

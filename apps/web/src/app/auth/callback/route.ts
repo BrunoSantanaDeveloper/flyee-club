@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { DEFAULTS } from "@/config";
 import { COOKIE_KEYS } from "@/constants";
@@ -10,6 +10,7 @@ import { getGaClientId, getMetaClientContext } from "@/lib/meta-capi-context";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
 import { sanitizeInternalNext } from "@/lib/safe-next";
 import { persistSignupAttribution } from "@/lib/signup-attribution";
+import { isNewAccount, welcomeOnce } from "@/lib/welcome";
 import { createClient } from "@flyee/auth/server";
 
 /** A brand-new account confirms within minutes; a returning session (e.g. a
@@ -57,6 +58,13 @@ export async function GET(request: Request) {
             eventId: data.user.id,
             params: { method: "email" },
           });
+        }
+        // The welcome (bell and e-mail) of a new account, once: its own key
+        // keeps a second link or another browser from repeating it. Sent after
+        // the redirect is on its way, so the member never waits on it.
+        if (isNewAccount(data.user.created_at)) {
+          const newMember = data.user.id;
+          after(() => welcomeOnce(newMember));
         }
         // OAuth is sign-in AND sign-up. The handle_new_user trigger creates the
         // personal workspace for every new account, Google/GitHub included, so

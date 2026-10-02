@@ -13,8 +13,10 @@ export type AdminWeeklyDigestEmailProps = {
   appUrl: string;
 };
 
-const cell = { color: "#3d3d3d", fontSize: 13, padding: "6px 8px", textAlign: "right" as const, whiteSpace: "nowrap" as const };
-const head = { ...cell, color: "#6b6b6b", fontWeight: 600 };
+// Values keep to one line, headers may wrap: six columns have to fit a phone
+// without the message scrolling sideways (mail clients ignore overflow rules).
+const cell = { color: "#3d3d3d", fontSize: 13, padding: "6px 4px", textAlign: "right" as const, whiteSpace: "nowrap" as const };
+const head = { ...cell, color: "#6b6b6b", fontSize: 12, fontWeight: 600, whiteSpace: "normal" as const, verticalAlign: "bottom" as const };
 
 /**
  * The operator's Monday digest: last week's focus metrics per segment, the
@@ -30,19 +32,19 @@ const head = { ...cell, color: "#6b6b6b", fontWeight: 600 };
  */
 export default function AdminWeeklyDigestEmail({ headline, focus, rows, attention, appUrl }: AdminWeeklyDigestEmailProps) {
   return (
-    <Html>
+    <Html lang="pt-BR">
       <Head />
       <Preview>{headline}</Preview>
       <Body style={{ backgroundColor: "#faf8f5", fontFamily: "Arial, Helvetica, sans-serif", margin: 0 }}>
         <Container
-          style={{ backgroundColor: "#ffffff", borderRadius: 16, margin: "40px auto", maxWidth: 640, padding: 32 }}
+          style={{ backgroundColor: "#ffffff", borderRadius: 16, margin: "24px auto", maxWidth: 640, padding: 16 }}
         >
-          <Heading as="h2" style={{ color: "#3d3d3d", fontSize: 20, marginBottom: 8 }}>
+          <Heading as="h1" style={{ color: "#3d3d3d", fontSize: 20, marginBottom: 8 }}>
             {headline}
           </Heading>
           <Text style={{ color: "#4d4d4d", fontSize: 14, lineHeight: "22px" }}>{focus}</Text>
 
-          <Section style={{ margin: "16px 0", overflowX: "auto" }}>
+          <Section style={{ margin: "16px 0" }}>
             <table cellPadding={0} cellSpacing={0} style={{ borderCollapse: "collapse", width: "100%" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #e8e8e8" }}>
@@ -67,7 +69,7 @@ export default function AdminWeeklyDigestEmail({ headline, focus, rows, attentio
                 ))}
               </tbody>
             </table>
-            <Text style={{ color: "#777777", fontSize: 12, lineHeight: "18px", margin: "8px 0 0" }}>
+            <Text style={{ color: "#6b6b6b", fontSize: 12, lineHeight: "18px", margin: "8px 0 0" }}>
               † Janela ainda aberta: o número pode crescer. “Outro” e “não informado” ficam fora da regra de foco.
             </Text>
           </Section>
@@ -103,7 +105,7 @@ export default function AdminWeeklyDigestEmail({ headline, focus, rows, attentio
             </Button>
           </Section>
           <Hr style={{ borderColor: "#e8e8e8", margin: "24px 0" }} />
-          <Text style={{ color: "#999999", fontSize: 12, lineHeight: "18px" }}>
+          <Text style={{ color: "#6b6b6b", fontSize: 12, lineHeight: "18px" }}>
             Aviso interno da plataforma, enviado às segundas e só quando a semana teve algo.
           </Text>
         </Container>

@@ -109,8 +109,8 @@ Operação:
 | --- | --- |
 | `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` / `ASAAS_BASE_URL` | cobrança em BRL (produção: `https://api.asaas.com/v3`) |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | cobrança em USD |
-| `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | jobs em background (sem elas tudo cai para processamento inline) |
-| `RESEND_API_KEY` / `EMAIL_FROM` | e-mail transacional (sem elas os envios caem para o fallback de cada chamada). **Obrigatórias para a lista de espera**: sem o e-mail de confirmação ninguém confirma, e o formulário responde que a lista está fora do ar |
+| `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | jobs em background. Sem elas o que parte de uma ação roda no próprio pedido, mas nada agendado roda (lembretes, resumos, encerramento de assinaturas, limpeza): obrigatórias em produção |
+| `RESEND_API_KEY` / `EMAIL_FROM` | e-mails do app (sem elas os avisos ficam só no sino do painel). **Obrigatórias para a lista de espera**: sem o e-mail de confirmação ninguém confirma, e o formulário responde que a lista está fora do ar. Ver "E-mails e jobs" |
 | `CONTACT_FORM_TO` | destino do formulário de contato |
 | `PUBLIC_FORMS_IP_SALT` | segredo da janela por rede da lista de espera (HMAC do IP). Sem ele não há limite por rede |
 | `ANTHROPIC_API_KEY` ou `GEMINI_API_KEY` ou `OPENROUTER_API_KEY` | opcional: provedor do `/admin/insights`, custo do operador |
@@ -161,8 +161,8 @@ cadastro continuam acessíveis, só não aparecem nos botões.
 
 1. **Banco.** Com o `apps/web/.env.local` apontando para o projeto Supabase novo
    do flyee.club, rode `npm run db:plan:remote` (dry-run) e depois
-   `npm run db:gate:remote`, que aplica `0000`–`0019` num projeto vazio e roda o
-   pgTAP. O gate recusa um banco que ele não construiu.
+   `npm run db:gate:remote`, que aplica todas as migrações (`0000`–`0023`) num
+   projeto vazio e roda o pgTAP. O gate recusa um banco que ele não construiu.
 2. **Variáveis na Vercel**: as obrigatórias acima, mais `RESEND_API_KEY` e
    `EMAIL_FROM` com o domínio verificado no Resend, `PUBLIC_FORMS_IP_SALT` e as
    duas chaves do Inngest. O job diário `flyee-purge-expired-leads` apaga em 7
@@ -185,11 +185,103 @@ cadastro continuam acessíveis, só não aparecem nos botões.
 6. **Smoke test.** Inscreva o seu e-mail em `/espera`, abra o link do e-mail,
    confirme no botão e veja "Pronto, você está na lista"; repita em
    `/en/waitlist`; confira `/legal/termos` com "Versão 1", a empresa no rodapé, e
-   `/sitemap.xml` com `/espera` e `/en/waitlist`. A inscrição aparece no
-   console de leads quando ele existir (fase 6); até lá, na tabela `leads`.
+   `/sitemap.xml` com `/espera` e `/en/waitlist`. A inscrição aparece em
+   `/admin/leads`.
 
 Quando o checkout do kit estiver testado (fase 4), volte a `/admin/support` e
 mude "Lançamento do site" para "Aberto".
+
+## E-mails e jobs
+
+A plataforma escreve para as pessoas por três caminhos, e cada um tem a sua
+configuração.
+
+### E-mails do app (Resend)
+
+Enviados pelo próprio app com `RESEND_API_KEY` e `EMAIL_FROM`: boas-vindas,
+recibo, confirmação e fim de assinatura, aviso de período pago terminando,
+lembrete de conexão, resumo semanal de versões novas, mensagens dos encontros,
+confirmação da lista de espera e mensagens para a lista. Os modelos e o texto
+nos dois idiomas ficam em `packages/email`; cada pessoa recebe no idioma do
+perfil (`profiles.locale`) ou da inscrição (`leads.locale`).
+
+- Sem `RESEND_API_KEY` nada quebra: os avisos continuam chegando pelo sino do
+  painel, e as telas que dependem de e-mail (lista de espera, "escrever para a
+  lista") dizem que o envio está fora do ar.
+- Os links dos e-mails usam `NEXT_PUBLIC_SITE_URL`. Sem ela, apontam para
+  `http://localhost:3000`.
+- O resumo semanal e as mensagens para a lista levam o link de descadastro no
+  corpo e no cabeçalho `List-Unsubscribe` (um clique). O endereço é
+  `/api/public/email/unsubscribe`, público por definição; quem clica no link
+  cai em `/descadastro` (ou `/en/unsubscribe`) e confirma em um botão.
+
+### E-mails de autenticação (Supabase Auth)
+
+Confirmação de cadastro, troca de senha e troca de e-mail são enviados pelo
+Supabase, não pelo app. Os modelos bilíngues estão em `supabase/templates/` e
+escolhem o idioma pelo `locale` gravado no cadastro (`{{ .Data.locale }}`;
+conta sem ele lê em português).
+
+1. **Authentication → Emails → SMTP Settings**: ligar o SMTP próprio com o
+   Resend (host `smtp.resend.com`, porta `465`, usuário `resend`, senha a
+   `RESEND_API_KEY`, remetente o mesmo endereço de `EMAIL_FROM`). Sem SMTP
+   próprio o Supabase limita os envios a poucos por hora.
+2. **Authentication → Sign In / Providers → Email**: ligar "Confirm email". É o
+   link de confirmação que leva a conta nova a `/auth/callback`, de onde saem o
+   aviso e o e-mail de boas-vindas.
+3. **Authentication → Emails → Templates**: colar o conteúdo de cada arquivo e
+   o assunto correspondente. O assunto vai nos dois idiomas porque é uma linha
+   só:
+
+   | Modelo no painel | Arquivo | Assunto |
+   | --- | --- | --- |
+   | Confirm signup | `supabase/templates/confirmation.html` | `Confirme seu e-mail no flyee.club / Confirm your email at flyee.club` |
+   | Reset password | `supabase/templates/recovery.html` | `Redefina sua senha do flyee.club / Reset your flyee.club password` |
+   | Change email address | `supabase/templates/email_change.html` | `Confirme seu novo e-mail no flyee.club / Confirm your new email at flyee.club` |
+
+   Os outros modelos do painel (convite, link mágico, reautenticação) não são
+   usados pelo app e ficam como estão.
+4. **Teste**: criar uma conta em `/auth/sign-up` com o site em português e outra
+   em `/en`, e conferir que cada confirmação chega no idioma certo. Estes
+   modelos são renderizados pelo Supabase e não passam pelos testes do
+   repositório: este teste manual é a verificação deles.
+
+O `supabase/config.toml` aponta para os mesmos arquivos, para quem ligar a
+confirmação por e-mail no Supabase local.
+
+### Jobs (Inngest)
+
+Depois de sincronizar o app em `https://<domínio>/api/inngest`, estas funções
+devem aparecer na lista:
+
+| Função | Quando | O que faz |
+| --- | --- | --- |
+| `flyee-meeting-emails-sweep` | a cada 10 minutos | lembretes dos encontros (24 horas e última hora) e aviso da gravação |
+| `flyee-meeting-email` | evento | confirmação de uma inscrição; botões "Enviar agora" de `/admin/encontros` |
+| `flyee-token-reminders` | todo dia, 10:00 de Brasília | lembrete da conexão que vence em até 5 dias |
+| `flyee-term-end-notices` | todo dia, 10:15 de Brasília | aviso de período pago (compra parcelada) que termina em até 15 dias |
+| `flyee-updates-digest` | terças, 10:00 de Brasília | resumo semanal de versões novas dos apps instalados |
+| `flyee-newsletter-send` | evento | entrega de uma mensagem para a lista, em lotes de 100 |
+| `flyee-maintenance` | todo dia, 01:30 de Brasília | consolida os eventos de uso do dia anterior e apaga o que venceu (eventos, trilha da CLI, sobras de login, uploads não concluídos) |
+| `flyee-settle-billing-cancellations` | a cada 15 minutos | encerra assinaturas cujo período acabou e avisa o integrante |
+| `flyee-billing-maintenance` | todo dia | reservas e checkouts abandonados |
+| `flyee-purge-expired-leads` | todo dia | apaga contatos não confirmados (7 dias) e descadastrados (6 meses) |
+| `admin-weekly-digest` | segundas, 08:30 de Brasília | resumo do operador |
+| `backup-run-cron` / `backup-run-manual` | todo dia / evento | backup lógico |
+
+`flyee-token-reminders-manual` e `flyee-updates-digest-manual` rodam as mesmas
+rotinas quando alguém dispara os eventos `flyee/token.reminder` e
+`flyee/updates.digest` pelo painel do Inngest.
+
+**Sem as chaves do Inngest**, o que parte de uma ação continua funcionando no
+próprio pedido (confirmação de inscrição em encontro, "Enviar agora", mensagem
+para a lista), mas **nada agendado roda**: lembretes, resumos, avisos de fim de
+período, encerramento de assinaturas e limpeza param. O Inngest é obrigatório
+em produção.
+
+Cada mensagem agendada é reservada no banco antes de ser enviada (migração
+`0023`), então uma função que roda duas vezes não escreve duas vezes para a
+mesma pessoa.
 
 ## Domínio — `flyee.club`
 

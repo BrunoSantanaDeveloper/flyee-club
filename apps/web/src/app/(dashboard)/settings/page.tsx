@@ -1,6 +1,7 @@
 "use client";
 
 import AccountCard from "./components/account-card";
+import EmailsCard from "./components/emails-card";
 import MemberCard from "./components/member-card";
 import ProfileCard from "./components/profile-card";
 import SettingsMenu from "./components/settings-menu";
@@ -16,8 +17,8 @@ import { isSupabaseConfigured } from "@flyee/auth";
 /**
  * The member's own account: who they are (name, photo) and how they sign in
  * (email, password), plus what the club tailors itself to: segment, AI tool,
- * language and timezone. Devices, billing and 2FA have their own pages in the
- * settings menu.
+ * language and timezone, and which e-mails they receive. Devices, billing and
+ * 2FA have their own pages in the settings menu.
  */
 export default function Settings() {
   const t = useTranslations("product");
@@ -75,6 +76,7 @@ export default function Settings() {
           <>
             <ProfileCard />
             <MemberCard />
+            <EmailsCard />
             <AccountCard />
           </>
         )}

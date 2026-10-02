@@ -145,8 +145,28 @@ Durante a carência de `past_due` (`platform_settings.dunning.grace_days`, 7 dia
 
 ## Inadimplência e Pix provisório
 
-- **Carência**: `platform_settings.dunning.grace_days`. A conta recebe aviso no sino, e `/settings/billing` mostra o botão de pagamento: o portal da Stripe, ou o link da fatura no Asaas.
+- **Carência**: `platform_settings.dunning.grace_days`. A conta recebe aviso no sino, com o prazo, e `/settings/billing` mostra o botão de pagamento: o portal da Stripe, ou o link da fatura no Asaas. Se o provedor encerrar a assinatura por falta de pagamento, o integrante recebe o e-mail de assinatura encerrada com esse motivo.
 - **Pix provisório**: `platform_settings.pix_provisional_access` (desligado no seed) libera o plano por algumas horas enquanto o Pix não confirma, uma vez por conta.
+
+## Avisos ao integrante
+
+Cada transição de cobrança é avisada no sino do painel e, quando faz sentido, por e-mail. Os avisos saem de `lib/billing-notices.ts`, chamados pelo webhook e pelos jobs, cada pessoa no idioma do próprio perfil. O sino alcança todos os integrantes da conta; o e-mail vai para quem a administra (dono e admins).
+
+| Momento | Sino | E-mail |
+|---|---|---|
+| Assinatura ativada | sim | confirmação com o que o plano libera, lido dos limites do plano |
+| Kit concedido | sim | recibo, com o prazo que a concessão tem (ou "sem prazo") e o aviso da nota fiscal em compras em real |
+| Pagamento falhou (entrou em carência) | sim | não: o provedor já escreve para o pagador |
+| Pagamento atrasado confirmado | sim | não |
+| Período pago que não renova termina em até 15 dias | sim, uma vez | sim, uma vez |
+| Assinatura encerrada | sim | sim: o que continua e o que deixa de chegar |
+
+- **Um plano é sempre chamado pelo nome que tem nos dados** (`plans.name`). Nenhum texto escreve "kit" ou "assinatura" por conta própria, então renomear um plano em `/admin/billing` muda os avisos junto.
+- **O que continua depois do fim** vem de `org_entitlements`, lido depois da mudança: quem tem o kit lê que o acesso à loja continua, quem não tem lê que as versões novas deixam de chegar. É a mesma resposta que a API da CLI usa.
+- **Por que acabou**: o e-mail diz se foi a pedido do integrante, por falta de pagamento ou porque o período pago terminou. Quando a linha não registra motivo (encerrada direto no provedor), o e-mail informa o fim sem atribuir motivo.
+- **Uma vez só**: o webhook e o job de liquidação encerram as mesmas assinaturas no mesmo instante. Só quem de fato tira a linha do estado vivo registra o evento e avisa. O aviso de fim de período é reservado no banco antes do envio (`claim_term_end_notices`, migração `0023`), e uma compra nova, que move o fim do período, libera o aviso de novo.
+- **Reembolso e estorno não geram e-mail**: são tratados pelo suporte, que já está em contato com a pessoa.
+- **Um aviso nunca derruba a conciliação**: as funções de aviso não lançam erro. Quando rodam, o banco já está certo, e um webhook que falhasse por causa de um sino seria reenviado pelo provedor e conciliaria tudo outra vez.
 
 ## Tokens da CLI
 
@@ -177,7 +197,7 @@ Os tokens da CLI só valem enquanto a conta tem `catalog_access`. Eles são revo
 | env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe (USD) |
 | env | `BILLING_PIX_ENABLED` | `false` desliga o Pix |
 
-Jobs no Inngest: liquidação de cancelamentos a cada 15 minutos e manutenção diária às 04:20 UTC (leases vencidos e checkouts abandonados).
+Jobs no Inngest: liquidação de cancelamentos a cada 15 minutos, manutenção diária às 04:20 UTC (leases vencidos e checkouts abandonados) e aviso de fim de período pago todo dia às 13:15 UTC.
 
 ## Consoles
 
@@ -187,7 +207,5 @@ Jobs no Inngest: liquidação de cancelamentos a cada 15 minutos e manutenção 
 ## Adiado e em aberto
 
 - **Proração e troca agendada**: a troca de plano hoje é um checkout novo que encerra o anterior, e a tela avisa que o período pago não é creditado. Uma troca agendada ganha colunas próprias quando for construída.
-- **Aviso de fim do anual parcelado** (15 dias antes): fica para a fase 8, com os demais e-mails.
-- **Avisos no sino em inglês**: os textos de cobrança do webhook ainda são só em português. A fase 8 os passa para o idioma de cada pessoa. O recibo do kit já é bilíngue.
 - **Reembolso parcial**: decidir se deve manter o acesso.
 - **Nota das vendas em dólar**: decisão contábil.

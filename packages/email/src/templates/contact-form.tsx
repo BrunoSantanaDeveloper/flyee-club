@@ -1,4 +1,6 @@
-import { Body, Container, Head, Heading, Hr, Html, Preview, Text } from "@react-email/components";
+import { Text } from "@react-email/components";
+
+import EmailShell, { COLOR, EmailText } from "./shell";
 
 export type ContactFormEmailProps = {
   name: string;
@@ -7,28 +9,24 @@ export type ContactFormEmailProps = {
 };
 
 /**
- * Internal notification for a public contact-form submission. Inline styles
- * only — email clients ignore stylesheets, so design tokens cannot be
- * consumed here directly; keep values aligned with packages/design-tokens.
+ * Internal notification of a public contact-form submission. It goes to our
+ * own staff, so it is written in Portuguese like the consoles, whatever
+ * language the visitor wrote in; replying to it answers the visitor.
  */
 export default function ContactFormEmail({ name, email, message }: ContactFormEmailProps) {
   return (
-    <Html>
-      <Head />
-      <Preview>New contact form message from {name}</Preview>
-      <Body style={{ backgroundColor: "#fafafa", fontFamily: "Arial, Helvetica, sans-serif", margin: 0 }}>
-        <Container style={{ backgroundColor: "#ffffff", borderRadius: 16, margin: "40px auto", maxWidth: 480, padding: 32 }}>
-          <Heading as="h2" style={{ color: "#4d4d4d", fontSize: 20, marginBottom: 8 }}>
-            New contact form message
-          </Heading>
-          <Text style={{ color: "#4d4d4d", fontSize: 14, lineHeight: "22px" }}>
-            <strong>{name}</strong> ({email}) wrote:
-          </Text>
-          <Text style={{ color: "#4d4d4d", fontSize: 14, lineHeight: "22px", whiteSpace: "pre-wrap" }}>{message}</Text>
-          <Hr style={{ borderColor: "#e8e8e8", margin: "24px 0" }} />
-          <Text style={{ color: "#999999", fontSize: 12 }}>Reply directly to this email to answer the sender.</Text>
-        </Container>
-      </Body>
-    </Html>
+    <EmailShell
+      locale="pt-BR"
+      preview={`Mensagem de ${name} pelo formulário de contato`}
+      heading="Nova mensagem pelo site"
+      notes={["Responda a este e-mail para falar com quem escreveu."]}
+    >
+      <EmailText>
+        <strong>{name}</strong> ({email}) escreveu:
+      </EmailText>
+      <Text style={{ color: COLOR.text, fontSize: 14, lineHeight: "22px", margin: "0 0 16px", whiteSpace: "pre-wrap" }}>
+        {message}
+      </Text>
+    </EmailShell>
   );
 }

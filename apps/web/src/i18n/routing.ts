@@ -48,6 +48,7 @@ export const routing = defineRouting({
     "/espera/confirmar": { "pt-BR": "/espera/confirmar", en: "/waitlist/confirm" },
     "/verificar/[ref]": { "pt-BR": "/verificar/[ref]", en: "/verify/[ref]" },
     "/fundadores": { "pt-BR": "/fundadores", en: "/founders" },
+    "/descadastro": { "pt-BR": "/descadastro", en: "/unsubscribe" },
   },
 });
 

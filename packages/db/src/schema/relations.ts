@@ -1,7 +1,7 @@
 // GENERATED from packages/db/migrations by `npm run db:schema:pull`.
 // Regenerate after every migration instead of editing by hand.
 import { relations } from "drizzle-orm/relations";
-import { usersInAuth, profiles, organizations, memberships, auditEvents, consentTerms, consentAcceptances, accessEvents, platformSettings, notifications, announcements, onboardingState, subscriptions, plans, coupons, billingOperations, subscriptionModules, modules, invoices, entitlementGrants, metaAttribution, signupAttribution, purchaseAttributions, productEvents, helpCategories, helpArticles, blogPosts, blogComments, catalogTrails, catalogModules, catalogModuleVersions, catalogLessons, catalogLessonVideos, roadmapItems, catalogRecipes, catalogRecipeWorkflows, oauthClients, oauthGrants, oauthTokens, oauthDeviceCodes, memberDevices, cliRequests, leads, moduleDownloads, impersonationSessions, meetings, meetingLinks, meetingRegistrations, aiSpend, announcementDismissals, catalogRecipeModules, roadmapVotes, lessonProgress } from "./schema";
+import { usersInAuth, profiles, organizations, memberships, auditEvents, consentTerms, consentAcceptances, accessEvents, platformSettings, notifications, announcements, onboardingState, subscriptions, plans, coupons, billingOperations, subscriptionModules, modules, invoices, entitlementGrants, metaAttribution, signupAttribution, purchaseAttributions, productEvents, helpCategories, helpArticles, blogPosts, blogComments, catalogTrails, catalogModules, catalogModuleVersions, catalogLessons, catalogLessonVideos, roadmapItems, catalogRecipes, catalogRecipeWorkflows, oauthClients, oauthGrants, oauthTokens, oauthDeviceCodes, memberDevices, cliRequests, leads, moduleDownloads, impersonationSessions, meetings, meetingLinks, meetingRegistrations, newsletterSends, aiSpend, announcementDismissals, catalogRecipeModules, newsletterDeliveries, roadmapVotes, lessonProgress } from "./schema";
 
 export const profilesRelations = relations(profiles, ({one, many}) => ({
 	usersInAuth: one(usersInAuth, {
@@ -42,6 +42,7 @@ export const profilesRelations = relations(profiles, ({one, many}) => ({
 	}),
 	meetings: many(meetings),
 	meetingRegistrations: many(meetingRegistrations),
+	newsletterSends: many(newsletterSends),
 	announcementDismissals: many(announcementDismissals),
 	roadmapVotes: many(roadmapVotes),
 	lessonProgresses: many(lessonProgress),
@@ -483,11 +484,12 @@ export const cliRequestsRelations = relations(cliRequests, ({one}) => ({
 	}),
 }));
 
-export const leadsRelations = relations(leads, ({one}) => ({
+export const leadsRelations = relations(leads, ({one, many}) => ({
 	consentTerm: one(consentTerms, {
 		fields: [leads.consentTermId],
 		references: [consentTerms.id]
 	}),
+	newsletterDeliveries: many(newsletterDeliveries),
 }));
 
 export const moduleDownloadsRelations = relations(moduleDownloads, ({one}) => ({
@@ -557,6 +559,14 @@ export const meetingRegistrationsRelations = relations(meetingRegistrations, ({o
 	}),
 }));
 
+export const newsletterSendsRelations = relations(newsletterSends, ({one, many}) => ({
+	profile: one(profiles, {
+		fields: [newsletterSends.createdBy],
+		references: [profiles.id]
+	}),
+	newsletterDeliveries: many(newsletterDeliveries),
+}));
+
 export const aiSpendRelations = relations(aiSpend, ({one}) => ({
 	organization: one(organizations, {
 		fields: [aiSpend.orgId],
@@ -587,6 +597,17 @@ export const catalogRecipeModulesRelations = relations(catalogRecipeModules, ({o
 	catalogModule: one(catalogModules, {
 		fields: [catalogRecipeModules.moduleId],
 		references: [catalogModules.id]
+	}),
+}));
+
+export const newsletterDeliveriesRelations = relations(newsletterDeliveries, ({one}) => ({
+	newsletterSend: one(newsletterSends, {
+		fields: [newsletterDeliveries.sendId],
+		references: [newsletterSends.id]
+	}),
+	lead: one(leads, {
+		fields: [newsletterDeliveries.leadId],
+		references: [leads.id]
 	}),
 }));
 

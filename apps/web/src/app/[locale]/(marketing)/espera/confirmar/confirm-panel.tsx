@@ -40,7 +40,7 @@ export default function ConfirmPanel({ pending }: { pending: boolean }) {
   }
 
   return (
-    <Box className="mx-auto flex w-full max-w-xl flex-col items-start gap-4">
+    <Box className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
       {status === "invalid" && (
         <Alert severity="warning" className="neutral bg-background-paper/60! w-full">
           {t("waitlist-confirm-invalid")}{" "}

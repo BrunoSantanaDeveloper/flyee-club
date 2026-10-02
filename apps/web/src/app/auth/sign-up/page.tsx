@@ -31,6 +31,7 @@ import NiCrossSquare from "@/icons/nexture/ni-cross-square";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
 import { sanitizeInternalNext } from "@/lib/safe-next";
 import { cn } from "@/lib/utils";
+import { welcomeNewMember } from "@/lib/welcome-actions";
 import { useThemeContext } from "@/theme/theme-provider";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
@@ -113,6 +114,9 @@ export default function Page() {
         return;
       }
       if (data.session) {
+        // No confirmation e-mail on this project, so no callback will run: the
+        // welcome is asked for here (once per account, sent after the answer).
+        await welcomeNewMember();
         const destination = data.user ? await resolvePostAuthDestination(supabase, data.user.id) : DEFAULTS.appRoot;
         router.push(next ?? destination);
         router.refresh();
@@ -336,11 +340,11 @@ export default function Page() {
 
                 <Typography variant="body2" className="text-text-secondary">
                   {t("legal-agree")}{" "}
-                  <Link target="_blank" href="/legal/termos" className="link-primary link-underline-hover">
+                  <Link target="_blank" href="/legal/termos" className="link-primary">
                     {t("legal-terms")}
                   </Link>{" "}
                   {t("legal-and")}{" "}
-                  <Link target="_blank" href="/legal/privacidade" className="link-primary link-underline-hover">
+                  <Link target="_blank" href="/legal/privacidade" className="link-primary">
                     {t("legal-privacy")}
                   </Link>
                   .
@@ -355,10 +359,7 @@ export default function Page() {
               </Typography>
               <Typography variant="body1" className="text-text-secondary">
                 {t("signup-has-account-body", { brand: BRAND.name })}{" "}
-                <Link
-                  href={`/auth/sign-in${next ? `?next=${encodeURIComponent(next)}` : ""}`}
-                  className="link-primary link-underline-hover"
-                >
+                <Link href={`/auth/sign-in${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="link-primary">
                   {t("signup-has-account-link")}
                 </Link>
                 .

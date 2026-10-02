@@ -331,11 +331,11 @@ export default function Page() {
 
                   <Typography variant="body2" className="text-text-secondary">
                     {t("legal-agree")}{" "}
-                    <Link target="_blank" href="/legal/termos" className="link-primary link-underline-hover">
+                    <Link target="_blank" href="/legal/termos" className="link-primary">
                       {t("legal-terms")}
                     </Link>{" "}
                     {t("legal-and")}{" "}
-                    <Link target="_blank" href="/legal/privacidade" className="link-primary link-underline-hover">
+                    <Link target="_blank" href="/legal/privacidade" className="link-primary">
                       {t("legal-privacy")}
                     </Link>
                     .
@@ -351,7 +351,7 @@ export default function Page() {
                   {t("signin-new-body", { brand: BRAND.name })}{" "}
                   <Link
                     href={`/auth/sign-up${next ? `?next=${encodeURIComponent(next)}` : ""}`}
-                    className="link-primary link-underline-hover"
+                    className="link-primary"
                   >
                     {t("signin-new-link")}
                   </Link>

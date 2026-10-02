@@ -31,6 +31,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0020_coupon_redemption` | coupon uses counted atomically per purchase (`redeem_coupon`), kit and split purchases included |
 | `0021_admin_consoles` | what the phase 6 consoles read: payers per currency in the weekly segment report, catalog usage per module and version (`admin_catalog_stats`), meeting registrants (`admin_meeting_registrants`) |
 | `0022_tracking_terms` | version 2 of the privacy and cookie policies, in both languages: the Pixel and GA4 also load in the member area (version 1 switched off, never edited) |
+| `0023_messages` | what the phase 8 jobs and e-mails need: claim-then-send functions for the connection reminder (`claim_token_reminders`), the end of a paid period that does not renew (`claim_term_end_notices`), meeting e-mails (`due_meeting_emails`, `claim_meeting_emails`) and messages to the confirmed list (`newsletter_sends`, `newsletter_deliveries` and their functions); retention of sign-in leftovers (`purge_oauth_leftovers`); who a message is written to, with the address read once from `auth.users` (`member_recipients`) |
 
 ## Conventions every migration follows
 

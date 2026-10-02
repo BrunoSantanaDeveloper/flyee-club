@@ -11,8 +11,9 @@ import { absoluteUrl, everyLanguage, languageAlternates, sectionTranslations, ty
  * never enters.
  *
  * Declared in src/i18n/routing.ts but deliberately absent (noindex):
- * /espera/confirmar (a one-time confirmation link), /verificar/[ref] (a
- * checksum lookup) and /fundadores (a campaign offer). The module pages
+ * /espera/confirmar (a one-time confirmation link), /descadastro (reached only
+ * from the unsubscribe link of an e-mail), /verificar/[ref] (a checksum
+ * lookup) and /fundadores (a campaign offer). The module pages
  * (/catalogo/[slug]) enter below, each in the languages its text exists in.
  */
 const INDEXED_PAGES = [

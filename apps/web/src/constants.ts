@@ -71,6 +71,10 @@ export const COOKIE_KEYS = {
   // middleware (a URL is what analytics scripts and Referer headers carry).
   // httpOnly, 15 minutes, consumed by the confirm action.
   leadConfirm: `${storagePrefix}-confirmacao`,
+  // The request of an unsubscribe link ("m:<token>" or "l:<token>"), moved out
+  // of the address on the way to the page that asks before acting
+  // (lib/unsubscribe.ts). httpOnly, 15 minutes, consumed by that page.
+  unsubscribe: `${storagePrefix}-descadastro`,
 };
 
 export const SESSION_STORAGE_KEYS = {

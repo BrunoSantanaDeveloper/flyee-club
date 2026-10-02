@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
+import { requestMeetingEmails } from "@/lib/meeting-jobs";
 import { createClient } from "@flyee/auth/server";
 
 /**
@@ -38,10 +40,25 @@ export async function recordLessonProgress(lessonId: string, completed: boolean)
   return call("record_lesson_progress", { target_lesson: lessonId, target_completed: completed });
 }
 
+/**
+ * Registers the member and asks for the confirmation e-mail. The e-mail goes
+ * out after the answer (the page does not wait on a mail provider), once per
+ * registration: cancelling and registering again is a new registration, and
+ * registering twice is not.
+ */
 export async function registerForMeeting(meetingId: string): Promise<MemberActionResult> {
   if (!UUID.test(meetingId)) return { ok: false, code: "invalid" };
   const result = await call("register_for_meeting", { target_meeting: meetingId });
-  if (result.ok) revalidatePath("/encontros");
+  if (result.ok) {
+    revalidatePath("/encontros");
+    const {
+      data: { user },
+    } = await (await createClient()).auth.getUser();
+    if (user) {
+      const userId = user.id;
+      after(() => requestMeetingEmails({ meetingId, kind: "confirmation", userId }));
+    }
+  }
   return result;
 }
 

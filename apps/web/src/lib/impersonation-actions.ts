@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 import { recordAudit } from "@/lib/audit";
 import { getImpersonationSettings, sessionIdFromAccessToken } from "@/lib/impersonation";
-import { notifyUser } from "@/lib/notifications";
+import { notifyLocalized } from "@/lib/notifications";
 import {
   encodeImpersonationMarker,
   IMPERSONATION_MARKER_COOKIE,
@@ -171,12 +171,11 @@ export async function startImpersonation(userId: string, reason: string): Promis
 
   // Transparency is part of the feature, not a courtesy: she is told, in her
   // own bell, that support opened her account and why.
-  await notifyUser(userId, {
-    type: "system",
-    title: "Acesso de suporte à sua conta",
-    body: `${operatorProfile.display_name ?? "A equipe de suporte"} acessou sua conta para investigar: "${trimmedReason}". O acesso é somente leitura e expira em ${settings.maxMinutes} minutos.`,
-    href: "/settings/security",
-  });
+  await notifyLocalized(
+    [userId],
+    (copy) => copy.supportAccess(operatorProfile.display_name ?? null, trimmedReason, settings.maxMinutes),
+    { type: "system", href: "/settings/security" },
+  );
 
   return { ok: true };
 }

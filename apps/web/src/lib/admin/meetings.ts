@@ -1,4 +1,11 @@
 import type { Localized } from "@/lib/admin/catalog";
+import {
+  MEETING_EMAIL_KINDS,
+  MEETING_SENT_COLUMN,
+  type MeetingEmailKind,
+  type MeetingEmailWindow,
+  meetingEmailWindow,
+} from "@/lib/meeting-email-kinds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -47,6 +54,20 @@ export type MeetingResults = {
   registered: number;
   joined: number;
   bySegment: { segment: string; registered: number; joined: number }[];
+};
+
+/**
+ * The messages of a meeting (lib/meeting-email.ts): how many registrants each
+ * one already reached, and whether it may be sent at the moment the page was
+ * read (the action checks again when the button is pressed).
+ */
+export type MeetingEmails = Record<MeetingEmailKind, { sent: number; window: MeetingEmailWindow }>;
+
+export const NO_MEETING_EMAILS: MeetingEmails = {
+  confirmation: { sent: 0, window: { open: false, why: "state" } },
+  day: { sent: 0, window: { open: false, why: "state" } },
+  hour: { sent: 0, window: { open: false, why: "state" } },
+  recording: { sent: 0, window: { open: false, why: "state" } },
 };
 
 export type MeetingRegistrant = {
@@ -107,8 +128,13 @@ export async function loadMeetingsOverview(supabase: SupabaseClient): Promise<Me
 export async function loadMeetingAdmin(
   supabase: SupabaseClient,
   id: string,
-): Promise<{ meeting: MeetingDetail; results: MeetingResults; registrants: MeetingRegistrant[] } | null> {
-  const [meetingRead, linkRead, resultsRead, registrantsRead] = await Promise.all([
+): Promise<{
+  meeting: MeetingDetail;
+  results: MeetingResults;
+  registrants: MeetingRegistrant[];
+  emails: MeetingEmails;
+} | null> {
+  const [meetingRead, linkRead, resultsRead, registrantsRead, ...sentReads] = await Promise.all([
     supabase
       .from("meetings")
       .select("id, slug, title, description, state, provider, starts_at, duration_minutes, published_at, updated_at")
@@ -117,8 +143,22 @@ export async function loadMeetingAdmin(
     supabase.from("meeting_links").select("join_url, recording_url").eq("meeting_id", id).maybeSingle(),
     supabase.rpc("meeting_results", { target_meeting: id }),
     supabase.rpc("admin_meeting_registrants", { target_meeting: id }),
+    // One count per message: the registrations whose "sent" mark is set.
+    ...MEETING_EMAIL_KINDS.map((kind) =>
+      supabase
+        .from("meeting_registrations")
+        .select("id", { count: "exact", head: true })
+        .eq("meeting_id", id)
+        .not(MEETING_SENT_COLUMN[kind], "is", null),
+    ),
   ]);
-  if (meetingRead.error || linkRead.error || resultsRead.error || registrantsRead.error)
+  if (
+    meetingRead.error ||
+    linkRead.error ||
+    resultsRead.error ||
+    registrantsRead.error ||
+    sentReads.some((read) => read.error)
+  )
     throw new Error("meeting_failed");
   if (!meetingRead.data) return null;
   const row = meetingRead.data;
@@ -160,5 +200,18 @@ export async function loadMeetingAdmin(
       registeredAt: entry.registeredAt,
       joinedAt: entry.joinedAt,
     })),
+    emails: Object.fromEntries(
+      MEETING_EMAIL_KINDS.map((kind, index) => [
+        kind,
+        {
+          sent: sentReads[index]?.count ?? 0,
+          window: meetingEmailWindow(kind, {
+            state: row.state,
+            startsAt: row.starts_at,
+            hasRecording: Boolean(linkRead.data?.recording_url),
+          }),
+        },
+      ]),
+    ) as MeetingEmails,
   };
 }

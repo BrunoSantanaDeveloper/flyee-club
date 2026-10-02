@@ -49,6 +49,10 @@ const PUBLIC_PREFIXES = [
   // The CLI delivery API authenticates every call with its own bearer token
   // (lib/cli/gates.ts); a cookie session means nothing there.
   "/api/cli",
+  // Endpoints a person reaches from an e-mail, with no account or signed out:
+  // each carries its own token (the unsubscribe link, lib/unsubscribe.ts). The
+  // trailing slash is part of the rule: `/api/publicity` is not this folder.
+  "/api/public/",
   // SEO surfaces crawlers hit anonymously.
   "/sitemap.xml",
   "/robots.txt",

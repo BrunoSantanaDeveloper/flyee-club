@@ -6,15 +6,20 @@ import {
   trackWorkspaceEvent,
   workspaceOwner,
 } from "@/lib/billing-lifecycle";
+import {
+  notifyAccessGranted,
+  notifyPaymentFailed,
+  notifyPaymentRecovered,
+  notifyPlanActive,
+  notifySubscriptionEnded,
+} from "@/lib/billing-notices";
 import { periodEnd, resolveBillingWindow } from "@/lib/billing-window";
 import { sendGa4Event } from "@/lib/ga4-mp";
 import { sendMetaConversion } from "@/lib/meta-capi";
-import { notifyUsers } from "@/lib/notifications";
 import { readSignupAttribution } from "@/lib/signup-attribution";
 import { logAuditEvent } from "@flyee/audit";
 import { createServiceClient } from "@flyee/auth/service";
 import { type BillingEvent, type BillingPeriod, getProvider, isTier } from "@flyee/billing";
-import { sendKitReceiptEmail, sendSubscriptionActiveEmail } from "@flyee/email";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -119,121 +124,6 @@ function skipForeignEvent(event: BillingEvent, why: string) {
     type: event.type,
     why,
   });
-}
-
-/**
- * Tells the workspace something about its billing, in the default locale
- * (notification bodies are stored text, written at creation).
- *
- * Best-effort by construction: a notification outage must never make a
- * reconciled provider event look unreconciled, which would replay it.
- */
-async function notifyOrg(supabase: ServiceClient, orgId: string, input: { title: string; body: string; href: string }) {
-  try {
-    const { data: members } = await supabase.from("memberships").select("user_id").eq("org_id", orgId);
-    const userIds = (members ?? []).map((row) => row.user_id as string);
-    if (userIds.length === 0) return;
-    await notifyUsers(userIds, { type: "billing", ...input });
-  } catch {
-    // Reconciliation already succeeded; the bell is not worth replaying it.
-  }
-}
-
-/** The owners and admins of a workspace, with the address and language each one reads. */
-async function workspaceManagers(supabase: ServiceClient, orgId: string) {
-  const { data: managers } = await supabase
-    .from("memberships")
-    .select("user_id")
-    .eq("org_id", orgId)
-    .in("role", ["owner", "admin"]);
-  const people: { email: string; name: string | null; locale: "pt-BR" | "en" }[] = [];
-  for (const manager of managers ?? []) {
-    // The address lives in GoTrue, read through the admin API: there is no
-    // session on a provider callback.
-    const { data: account } = await supabase.auth.admin.getUserById(manager.user_id as string);
-    const email = account?.user?.email;
-    if (!email) continue;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("display_name, locale")
-      .eq("id", manager.user_id as string)
-      .maybeSingle();
-    people.push({
-      email,
-      name: (profile?.display_name as string | null) ?? null,
-      locale: profile?.locale === "en" ? "en" : "pt-BR",
-    });
-  }
-  return people;
-}
-
-/**
- * Tells the workspace its plan is live.
- *
- * Best-effort like every other notification here: the entitlement is already
- * correct in the database, and replaying the whole event to retry a bell would
- * re-run the reconciliation above it.
- */
-async function notifyActivation(supabase: ServiceClient, orgId: string, planId: string) {
-  try {
-    const { data: plan } = await supabase.from("plans").select("name").eq("id", planId).maybeSingle();
-    const planName = plan?.name ?? "seu plano";
-    await notifyOrg(supabase, orgId, {
-      title: `${planName} ativo`,
-      body: "Pagamento confirmado. Seu plano já está ativo.",
-      href: "/inicio",
-    });
-
-    // And out of the app, because with Pix the member is not here when this runs.
-    for (const person of await workspaceManagers(supabase, orgId)) {
-      await sendSubscriptionActiveEmail(person.email, {
-        planName,
-        appUrl: `${appOrigin()}/inicio`,
-        name: person.name,
-      });
-    }
-  } catch {
-    // The plan is already active; a bell or an email is not worth replaying it.
-  }
-}
-
-/** The kit is granted: the bell, and the receipt in each manager's language. */
-async function notifyKitPurchase(
-  supabase: ServiceClient,
-  orgId: string,
-  payment: { amountCents: number; currency: string },
-) {
-  try {
-    await notifyOrg(supabase, orgId, {
-      title: "Kit liberado",
-      body: "Pagamento confirmado. O catálogo e as atualizações já estão liberados na sua conta.",
-      href: "/inicio",
-    });
-    for (const person of await workspaceManagers(supabase, orgId)) {
-      const amountLabel = new Intl.NumberFormat(person.locale, {
-        style: "currency",
-        currency: payment.currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      }).format(payment.amountCents / 100);
-      await sendKitReceiptEmail(person.email, {
-        locale: person.locale,
-        appUrl: `${appOrigin()}/inicio`,
-        name: person.name,
-        amountLabel,
-        fiscalNote: payment.currency === "BRL",
-      });
-    }
-  } catch {
-    // The grant is already in the database; the receipt is not worth replaying it.
-  }
-}
-
-/** Absolute app URL for links inside an email sent from a webhook (no request). */
-function appOrigin(): string {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.VERCEL_URL?.trim();
-  if (!configured) return "https://flyee.club";
-  return configured.startsWith("http") ? configured.replace(/\/+$/u, "") : `https://${configured}`;
 }
 
 /**
@@ -525,7 +415,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
       if (sub.status === "incomplete") {
         // The one celebratory moment of the funnel: with Pix the confirmation
         // lands after she left the app.
-        await notifyActivation(supabase, sub.org_id, sub.plan_id);
+        await notifyPlanActive(supabase, sub.org_id, sub.plan_id);
         const plan = await readPlan(supabase, sub.plan_id);
         await trackWorkspaceEvent(
           supabase,
@@ -556,21 +446,26 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
     case "subscription_canceled": {
       const { data: sub, error: subscriptionError } = await supabase
         .from("subscriptions")
-        .select("id, org_id, status, cancel_reason, plans(tier)")
+        .select("id, org_id, plan_id, status, cancel_reason, cancellation_requested_at, plans(tier)")
         .eq("provider", event.provider)
         .eq("provider_subscription_id", event.providerSubscriptionId)
         .in("status", ["trialing", "active", "past_due", "incomplete"])
         .maybeSingle();
       if (subscriptionError) throw new Error("subscription_reconciliation_failed");
       if (!sub) return;
-      const { error: cancellationError } = await supabase
+      // Only a row that is still live is ended here: the settlement job ends
+      // the same subscriptions at the same moment, and whichever of the two
+      // flips the row is the one that reports it and writes to the member.
+      const { data: ended, error: cancellationError } = await supabase
         .from("subscriptions")
         .update({ status: "canceled", canceled_at: new Date().toISOString(), cancel_at_period_end: false })
-        .eq("id", sub.id);
+        .eq("id", sub.id)
+        .in("status", ["trialing", "active", "past_due", "incomplete"])
+        .select("id");
       if (cancellationError) throw new Error("subscription_reconciliation_failed");
       await ensureFreeSubscription(supabase, sub.org_id);
       // A checkout that never paid was never a subscription to lose.
-      if (sub.status !== "incomplete") {
+      if (sub.status !== "incomplete" && (ended ?? []).length > 0) {
         const tier = (sub.plans as unknown as { tier: string | null } | null)?.tier ?? null;
         await trackWorkspaceEvent(supabase, sub.org_id, "subscription.canceled", {
           ...(sub.cancel_reason ? { reason: sub.cancel_reason as string } : {}),
@@ -579,6 +474,13 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         // Tools already installed keep working; updates stop, unless the kit
         // (or another source) still grants access.
         await revokeTokensIfAccessEnded(supabase, sub.org_id, "canceled");
+        // Why it ended, as far as the row knows: a payment that never came, the
+        // member's own request, or nothing on record (ended at the provider).
+        await notifySubscriptionEnded(supabase, {
+          orgId: sub.org_id,
+          planId: sub.plan_id,
+          cause: sub.status === "past_due" ? "payment" : sub.cancellation_requested_at ? "requested" : "ended",
+        });
       }
       break;
     }
@@ -636,7 +538,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           target_price_cents: event.amountCents,
           target_currency: event.currency.toUpperCase(),
         });
-        const grant = granted as { ok?: boolean; code?: string } | null;
+        const grant = granted as { ok?: boolean; code?: string; grantId?: string } | null;
         if (grantError || !grant?.ok) throw new Error("grant_reconciliation_failed");
 
         // The first delivery of a new grant is the purchase; a replay is not.
@@ -656,7 +558,9 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           }
           await trackWorkspaceEvent(supabase, orgId, "kit.purchased", { offer: "kit" }, event.paidAt);
           await trackUpsellPurchase(supabase, orgId, "kit", event.paidAt);
-          await notifyKitPurchase(supabase, orgId, {
+          await notifyAccessGranted(supabase, orgId, {
+            planId: plan.id,
+            grantId: grant.grantId ?? null,
             amountCents: event.amountCents,
             currency: event.currency.toUpperCase(),
           });
@@ -718,7 +622,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         // Everything below the flip is best-effort: a retry finds the row
         // active and never comes back here, so throwing would only lose it.
         if (saleOpenedHere) {
-          await notifyActivation(supabase, sub.org_id, sub.plan_id);
+          await notifyPlanActive(supabase, sub.org_id, sub.plan_id);
           await trackWorkspaceEvent(
             supabase,
             sub.org_id,
@@ -742,11 +646,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           .update({ status: "active", past_due_since: null })
           .eq("id", sub.id);
         if (recoveryError) throw new Error("subscription_reconciliation_failed");
-        await notifyOrg(supabase, orgId, {
-          title: "Pagamento confirmado",
-          body: "Sua assinatura está em dia e seu acesso segue liberado.",
-          href: "/settings/billing",
-        });
+        await notifyPaymentRecovered(supabase, orgId);
       }
 
       // Purchases per campaign: only the invoice that STARTS a subscription
@@ -919,15 +819,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           .eq("id", sub.id);
         if (pastDueError) throw new Error("subscription_reconciliation_failed");
 
-        const days = await graceDays(supabase);
-        await notifyOrg(supabase, orgId, {
-          title: "Não conseguimos processar seu pagamento",
-          body:
-            days > 0
-              ? `Atualize sua forma de pagamento em até ${days} dias para não interromper seu acesso. As ferramentas já instaladas continuam funcionando.`
-              : "Atualize sua forma de pagamento para manter seu acesso. As ferramentas já instaladas continuam funcionando.",
-          href: "/settings/billing",
-        });
+        await notifyPaymentFailed(supabase, orgId, await graceDays(supabase));
       }
       break;
     }
