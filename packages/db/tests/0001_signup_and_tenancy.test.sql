@@ -108,7 +108,7 @@ select lives_ok(
 
 insert into results values (
   'ana_profile',
-  public.update_member_profile(null, 'freelancer_agencia', 'claude_code', 'pt-BR', 'America/Sao_Paulo')
+  public.update_member_profile(null, 'agencia', 'claude_code', 'pt-BR', 'America/Sao_Paulo')
 );
 select throws_ok(
   $$select public.update_member_profile(null, 'astronaut', null, null, null)$$,
@@ -138,7 +138,7 @@ select ok(
     select 1 from public.audit_events
     where action = 'member.profile_updated'
       and actor_id = 'a1000000-0000-4000-8000-000000000001'
-      and metadata ->> 'segment' = 'freelancer_agencia'
+      and metadata ->> 'segment' = 'agencia'
   ),
   'the change of segment is audited'
 );

@@ -10,16 +10,16 @@ export const labelOf = (labels: Record<string, string>, value: string | null | u
 
 /** `member_segment` (migration 0000), plus the bucket the metrics use for a blank answer. */
 export const SEGMENT_LABEL: Record<string, string> = {
-  produto_proprio: "Produto próprio",
-  freelancer_agencia: "Freelancer ou agência",
-  profissional_ia: "Profissional que usa IA",
+  negocio: "Negócio",
+  agencia: "Agência ou freelancer",
+  produto: "Produto digital",
   dev: "Dev",
   outro: "Outro",
   unknown: "Não informado",
 };
 
 /** The order segments are listed in: the four the focus rule reads, then the two it leaves out. */
-export const SEGMENT_ORDER = ["produto_proprio", "freelancer_agencia", "profissional_ia", "dev", "outro", "unknown"];
+export const SEGMENT_ORDER = ["negocio", "agencia", "produto", "dev", "outro", "unknown"];
 
 export const AI_TOOL_LABEL: Record<string, string> = {
   claude_code: "Claude Code",

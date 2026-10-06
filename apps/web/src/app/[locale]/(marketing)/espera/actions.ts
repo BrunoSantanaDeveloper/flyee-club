@@ -13,7 +13,7 @@ import { createServiceClient } from "@flyee/auth/service";
 import { isEmailConfigured, sendLeadConfirmationEmail } from "@flyee/email";
 
 /** The segments a visitor can declare (enum `member_segment`, migration 0000). */
-const SEGMENTS = ["produto_proprio", "freelancer_agencia", "profissional_ia", "dev", "outro"] as const;
+const SEGMENTS = ["negocio", "agencia", "produto", "dev", "outro"] as const;
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 

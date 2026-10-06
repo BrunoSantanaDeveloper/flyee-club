@@ -36,6 +36,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0025_two_plans` | two plans named after the club: the access is "FlyeeClub" and the subscription "FlyeeClub Pro" (which inherits `open_the_hood`); the former Pro family is inactive and off the grids, never deleted; `consulting` joins the offers an event may name; terms of use version 3 with the names. |
 | `0026_roadmap_proposals` | the custom app, the minimal honest way: a FlyeeClub Pro member proposes a roadmap item into a moderated queue (`submitted`, `propose_roadmap_item`, ceiling in `platform_settings.roadmap`), visible to the author and the operator only; `roadmap_month_leader(month)` names the open idea with the most votes cast in the month; `roadmap.proposed` joins the events and `custom_app` the offers. |
 | `0027_legal_texts_v3` | version 3 of the privacy and cookie policies, built from version 2 by checked replacements: the cookie policy names the segment cookie and the click measurement, the privacy policy names the platform FlyeeClub; no consent change. |
+| `0028_segments_from_the_site` | the segments are the public site's personas: `member_segment` renamed to `negocio`, `agencia`, `produto`, `dev`, `outro`; the rows of the retired `profissional_ia` become `outro` before its slot takes the name `negocio`, and the daily rollup (segment as text) is summed into `outro` and renamed. |
 
 ## Conventions every migration follows
 

@@ -15,7 +15,7 @@ import { encodeCampaignCookie, hasCampaign, LAST_CAMPAIGN_MAX_AGE, pickCampaignP
 import { detectLocale, isCrawler, LOCALE_COOKIE_MAX_AGE } from "@/lib/locale-detection";
 import { COUPON_COOKIE_MAX_AGE, COUPON_PARAM, normalizeCouponCode } from "@/lib/offer-link";
 import { sanitizeInternalNext } from "@/lib/safe-next";
-import { normalizeSiteSegment, SEGMENT_COOKIE_MAX_AGE, SEGMENT_PARAM } from "@/lib/site-segment";
+import { normalizeSegment, SEGMENT_COOKIE_MAX_AGE, SEGMENT_PARAM } from "@/lib/site-segment";
 import { countSiteView, isSpeculativeLoad, viewDoor } from "@/lib/site-views";
 import { IMPERSONATION_MARKER_COOKIE, parseImpersonationMarker } from "@flyee/auth";
 import { updateSession } from "@flyee/auth/middleware";
@@ -158,7 +158,7 @@ export async function middleware(request: NextRequest, event?: NextFetchEvent) {
    * kept for the sign-up and the onboarding to pre-fill (lib/site-segment.ts).
    * The newest link wins, like the coupon; an unknown value writes nothing.
    */
-  const linkSegment = normalizeSiteSegment(request.nextUrl.searchParams.get(SEGMENT_PARAM));
+  const linkSegment = normalizeSegment(request.nextUrl.searchParams.get(SEGMENT_PARAM));
 
   /**
    * Campaign attribution (?origem/?onda/utm_*), captured on the FIRST touch and

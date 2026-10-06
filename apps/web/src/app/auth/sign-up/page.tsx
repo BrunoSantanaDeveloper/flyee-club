@@ -31,7 +31,6 @@ import NiCrossSquare from "@/icons/nexture/ni-cross-square";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
 import { sanitizeInternalNext } from "@/lib/safe-next";
 import { readSegmentCookie } from "@/lib/site-events";
-import { profileSegmentFor } from "@/lib/site-segment";
 import { cn } from "@/lib/utils";
 import { welcomeNewMember } from "@/lib/welcome-actions";
 import { useThemeContext } from "@/theme/theme-provider";
@@ -108,12 +107,12 @@ export default function Page() {
         password: values.password,
         options: {
           emailRedirectTo: callback.toString(),
-          // The segment declared on the site pre-fills the profile where the two
-          // vocabularies agree (lib/site-segment.ts); the trigger ignores anything else.
+          // The segment declared on the site pre-fills the profile (lib/site-segment.ts);
+          // the trigger ignores anything it does not know.
           data: {
             display_name: values.name.trim(),
             locale,
-            segment: profileSegmentFor(readSegmentCookie()) ?? undefined,
+            segment: readSegmentCookie() ?? undefined,
           },
         },
       });

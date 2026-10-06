@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { DEFAULTS } from "@/config";
 import { COOKIE_KEYS } from "@/constants";
 import { getMemberContext } from "@/lib/member/context";
-import { profileSegmentFor } from "@/lib/site-segment";
+import { normalizeSegment } from "@/lib/site-segment";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -23,7 +23,7 @@ export default async function OnboardingPage() {
   // The segment declared on the site before the account existed pre-fills the
   // first step (a sign-up through a provider carries no metadata); the member
   // still confirms it.
-  const declared = profileSegmentFor((await cookies()).get(COOKIE_KEYS.segment)?.value);
+  const declared = normalizeSegment((await cookies()).get(COOKIE_KEYS.segment)?.value);
 
   return (
     <OnboardingWizard

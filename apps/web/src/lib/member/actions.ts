@@ -137,7 +137,7 @@ export async function revokeDevice(deviceRowId: string): Promise<MemberActionRes
   return result;
 }
 
-const SEGMENTS = ["produto_proprio", "freelancer_agencia", "profissional_ia", "dev", "outro"] as const;
+const SEGMENTS = ["negocio", "agencia", "produto", "dev", "outro"] as const;
 const AI_TOOLS = ["claude_code", "codex", "gemini_cli", "cursor", "other"] as const;
 
 export type ProfileUpdate = {

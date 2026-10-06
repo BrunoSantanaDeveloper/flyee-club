@@ -24,13 +24,12 @@ import {
 import Link from "@/components/marketing/locale-link";
 import NiCheckSquare from "@/icons/nexture/ni-check-square";
 import { readSegmentCookie, rememberSegment, trackSiteEvent } from "@/lib/site-events";
-import { profileSegmentFor } from "@/lib/site-segment";
 
 /** Segment value (enum member_segment) → its label key. "" = not declared. */
 const SEGMENT_OPTIONS = [
-  { value: "produto_proprio", labelKey: "waitlist-segment-own-product" },
-  { value: "freelancer_agencia", labelKey: "waitlist-segment-agency" },
-  { value: "profissional_ia", labelKey: "waitlist-segment-ai-professional" },
+  { value: "negocio", labelKey: "waitlist-segment-business" },
+  { value: "agencia", labelKey: "waitlist-segment-agency" },
+  { value: "produto", labelKey: "waitlist-segment-product" },
   { value: "dev", labelKey: "waitlist-segment-dev" },
   { value: "outro", labelKey: "waitlist-segment-other" },
 ] as const;
@@ -79,7 +78,7 @@ export default function WaitlistForm() {
   useEffect(() => {
     if (prefilled.current) return;
     prefilled.current = true;
-    const declared = profileSegmentFor(readSegmentCookie());
+    const declared = readSegmentCookie();
     if (declared && !values.segment) void setFieldValue("segment", declared);
   }, [setFieldValue, values.segment]);
 

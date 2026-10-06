@@ -161,17 +161,15 @@ signal exists, so a plain checkout never wipes a stored one.
 
 ### Segment capture
 
-The audience a visitor declares before any account exists: a segment link
-(`?segment=agencia`, the brief's personas `negocio`, `agencia`, `produto`,
-`dev`, or a profile segment) is kept by the middleware in a readable cookie
-(90 days, the newest wins, an unknown value writes nothing), and a click on
-the page writes the same cookie (`rememberSegment`). It stamps every site
-event, pre-fills the waitlist's select, goes into the sign-up's metadata (so
-`handle_new_user` stamps the profile and `account.created` carries it) and
-pre-fills the onboarding's first step. The pre-fill happens only where the two
-vocabularies mean the same (`profileSegmentFor`, `lib/site-segment.ts`):
-`negocio` has no honest counterpart in `member_segment` yet, so the member
-answers.
+The audience a visitor declares before any account exists. Since migration
+`0028` there is one vocabulary: the site's personas `negocio`, `agencia`,
+`produto` and `dev` ARE `member_segment`, plus `outro` (`lib/site-segment.ts`).
+A segment link (`?segment=agencia`) is kept by the middleware in a readable
+cookie (90 days, the newest wins, an unknown value writes nothing), and a
+click on the page writes the same cookie (`rememberSegment`). It stamps every
+site event, pre-fills the waitlist's select, goes into the sign-up's metadata
+(so `handle_new_user` stamps the profile and `account.created` carries it) and
+pre-fills the onboarding's first step; the member can change it in either.
 
 ### Visits per page and door (first-party, no cookie)
 

@@ -39,7 +39,7 @@ function member(overrides: Partial<MemberRow> = {}): MemberRow {
     lastSignInAt: "2026-09-30T12:00:00Z",
     confirmed: true,
     bannedUntil: null,
-    segment: "produto_proprio",
+    segment: "produto",
     aiTool: "claude_code",
     locale: "pt-BR",
     tier: null,
@@ -199,7 +199,7 @@ describe("members console", () => {
     for (const term of [
       "ana souza",
       "ana@example.com",
-      "produto próprio",
+      "produto digital",
       "claude code",
       "kit",
       "flyeeclub",

@@ -31,9 +31,9 @@ export const MODULE_TYPE_LABEL: Record<string, string> = Object.fromEntries(
 
 /** The `member_segment` enum (migration 0000), in the order the onboarding asks it. */
 export const SEGMENT_OPTIONS = [
-  { value: "produto_proprio", label: "segment-produto-proprio" },
-  { value: "freelancer_agencia", label: "segment-freelancer-agencia" },
-  { value: "profissional_ia", label: "segment-profissional-ia" },
+  { value: "negocio", label: "segment-negocio" },
+  { value: "agencia", label: "segment-agencia" },
+  { value: "produto", label: "segment-produto" },
   { value: "dev", label: "segment-dev" },
   { value: "outro", label: "segment-outro" },
 ] as const;

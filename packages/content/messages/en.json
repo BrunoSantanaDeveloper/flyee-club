@@ -281,9 +281,7 @@
     "waitlist-email-placeholder": "you@example.com",
     "waitlist-segment-label": "What describes you best? (optional)",
     "waitlist-segment-none": "I'd rather not say",
-    "waitlist-segment-own-product": "I build my own product",
-    "waitlist-segment-agency": "I'm a freelancer or an agency",
-    "waitlist-segment-ai-professional": "I use AI at work every day",
+    "waitlist-segment-agency": "I run an agency or serve clients",
     "waitlist-segment-dev": "I'm a developer",
     "waitlist-segment-other": "Something else",
     "waitlist-consent": "I want FlyeeClub emails about the opening and what is new. I can leave anytime.",
@@ -624,7 +622,9 @@
     "contact-prefill-fundadores": "Hello. I received the founders offer link and arrived after it closed. I would like to know what the options are.",
     "contact-prefill-mentoria": "Hello. I am a FlyeeClub member and I want to book a remote mentoring session. The point I want to work through is: ",
     "contact-prefill-consultoria": "Hello. I am a FlyeeClub member and I want a proposal for full consulting. About my company: ",
-    "contact-prefill-app": "Hello. I am a FlyeeClub member and I want to commission a custom app. What it needs to do: "
+    "contact-prefill-app": "Hello. I am a FlyeeClub member and I want to commission a custom app. What it needs to do: ",
+    "waitlist-segment-business": "I run a business",
+    "waitlist-segment-product": "I sell a digital product"
   },
   "product": {
     "security-title": "Security",
@@ -1120,12 +1120,9 @@
     "onboarding-title-generic": "Let's get you set up",
     "onboarding-subtitle": "Three quick steps. The first two answers tailor the catalog and the lessons to you.",
     "onboarding-skip": "Skip for now",
-    "onboarding-segment-title": "What do you build?",
+    "onboarding-segment-title": "Where will you use the apps?",
     "onboarding-segment-hint": "Pick what looks most like your day to day. You can change it later in the settings.",
-    "segment-produto-proprio": "My own product",
-    "segment-freelancer-agencia": "Client projects (freelancer or agency)",
-    "segment-profissional-ia": "I use AI in my work, without being a developer",
-    "segment-dev": "I am a developer at a company",
+    "segment-dev": "My dev work",
     "segment-outro": "Something else",
     "onboarding-ai-title": "Which AI do you code with?",
     "onboarding-ai-hint": "The tools run in the AI you already use, on your own plan.",
@@ -1229,7 +1226,10 @@
     "roadmap-mine-title": "Your proposals",
     "roadmap-mine-status-submitted": "Under review",
     "roadmap-mine-status-proposed": "Open for votes",
-    "roadmap-mine-status-declined": "Declined"
+    "roadmap-mine-status-declined": "Declined",
+    "segment-negocio": "My business",
+    "segment-agencia": "My agency or my clients",
+    "segment-produto": "My digital product"
   },
   "auth": {
     "continue": "Continue",

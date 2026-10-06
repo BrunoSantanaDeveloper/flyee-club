@@ -14,9 +14,9 @@ values
   ('ab000000-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'dev@flyee.invalid', '', '{}', '{"display_name":"Dev","segment":"dev"}', now(), now()),
   ('ab000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'freela@flyee.invalid', '', '{}', '{"display_name":"Freela","segment":"freelancer_agencia"}', now(), now()),
+   'freela@flyee.invalid', '', '{}', '{"display_name":"Freela","segment":"agencia"}', now(), now()),
   ('ab000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-   'regular@flyee.invalid', '', '{}', '{"display_name":"Regular","segment":"profissional_ia"}', now(), now()),
+   'regular@flyee.invalid', '', '{}', '{"display_name":"Regular","segment":"negocio"}', now(), now()),
   ('ab000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'operator@flyee.invalid', '', '{}', '{"display_name":"Operator"}', now(), now());
 
@@ -91,12 +91,12 @@ select ok(
   'page views are the week''s public loads, and conversion divides the segment''s buyers by them'
 );
 select is(
-  (select kit_to_club_60d from report where week_start = (select this_week from ctx) and segment = 'freelancer_agencia'),
+  (select kit_to_club_60d from report where week_start = (select this_week from ctx) and segment = 'agencia'),
   1,
   'the freelancer counts as a kit buyer who moved to the subscription'
 );
 select is(
-  (select weekly_active from report where week_start = (select this_week from ctx) and segment = 'profissional_ia'),
+  (select weekly_active from report where week_start = (select this_week from ctx) and segment = 'negocio'),
   1,
   'three active weeks out of four make the regular a weekly user'
 );

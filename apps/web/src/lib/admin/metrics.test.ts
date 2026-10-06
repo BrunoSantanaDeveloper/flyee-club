@@ -15,7 +15,7 @@ import {
 // Thursday 2026-10-01, Brasília: the running week starts on 2026-09-28.
 const NOW = new Date("2026-10-01T15:00:00Z").getTime();
 const WEEKS = ["2026-08-31", "2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28"];
-const SEGMENTS = ["produto_proprio", "freelancer_agencia", "profissional_ia", "dev", "outro", "unknown"];
+const SEGMENTS = ["negocio", "agencia", "produto", "dev", "outro", "unknown"];
 
 function row(week: string, segment: string, overrides: Partial<SegmentWeekRow> = {}): SegmentWeekRow {
   return {
@@ -48,7 +48,7 @@ function world(leader: string | null, fromWeek = WEEKS[0]): SegmentWeekRow[] {
   );
 }
 
-const enoughPeople = { produto_proprio: 40, freelancer_agencia: 35, profissional_ia: 31, dev: 50, outro: 90 };
+const enoughPeople = { produto: 40, agencia: 35, negocio: 31, dev: 50, outro: 90 };
 
 describe("focus rule", () => {
   it("leads nobody on a tie or on a week with nothing in it", () => {
@@ -85,10 +85,10 @@ describe("focus rule", () => {
   });
 
   it("counts the streak back from the newest complete week", () => {
-    const result = focusRule(world("produto_proprio", "2026-09-14"), enoughPeople, NOW);
+    const result = focusRule(world("produto", "2026-09-14"), enoughPeople, NOW);
     expect(result.status).toBe("leading");
-    expect(result.streak).toEqual({ segment: "produto_proprio", weeks: 2 });
-    expect(focusSentence(result)).toBe("Produto próprio lidera as três métricas há 2 de 4 semanas seguidas.");
+    expect(result.streak).toEqual({ segment: "produto", weeks: 2 });
+    expect(focusSentence(result)).toBe("Produto digital lidera as três métricas há 2 de 4 semanas seguidas.");
   });
 
   it("never lets 'outro' lead, however large it is", () => {
@@ -98,7 +98,7 @@ describe("focus rule", () => {
   });
 
   it("compares only segments with enough people, and needs two of them", () => {
-    const one = focusRule(world("dev"), { dev: FOCUS_MIN_PEOPLE, produto_proprio: FOCUS_MIN_PEOPLE - 1 }, NOW);
+    const one = focusRule(world("dev"), { dev: FOCUS_MIN_PEOPLE, produto: FOCUS_MIN_PEOPLE - 1 }, NOW);
     expect(one.comparable).toEqual(["dev"]);
     expect(one.status).toBe("not_enough_people");
     expect(focusSentence(one)).toContain("Só Dev tem 30 contas com acesso");

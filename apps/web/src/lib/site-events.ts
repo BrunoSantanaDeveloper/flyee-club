@@ -2,7 +2,7 @@
 
 import { COOKIE_KEYS } from "@/constants";
 import { track } from "@/lib/analytics";
-import { normalizeSiteSegment, SEGMENT_COOKIE_MAX_AGE } from "@/lib/site-segment";
+import { normalizeSegment, SEGMENT_COOKIE_MAX_AGE } from "@/lib/site-segment";
 
 /**
  * The events of the public site (docs/TRACKING.md, "Site events"): the
@@ -83,12 +83,12 @@ export function readSegmentCookie(): string | null {
   if (typeof document === "undefined") return null;
   const prefix = `${COOKIE_KEYS.segment}=`;
   const entry = document.cookie.split("; ").find((candidate) => candidate.startsWith(prefix));
-  return entry ? normalizeSiteSegment(decodeURIComponent(entry.slice(prefix.length))) : null;
+  return entry ? normalizeSegment(decodeURIComponent(entry.slice(prefix.length))) : null;
 }
 
 /** A segment chosen on the page (a card, a link, the waitlist's select): the newest choice wins. */
 export function rememberSegment(value: string): void {
-  const segment = normalizeSiteSegment(value);
+  const segment = normalizeSegment(value);
   if (!segment || typeof document === "undefined") return;
   document.cookie = `${COOKIE_KEYS.segment}=${segment}; path=/; max-age=${SEGMENT_COOKIE_MAX_AGE}; samesite=lax`;
 }

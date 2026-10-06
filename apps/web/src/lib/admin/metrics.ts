@@ -42,7 +42,7 @@ export type DoorWeekRow = {
 };
 
 /** The segments the focus rule compares. `outro` and an unanswered segment never lead. */
-export const FOCUS_SEGMENTS = ["produto_proprio", "freelancer_agencia", "profissional_ia", "dev"] as const;
+export const FOCUS_SEGMENTS = ["negocio", "agencia", "produto", "dev"] as const;
 
 /** The proposal in docs/PRODUCT.md, used as the indicator until the rule is decided. */
 export const FOCUS_MIN_PEOPLE = 30;

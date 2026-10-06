@@ -281,9 +281,7 @@
     "waitlist-email-placeholder": "voce@exemplo.com",
     "waitlist-segment-label": "O que melhor descreve você? (opcional)",
     "waitlist-segment-none": "Prefiro não dizer",
-    "waitlist-segment-own-product": "Tenho um produto próprio",
-    "waitlist-segment-agency": "Sou freelancer ou agência",
-    "waitlist-segment-ai-professional": "Uso IA todo dia no trabalho",
+    "waitlist-segment-agency": "Tenho uma agência ou atendo clientes",
     "waitlist-segment-dev": "Sou dev",
     "waitlist-segment-other": "Outro",
     "waitlist-consent": "Quero receber os e-mails do FlyeeClub sobre a abertura e as novidades. Posso sair quando quiser.",
@@ -624,7 +622,9 @@
     "contact-prefill-fundadores": "Olá. Recebi o link da condição de fundador e cheguei depois do fechamento. Gostaria de saber quais são as opções.",
     "contact-prefill-mentoria": "Olá. Sou integrante do FlyeeClub e quero agendar uma mentoria remota. O ponto que quero resolver é: ",
     "contact-prefill-consultoria": "Olá. Sou integrante do FlyeeClub e quero uma proposta de consultoria completa. Sobre a minha empresa: ",
-    "contact-prefill-app": "Olá. Sou integrante do FlyeeClub e quero contratar o desenvolvimento de um app sob medida. O que ele precisa fazer: "
+    "contact-prefill-app": "Olá. Sou integrante do FlyeeClub e quero contratar o desenvolvimento de um app sob medida. O que ele precisa fazer: ",
+    "waitlist-segment-business": "Toco um negócio",
+    "waitlist-segment-product": "Vendo um produto digital"
   },
   "product": {
     "security-title": "Segurança",
@@ -1120,12 +1120,9 @@
     "onboarding-title-generic": "Vamos deixar tudo pronto",
     "onboarding-subtitle": "Três passos rápidos. As duas primeiras respostas ajustam o catálogo e as aulas para você.",
     "onboarding-skip": "Pular por agora",
-    "onboarding-segment-title": "O que você constrói?",
+    "onboarding-segment-title": "Onde você vai usar os apps?",
     "onboarding-segment-hint": "Escolha o que mais parece com o seu dia a dia. Dá para mudar depois nas configurações.",
-    "segment-produto-proprio": "Meu próprio produto",
-    "segment-freelancer-agencia": "Projetos de clientes (freelancer ou agência)",
-    "segment-profissional-ia": "Uso IA no meu trabalho, sem ser dev",
-    "segment-dev": "Sou dev em uma empresa",
+    "segment-dev": "Meu trabalho de dev",
     "segment-outro": "Outra coisa",
     "onboarding-ai-title": "Qual IA você usa para programar?",
     "onboarding-ai-hint": "As ferramentas rodam na IA que você já usa, com o seu próprio plano.",
@@ -1229,7 +1226,10 @@
     "roadmap-mine-title": "Suas propostas",
     "roadmap-mine-status-submitted": "Em análise",
     "roadmap-mine-status-proposed": "Aberta para votos",
-    "roadmap-mine-status-declined": "Recusada"
+    "roadmap-mine-status-declined": "Recusada",
+    "segment-negocio": "Meu negócio",
+    "segment-agencia": "Minha agência ou meus clientes",
+    "segment-produto": "Meu produto digital"
   },
   "auth": {
     "continue": "Continuar",
