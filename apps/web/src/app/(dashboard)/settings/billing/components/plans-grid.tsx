@@ -28,12 +28,17 @@ import {
 
 import { COOKIE_KEYS } from "@/constants";
 import NiCheck from "@/icons/nexture/ni-check";
+import { accessTermParts } from "@/lib/access-term";
 import { clearCouponCookie, normalizeCouponCode, readCouponCookie, writeCouponCookie } from "@/lib/offer-link";
 import { type OfferKind, trackOffer } from "@/lib/product-events";
 import { cn } from "@/lib/utils";
 import type { BillingCurrency } from "@flyee/billing/currency";
 import { enabledFeatures, type EntitlementKey, limitOf } from "@flyee/billing/entitlements";
 import { applyDiscount } from "@flyee/billing/types";
+
+/** The plural-aware key of a term ("1 ano", "18 meses"); both literals, so the message pruner sees them. */
+const termKey = (months: number) =>
+  accessTermParts(months).unit === "years" ? "access-term-years" : "access-term-months";
 
 type Period = "monthly" | "yearly";
 
@@ -89,6 +94,7 @@ export default function PlansGrid({
 }) {
   const t = useTranslations("product");
   const locale = useLocale();
+  const formatDate = (value: string) => new Intl.DateTimeFormat(locale).format(new Date(value));
   const router = useRouter();
   const [confirming, setConfirming] = useState<PlanRow | null>(null);
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
@@ -350,7 +356,16 @@ export default function PlansGrid({
                           <Chip label={t("billing-current-chip")} size="small" color="success" variant="outlined" />
                         )}
                         {owned && (
-                          <Chip label={t("billing-kit-owned")} size="small" color="success" variant="outlined" />
+                          <Chip
+                            label={
+                              entitlements.accessEndsAt
+                                ? t("billing-kit-owned-until", { date: formatDate(entitlements.accessEndsAt) })
+                                : t("billing-kit-owned")
+                            }
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                          />
                         )}
                         {isOffer && !current && <Chip label={t("billing-offer-chip")} size="small" color="primary" />}
                       </Box>
@@ -367,7 +382,15 @@ export default function PlansGrid({
                         {money(plan, discountedCents)}
                         <Typography component="span" variant="body2" className="text-text-secondary">
                           {" "}
-                          {plan.period ? t(`billing-period-${plan.period}` as never) : t("billing-one-time")}
+                          {plan.period
+                            ? t(`billing-period-${plan.period}` as never)
+                            : plan.accessMonths
+                              ? t("billing-access-term", {
+                                  term: t(termKey(plan.accessMonths), {
+                                    count: accessTermParts(plan.accessMonths).count,
+                                  }),
+                                })
+                              : t("billing-one-time")}
                         </Typography>
                       </Typography>
                       {plan.description && (
@@ -398,9 +421,18 @@ export default function PlansGrid({
                           </Typography>
                         )}
                       </Box>
-                      {current || owned ? (
+                      {current ? (
                         <Button variant="outlined" disabled>
-                          {owned ? t("billing-kit-owned") : t("billing-current-chip")}
+                          {t("billing-current-chip")}
+                        </Button>
+                      ) : owned && !checkoutAvailable ? (
+                        <Button variant="outlined" disabled>
+                          {t("billing-kit-owned")}
+                        </Button>
+                      ) : owned ? (
+                        // Buying the access again renews it: the new term starts when the current one ends.
+                        <Button variant="outlined" onClick={() => choose(plan)}>
+                          {t("billing-renew-kit")}
                         </Button>
                       ) : checkoutAvailable ? (
                         <Button variant={isOffer || isKit ? "contained" : "outlined"} onClick={() => choose(plan)}>

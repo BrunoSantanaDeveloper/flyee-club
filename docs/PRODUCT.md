@@ -59,7 +59,7 @@ Registradas ao transformar a base copiada do MedChina na plataforma do flyee.clu
 
 **Premissas adotadas no plano (confirme ou corrija)**
 
-- O kit concede acesso e atualização sem prazo. Quem assina sem ter comprado o kit e cancela perde a atualização; a tela de cancelamento oferece o kit para mantê-la.
+- ~~O kit concede acesso e atualização sem prazo.~~ Revisado em 2026-10-06 pelo brief da home: o kit vale por 1 ano a partir do pagamento, sem renovação automática, e é renovado comprando de novo (o novo prazo começa quando o atual termina); pode ser parcelado no cartão; todo plano pago pode ser usado em projetos de clientes; o reembolso continua pelo suporte. Quem assina sem ter comprado o kit e cancela perde a atualização; a tela de cancelamento oferece o kit para mantê-la.
 - O Pro é uma família de plano própria, não um complemento da assinatura.
 - Máquinas sem navegador entram pelo fluxo de código de dispositivo, com as mesmas regras de token: 30 dias sem update e revogação no cancelamento.
 - Eventos de uso ficam numa tabela do próprio Supabase e são lidos em `/admin/metricas`. PostHog não entra.
@@ -215,7 +215,7 @@ A escada tem três degraus claros: um produto de entrada barato para medir quem 
 | 0 · Amostra | Skills soltas + newsletter bilíngue | Topo de funil | Grátis | Interesse por segmento e idioma |
 | 1 · Kit de entrada (low-ticket) | Harness + catálogo inteiro com atualização contínua + aula de uso por ferramenta; 1 acesso; token revalidado no painel a cada 30 dias sem update | Quem quer testar | R$ 97 único / US$ 29 | Quem paga, por qual porta entra e quem volta para revalidar |
 | 2 · Assinatura flyee | Kit + aulas avançadas, receitas, encontros, voto no roadmap, acesso em mais de uma máquina | Quem usa toda semana e quer ir fundo | R$ 67/mês ou R$ 597/ano; US$ 19/mês; fundador com preço travado | Uso semanal por segmento, conversão kit → assinatura |
-| 3 · Pro | Assinatura + licença comercial + camada "abrir o capô" + ferramentas de cliente | Freelancer e agência | R$ 197/mês / US$ 49 | Quanto do público é profissional de serviço |
+| 3 · Pro | Assinatura + camada "abrir o capô" + mais máquinas (a licença comercial passou a valer em todo plano pago em 2026-10-06) | Freelancer e agência | R$ 197/mês / US$ 49 | Quanto do público é profissional de serviço |
 | 4 · Mentoria em grupo | Turma trimestral, ao vivo, sobre operar produto com IA | Assinantes engajados | R$ 997 a 1.997 por turma | Demanda por acesso a você |
 | 5 · Advisory e Time | Meio dia por semana ([plano de agosto](https://claude.ai/code/artifact/a704c98b-1442-45e3-9e3f-dd4ae0f5166c)) e plano por assento | Empresas | Preço público, sob consulta | Teto da escada |
 
@@ -291,7 +291,7 @@ Das seis decisões originais, três foram tomadas em 2026-09-30 e estão marcada
 - [x] **O que "1 acesso" significa no kit.** Decidido: um dispositivo no kit, três na assinatura, cinco no Pro.
 - [x] **Canal de atualização do kit.** Decidido: o mesmo canal para todos na v1.
 - [ ] **O que fica aberto.** Quais skills viram amostra grátis e que parte do harness é pública.
-- [ ] **Ordem dos upsells.** Pro (licença comercial) primeiro ou mentoria em grupo primeiro?
+- [ ] **Ordem dos upsells.** Pro (abrir o capô e mais máquinas) primeiro ou mentoria em grupo primeiro? Desde 2026-10-06 nenhum uso das ferramentas oferece o Pro por conta própria: projetos de cliente valem em todo plano pago.
 
 **Levantadas no plano da plataforma**
 

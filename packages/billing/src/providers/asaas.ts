@@ -30,8 +30,7 @@ const METHOD_TO_BILLING_TYPE: Record<PaymentMethod, string> = {
   pix: "PIX",
 };
 
-const billingTypeFor = (method: PaymentMethod | undefined) =>
-  method ? METHOD_TO_BILLING_TYPE[method] : "UNDEFINED";
+const billingTypeFor = (method: PaymentMethod | undefined) => (method ? METHOD_TO_BILLING_TYPE[method] : "UNDEFINED");
 
 /**
  * Sandbox by default; set ASAAS_BASE_URL=https://api.asaas.com/v3 in production.
@@ -432,20 +431,24 @@ export class AsaasProvider implements PaymentProvider {
       );
 
       if (oneTimeCents > 0) {
-        await asaasFetch("/payments", {
-          method: "POST",
-          body: JSON.stringify({
-            customer: customerId,
-            billingType: billingTypeFor(input.paymentMethod),
-            value: oneTimeCents / 100,
-            dueDate: isoDate(new Date()),
-            description: `Add-ons: ${modules
-              .filter((m) => m.kind === "one_time")
-              .map((m) => m.name)
-              .join(", ")}`,
-            externalReference,
-          }),
-        }, `${input.idempotencyKey}:addons`);
+        await asaasFetch(
+          "/payments",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              customer: customerId,
+              billingType: billingTypeFor(input.paymentMethod),
+              value: oneTimeCents / 100,
+              dueDate: isoDate(new Date()),
+              description: `Add-ons: ${modules
+                .filter((m) => m.kind === "one_time")
+                .map((m) => m.name)
+                .join(", ")}`,
+              externalReference,
+            }),
+          },
+          `${input.idempotencyKey}:addons`,
+        );
       }
 
       // The first payment's hosted invoice stays the contract; for PIX the QR
@@ -520,10 +523,7 @@ export class AsaasProvider implements PaymentProvider {
       // it is not there now, waiting will not produce it.
       const payments = await asaasFetch<{
         data: { id?: string; status?: string; billingType?: string; invoiceUrl?: string }[];
-      }>(
-        `/subscriptions/${input.providerSubscriptionId}/payments?limit=1`,
-        { signal: AbortSignal.timeout(8_000) },
-      );
+      }>(`/subscriptions/${input.providerSubscriptionId}/payments?limit=1`, { signal: AbortSignal.timeout(8_000) });
       const charge = payments.data[0];
       if (!charge?.id || charge.billingType !== "PIX") return null;
       if (charge.status && charge.status !== "PENDING" && charge.status !== "OVERDUE") return null;
@@ -664,7 +664,9 @@ export class AsaasProvider implements PaymentProvider {
             providerCustomerId: payment.customer,
             providerSubscriptionId: payment.subscription,
             status: "active",
-            ...(cycleStartDate && !Number.isNaN(cycleStartDate.getTime()) ? { currentPeriodStart: cycleStartDate } : {}),
+            ...(cycleStartDate && !Number.isNaN(cycleStartDate.getTime())
+              ? { currentPeriodStart: cycleStartDate }
+              : {}),
           });
         }
         break;
@@ -703,6 +705,7 @@ export class AsaasProvider implements PaymentProvider {
           provider: "asaas",
           metadata,
           providerInvoiceId: payment.id,
+          ...(providerPaymentRef ? { providerPaymentRef } : {}),
           kind: body.event.startsWith("PAYMENT_CHARGEBACK") ? "chargeback" : "refund",
         });
         break;

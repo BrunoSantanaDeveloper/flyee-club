@@ -13,11 +13,16 @@ import { CepField, CpfCnpjField, PhoneField } from "@/components/product/fields"
 import { COOKIE_KEYS } from "@/constants";
 import { localizeHref } from "@/i18n/routing";
 import NiCheck from "@/icons/nexture/ni-check";
+import { accessTermParts } from "@/lib/access-term";
 import type { CampaignParams } from "@/lib/campaign-params";
 import { readCouponCookie } from "@/lib/offer-link";
 import { createClient } from "@flyee/auth/client";
 import type { PixCharge } from "@flyee/billing/types";
 import { formatCep, formatCpfCnpj, formatPhoneBr, isValidCpfCnpj, isValidPhoneBr, onlyDigits } from "@flyee/fields";
+
+/** The plural-aware key of a term ("1 ano", "18 meses"); both literals, so the message pruner sees them. */
+const termKey = (months: number) =>
+  accessTermParts(months).unit === "years" ? "access-term-years" : "access-term-months";
 
 type Profile = {
   document: string | null;
@@ -55,6 +60,8 @@ export default function CheckoutForm({
   priceLabel,
   currency,
   oneTime,
+  accessMonths,
+  renewalFrom,
   guaranteeDays,
   canManage,
   switchingFrom,
@@ -71,6 +78,10 @@ export default function CheckoutForm({
   currency: "BRL" | "USD";
   /** The kit: a one-time access purchase. */
   oneTime: boolean;
+  /** How long the access lasts, in months; null when it has no end. */
+  accessMonths: number | null;
+  /** The end of the access the workspace already holds: this purchase renews it from that day. */
+  renewalFrom: string | null;
   guaranteeDays: number;
   canManage: boolean;
   switchingFrom: string | null;
@@ -291,7 +302,18 @@ export default function CheckoutForm({
           <Box component="ul" className="text-text-secondary m-0 flex list-none flex-col gap-1 p-0 text-sm">
             {oneTime && (
               <li className="flex items-center gap-1">
-                <NiCheck size="small" className="text-primary" /> {t("checkout-kit-forever")}
+                <NiCheck size="small" className="text-primary" />{" "}
+                {accessMonths
+                  ? t("checkout-kit-term", {
+                      term: t(termKey(accessMonths), { count: accessTermParts(accessMonths).count }),
+                    })
+                  : t("checkout-kit-forever")}
+              </li>
+            )}
+            {renewalFrom && (
+              <li className="flex items-center gap-1">
+                <NiCheck size="small" className="text-primary" />{" "}
+                {t("checkout-renewal-note", { date: new Intl.DateTimeFormat(locale).format(new Date(renewalFrom)) })}
               </li>
             )}
             <li className="flex items-center gap-1">

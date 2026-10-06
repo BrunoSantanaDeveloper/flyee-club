@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { emailCopyFor } from "./copy";
 import type { EmailLocale } from "./locale";
 import { emailEnv, isEmailConfigured, send, sendBatch, type SendResult } from "./send";
+import AccessEndedEmail, { type AccessEndedEmailProps } from "./templates/access-ended";
 import AdminWeeklyDigestEmail, { type AdminWeeklyDigestEmailProps } from "./templates/admin-weekly-digest";
 import ContactFormEmail, { type ContactFormEmailProps } from "./templates/contact-form";
 import KitReceiptEmail, { type KitReceiptEmailProps } from "./templates/kit-receipt";
@@ -22,6 +23,7 @@ import UpdatesDigestEmail, { type UpdatesDigestEmailProps, type UpdatesDigestIte
 export { toEmailLocale, type EmailLocale } from "./locale";
 export { BATCH_LIMIT, isEmailConfigured, type SendResult } from "./send";
 export type {
+  AccessEndedEmailProps,
   AdminWeeklyDigestEmailProps,
   CancelCause,
   ContactFormEmailProps,
@@ -75,6 +77,14 @@ export const sendSubscriptionCanceledEmail = (to: string, props: SubscriptionCan
     to,
     subject: emailCopyFor(props.locale).subscriptionCanceled.subject(props.planName),
     react: createElement(SubscriptionCanceledEmail, props),
+  });
+
+/** The term of a one-time access ran out and nothing else keeps the store open. Transactional. */
+export const sendAccessEndedEmail = (to: string, props: AccessEndedEmailProps): Promise<SendResult> =>
+  send({
+    to,
+    subject: emailCopyFor(props.locale).accessEnded.subject(props.planName),
+    react: createElement(AccessEndedEmail, props),
   });
 
 /** A paid period that does not renew is about to end. Transactional. */

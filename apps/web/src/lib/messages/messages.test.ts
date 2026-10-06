@@ -17,7 +17,8 @@ import { describe, expect, it } from "vitest";
 const notices = (copy: BellCopy): Record<keyof BellCopy, BellText> => ({
   welcome: copy.welcome(),
   planActive: copy.planActive("Assinatura flyee"),
-  accessGranted: copy.accessGranted("Acesso flyee"),
+  accessGranted: copy.accessGranted("Acesso flyee", "6 de outubro de 2027"),
+  accessEnded: copy.accessEnded("Acesso flyee", "6 de outubro de 2027"),
   paymentRecovered: copy.paymentRecovered(),
   paymentFailed: copy.paymentFailed(7),
   subscriptionEnded: copy.subscriptionEnded("Assinatura flyee", false),
@@ -48,10 +49,20 @@ describe("bell copy", () => {
     for (const locale of ["pt-BR", "en"] as const) {
       const copy = bellCopyFor(locale);
       expect(copy.planActive("Plano Qualquer").body).toContain("Plano Qualquer");
-      expect(copy.accessGranted("Plano Qualquer").body).toContain("Plano Qualquer");
+      expect(copy.accessGranted("Plano Qualquer", null).body).toContain("Plano Qualquer");
+      expect(copy.accessGranted("Plano Qualquer", "x").body).toContain("Plano Qualquer");
+      expect(copy.accessEnded("Plano Qualquer", "x").body).toContain("Plano Qualquer");
       expect(copy.subscriptionEnded("Plano Qualquer", true).body).toContain("Plano Qualquer");
       expect(copy.termEnding("Plano Qualquer", "x").body).toContain("Plano Qualquer");
     }
+  });
+
+  it("states the end of an access only when it has one", () => {
+    expect(bellCopyFor("pt-BR").accessGranted("Acesso", "6 de outubro de 2027").body).toContain(
+      "até 6 de outubro de 2027",
+    );
+    expect(bellCopyFor("pt-BR").accessGranted("Acesso", null).body).not.toContain("até");
+    expect(bellCopyFor("en").accessGranted("Access", "October 6, 2027").body).toContain("until October 6, 2027");
   });
 
   it("says updates stop only when nothing else unlocks the store", () => {

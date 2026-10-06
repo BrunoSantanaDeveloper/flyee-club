@@ -6,6 +6,7 @@ import { notifyLocalized } from "@/lib/notifications";
 import { limitOf } from "@flyee/billing/entitlements";
 import {
   type CancelCause,
+  sendAccessEndedEmail,
   sendKitReceiptEmail,
   sendSubscriptionActiveEmail,
   sendSubscriptionCanceledEmail,
@@ -17,7 +18,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * What a workspace is told about its billing, by the bell and by e-mail, each
  * person in the language they read: a plan went live, the one-time access was
  * granted, a payment failed or recovered, a subscription ended, a paid period
- * is about to end.
+ * or an access term is about to end, an access term ran out.
  *
  * Called by the provider webhook and by the billing jobs, with the service
  * role: there is no member session behind either. Every function here is
@@ -98,10 +99,11 @@ export async function notifyAccessGranted(
         .maybeSingle();
       expiresAt = (grant?.expires_at as string | null) ?? null;
     }
-    await notifyLocalized(await workspaceMemberIds(service, orgId), (copy) => copy.accessGranted(plan.name), {
-      type: "billing",
-      href: HOME,
-    });
+    await notifyLocalized(
+      await workspaceMemberIds(service, orgId),
+      (copy, locale) => copy.accessGranted(plan.name, expiresAt ? dateLabel(expiresAt, locale) : null),
+      { type: "billing", href: HOME },
+    );
     for (const person of await workspaceManagers(service, orgId)) {
       await sendKitReceiptEmail(person.email, {
         locale: person.locale,
@@ -202,6 +204,113 @@ export async function notifySubscriptionEnded(
 type TermClaim = { subscription_id: string; org_id: string; plan_name: string; current_period_end: string };
 
 export type TermNoticeOutcome = { claimed: number; notified: number; emailed: number };
+
+type AccessClaim = { grant_id: string; org_id: string; plan_name: string; expires_at: string };
+
+/** Whether the workspace still has catalog access, by the one answer every gate shares. */
+async function hasCatalogAccess(service: SupabaseClient, orgId: string): Promise<boolean> {
+  const { data, error } = await service.rpc("org_entitlements", { target_org: orgId });
+  if (error) throw new Error("entitlements_read_failed");
+  const value = (data ?? {}) as { active?: boolean; limits?: Record<string, unknown> };
+  return Boolean(value.active) && limitOf(value.limits, "catalog_access") > 0;
+}
+
+/**
+ * The notice that the term of a one-time access is about to end.
+ *
+ * The access does not renew by itself (docs/BILLING.md): about two weeks
+ * before it ends, the member gets one bell notice and one e-mail, the same
+ * words as a paid period that does not renew. `claim_access_end_notices`
+ * (migration 0024) marks the grant in the statement that returns it, and
+ * leaves out a grant that a renewal already follows.
+ */
+export async function sendAccessEndNotices(service: SupabaseClient): Promise<TermNoticeOutcome> {
+  const { data, error } = await service.rpc("claim_access_end_notices");
+  if (error) throw new Error(`claim_access_end_notices failed: ${error.message}`);
+  const claims = (data ?? []) as AccessClaim[];
+  const outcome: TermNoticeOutcome = { claimed: claims.length, notified: 0, emailed: 0 };
+
+  for (const claim of claims) {
+    await quietly("access_ending", claim.org_id, async () => {
+      const bell = await notifyLocalized(
+        await workspaceMemberIds(service, claim.org_id),
+        (copy, locale) => copy.termEnding(claim.plan_name, dateLabel(claim.expires_at, locale)),
+        {
+          type: "billing",
+          href: BILLING,
+          sourceKey: `access-ending:${claim.grant_id}`,
+        },
+      );
+      outcome.notified += bell.created ?? 0;
+      for (const person of await workspaceManagers(service, claim.org_id)) {
+        const sent = await sendTermEndingEmail(person.email, {
+          locale: person.locale,
+          planName: claim.plan_name,
+          endsLabel: dateLabel(claim.expires_at, person.locale, person.timezone),
+          billingUrl: memberUrl(BILLING),
+        });
+        if (sent.sent) outcome.emailed += 1;
+      }
+    });
+  }
+  return outcome;
+}
+
+export type AccessEndingOutcome = {
+  claimed: number;
+  /** Workspaces that lost the catalog: told, and their CLI tokens revoked. */
+  ended: number;
+  /** Workspaces a renewal or a subscription kept open: nothing to say. */
+  kept: number;
+  emailed: number;
+};
+
+/**
+ * Settles the accesses whose term ran out: when nothing else keeps the store
+ * open, the member is told (bell and e-mail) and the CLI tokens are revoked,
+ * as when a subscription ends without the access (lib/billing-lifecycle.ts).
+ * A renewal chained after the term, or a live subscription, keeps the access
+ * and nothing is said. `claim_access_endings` (migration 0024) hands each
+ * grant over once.
+ */
+export async function settleAccessEndings(service: SupabaseClient): Promise<AccessEndingOutcome> {
+  const { data, error } = await service.rpc("claim_access_endings");
+  if (error) throw new Error(`claim_access_endings failed: ${error.message}`);
+  const claims = (data ?? []) as AccessClaim[];
+  const outcome: AccessEndingOutcome = { claimed: claims.length, ended: 0, kept: 0, emailed: 0 };
+
+  for (const claim of claims) {
+    await quietly("access_ended", claim.org_id, async () => {
+      if (await hasCatalogAccess(service, claim.org_id)) {
+        outcome.kept += 1;
+        return;
+      }
+      outcome.ended += 1;
+      // Installed tools keep working; what stops is the update. The token
+      // server is ours, so the tokens fall with the access.
+      const { error: revokeError } = await service.rpc("revoke_member_tokens", {
+        target_org: claim.org_id,
+        target_reason: "canceled",
+      });
+      if (revokeError) throw new Error(`revoke_member_tokens failed: ${revokeError.message}`);
+      await notifyLocalized(
+        await workspaceMemberIds(service, claim.org_id),
+        (copy, locale) => copy.accessEnded(claim.plan_name, dateLabel(claim.expires_at, locale)),
+        { type: "billing", href: BILLING, sourceKey: `access-ended:${claim.grant_id}` },
+      );
+      for (const person of await workspaceManagers(service, claim.org_id)) {
+        const sent = await sendAccessEndedEmail(person.email, {
+          locale: person.locale,
+          planName: claim.plan_name,
+          endedLabel: dateLabel(claim.expires_at, person.locale, person.timezone),
+          billingUrl: memberUrl(BILLING),
+        });
+        if (sent.sent) outcome.emailed += 1;
+      }
+    });
+  }
+  return outcome;
+}
 
 /**
  * The notice that a paid period which does not renew is about to end.

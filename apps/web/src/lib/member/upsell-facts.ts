@@ -9,24 +9,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * The facts `decideUpsell` needs, for one workspace.
  *
  * Tool executions live in `product_events`, which only the platform operator
- * reads, so that one count goes through the service role, scoped to the
- * workspace the SESSION belongs to (the caller passes the org it read from
- * the session, never from the request). The rest is the member's own data.
+ * reads, so the count goes through the service role, scoped to the workspace
+ * the SESSION belongs to (the caller passes the org it read from the session,
+ * never from the request).
  */
 export async function loadUpsellFacts(
   supabase: SupabaseClient,
   input: { orgId: string; tier: Tier | null },
 ): Promise<UpsellFacts> {
-  const facts: UpsellFacts = { tier: input.tier, trailsUsed30d: 0, hasClientProject: false };
+  const facts: UpsellFacts = { tier: input.tier, trailsUsed30d: 0 };
   if (!input.tier) return facts;
-
-  const { count } = await supabase
-    .from("member_devices")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", input.orgId)
-    .eq("project_kind", "client")
-    .is("revoked_at", null);
-  facts.hasClientProject = (count ?? 0) > 0;
 
   try {
     const service = createServiceClient();

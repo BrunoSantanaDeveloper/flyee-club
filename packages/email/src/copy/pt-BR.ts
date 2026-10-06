@@ -101,6 +101,19 @@ export const emailCopy = {
     back: "Para voltar, escolha um plano em Configurações, Cobrança.",
   },
 
+  accessEnded: {
+    subject: (plan: string) => `${plan}: o acesso terminou`,
+    preview: "O que continua e o que deixa de chegar",
+    heading: "Seu acesso terminou",
+    body: (plan: string, date: string) => `${plan} terminou em ${date}. O acesso não renova sozinho.`,
+    keepsTitle: "O que continua:",
+    keepsInstalled: "Os apps já instalados continuam funcionando no seu computador.",
+    stopsTitle: "O que deixa de chegar:",
+    stopsUpdates: "As versões novas dos apps e os apps novos.",
+    button: "Renovar o acesso",
+    back: "Para voltar a receber as atualizações, compre o acesso de novo em Configurações, Cobrança.",
+  },
+
   termEnding: {
     subject: (plan: string, date: string) => `${plan}: o período pago termina em ${date}`,
     preview: "Uma compra única não renova sozinha",

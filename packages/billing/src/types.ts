@@ -226,14 +226,19 @@ export type BillingEvent = { providerEventId: string } & (
        * The money went back — refunded by us or pulled by the card issuer.
        *
        * Until this existed the invoice stayed `paid` forever and, worse, what
-       * it bought stayed usable. The kit does not expire by design, so an
-       * un-reverted chargeback is a permanent free kit; the reversal revokes
-       * the grant the invoice created.
+       * it bought stayed usable: an un-reverted chargeback was a free year of
+       * access. The reversal revokes the grant the invoice created.
        */
       type: "payment_reverted";
       provider: BillingProviderName;
       metadata: Partial<CheckoutMetadata>;
       providerInvoiceId: string;
+      /**
+       * The one-off purchase the refunded charge belongs to (the installment
+       * of an Asaas parcel). The grant of an access paid in parts is keyed by
+       * it, so the refund of one parcel has to name it to reach the grant.
+       */
+      providerPaymentRef?: string;
       kind: "refund" | "chargeback";
     }
 );
@@ -298,11 +303,7 @@ const compactId = (id: string) => id.replace(/-/gu, "").toLowerCase();
 const expandId = (hex: string) =>
   `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 
-export function packCheckoutReference(metadata: {
-  org_id: string;
-  plan_id: string;
-  coupon_id?: string;
-}): string {
+export function packCheckoutReference(metadata: { org_id: string; plan_id: string; coupon_id?: string }): string {
   const parts = [compactId(metadata.org_id), compactId(metadata.plan_id)];
   if (metadata.coupon_id) parts.push(compactId(metadata.coupon_id));
   return parts.join(".");
@@ -368,10 +369,7 @@ export const INVOICE_DESCRIPTION_LIMIT = 500;
  * the result is clamped to the provider's limit so no edit in the admin can
  * break the checkout.
  */
-export function invoiceDescription(
-  plan: { name: string; description?: string | null },
-  extras: string[] = [],
-): string {
+export function invoiceDescription(plan: { name: string; description?: string | null }, extras: string[] = []): string {
   const title = extras.length > 0 ? `${plan.name} + ${extras.join(", ")}` : plan.name;
   const detail = (plan.description ?? "").replace(/\s+/gu, " ").trim();
   const full = detail ? `${title} — ${detail}` : title;

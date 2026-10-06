@@ -360,6 +360,7 @@ export const plans = pgTable("plans", {
 	sort: integer().default(0).notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	accessMonths: integer("access_months"),
 }, (table) => [
 	uniqueIndex("plans_one_public_access_idx").using("btree", table.family.asc().nullsLast().op("text_ops"), table.currency.asc().nullsLast().op("text_ops")).where(sql`(is_public AND is_active AND (NOT is_addon) AND (period IS NULL))`),
 	uniqueIndex("plans_one_public_recurring_idx").using("btree", table.family.asc().nullsLast().op("text_ops"), table.period.asc().nullsLast().op("enum_ops"), table.currency.asc().nullsLast().op("text_ops")).where(sql`(is_public AND is_active AND (NOT is_addon) AND (period IS NOT NULL))`),
@@ -375,6 +376,8 @@ export const plans = pgTable("plans", {
 	check("plans_free_price", sql`(NOT is_free) OR (price_cents = 0)`),
 	check("plans_recurring_period", sql`(kind <> 'recurring'::plan_kind) OR (period IS NOT NULL)`),
 	check("plans_access_no_period", sql`(kind <> 'access'::plan_kind) OR (period IS NULL)`),
+	check("plans_access_months_check", sql`(access_months IS NULL) OR (access_months > 0)`),
+	check("plans_access_months_kind", sql`(kind = 'access'::plan_kind) OR (access_months IS NULL)`),
 ]);
 
 export const modules = pgTable("modules", {
@@ -570,6 +573,8 @@ export const entitlementGrants = pgTable("entitlement_grants", {
 	revokedAt: timestamp("revoked_at", { withTimezone: true, mode: 'string' }),
 	revokeReason: text("revoke_reason"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	endNoticeSentAt: timestamp("end_notice_sent_at", { withTimezone: true, mode: 'string' }),
+	endedHandledAt: timestamp("ended_handled_at", { withTimezone: true, mode: 'string' }),
 }, (table) => [
 	index("entitlement_grants_live_idx").using("btree", table.orgId.asc().nullsLast().op("uuid_ops")).where(sql`(revoked_at IS NULL)`),
 	index("entitlement_grants_org_idx").using("btree", table.orgId.asc().nullsLast().op("uuid_ops"), table.createdAt.desc().nullsFirst().op("timestamptz_ops")),

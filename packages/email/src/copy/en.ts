@@ -86,6 +86,19 @@ export const emailCopy: EmailCopy = {
     back: "To come back, choose a plan under Settings, Billing.",
   },
 
+  accessEnded: {
+    subject: (plan) => `${plan}: your access has ended`,
+    preview: "What stays and what stops arriving",
+    heading: "Your access has ended",
+    body: (plan, date) => `${plan} ended on ${date}. Access does not renew by itself.`,
+    keepsTitle: "What stays:",
+    keepsInstalled: "The apps you installed keep working on your computer.",
+    stopsTitle: "What stops arriving:",
+    stopsUpdates: "New versions of the apps, and new apps.",
+    button: "Renew access",
+    back: "To receive updates again, buy the access again under Settings, Billing.",
+  },
+
   termEnding: {
     subject: (plan, date) => `${plan}: the paid period ends on ${date}`,
     preview: "A one-time purchase does not renew by itself",

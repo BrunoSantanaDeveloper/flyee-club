@@ -19,7 +19,14 @@ import { sendMetaConversion } from "@/lib/meta-capi";
 import { readSignupAttribution } from "@/lib/signup-attribution";
 import { logAuditEvent } from "@flyee/audit";
 import { createServiceClient } from "@flyee/auth/service";
-import { type BillingEvent, type BillingPeriod, getProvider, isTier } from "@flyee/billing";
+import {
+  applyDiscount,
+  type BillingEvent,
+  type BillingPeriod,
+  type CheckoutCoupon,
+  getProvider,
+  isTier,
+} from "@flyee/billing";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -278,17 +285,45 @@ async function graceDays(supabase: ServiceClient): Promise<number> {
   return Number.isFinite(days) && days > 0 ? Math.floor(days) : 0;
 }
 
-type PlanFacts = { id: string; slug: string; name: string; kind: string; tier: string | null; period: string | null };
+type PlanFacts = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  tier: string | null;
+  period: string | null;
+  price_cents: number;
+};
 
 async function readPlan(supabase: ServiceClient, planId: string | null | undefined): Promise<PlanFacts | null> {
   if (!planId) return null;
   const { data, error } = await supabase
     .from("plans")
-    .select("id, slug, name, kind, tier, period")
+    .select("id, slug, name, kind, tier, period, price_cents")
     .eq("id", planId)
     .maybeSingle();
   if (error) throw new Error("plan_reconciliation_failed");
   return (data as PlanFacts | null) ?? null;
+}
+
+/**
+ * What an access paid in installments was sold for: the plan's price with the
+ * coupon of the checkout. A parcel's event carries the parcel's amount, and
+ * Asaas never sends the total, so the whole is rebuilt the way the checkout
+ * computed it (`applyDiscount`, packages/billing).
+ */
+async function soldAccessPrice(supabase: ServiceClient, plan: PlanFacts, couponId: string | undefined) {
+  if (!couponId) return plan.price_cents;
+  const { data } = await supabase
+    .from("coupons")
+    .select("discount_type, discount_value")
+    .eq("id", couponId)
+    .maybeSingle();
+  if (!data) return plan.price_cents;
+  return applyDiscount(plan.price_cents, {
+    discountType: data.discount_type,
+    discountValue: Number(data.discount_value),
+  } as CheckoutCoupon);
 }
 
 /**
@@ -527,24 +562,38 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
 
       // A one-time ACCESS purchase (the kit) is granted HERE, on the paid
       // invoice and never at checkout start. The grant is idempotent per
-      // invoice, so a resent event grants nothing more, and a refunded kit is
-      // never revived by a late replay (grant_entitlement_on_invoice, 0003).
+      // purchase, so a resent event grants nothing more, and a refunded kit is
+      // never revived by a late replay (grant_entitlement_on_invoice, 0024).
+      //
+      // An access paid in installments is ONE purchase with a payment per
+      // parcel: every parcel's event names the installment, the grant is keyed
+      // by it, and twelve confirmed parcels grant one term. The parcel's own
+      // amount is not what was sold; the whole is.
+      let accessSoldCents: number | null = null;
+      let accessSaleHere = false;
+      let accessSplit = false;
       if (plan?.kind === "access") {
+        accessSplit = Boolean(event.providerPaymentRef && event.providerPaymentRef !== event.providerInvoiceId);
+        const purchaseRef = event.providerPaymentRef ?? event.providerInvoiceId;
+        accessSoldCents = accessSplit
+          ? await soldAccessPrice(supabase, plan, event.metadata.coupon_id)
+          : event.amountCents;
         const { data: granted, error: grantError } = await supabase.rpc("grant_entitlement_on_invoice", {
           target_org: orgId,
           target_plan: plan.id,
           target_provider: event.provider,
-          target_provider_invoice_id: event.providerInvoiceId,
-          target_price_cents: event.amountCents,
+          target_provider_invoice_id: purchaseRef,
+          target_price_cents: accessSoldCents,
           target_currency: event.currency.toUpperCase(),
         });
         const grant = granted as { ok?: boolean; code?: string; grantId?: string } | null;
         if (grantError || !grant?.ok) throw new Error("grant_reconciliation_failed");
+        accessSaleHere = grant.code === "granted";
 
         // The first delivery of a new grant is the purchase; a replay is not.
         // This block runs before anything below that may throw, because a
         // retry finds the grant already given and never comes back to it.
-        if (grant.code === "granted") {
+        if (accessSaleHere) {
           // Counted here or never: a retry finds the grant already given and
           // skips this block, so a failure is logged instead of replayed.
           if (event.metadata.coupon_id) {
@@ -561,22 +610,43 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
           await notifyAccessGranted(supabase, orgId, {
             planId: plan.id,
             grantId: grant.grantId ?? null,
-            amountCents: event.amountCents,
+            amountCents: accessSoldCents,
             currency: event.currency.toUpperCase(),
           });
         }
 
-        // Idempotent per invoice (upsert, duplicates ignored): a failure here
-        // throws and the retry writes it.
-        await recordPurchaseAttribution(supabase, {
-          orgId,
-          invoiceKey,
-          subscriptionId: null,
-          planSlug: plan.slug,
-          amountCents: event.amountCents,
-          currency: event.currency.toUpperCase(),
-          paidAt: event.paidAt,
-        });
+        if (!accessSplit) {
+          // Idempotent per invoice (upsert, duplicates ignored): a failure here
+          // throws and the retry writes it.
+          await recordPurchaseAttribution(supabase, {
+            orgId,
+            invoiceKey,
+            subscriptionId: null,
+            planSlug: plan.slug,
+            amountCents: event.amountCents,
+            currency: event.currency.toUpperCase(),
+            paidAt: event.paidAt,
+          });
+        } else if (accessSaleHere) {
+          // One sale, credited once, by the parcel that granted it, at the
+          // whole price. A retry finds the grant given and never returns here,
+          // so a failure is logged instead of replayed.
+          await recordPurchaseAttribution(supabase, {
+            orgId,
+            invoiceKey,
+            subscriptionId: null,
+            planSlug: plan.slug,
+            amountCents: accessSoldCents,
+            currency: event.currency.toUpperCase(),
+            paidAt: event.paidAt,
+          }).catch((attributionError) => {
+            console.error("billing_split_attribution_failed", {
+              orgId,
+              invoiceKey,
+              message: attributionError instanceof Error ? attributionError.message : String(attributionError),
+            });
+          });
+        }
       }
 
       // A yearly plan split into installments is ONE purchase: no provider
@@ -634,9 +704,10 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         }
       }
       // What the sale is worth: the whole purchase for a split one (the price
-      // snapshot), the charge itself otherwise.
+      // snapshot, or the access rebuilt above), the charge itself otherwise.
       const saleCents =
-        singlePurchase && typeof sub?.price_cents === "number" ? (sub.price_cents as number) : event.amountCents;
+        accessSoldCents ??
+        (singlePurchase && typeof sub?.price_cents === "number" ? (sub.price_cents as number) : event.amountCents);
 
       // A paid invoice heals a past_due subscription — and closes the dunning
       // window with it, so a later failure starts counting from scratch.
@@ -691,8 +762,9 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
 
       // Meta CAPI + GA4 — Purchase, once per paid invoice (renewals are distinct
       // invoices, so they count as distinct purchases), and once per SALE for a
-      // split purchase. Best-effort: it never blocks reconciliation.
-      if (!alreadyCounted && (!singlePurchase || saleOpenedHere))
+      // split purchase, subscription or access. Best-effort: it never blocks
+      // reconciliation.
+      if (!alreadyCounted && (!singlePurchase || saleOpenedHere) && (!accessSplit || accessSaleHere))
         try {
           const { data: attribution } = await supabase
             .from("meta_attribution")
@@ -831,6 +903,9 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
         target_provider: event.provider,
         target_provider_invoice_id: event.providerInvoiceId,
         target_kind: event.kind,
+        // The grant of an access paid in parts is keyed by the installment the
+        // refunded parcel belongs to (0024).
+        target_purchase_ref: event.providerPaymentRef ?? null,
       });
       if (error) throw new Error("invoice_reversal_failed");
       const result = data as { ok?: boolean; code?: string; orgId?: string; grantsRevoked?: number } | null;

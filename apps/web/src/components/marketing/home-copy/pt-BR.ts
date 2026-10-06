@@ -9,10 +9,11 @@
  *
  * The text follows docs/HOME-COPY.md (the app-store home, delivered
  * 2026-10-01). Where that draft states something the platform does not do yet
- * (a year of access paid in 12x, client projects on the entry access, a
- * self-service refund, custom apps, mentoring) or marks it [CONFIRMAR] /
+ * (a self-service refund, custom apps, mentoring) or marks it [CONFIRMAR] /
  * [FICTÍCIO], the page says what the platform does instead, or leaves the
- * section out until it exists. The guardrails of docs/DESIGN.md apply to every
+ * section out until it exists. The commercial rules it states (a year of
+ * access, installments, client projects) are the platform's since migration
+ * 0024. The guardrails of docs/DESIGN.md apply to every
  * line, and every NUMBER on the home comes from the database.
  */
 export const homeCopyPtBR = {
@@ -29,7 +30,7 @@ export const homeCopyPtBR = {
     subtitle:
       "Vendas, conteúdo, vídeo, pesquisa e produto: cada tarefa repetitiva vira um app que roda no Claude Code, no Codex ou na IA que você já usa. Para o seu negócio, a sua agência, o seu produto digital ou o seu trabalho de dev.",
     secondaryCta: "O flyee é pra mim?",
-    note: "O acesso é um pagamento único. Você usa o seu próprio plano de IA.",
+    note: "Acesso de 1 ano, pagamento único. Você usa o seu próprio plano de IA.",
     stripLabel: "Funciona com a IA que você já usa",
     store: {
       label: "A loja de apps do flyee, com os apps publicados",
@@ -130,7 +131,7 @@ export const homeCopyPtBR = {
     eyebrow: "Acesso",
     title: "Escolha como entrar.",
     subtitle:
-      "O acesso é um pagamento único e libera todos os apps da loja, com as atualizações. A assinatura soma guias avançados, encontros ao vivo, voto no que entra na loja e mais computadores.",
+      "O acesso é um pagamento único, válido por 1 ano, e libera todos os apps da loja, com as atualizações. A assinatura soma guias avançados, encontros ao vivo, voto no que entra na loja e mais computadores.",
     requirementsTitle: "O que você precisa ter",
     requirements: [
       {
@@ -183,7 +184,7 @@ export const homeCopyPtBR = {
       },
       {
         question: "Posso usar em projetos de clientes?",
-        answer: "Pode, com o Pro: ele inclui a licença comercial para projetos de clientes.",
+        answer: "Pode. O acesso cobre os seus projetos e os projetos dos seus clientes.",
       },
       {
         question: "Em que idiomas?",

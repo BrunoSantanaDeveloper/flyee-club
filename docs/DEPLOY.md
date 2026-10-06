@@ -259,7 +259,7 @@ devem aparecer na lista:
 | `flyee-meeting-emails-sweep` | a cada 10 minutos | lembretes dos encontros (24 horas e última hora) e aviso da gravação |
 | `flyee-meeting-email` | evento | confirmação de uma inscrição; botões "Enviar agora" de `/admin/encontros` |
 | `flyee-token-reminders` | todo dia, 10:00 de Brasília | lembrete da conexão que vence em até 5 dias |
-| `flyee-term-end-notices` | todo dia, 10:15 de Brasília | aviso de período pago (compra parcelada) que termina em até 15 dias |
+| `flyee-term-end-notices` | todo dia, 10:15 de Brasília | aviso de período pago (compra parcelada) ou de kit que termina em até 15 dias, e liquidação dos kits que terminaram (aviso e tokens revogados quando nada mais mantém o acesso) |
 | `flyee-updates-digest` | terças, 10:00 de Brasília | resumo semanal de versões novas dos apps instalados |
 | `flyee-newsletter-send` | evento | entrega de uma mensagem para a lista, em lotes de 100 |
 | `flyee-maintenance` | todo dia, 01:30 de Brasília | consolida os eventos de uso do dia anterior e apaga o que venceu (eventos, trilha da CLI, sobras de login, uploads não concluídos) |

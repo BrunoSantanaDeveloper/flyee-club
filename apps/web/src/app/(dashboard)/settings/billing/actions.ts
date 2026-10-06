@@ -273,6 +273,7 @@ export async function startCheckout(input: {
 
     const origin = await appOrigin();
     const choice = resolvePaymentChoice({
+      planKind: planRow.kind,
       method: input.paymentMethod,
       installments: input.installments,
       planPeriod: planRow.period,

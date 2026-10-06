@@ -15,7 +15,7 @@ export const homeCopy: HomeCopy = {
     subtitle:
       "Sales, content, video, research and product: every repetitive task becomes an app that runs in Claude Code, Codex or the AI you already use. For your business, your agency, your digital product or your dev work.",
     secondaryCta: "Is flyee for me?",
-    note: "Access is a one-time payment. You use your own AI plan.",
+    note: "One year of access, one payment. You use your own AI plan.",
     stripLabel: "Works with the AI you already use",
     store: {
       label: "The flyee app store, with the published apps",
@@ -117,7 +117,7 @@ export const homeCopy: HomeCopy = {
     eyebrow: "Access",
     title: "Choose how to get in.",
     subtitle:
-      "Access is a one-time payment that unlocks every app in the store, with updates. The membership adds advanced guides, live sessions, a vote on what joins the store and more computers.",
+      "Access is a one-time payment, valid for 1 year, that unlocks every app in the store, with updates. The membership adds advanced guides, live sessions, a vote on what joins the store and more computers.",
     requirementsTitle: "What you need",
     requirements: [
       {
@@ -170,7 +170,7 @@ export const homeCopy: HomeCopy = {
       },
       {
         question: "Can I use it in client projects?",
-        answer: "Yes, with Pro: it includes the commercial license for client projects.",
+        answer: "Yes. Access covers your own projects and your clients' projects.",
       },
       {
         question: "Which languages?",

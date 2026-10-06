@@ -33,10 +33,18 @@ const ptBR = {
     body: `${plan} já vale na sua conta.`,
   }),
 
-  /** The one-time access was granted. */
-  accessGranted: (plan: string): BellText => ({
+  /** The one-time access was granted. `until` is the end of its term, already formatted; null when it has none. */
+  accessGranted: (plan: string, until: string | null): BellText => ({
     title: "Acesso liberado",
-    body: `Pagamento confirmado: ${plan}. Os apps da loja e as atualizações estão liberados na sua conta.`,
+    body: until
+      ? `Pagamento confirmado: ${plan}. Os apps da loja e as atualizações estão liberados na sua conta até ${until}.`
+      : `Pagamento confirmado: ${plan}. Os apps da loja e as atualizações estão liberados na sua conta.`,
+  }),
+
+  /** The term of a one-time access ran out and nothing else keeps the store open. */
+  accessEnded: (plan: string, date: string): BellText => ({
+    title: "Seu acesso terminou",
+    body: `${plan} terminou em ${date}. Os apps já instalados continuam funcionando; as versões novas deixam de chegar. Para renovar, compre o acesso de novo em Cobrança.`,
   }),
 
   /** A late payment went through. */
@@ -123,9 +131,16 @@ const en: BellCopy = {
     body: `${plan} is live on your account.`,
   }),
 
-  accessGranted: (plan) => ({
+  accessGranted: (plan, until) => ({
     title: "Access unlocked",
-    body: `Payment confirmed: ${plan}. Every app in the store and its updates are on your account.`,
+    body: until
+      ? `Payment confirmed: ${plan}. Every app in the store and its updates are on your account until ${until}.`
+      : `Payment confirmed: ${plan}. Every app in the store and its updates are on your account.`,
+  }),
+
+  accessEnded: (plan, date) => ({
+    title: "Your access has ended",
+    body: `${plan} ended on ${date}. The apps you installed keep working; new versions stop arriving. To renew, buy the access again under Billing.`,
   }),
 
   paymentRecovered: () => ({

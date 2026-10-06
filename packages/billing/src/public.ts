@@ -20,6 +20,8 @@ export type PublicPlan = {
   isFree: boolean;
   limits: Record<string, number>;
   sort: number;
+  /** How long a one-time access lasts, in months; null when it has no end (and for every recurring plan). */
+  accessMonths: number | null;
 };
 
 /**
@@ -43,7 +45,9 @@ export async function listPublicPlans(options: { currency?: string } = {}): Prom
 
   let query = supabase
     .from("plans")
-    .select("slug, name, description, kind, family, tier, period, price_cents, currency, trial_days, is_free, limits, sort")
+    .select(
+      "slug, name, description, kind, family, tier, period, price_cents, currency, trial_days, is_free, limits, sort, access_months",
+    )
     .eq("is_active", true)
     // Add-ons are not tiers: on a public pricing page they
     // would read as another plan to choose between.
@@ -71,6 +75,7 @@ export async function listPublicPlans(options: { currency?: string } = {}): Prom
     isFree: row.is_free,
     limits: (row.limits ?? {}) as Record<string, number>,
     sort: row.sort,
+    accessMonths: row.access_months ?? null,
   }));
 }
 
@@ -97,7 +102,9 @@ export async function getPlanBySlug(slug: string): Promise<PublicPlan | null> {
 
   const { data, error } = await supabase
     .from("plans")
-    .select("slug, name, description, kind, family, tier, period, price_cents, currency, trial_days, is_free, limits, sort")
+    .select(
+      "slug, name, description, kind, family, tier, period, price_cents, currency, trial_days, is_free, limits, sort, access_months",
+    )
     .eq("slug", slug.trim())
     .eq("is_active", true)
     .maybeSingle();
@@ -118,6 +125,7 @@ export async function getPlanBySlug(slug: string): Promise<PublicPlan | null> {
     isFree: data.is_free,
     limits: (data.limits ?? {}) as Record<string, number>,
     sort: data.sort,
+    accessMonths: data.access_months ?? null,
   };
 }
 
@@ -148,7 +156,9 @@ export async function resolvePublicCoupon(code: string): Promise<CheckoutCoupon 
   const { data, error } = await supabase.rpc("validate_coupon", { coupon_code: normalized });
   if (error) return null;
   const row = (
-    data as { id: string; code: string; discount_type: string; discount_value: number; currency: string | null }[] | null
+    data as
+      | { id: string; code: string; discount_type: string; discount_value: number; currency: string | null }[]
+      | null
   )?.[0];
   if (!row) return null;
 

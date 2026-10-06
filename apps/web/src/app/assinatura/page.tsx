@@ -110,7 +110,7 @@ export default async function AssinaturaPage({
   // deliberately unlisted and reached only by the link it is sent with.
   const planQuery = supabase
     .from("plans")
-    .select("id, slug, name, kind, family, tier, period, price_cents, currency, is_free")
+    .select("id, slug, name, kind, family, tier, period, price_cents, currency, is_free, access_months")
     .eq("is_active", true);
   const { data: planRow } = requestedSlug
     ? await planQuery.eq("slug", requestedSlug).maybeSingle()
@@ -150,31 +150,22 @@ export default async function AssinaturaPage({
   const suffix = planRow.period ? t(`billing-period-${planRow.period}` as never) : t("billing-one-time");
   const priceLabel = `${money.format(Number(planRow.price_cents) / 100)} ${suffix}`;
 
+  // An access the workspace already holds: buying again is a RENEWAL, and the
+  // new term starts when the current one ends (grant_entitlement_on_invoice,
+  // 0024), so the form says so instead of refusing the purchase.
+  let renewalFrom: string | null = null;
   if (oneTime) {
-    // Already owns this kit: buying again would only pay twice for a right
-    // that never expires.
-    const { data: liveGrant } = await supabase
+    const { data: liveGrants } = await supabase
       .from("entitlement_grants")
-      .select("id")
+      .select("expires_at")
       .eq("org_id", orgId)
-      .eq("plan_id", planRow.id)
-      .is("revoked_at", null)
-      .limit(1)
-      .maybeSingle();
-    if (liveGrant) {
-      return (
-        <Shell>
-          <Typography variant="h1" component="h1" className="mb-0">
-            {t("checkout-owned-kit-title")}
-          </Typography>
-          <Alert severity="success" className="neutral bg-background-paper/60!">
-            {t("checkout-owned-kit-body")}
-          </Alert>
-          <Button variant="contained" component={Link} href="/inicio">
-            {t("checkout-go-platform")}
-          </Button>
-        </Shell>
-      );
+      .eq("kind", "kit")
+      .is("revoked_at", null);
+    const ends = (liveGrants ?? []).map((grant) => grant.expires_at as string | null);
+    if (ends.length > 0) {
+      renewalFrom = ends.includes(null)
+        ? null
+        : ends.reduce<string | null>((latest, end) => (!latest || (end && end > latest) ? end : latest), null);
     }
 
     // A kit purchase started in the last day and not granted yet: a PIX being
@@ -286,9 +277,9 @@ export default async function AssinaturaPage({
     );
   }
 
-  // Installments only for a yearly BRL subscription paid by card (the server
-  // re-applies the same rule).
-  const splittable = !oneTime && planCurrency === "BRL" && planRow.period === "yearly";
+  // Installments in BRL, on a card, for the one-time access or a yearly plan
+  // (the server re-applies the same rule, lib/payment-choice.ts).
+  const splittable = planCurrency === "BRL" && (oneTime || planRow.period === "yearly");
 
   return (
     <Shell wide>
@@ -303,6 +294,8 @@ export default async function AssinaturaPage({
         priceLabel={priceLabel}
         currency={planCurrency}
         oneTime={oneTime}
+        accessMonths={oneTime ? ((planRow.access_months as number | null) ?? null) : null}
+        renewalFrom={renewalFrom}
         guaranteeDays={guaranteeDays}
         priceCents={Number(planRow.price_cents)}
         maxInstallments={splittable ? maxInstallments : 1}

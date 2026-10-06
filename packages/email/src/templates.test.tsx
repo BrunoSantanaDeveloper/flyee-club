@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { emailCopyFor } from "./copy";
 import type { EmailLocale } from "./locale";
+import AccessEndedEmail from "./templates/access-ended";
 import ContactFormEmail from "./templates/contact-form";
 import KitReceiptEmail from "./templates/kit-receipt";
 import LeadConfirmEmail from "./templates/lead-confirm";
@@ -61,6 +62,12 @@ function every(locale: EmailLocale): Record<string, ReactElement> {
       cause: "requested",
       endedLabel: "2026-10-02",
       keptAccess: null,
+      billingUrl: APP,
+    }),
+    "access-ended": createElement(AccessEndedEmail, {
+      locale,
+      planName: "Acesso flyee",
+      endedLabel: "2026-10-02",
       billingUrl: APP,
     }),
     "term-ending": createElement(TermEndingEmail, {

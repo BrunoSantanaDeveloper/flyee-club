@@ -1,7 +1,8 @@
 import { resolvePaymentChoice } from "./payment-choice";
 import { describe, expect, it } from "vitest";
 
-const yearlyBrl = { planPeriod: "yearly", currency: "BRL", maxInstallments: 12 };
+const yearlyBrl = { planPeriod: "yearly", planKind: "recurring" as const, currency: "BRL", maxInstallments: 12 };
+const accessBrl = { planPeriod: null, planKind: "access" as const, currency: "BRL", maxInstallments: 12 };
 
 describe("resolvePaymentChoice", () => {
   it("passes a card purchase on an annual BRL plan through with its instalments", () => {
@@ -38,7 +39,18 @@ describe("resolvePaymentChoice", () => {
     ).toBe(1);
   });
 
-  it("refuses to split a one-time purchase (the kit)", () => {
+  it("splits the one-time access on a card, up to the ceiling", () => {
+    expect(resolvePaymentChoice({ ...accessBrl, method: "credit_card", installments: 12 })).toEqual({
+      method: "credit_card",
+      installments: 12,
+    });
+    expect(
+      resolvePaymentChoice({ ...accessBrl, maxInstallments: 1, method: "credit_card", installments: 12 }).installments,
+    ).toBe(1);
+    expect(resolvePaymentChoice({ ...accessBrl, method: "pix", installments: 12 }).installments).toBe(1);
+  });
+
+  it("refuses to split a one-time purchase that is not the access", () => {
     expect(
       resolvePaymentChoice({ ...yearlyBrl, planPeriod: null, method: "credit_card", installments: 3 }).installments,
     ).toBe(1);
@@ -55,6 +67,7 @@ describe("resolvePaymentChoice", () => {
     expect(
       resolvePaymentChoice({
         planPeriod: "yearly",
+        planKind: "recurring",
         currency: "USD",
         maxInstallments: 12,
         method: "pix",

@@ -25,7 +25,7 @@ export async function loadOfferPlans(currency: BillingCurrency): Promise<Partial
       .filter((plan) => plan.tier === tier && (tier === "kit" ? plan.kind === "access" : plan.period === "monthly"))
       .sort((a, b) => a.sort - b.sort)[0];
   const offers: Partial<Record<UpsellOffer, OfferPlan>> = {};
-  for (const tier of ["kit", "club", "pro"] as const) {
+  for (const tier of ["kit", "club"] as const) {
     const plan = pick(tier);
     if (plan) {
       offers[tier] = {

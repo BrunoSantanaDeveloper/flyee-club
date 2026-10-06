@@ -33,7 +33,7 @@ export default async function HomePage() {
     ? decideUpsell(upsellFacts)
     : entitlements.tier
       ? null
-      : decideUpsell({ tier: null, trailsUsed30d: 0, hasClientProject: false });
+      : decideUpsell({ tier: null, trailsUsed30d: 0 });
 
   const state: HomeState = {
     kind: "ready",

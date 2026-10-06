@@ -119,7 +119,9 @@ export default function CurrentSubscription({
 
           {entitlements.hasKit && (
             <Alert severity="success" className="neutral">
-              {t("billing-kit-active")}
+              {entitlements.accessEndsAt
+                ? t("billing-kit-active-until", { date: formatDate(entitlements.accessEndsAt) })
+                : t("billing-kit-active")}
             </Alert>
           )}
 

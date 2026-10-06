@@ -2,6 +2,11 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import type { PublicPlanDisplay } from "@/components/marketing/pricing-section";
 import type { Tone } from "@/components/marketing/tone";
+import { accessTermParts } from "@/lib/access-term";
+
+/** The plural-aware key of a term ("1 ano", "18 meses"); both literals, so the message pruner sees them. */
+const termKey = (months: number) =>
+  accessTermParts(months).unit === "years" ? "access-term-years" : "access-term-months";
 import type { LaunchStage } from "@/lib/launch";
 import type { BillingCurrency } from "@flyee/billing/currency";
 import { enabledFeatures, type EntitlementKey, isTier, limitOf, type Tier } from "@flyee/billing/entitlements";
@@ -120,7 +125,13 @@ export async function getDisplayPlans({
           ? t("pricing-coupon-off-percent", { value: planCoupon.discountValue })
           : t("pricing-coupon-off-fixed", { value: money.format((planCoupon?.discountValue ?? 0) / 100) })
         : undefined,
-      period: isKit ? t("pricing-one-time") : t(`pricing-period-${plan.period}`),
+      period: isKit
+        ? plan.accessMonths
+          ? t("pricing-access-term", {
+              term: t(termKey(plan.accessMonths), { count: accessTermParts(plan.accessMonths).count }),
+            })
+          : t("pricing-one-time")
+        : t(`pricing-period-${plan.period}`),
       features,
       // The subscription is the anchor of the ladder.
       highlighted: tier === "club",

@@ -4,7 +4,7 @@ Desenho vigente da cobrança do flyee.club, escrito na fase 4 de `docs/PLANO-IMP
 
 ## Em uma tela
 
-- **Três degraus pagos**: kit (pagamento único, sem prazo), assinatura (mensal ou anual) e Pro (mensal ou anual). Sem compra, a conta fica no Gratuito.
+- **Três degraus pagos**: kit (pagamento único, válido por 1 ano, renovado com uma nova compra), assinatura (mensal ou anual) e Pro (mensal ou anual). Sem compra, a conta fica no Gratuito. Todo plano pago pode ser usado em projetos de clientes.
 - **A moeda escolhe o provedor**: real vai para o Asaas, dólar vai para a Stripe. Não existe chave de provedor.
 - **Nada é liberado no checkout.** O acesso nasce no webhook do pagamento confirmado, de forma idempotente.
 - **Uma só resposta para "o que esta conta pode usar"**: a função `org_entitlements(org)`. Tela nenhuma decide pelo nome ou slug do plano.
@@ -16,13 +16,14 @@ Desenho vigente da cobrança do flyee.club, escrito na fase 4 de `docs/PLANO-IMP
 | Degrau | Planos | Cobrança | Dispositivos | O que libera |
 |---|---|---|---|---|
 | Gratuito | `gratuito` | nenhuma | 1 | amostras grátis do catálogo |
-| Kit | `kit`, `kit-usd` | pagamento único, sem prazo | 1 | catálogo e atualizações (`catalog_access`) |
+| Kit | `kit`, `kit-usd` | pagamento único, válido por `plans.access_months` (12) a partir da fatura paga | 1 | catálogo e atualizações (`catalog_access`), uso em projetos de clientes (`commercial_license`) |
 | Assinatura | `club-mensal`, `club-anual` e as versões `-usd` | recorrente | 3 | o kit, mais `advanced_lessons`, `recipes`, `roadmap_vote` e `meetings` |
-| Pro | `pro-mensal`, `pro-anual` e as versões `-usd` | recorrente | 5 | a assinatura, mais `commercial_license` e `open_the_hood` |
+| Pro | `pro-mensal`, `pro-anual` e as versões `-usd` | recorrente | 5 | a assinatura, mais `open_the_hood` |
 
 - Cada plano existe uma vez por moeda: uma linha de `plans` em BRL e outra em USD, com o mesmo `family` e `tier`.
 - `club-fundador-anual` é a oferta de fundador: BRL, fora da vitrine (`is_public = false`), alcançada só pelo link da oferta (`platform_settings.founders`).
-- Os direitos são chaves numéricas de `plans.limits` (0 = desligado; `devices` é um teto). A lista fica em `packages/billing/src/entitlements.ts`.
+- Os direitos são chaves numéricas de `plans.limits` (0 = desligado; `devices` é um teto). A lista fica em `packages/billing/src/entitlements.ts`. Desde a migração `0024`, `commercial_license` está ligada em todo plano pago: o uso em projetos de clientes não distingue degrau nenhum.
+- **Renovação do kit**: comprar o kit de novo é renovar. A nova concessão começa quando a atual termina (`grant_entitlement_on_invoice` encadeia pelo maior `expires_at` vivo), então renovar cedo não joga dias fora. `org_entitlements` só conta a concessão em curso; a página de cobrança lê `entitlement_grants` para mostrar até quando o acesso vai, renovações incluídas.
 - Os preços do seed são hipóteses de lançamento. Eles mudam em `/admin/billing`, nunca no código.
 
 ## Quem responde o que a conta pode usar
@@ -45,9 +46,9 @@ São duas tabelas, com papéis diferentes:
 | Tipos | `kit` (compra), `comp` (cortesia), `license` (reservado) | um plano recorrente; o Gratuito também é uma linha |
 | Quem cria | o webhook, no pagamento confirmado (`grant_entitlement_on_invoice`); o superadmin, na aba "Kits e cortesias" (`grant_entitlement`) | o checkout cria a linha `incomplete`; o webhook ativa |
 | Quantas | várias por conta | uma viva por conta (`subscriptions_org_live_unique`) |
-| Fim | reembolso ou estorno (`revert_paid_invoice`), ou revogação no admin | cancelamento, fim do período ou desistência do provedor |
+| Fim | o prazo (`expires_at`, 12 meses para o kit), reembolso ou estorno (`revert_paid_invoice`), ou revogação no admin | cancelamento, fim do período ou desistência do provedor |
 
-O kit é idempotente por fatura: a chave `invoice_key = provedor:id_da_fatura` impede conceder duas vezes, e um kit reembolsado não volta com um webhook atrasado.
+O kit é idempotente por compra: a chave `invoice_key = provedor:id_da_compra` impede conceder duas vezes, e um kit reembolsado não volta com um webhook atrasado. Num kit parcelado, a compra é o parcelamento (o `installment` do Asaas, que toda parcela carrega), não a parcela: doze parcelas confirmadas concedem um prazo só.
 
 ## Moeda e provedor
 
@@ -63,9 +64,9 @@ O kit é idempotente por fatura: a chave `invoice_key = provedor:id_da_fatura` i
 2. `startCheckout` (`apps/web/src/app/(dashboard)/settings/billing/actions.ts`) reserva a operação em `billing_operations` (tipo `access_checkout` para o kit, `checkout` para assinatura). A reserva é o que torna o clique duplo inofensivo.
 3. O cupom passa por `validate_coupon`: família, moeda, validade e limite de usos.
 4. O provedor cria a cobrança:
-   - **Kit**: cobrança avulsa (Asaas `/payments`; Stripe Checkout em modo `payment`).
+   - **Kit**: cobrança avulsa (Asaas `/payments`, à vista ou parcelada no cartão; Stripe Checkout em modo `payment`).
    - **Assinatura ou Pro**: assinatura no provedor (Asaas `/subscriptions`; Stripe Checkout em modo `subscription`).
-   - **Anual parcelado em real**: uma cobrança parcelada no Asaas (ver "Parcelamento").
+   - **Parcelado em real** (kit ou anual): uma cobrança parcelada no Asaas (ver "Parcelamento").
 5. A operação fecha. Para o kit, só registra o link de pagamento. Para assinatura, grava a linha `incomplete` com o preço vendido, a moeda, o código do cupom e, no parcelado, a referência do parcelamento com `renews = false`.
 
 Respostas de erro do checkout: `coupon_invalid`, `currency_unavailable`, `billing_profile_required`, `offer_closed`, `pix_unavailable` e `unavailable`. Cada uma tem texto próprio na tela.
@@ -93,11 +94,11 @@ Cada evento do provedor vira um evento normalizado:
 
 O que cada evento normalizado faz (`apps/web/src/app/api/webhooks/[provider]/route.ts`):
 
-- **`payment_succeeded`**: grava a fatura como paga. No kit, concede o direito e, só na primeira entrega, conta o cupom, registra `kit.purchased` e manda o recibo no idioma de cada gestor. No parcelado, a primeira parcela ativa a compra. Uma assinatura em atraso volta a ativa. A primeira fatura de uma assinatura entra na atribuição de campanha.
+- **`payment_succeeded`**: grava a fatura como paga. No kit, concede o direito pelo prazo do plano e, só na primeira entrega, conta o cupom, registra `kit.purchased` e manda o recibo no idioma de cada gestor, com a data em que o acesso termina; num kit parcelado, a primeira parcela confirmada concede e registra a venda pelo valor inteiro (o preço do plano com o cupom, porque o Asaas só manda o valor da parcela). No anual parcelado, a primeira parcela ativa a compra. Uma assinatura em atraso volta a ativa. A primeira fatura de uma assinatura entra na atribuição de campanha.
 - **`subscription_activated`**: abre ou mantém o período (`lib/billing-window.ts`), encerra a assinatura substituída, inclusive no provedor, e, na primeira ativação, avisa a conta, registra `subscription.started` e conta o cupom.
 - **`payment_failed`**: grava a fatura com o link de pagamento, que é o caminho de recuperação. Uma assinatura ativa passa a `past_due` e abre a carência.
 - **`subscription_canceled`**: cancela a linha, devolve a conta ao Gratuito, registra `subscription.canceled` e revoga os tokens da CLI se nenhuma outra fonte mantiver o catálogo.
-- **`payment_reverted`**: marca a fatura como reembolsada, revoga o que ela comprou (o kit) e encerra a compra parcelada. Os tokens da CLI caem se o acesso acabou.
+- **`payment_reverted`**: marca a fatura como reembolsada, revoga o que ela comprou (o kit, inclusive quando a fatura é uma parcela: o webhook passa o parcelamento a `revert_paid_invoice`) e encerra a compra parcelada. Os tokens da CLI caem se o acesso acabou.
 
 Idempotência: cada entrega passa por `claim_billing_webhook_event` e `complete_billing_webhook_event`, com teto de tentativas. A rota processa até 6 segundos na resposta e continua o resto em `after()`. Uma reentrega durante o processamento recebe `event_in_progress` e é ignorada.
 
@@ -117,12 +118,19 @@ Durante a carência de `past_due` (`platform_settings.dunning.grace_days`, 7 dia
 
 ## Parcelamento
 
-- **Onde existe**: só em planos anuais em real, só no cartão, até `platform_settings.billing.max_installments` (o Asaas aceita no máximo 12).
-- **O que é**: o Asaas não parcela assinaturas. O anual parcelado é uma compra única dividida pela operadora do cartão, e não renova sozinha. A tela diz isso antes do pagamento.
+- **Onde existe**: no kit e nos planos anuais, em real, só no cartão, até `platform_settings.billing.max_installments` (o Asaas aceita no máximo 12). Nunca num plano mensal (`lib/payment-choice.ts`).
+- **O que é**: o Asaas não parcela assinaturas. O anual parcelado é uma compra única dividida pela operadora do cartão, e não renova sozinha. A tela diz isso antes do pagamento. O kit parcelado é a mesma compra única de sempre, dividida em parcelas: o prazo de 1 ano conta da primeira parcela confirmada.
 - **Ativação**: o checkout guarda a referência do parcelamento em `subscriptions.provider_payment_id`, que toda parcela carrega no webhook. A primeira parcela paga ativa a linha por um período a partir do pagamento, com `cancel_at_period_end`.
 - **Uma venda, não doze**: o Asaas confirma todas as parcelas em segundos, em entregas paralelas. Só o handler que tira a linha de `incomplete` registra a venda: aviso, evento, atribuição e Purchase no Meta e no GA4, pelo valor total.
 - **Reembolso**: reembolsar a compra encerra o período na hora, porque não existe assinatura no provedor cujo cancelamento a encerraria depois.
 - **Fim do período**: o job de cancelamentos encerra a linha. O integrante compra de novo para continuar.
+
+## Fim do kit e renovação
+
+- **Prazo**: `plans.access_months` (12 no seed; muda em `/admin/billing`, nunca no código). A concessão nasce com `expires_at` e `org_entitlements` para de contá-la nesse dia. Sem prazo (`null`), a concessão não termina.
+- **Aviso**: 15 dias antes, um sino e um e-mail (os mesmos do período pago que não renova), reservados em `claim_access_end_notices`; uma concessão já seguida de renovação não é avisada.
+- **Fim**: no dia, `claim_access_endings` entrega a concessão ao job, que consulta `org_entitlements`: se nada mais mantém o catálogo (nem renovação, nem assinatura), avisa o integrante (sino e e-mail "seu acesso terminou") e revoga os tokens da CLI (`revoke_member_tokens`), como no fim de uma assinatura sem kit. As ferramentas instaladas continuam funcionando; o que para é a atualização.
+- **Renovar**: é comprar o kit de novo, em `/settings/billing` ("Renovar o acesso") ou pelo mesmo checkout. O novo prazo começa quando o atual termina.
 
 ## Preço travado
 
@@ -139,7 +147,7 @@ Durante a carência de `past_due` (`platform_settings.dunning.grace_days`, 7 dia
 
 - **Cancelar**: o integrante cancela em `/settings/billing`, com motivo opcional (`cancel_reason`) e nota (`cancel_note`). O provedor para de renovar na hora, o acesso segue até o fim do período e o cancelamento pode ser desfeito até lá. Eventos: `subscription.cancel_requested` no pedido e `subscription.canceled` quando o período acaba.
 - **Reembolsar**: no painel do provedor. O webhook marca a fatura como reembolsada e revoga o que ela comprou. Numa assinatura recorrente, o operador também cancela a assinatura no provedor; o webhook de cancelamento encerra a linha.
-- **Reembolso parcial**: hoje é tratado como reembolso total. Ele revoga o kit e encerra a compra parcelada. Para uma cortesia sem tirar o acesso, use cupom ou desconto, nunca reembolso parcial.
+- **Reembolso parcial**: hoje é tratado como reembolso total. Ele revoga o kit (o reembolso de uma parcela revoga a concessão do parcelamento inteiro) e encerra a compra parcelada. Para uma cortesia sem tirar o acesso, use cupom ou desconto, nunca reembolso parcial.
 - **Estorno (chargeback)**: igual ao reembolso.
 - **Garantia**: `platform_settings.guarantee.days` (7) só define o prazo que as telas mostram. O reembolso em si é feito no provedor.
 
@@ -155,10 +163,12 @@ Cada transição de cobrança é avisada no sino do painel e, quando faz sentido
 | Momento | Sino | E-mail |
 |---|---|---|
 | Assinatura ativada | sim | confirmação com o que o plano libera, lido dos limites do plano |
-| Kit concedido | sim | recibo, com o prazo que a concessão tem (ou "sem prazo") e o aviso da nota fiscal em compras em real |
+| Kit concedido | sim, com a data em que o acesso termina | recibo, com a data em que o acesso termina (ou "sem prazo") e o aviso da nota fiscal em compras em real |
 | Pagamento falhou (entrou em carência) | sim | não: o provedor já escreve para o pagador |
 | Pagamento atrasado confirmado | sim | não |
 | Período pago que não renova termina em até 15 dias | sim, uma vez | sim, uma vez |
+| Kit termina em até 15 dias (sem renovação encadeada) | sim, uma vez | sim, uma vez: o mesmo texto |
+| Kit terminou e nada mais mantém o catálogo | sim, uma vez | sim: o que continua, o que deixa de chegar, como renovar |
 | Assinatura encerrada | sim | sim: o que continua e o que deixa de chegar |
 
 - **Um plano é sempre chamado pelo nome que tem nos dados** (`plans.name`). Nenhum texto escreve "kit" ou "assinatura" por conta própria, então renomear um plano em `/admin/billing` muda os avisos junto.
@@ -197,7 +207,7 @@ Os tokens da CLI só valem enquanto a conta tem `catalog_access`. Eles são revo
 | env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe (USD) |
 | env | `BILLING_PIX_ENABLED` | `false` desliga o Pix |
 
-Jobs no Inngest: liquidação de cancelamentos a cada 15 minutos, manutenção diária às 04:20 UTC (leases vencidos e checkouts abandonados) e aviso de fim de período pago todo dia às 13:15 UTC.
+Jobs no Inngest: liquidação de cancelamentos a cada 15 minutos, manutenção diária às 04:20 UTC (leases vencidos e checkouts abandonados) e, todo dia às 13:15 UTC, os avisos de fim de período pago e de fim do kit e a liquidação dos kits que terminaram.
 
 ## Consoles
 

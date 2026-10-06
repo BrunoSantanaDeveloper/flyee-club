@@ -1,5 +1,11 @@
 // @vitest-environment node
-import { keptAccess, notifySubscriptionEnded, sendTermEndNotices } from "./billing-notices";
+import {
+  keptAccess,
+  notifySubscriptionEnded,
+  sendAccessEndNotices,
+  sendTermEndNotices,
+  settleAccessEndings,
+} from "./billing-notices";
 import { sweepStagedUploads } from "./maintenance-jobs";
 import { deliverMeetingEmails } from "./meeting-email";
 import { deliverNewsletter, deliverNewsletterBatch } from "./newsletter";
@@ -29,6 +35,7 @@ const mocks = vi.hoisted(() => ({
   sendUpdatesDigestBatch: vi.fn(),
   sendSubscriptionCanceledEmail: vi.fn(),
   sendTermEndingEmail: vi.fn(),
+  sendAccessEndedEmail: vi.fn(),
   sendMemberWelcomeEmail: vi.fn(),
 }));
 
@@ -52,6 +59,7 @@ vi.mock("@flyee/email", () => ({
   sendUpdatesDigestBatch: mocks.sendUpdatesDigestBatch,
   sendSubscriptionCanceledEmail: mocks.sendSubscriptionCanceledEmail,
   sendTermEndingEmail: mocks.sendTermEndingEmail,
+  sendAccessEndedEmail: mocks.sendAccessEndedEmail,
   sendMemberWelcomeEmail: mocks.sendMemberWelcomeEmail,
   sendKitReceiptEmail: vi.fn(),
   sendSubscriptionActiveEmail: vi.fn(),
@@ -147,6 +155,7 @@ beforeEach(() => {
     .mockImplementation(async (messages: unknown[]) => ({ sent: true, count: messages.length }));
   mocks.sendSubscriptionCanceledEmail.mockReset().mockResolvedValue({ sent: true });
   mocks.sendTermEndingEmail.mockReset().mockResolvedValue({ sent: true });
+  mocks.sendAccessEndedEmail.mockReset().mockResolvedValue({ sent: true });
   mocks.sendMemberWelcomeEmail.mockReset().mockResolvedValue({ sent: true });
 });
 
@@ -522,6 +531,53 @@ describe("what a workspace is told when a subscription ends", () => {
     expect(mocks.sendTermEndingEmail.mock.calls[0][1]).toMatchObject({
       planName: "Assinatura anual",
       endsLabel: "17 de outubro de 2026",
+    });
+  });
+
+  it("announces the end of an access term with the same words, keyed by the grant", async () => {
+    const { service } = fakeService({
+      rpc: {
+        claim_access_end_notices: () => ({
+          data: [
+            { grant_id: "grant-1", org_id: "org-1", plan_name: "Acesso flyee", expires_at: "2026-10-20T03:00:00Z" },
+          ],
+        }),
+        member_recipients: recipients(recipient("owner")),
+      },
+      tables: { memberships: () => ({ data: [{ user_id: "owner" }] }) },
+    });
+    expect(await sendAccessEndNotices(service)).toEqual({ claimed: 1, notified: 1, emailed: 1 });
+    expect(mocks.notifyLocalized.mock.calls[0][2]).toMatchObject({ sourceKey: "access-ending:grant-1" });
+    expect(mocks.sendTermEndingEmail.mock.calls[0][1]).toMatchObject({
+      planName: "Acesso flyee",
+      endsLabel: "20 de outubro de 2026",
+    });
+  });
+
+  it("settles an ended access: told and disconnected when nothing else keeps the store open", async () => {
+    const claims = [
+      { grant_id: "grant-1", org_id: "org-gone", plan_name: "Acesso flyee", expires_at: "2026-10-05T03:00:00Z" },
+      { grant_id: "grant-2", org_id: "org-kept", plan_name: "Acesso flyee", expires_at: "2026-10-05T03:00:00Z" },
+    ];
+    const { service, rpcCalls } = fakeService({
+      rpc: {
+        claim_access_endings: () => ({ data: claims }),
+        org_entitlements: (args) => ({
+          data: { active: true, limits: { catalog_access: args.target_org === "org-kept" ? 1 : 0 } },
+        }),
+        revoke_member_tokens: () => ({ data: 2 }),
+        member_recipients: recipients(recipient("owner")),
+      },
+      tables: { memberships: () => ({ data: [{ user_id: "owner" }] }) },
+    });
+    expect(await settleAccessEndings(service)).toEqual({ claimed: 2, ended: 1, kept: 1, emailed: 1 });
+    expect(rpcCalls.filter((call) => call.fn === "revoke_member_tokens")).toEqual([
+      { fn: "revoke_member_tokens", args: { target_org: "org-gone", target_reason: "canceled" } },
+    ]);
+    expect(mocks.notifyLocalized.mock.calls[0][2]).toMatchObject({ sourceKey: "access-ended:grant-1" });
+    expect(mocks.sendAccessEndedEmail.mock.calls[0][1]).toMatchObject({
+      planName: "Acesso flyee",
+      endedLabel: "5 de outubro de 2026",
     });
   });
 });

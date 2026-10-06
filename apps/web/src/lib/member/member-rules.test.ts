@@ -11,31 +11,23 @@ import { decideUpsell } from "@/lib/upsell";
 
 describe("decideUpsell — an offer is earned by use", () => {
   it("offers the kit to an account that has bought nothing", () => {
-    expect(decideUpsell({ tier: null, trailsUsed30d: 0, hasClientProject: false })).toEqual({
+    expect(decideUpsell({ tier: null, trailsUsed30d: 0 })).toEqual({
       offer: "kit",
       reason: "no_access",
     });
   });
 
   it("offers the membership to a kit owner using three or more trails", () => {
-    expect(decideUpsell({ tier: "kit", trailsUsed30d: 2, hasClientProject: false })).toBeNull();
-    expect(decideUpsell({ tier: "kit", trailsUsed30d: 3, hasClientProject: false })).toEqual({
+    expect(decideUpsell({ tier: "kit", trailsUsed30d: 2 })).toBeNull();
+    expect(decideUpsell({ tier: "kit", trailsUsed30d: 3 })).toEqual({
       offer: "club",
       reason: "broad_use",
     });
   });
 
-  it("offers Pro, from the kit or the membership, when a project is a client's", () => {
-    expect(decideUpsell({ tier: "kit", trailsUsed30d: 5, hasClientProject: true })).toEqual({
-      offer: "pro",
-      reason: "client_project",
-    });
-    expect(decideUpsell({ tier: "club", trailsUsed30d: 0, hasClientProject: true })?.offer).toBe("pro");
-  });
-
-  it("offers nothing above Pro, and nothing to a member without a reason", () => {
-    expect(decideUpsell({ tier: "pro", trailsUsed30d: 9, hasClientProject: true })).toBeNull();
-    expect(decideUpsell({ tier: "club", trailsUsed30d: 9, hasClientProject: false })).toBeNull();
+  it("offers nothing above the membership, whatever the use: every paid plan covers client projects", () => {
+    expect(decideUpsell({ tier: "club", trailsUsed30d: 9 })).toBeNull();
+    expect(decideUpsell({ tier: "pro", trailsUsed30d: 9 })).toBeNull();
   });
 });
 
