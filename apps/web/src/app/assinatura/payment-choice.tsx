@@ -7,6 +7,7 @@ import { Box, Typography } from "@mui/material";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiCreditCard from "@/icons/nexture/ni-credit-card";
 import NiMoney from "@/icons/nexture/ni-money";
+import { splitInstallments } from "@/lib/installments";
 import { cn } from "@/lib/utils";
 import type { PaymentMethod } from "@flyee/billing/types";
 
@@ -54,10 +55,11 @@ export default function PaymentChoice({
     {
       id: "credit_card",
       title: t("checkout-method-card"),
-      hint: oneTime
-        ? t("checkout-method-card-hint-once")
-        : splittable
-          ? t("checkout-method-card-hint-split")
+      // A purchase that can be split says so first: the one-time access can be.
+      hint: splittable
+        ? t("checkout-method-card-hint-split")
+        : oneTime
+          ? t("checkout-method-card-hint-once")
           : t("checkout-method-card-hint-renews"),
       icon: <NiCreditCard size="medium" />,
     },
@@ -126,8 +128,9 @@ export default function PaymentChoice({
               const selected = value.installments === count;
               // Rounded DOWN per instalment so the label never promises a
               // smaller total than the provider will charge; the remainder
-              // lands on the last one, which is what Asaas does too.
-              const perInstallment = Math.floor(priceCents / count) / 100;
+              // lands on the last one, which is what Asaas does too (named
+              // below when it differs).
+              const perInstallment = splitInstallments(priceCents, count).each / 100;
               return (
                 <Box
                   key={count}
@@ -150,6 +153,17 @@ export default function PaymentChoice({
               );
             })}
           </Box>
+          {value.installments > 1 &&
+            splitInstallments(priceCents, value.installments).last !==
+              splitInstallments(priceCents, value.installments).each && (
+              // The cents that do not divide go to the last installment (Asaas):
+              // said here, so the member is never charged a number they did not see.
+              <Typography variant="body2" className="text-text-secondary text-xs leading-5">
+                {t("checkout-installments-last", {
+                  amount: money.format(splitInstallments(priceCents, value.installments).last / 100),
+                })}
+              </Typography>
+            )}
           {value.installments > 1 && (
             // The one consequence she cannot see: a split purchase is a single
             // charge the issuer divides, so nothing renews at the end of it.

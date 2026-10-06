@@ -3,6 +3,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import type { PublicPlanDisplay } from "@/components/marketing/pricing-section";
 import type { Tone } from "@/components/marketing/tone";
 import { accessTermParts } from "@/lib/access-term";
+import { getMaxInstallments } from "@/lib/billing-settings";
+import { splitInstallments } from "@/lib/installments";
 
 /** The plural-aware key of a term ("1 ano", "18 meses"); both literals, so the message pruner sees them. */
 const termKey = (months: number) =>
@@ -77,10 +79,12 @@ export async function getDisplayPlans({
   currency: BillingCurrency;
   stage: LaunchStage;
 }): Promise<DisplayPricing> {
-  const [t, locale, rows] = await Promise.all([
+  const [t, locale, rows, maxInstallments] = await Promise.all([
     getTranslations("marketing"),
     getLocale(),
     listPublicPlans({ currency }),
+    // Card installments exist only in reais (Asaas); the ceiling is data.
+    currency === "BRL" ? getMaxInstallments() : Promise.resolve(1),
   ]);
 
   if (!rows || rows.length === 0) {
@@ -140,6 +144,14 @@ export async function getDisplayPlans({
       cycle: plan.period === "monthly" || plan.period === "yearly" ? plan.period : undefined,
       href: stage === "open" ? `/auth/sign-up?next=${encodeURIComponent(`/assinatura?plan=${plan.slug}`)}` : "/espera",
       ctaLabel: stage === "open" && isKit ? t("pricing-cta-kit") : undefined,
+      // The split the checkout offers on the one-time access, at the price this card shows.
+      installmentsLabel:
+        isKit && maxInstallments > 1
+          ? t("pricing-installments", {
+              count: maxInstallments,
+              amount: money.format(splitInstallments(payableCents, maxInstallments).each / 100),
+            })
+          : undefined,
       ctaId: isKit ? "plan_access" : "plan_full",
       // Raw values power the Offer JSON-LD (formatted `price` is display-only).
       // Deliberately the LIST price: the structured data describes the offer

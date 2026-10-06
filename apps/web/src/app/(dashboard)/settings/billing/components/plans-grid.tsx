@@ -29,6 +29,7 @@ import {
 import { COOKIE_KEYS } from "@/constants";
 import NiCheck from "@/icons/nexture/ni-check";
 import { accessTermParts } from "@/lib/access-term";
+import { splitInstallments } from "@/lib/installments";
 import { clearCouponCookie, normalizeCouponCode, readCouponCookie, writeCouponCookie } from "@/lib/offer-link";
 import { type OfferKind, trackOffer } from "@/lib/product-events";
 import { cn } from "@/lib/utils";
@@ -76,6 +77,7 @@ export default function PlansGrid({
   entitlements,
   canManage,
   checkoutAvailable,
+  maxInstallments = 1,
   offerSlug,
 }: {
   subscription: SubscriptionInfo | null;
@@ -85,6 +87,8 @@ export default function PlansGrid({
   entitlements: WorkspaceEntitlements;
   canManage: boolean;
   checkoutAvailable: boolean;
+  /** The most card installments the checkout offers in this currency (1 = none). */
+  maxInstallments?: number;
   /**
    * Plan slug she arrived with (`?plan=`) — the offer agreed on a call. It is
    * shown even when the plan is unlisted, highlighted and scrolled to, so the
@@ -393,6 +397,14 @@ export default function PlansGrid({
                               : t("billing-one-time")}
                         </Typography>
                       </Typography>
+                      {plan.kind === "access" && currency === "BRL" && maxInstallments > 1 ? (
+                        <Typography variant="body2" className="text-text-secondary">
+                          {t("billing-installments", {
+                            count: maxInstallments,
+                            amount: money(plan, splitInstallments(discountedCents, maxInstallments).each),
+                          })}
+                        </Typography>
+                      ) : null}
                       {plan.description && (
                         <Typography variant="body2" className="text-text-secondary">
                           {plan.description}

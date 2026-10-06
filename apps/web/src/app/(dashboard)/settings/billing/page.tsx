@@ -38,7 +38,9 @@ export default function BillingSettings() {
   useEffect(() => {
     setCurrency(resolveCurrency({ cookie: readCurrencyCookie(), locale }));
   }, [locale]);
-  const [checkoutState, setCheckoutState] = useState<RemoteState<boolean, "check_failed">>(() => remoteLoading());
+  const [checkoutState, setCheckoutState] = useState<
+    RemoteState<{ available: boolean; maxInstallments: number }, "check_failed">
+  >(() => remoteLoading());
   const {
     configured,
     loading,
@@ -79,7 +81,8 @@ export default function BillingSettings() {
     setCurrency(next);
   };
 
-  const checkoutAvailable = checkoutState.status === "success" ? checkoutState.data : undefined;
+  const checkoutAvailable = checkoutState.status === "success" ? checkoutState.data.available : undefined;
+  const maxInstallments = checkoutState.status === "success" ? checkoutState.data.maxInstallments : 1;
   const detailsAvailable =
     detailsState.status === "success" ||
     ((detailsState.status === "loading" || detailsState.status === "error") && Boolean(detailsState.previous));
@@ -211,6 +214,7 @@ export default function BillingSettings() {
               entitlements={entitlements}
               canManage={canManage}
               checkoutAvailable={checkoutState.status === "success" && checkoutAvailable === true}
+              maxInstallments={maxInstallments}
               offerSlug={offerSlug}
             />
             {/* The fiscal data only exists for BRL (Asaas issues the NFS-e

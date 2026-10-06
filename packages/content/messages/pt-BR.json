@@ -132,7 +132,7 @@
     "faq-eyebrow": "Dúvidas",
     "faq-title": "Perguntas frequentes",
     "faq-1-question": "Quanto tempo dura o acesso?",
-    "faq-1-answer": "Um ano a partir da confirmação do pagamento, em 1 computador, sem renovação automática. Depois disso, você compra o acesso de novo para continuar recebendo atualizações e apps novos, e o novo prazo começa quando o atual termina. O que já está instalado continua funcionando. Para atualizar, o token precisa estar válido: ele é renovado a cada update e revalidado no painel quando você passa 30 dias sem atualizar.",
+    "faq-1-answer": "Um ano a partir da confirmação do pagamento, em 1 computador, sem renovação automática. Você paga à vista ou parcelado no cartão, e parcelado continua sendo uma única compra. Depois do ano, você compra o acesso de novo para continuar recebendo atualizações e apps novos, e o novo prazo começa quando o atual termina. O que já está instalado continua funcionando. Para atualizar, o token precisa estar válido: ele é renovado a cada update e revalidado no painel quando você passa 30 dias sem atualizar.",
     "faq-2-question": "Qual é a diferença entre o FlyeeClub e o FlyeeClub Pro?",
     "faq-2-answer": "O FlyeeClub entrega os apps e as atualizações por 1 ano. O FlyeeClub Pro soma a camada de profundidade: guias avançados, receitas, encontros ao vivo, voto no que entra na loja, a camada abrir o capô e até 3 computadores.",
     "faq-3-question": "Preciso pagar crédito de IA?",
@@ -623,7 +623,8 @@
     "module-guide-use-title": "Guia de uso",
     "module-guide-hood-title": "Guia abrir o capô",
     "module-guide-written": "texto com o passo a passo",
-    "module-guide-video": "vídeo de {count} min"
+    "module-guide-video": "vídeo de {count} min",
+    "pricing-installments": "ou em até {count}x de {amount} no cartão"
   },
   "product": {
     "security-title": "Segurança",
@@ -1235,7 +1236,9 @@
     "module-guide-newer": "A versão {version} já saiu, com o guia atualizado. Rode npx flyee update para receber as duas.",
     "module-guide-other-language": "Este guia ainda não foi traduzido para o seu idioma.",
     "module-guide-empty-title": "O guia deste app ainda não saiu",
-    "module-guide-empty-body": "Ele chega com uma próxima versão do app. Enquanto isso, a descrição abaixo mostra o que o app faz."
+    "module-guide-empty-body": "Ele chega com uma próxima versão do app. Enquanto isso, a descrição abaixo mostra o que o app faz.",
+    "billing-installments": "ou em até {count}x de {amount} no cartão",
+    "checkout-installments-last": "A última parcela é de {amount}: os centavos que não se dividem igualmente ficam nela."
   },
   "auth": {
     "continue": "Continuar",

@@ -114,9 +114,15 @@ export async function validateCouponCode(
   }
 }
 
-/** Whether plans in this currency can be sold in this deployment (its provider is configured). */
-export async function checkoutAvailability(currency: string): Promise<boolean> {
-  return providerForCurrency(currency) !== null;
+/**
+ * Whether plans in this currency can be sold in this deployment (its provider
+ * is configured), and the most card installments the checkout offers in it
+ * (reais only; 1 means none), so the plans read what the checkout will offer.
+ */
+export async function checkoutAvailability(currency: string): Promise<{ available: boolean; maxInstallments: number }> {
+  const available = providerForCurrency(currency) !== null;
+  const maxInstallments = available && currency.trim().toUpperCase() === "BRL" ? await getMaxInstallments() : 1;
+  return { available, maxInstallments };
 }
 
 /**

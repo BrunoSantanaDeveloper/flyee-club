@@ -125,6 +125,8 @@ Durante a carência de `past_due` (`platform_settings.dunning.grace_days`, 7 dia
 - **Reembolso**: reembolsar a compra encerra o período na hora, porque não existe assinatura no provedor cujo cancelamento a encerraria depois.
 - **Fim do período**: o job de cancelamentos encerra a linha. O integrante compra de novo para continuar.
 
+Na vitrine, o card do FlyeeClub em reais mostra "ou em até Nx de R$ X no cartão", com N vindo de `platform_settings.billing.max_installments` e o valor da parcela calculado do preço já com cupom, como o Asaas divide: em centavos inteiros, com a sobra na última parcela (`lib/installments.ts`). O checkout oferece de 1x até N e mostra o valor da última parcela quando ela é diferente. Em dólar não há parcelamento, e a linha não aparece. O mesmo vale para `/settings/billing`.
+
 ## Fim do kit e renovação
 
 - **Prazo**: `plans.access_months` (12 no seed; muda em `/admin/billing`, nunca no código). A concessão nasce com `expires_at` e `org_entitlements` para de contá-la nesse dia. Sem prazo (`null`), a concessão não termina.

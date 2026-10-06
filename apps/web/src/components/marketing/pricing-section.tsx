@@ -40,6 +40,8 @@ export type PublicPlanDisplay = {
   href?: string;
   /** This card's button label, when it differs from the section's (the one-time kit reads "Buy", not "Subscribe"). */
   ctaLabel?: string;
+  /** "ou em até 12x de R$ 8,08 no cartão": the card split the checkout offers, from data; absent when it cannot be split. */
+  installmentsLabel?: string;
   /** With `periodToggle`, the cycle this card belongs to; a card without one (the kit) always shows. */
   cycle?: "monthly" | "yearly";
   /** What the button's click is reported as (`cta_click`, `cta_id`): the access or the subscription. */
@@ -236,6 +238,7 @@ export default function PricingSection({
                   <span className="font-display text-display-md text-text-primary font-bold">{plan.price}</span>
                   {plan.period && <span className="text-text-secondary text-sm">{plan.period}</span>}
                 </p>
+                {plan.installmentsLabel && <p className="text-text-secondary text-sm">{plan.installmentsLabel}</p>}
               </div>
 
               <ul className="flex flex-1 flex-col gap-2">
