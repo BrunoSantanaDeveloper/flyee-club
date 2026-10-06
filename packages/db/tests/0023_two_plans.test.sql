@@ -89,9 +89,9 @@ select is(
 -- ---------- The terms of use ----------
 
 select is(
-  (select array_agg(version order by locale) from public.consent_terms where slug = 'terms' and is_active),
-  array[3, 3],
-  'version 3 of the terms is in force in both languages'
+  (select count(*)::int from public.consent_terms where slug = 'terms' and version = 3),
+  2,
+  'version 3 of the terms exists in both languages (version 4, migration 0031, followed it)'
 );
 select ok(
   (select bool_and(body_md like '%FlyeeClub Pro%' and body_md not like '%flyee.club%')

@@ -64,8 +64,8 @@ reset role;
 
 select is(
   (select version from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active),
-  4,
-  'a revision is published as the next version (version 3 came with migration 0025)'
+  5,
+  'a revision is published as the next version (version 4 came with migration 0031)'
 );
 select is(
   (select count(*)::int from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active),
@@ -135,7 +135,7 @@ select is(
   (select array_agg(t.version order by t.version) from public.consent_acceptances a
    join public.consent_terms t on t.id = a.term_id
    where a.user_id = 'a2000000-0000-4000-8000-000000000001' and t.slug = 'terms'),
-  array[4, 5],
+  array[5, 6],
   'a new version is a new acceptance, and the old one stays as history'
 );
 

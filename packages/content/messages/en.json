@@ -626,7 +626,8 @@
     "module-guide-video": "{count} min video",
     "pricing-installments": "or up to {count} card installments of {amount}",
     "faq-5-question": "I have a team. What do I do?",
-    "faq-5-answer": "Each person needs their own FlyeeClub, because each access belongs to one user and cannot be shared. FlyeeClub Pro allows more computers for the same person, not more people. For a team, talk to us through the contact page."
+    "faq-5-answer": "Each person needs their own FlyeeClub, because each access belongs to one user and cannot be shared. FlyeeClub Pro allows more computers for the same person, not more people. For a team, talk to us through the contact page.",
+    "contact-note-app": "A commissioned app joins the store for every member once it is ready, unless an exclusivity agreement is made here before the work is hired."
   },
   "product": {
     "security-title": "Security",
@@ -1202,7 +1203,7 @@
     "home-service-consulting-body": "Bruno builds your company's system inside Claude with you, from diagnosis to delivery.",
     "home-service-cta": "Ask for a proposal",
     "home-service-app-title": "A custom app",
-    "home-service-app-body": "Describe what you need and we agree on scope and price through the contact form. On FlyeeClub Pro, you can also put the app up for a vote on the roadmap.",
+    "home-service-app-body": "Describe what you need and we agree on scope and price through the contact form. Once ready, the app joins the store for every member, unless exclusivity is agreed. On FlyeeClub Pro, you can also put the app up for a vote on the roadmap.",
     "roadmap-empty-cta-contact": "Ask for an app through the contact form",
     "roadmap-propose": "Propose an app",
     "roadmap-propose-title": "Propose an app",
@@ -1222,7 +1223,7 @@
     "roadmap-leader-title": "Most voted this month",
     "roadmap-leader-body": "{title}: {count, plural, one {# vote} other {# votes}} in {month}. The most voted of the month goes into production.",
     "roadmap-custom-title": "Need an app the store does not have?",
-    "roadmap-custom-body": "Put it up for a vote or commission it directly: describe what you need and we agree on scope and price through the contact form.",
+    "roadmap-custom-body": "Put it up for a vote or commission it directly: describe what you need and we agree on scope and price through the contact form. A commissioned app joins the store for every member once it is ready, unless exclusivity is agreed.",
     "roadmap-custom-contact": "Ask through the contact form",
     "roadmap-mine-title": "Your proposals",
     "roadmap-mine-status-submitted": "Under review",

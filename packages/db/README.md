@@ -39,6 +39,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0028_segments_from_the_site` | the segments are the public site's personas: `member_segment` renamed to `negocio`, `agencia`, `produto`, `dev`, `outro`; the rows of the retired `profissional_ia` become `outro` before its slot takes the name `negocio`, and the daily rollup (segment as text) is summed into `outro` and renamed. |
 | `0029_store_categories` | two layers in the catalog: `catalog_store_categories` (the kinds of work the public store filters by, seeded with the home brief's Vender, Divulgar, Vídeo, Pesquisa, Construir; public read, operator write) and an optional `catalog_modules.store_category` (on delete set null); the stages stay the catalog's taxonomy. |
 | `0030_guides` | written guides carried by each version's package: `catalog_module_versions.guides` (which guides a version carries, public) and `catalog_guides` (the text, written only by the upload, read through `can_read_guide`: the basic depth with the app's entitlement, "abrir o capô" with `advanced_lessons`, drafts by the operator only). |
+| `0031_terms_custom_apps` | terms of use version 4, built from version 3 by one checked replacement: an app built on demand joins the store for every member unless an exclusivity agreement is made in writing before hiring. |
 
 ## Conventions every migration follows
 

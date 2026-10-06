@@ -32,6 +32,15 @@ export async function generateMetadata(): Promise<Metadata> {
  * Each value is a `marketing` key, so the message opens in the language
  * being read.
  */
+/**
+ * What the visitor must read before writing about a subject, per known
+ * `?assunto=`: a commissioned app is public by default (terms of use,
+ * version 4), so whoever asks for one reads it here, before any price.
+ */
+const SUBJECT_NOTE: Record<string, string> = {
+  app: "contact-note-app",
+};
+
 const SUBJECT_PREFILL: Record<string, string> = {
   fundadores: "contact-prefill-fundadores",
   app: "contact-prefill-app",
@@ -52,6 +61,11 @@ export default async function ContactPage({
     <Section spacing="compact">
       <BreadcrumbJsonLd home={t("nav-home")} trail={[{ name: t("nav-contact"), path: "/contato" }]} />
       <SectionHeader title={t("contact-title")} subtitle={t("contact-subtitle")} as="h1" />
+      {SUBJECT_NOTE[subject] ? (
+        <p className="text-text-secondary mx-auto mb-8 max-w-2xl text-center text-base leading-7">
+          {t(SUBJECT_NOTE[subject])}
+        </p>
+      ) : null}
       <Reveal>
         <ContactForm initialMessage={SUBJECT_PREFILL[subject] ? t(SUBJECT_PREFILL[subject]) : ""} />
       </Reveal>

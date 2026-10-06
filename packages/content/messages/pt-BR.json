@@ -626,7 +626,8 @@
     "module-guide-video": "vídeo de {count} min",
     "pricing-installments": "ou em até {count}x de {amount} no cartão",
     "faq-5-question": "Tenho uma equipe. Como faço?",
-    "faq-5-answer": "Cada pessoa precisa do próprio FlyeeClub, porque cada acesso é de um usuário e não pode ser compartilhado. O FlyeeClub Pro libera mais computadores para a mesma pessoa, não mais pessoas. Para uma equipe, fale com a gente pela página de contato."
+    "faq-5-answer": "Cada pessoa precisa do próprio FlyeeClub, porque cada acesso é de um usuário e não pode ser compartilhado. O FlyeeClub Pro libera mais computadores para a mesma pessoa, não mais pessoas. Para uma equipe, fale com a gente pela página de contato.",
+    "contact-note-app": "Um app contratado entra na loja para todos os integrantes quando fica pronto, salvo acordo de exclusividade combinado por aqui antes da contratação."
   },
   "product": {
     "security-title": "Segurança",
@@ -1202,7 +1203,7 @@
     "home-service-consulting-body": "O Bruno monta com você o sistema da sua empresa dentro do Claude, do diagnóstico à entrega.",
     "home-service-cta": "Pedir uma proposta",
     "home-service-app-title": "App sob medida",
-    "home-service-app-body": "Descreva o que precisa e combinamos escopo e valor pelo contato. No FlyeeClub Pro, você também propõe o app para votação no roadmap.",
+    "home-service-app-body": "Descreva o que precisa e combinamos escopo e valor pelo contato. Pronto, o app entra na loja para todos os integrantes, salvo acordo de exclusividade. No FlyeeClub Pro, você também propõe o app para votação no roadmap.",
     "roadmap-empty-cta-contact": "Pedir um app pelo contato",
     "roadmap-propose": "Propor um app",
     "roadmap-propose-title": "Propor um app",
@@ -1222,7 +1223,7 @@
     "roadmap-leader-title": "Mais votado do mês",
     "roadmap-leader-body": "{title}: {count, plural, one {# voto} other {# votos}} em {month}. O mais votado do mês entra em produção.",
     "roadmap-custom-title": "Precisa de um app que não está na loja?",
-    "roadmap-custom-body": "Proponha para votação ou peça o desenvolvimento direto: você descreve o que precisa e combinamos escopo e valor pelo contato.",
+    "roadmap-custom-body": "Proponha para votação ou peça o desenvolvimento direto: você descreve o que precisa e combinamos escopo e valor pelo contato. O app contratado entra na loja para todos os integrantes quando fica pronto, salvo acordo de exclusividade.",
     "roadmap-custom-contact": "Pedir pelo contato",
     "roadmap-mine-title": "Suas propostas",
     "roadmap-mine-status-submitted": "Em análise",

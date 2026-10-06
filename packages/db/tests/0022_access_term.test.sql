@@ -160,8 +160,8 @@ select ok(
 -- ---------- The terms of use ----------
 
 select is(
-  (select version from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active), 3,
-  'version 3 of the terms is in force (the names of migration 0025)'
+  (select version >= 3 from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active), true,
+  'a version of the terms from migration 0025 on is in force (later versions add, never remove, these rules)'
 );
 select ok(
   (select body_md like '%válido por 1 ano%' and body_md like '%projetos dos seus clientes%' and body_md like '%canais de contato%'

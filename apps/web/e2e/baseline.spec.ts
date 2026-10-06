@@ -373,3 +373,18 @@ test("a segment link is remembered for the sign-up, and an unknown value changes
   await page.goto("/planos?segment=dev");
   expect((await segmentCookie())?.value).toBe("dev");
 });
+
+test("asking for a custom app says, before any price, that a commissioned app is public by default", async ({
+  page,
+}) => {
+  await page.goto("/contato?assunto=app");
+  await expect(page.getByText("Um app contratado entra na loja para todos os integrantes")).toBeVisible();
+  await expect(page.locator("#message")).toHaveValue(/contratar o desenvolvimento de um app sob medida/);
+
+  await page.goto("/en/contact?assunto=app");
+  await expect(page.getByText("A commissioned app joins the store for every member")).toBeVisible();
+
+  // Any other subject shows no note.
+  await page.goto("/contato?assunto=mentoria");
+  await expect(page.getByText("Um app contratado entra na loja")).toHaveCount(0);
+});
