@@ -194,7 +194,7 @@ export default function ModuleFormDialog({
             label="Amostra grátis"
             checked={form.isFreeSample}
             onChange={(value) => set("isFreeSample", value)}
-            help="Qualquer conta instala e assiste à aula de uso, sem compra."
+            help="Qualquer conta instala o app e lê o guia de uso, sem compra."
           />
 
           <Box className="flex flex-col gap-3">

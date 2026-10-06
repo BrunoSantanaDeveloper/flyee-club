@@ -9,13 +9,14 @@ import { Alert, Box, Button, Card, CardContent, Chip, Divider, Grid, Typography 
 import { TRAIL_TONE } from "@/components/marketing/tone";
 import CatalogIcon from "@/components/product/catalog-icon";
 import CommandBlock from "@/components/product/command-block";
-import LessonPlayer, { type LessonView } from "@/components/product/lesson-player";
+import GuidePanel, { type GuideTab } from "@/components/product/guide-panel";
 import PageHeader from "@/components/product/page-header";
 import ProductMarkdown from "@/components/product/product-markdown";
 import { TILE_TONE } from "@/components/product/tile-tone";
 import NiKey from "@/icons/nexture/ni-key";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import type { loadModule } from "@/lib/catalog/read";
+import type { MemberGuide } from "@/lib/member/guides";
 import { aiToolName, MODULE_TYPE_LABEL, PERMISSION_LABEL, pickLocalized } from "@/lib/member/labels";
 import type { MemberLesson } from "@/lib/member/lessons";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 type ModuleDetail = NonNullable<Awaited<ReturnType<typeof loadModule>>>;
 
 export type ModuleState =
-  | { kind: "ready"; module: ModuleDetail; lessons: MemberLesson[]; locale: string }
+  | { kind: "ready"; module: ModuleDetail; lessons: MemberLesson[]; guide: MemberGuide; locale: string }
   | { kind: "error" }
   | { kind: "unavailable" };
 
@@ -71,17 +72,37 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
   const tone = TILE_TONE[TRAIL_TONE[module.trail] ?? "primary"];
   const date = (value: string | null) =>
     value ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value)) : "";
-  const lessons: LessonView[] = state.lessons.map((lesson) => ({
-    id: lesson.id,
-    depth: lesson.depth,
-    title: lesson.title,
-    durationLabel: lesson.durationSeconds
-      ? t("module-lesson-minutes", { minutes: Math.max(1, Math.round(lesson.durationSeconds / 60)) })
-      : null,
-    isAdvanced: lesson.isAdvanced,
-    youtubeId: lesson.youtubeId,
-    completed: lesson.completed,
-  }));
+  // One tab per depth that has a written guide (from the package of the
+  // version shown) or a video; the video sits inside its depth's guide.
+  const guide = state.guide;
+  const guideTabs: GuideTab[] = (["usar", "abrir_o_capo"] as const).flatMap((depth) => {
+    const written = guide.kind === "ready" ? guide.depths.find((entry) => entry.depth === depth) : undefined;
+    const lesson = state.lessons.find((entry) => entry.depth === depth);
+    if (!written && !lesson) return [];
+    return [
+      {
+        depth,
+        guide: written ? { markdown: written.markdown, otherLanguage: written.locale !== locale } : null,
+        video: lesson
+          ? {
+              id: lesson.id,
+              title: lesson.title,
+              durationLabel: lesson.durationSeconds
+                ? t("module-lesson-minutes", { minutes: Math.max(1, Math.round(lesson.durationSeconds / 60)) })
+                : null,
+              youtubeId: lesson.youtubeId,
+              completed: lesson.completed,
+            }
+          : null,
+      },
+    ];
+  });
+  const guideVersionLine =
+    guide.kind === "ready"
+      ? t(guide.installed ? "module-guide-version-installed" : "module-guide-version", { version: guide.version })
+      : null;
+  const guideNewerLine =
+    guide.kind === "ready" && guide.newer ? t("module-guide-newer", { version: guide.newer }) : null;
   const credentials = (module.external_credentials ?? []) as {
     name?: string;
     env?: string;
@@ -153,7 +174,12 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
             </CardContent>
           </Card>
 
-          <LessonPlayer lessons={lessons} upgradeHref={UPGRADE} />
+          <GuidePanel
+            tabs={guideTabs}
+            versionLine={guideVersionLine}
+            newerLine={guideNewerLine}
+            upgradeHref={UPGRADE}
+          />
 
           {module.description ? (
             <Card>

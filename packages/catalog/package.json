@@ -6,6 +6,7 @@
   "description": "The flyee.module.json manifest schema and the catalog's version rules, shared by the upload pipeline and the CLI delivery API, and published as JSON Schema for the CLI.",
   "exports": {
     ".": "./src/index.ts",
+    "./guides": "./src/guides.ts",
     "./manifest": "./src/manifest.ts",
     "./semver": "./src/semver.ts"
   },

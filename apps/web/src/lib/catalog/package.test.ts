@@ -87,3 +87,58 @@ describe("inspectModulePackage", () => {
     if (!result.ok) expect(result.errors.join("\n")).toMatch(/flyee.module.json version/);
   });
 });
+
+describe("inspectModulePackage: the guides a package carries", () => {
+  const withGuides = (extra: Record<string, string | Uint8Array>) => {
+    const files = [...manifest.files, ...Object.keys(extra)];
+    const entries: Record<string, Uint8Array> = {
+      "flyee.module.json": strToU8(JSON.stringify({ ...manifest, files })),
+      "SKILL.md": strToU8("# Deploy check"),
+      "scripts/check.sh": strToU8("echo ok"),
+    };
+    for (const [name, body] of Object.entries(extra)) entries[name] = typeof body === "string" ? strToU8(body) : body;
+    return inspectModulePackage(zipSync(entries));
+  };
+
+  it("reads each guide at its path, with its language and depth", () => {
+    const result = withGuides({
+      "guides/pt-BR/usar.md": "# Usar\n\n1. Rode o app.",
+      "guides/en/abrir-o-capo.md": "# Under the hood",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.guides).toEqual([
+        { locale: "en", depth: "abrir_o_capo", body: "# Under the hood" },
+        { locale: "pt-BR", depth: "usar", body: "# Usar\n\n1. Rode o app." },
+      ]);
+    }
+  });
+
+  it("carries no guide when the package has none", () => {
+    const result = inspectModulePackage(pack(VALID));
+    expect(result.ok && result.guides).toEqual([]);
+  });
+
+  it("refuses a file under guides/ that is not one of the four guide paths", () => {
+    const result = withGuides({ "guides/pt/usar.md": "# typo" });
+    expect(result).toEqual({
+      ok: false,
+      errors: ["guides/pt/usar.md: a guide is guides/<pt-BR|en>/<usar|abrir-o-capo>.md"],
+    });
+  });
+
+  it("refuses a guide that is too large, empty or not UTF-8", () => {
+    expect(withGuides({ "guides/pt-BR/usar.md": "a".repeat(200_001) })).toEqual({
+      ok: false,
+      errors: ["guides/pt-BR/usar.md: a guide is at most 200 KB"],
+    });
+    expect(withGuides({ "guides/pt-BR/usar.md": "   " })).toEqual({
+      ok: false,
+      errors: ["guides/pt-BR/usar.md: the guide is empty"],
+    });
+    expect(withGuides({ "guides/en/usar.md": new Uint8Array([0xff, 0xfe, 0xfd]) })).toEqual({
+      ok: false,
+      errors: ["guides/en/usar.md: a guide must be UTF-8 text"],
+    });
+  });
+});

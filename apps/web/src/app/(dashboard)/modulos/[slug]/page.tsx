@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { loadModule } from "@/lib/catalog/read";
 import { getMemberContext } from "@/lib/member/context";
+import { loadGuide } from "@/lib/member/guides";
 import { loadLessons } from "@/lib/member/lessons";
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,59}$/;
@@ -29,12 +30,11 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
     if (!module) {
       missing = true;
     } else {
-      const lessons = await loadLessons(context.supabase, {
-        moduleId: module.id,
-        userId: context.userId,
-        locale: context.locale,
-      });
-      state = { kind: "ready", module, lessons, locale: context.locale };
+      const [lessons, guide] = await Promise.all([
+        loadLessons(context.supabase, { moduleId: module.id, userId: context.userId, locale: context.locale }),
+        loadGuide(context.supabase, { moduleId: module.id, slug, orgId: context.orgId, locale: context.locale }),
+      ]);
+      state = { kind: "ready", module, lessons, guide, locale: context.locale };
     }
   } catch {
     state = { kind: "error" };

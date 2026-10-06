@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { guideAvailability, guideOf, guidePath } from "./guides.ts";
 import { isSafePackagePath, manifestJsonSchema, MANIFEST_SCHEMA_ID, parseManifest } from "./manifest.ts";
 import { compareSemver, isSemver, latestVersion, minimumOfRange } from "./semver.ts";
 
@@ -130,5 +131,32 @@ describe("flyee.module.json", () => {
     const properties = schema.properties as Record<string, unknown>;
     assert.ok(properties.name && properties.version && properties.permissions);
     assert.ok((schema.required as string[]).includes("manifest_version"));
+  });
+});
+
+describe("guides: a path convention inside the package", () => {
+  it("reads the language and depth of the four guide paths and nothing else", () => {
+    assert.deepEqual(guideOf("guides/pt-BR/usar.md"), { locale: "pt-BR", depth: "usar" });
+    assert.deepEqual(guideOf("guides/en/abrir-o-capo.md"), { locale: "en", depth: "abrir_o_capo" });
+    for (const other of ["guides/pt/usar.md", "guides/en/abrir_o_capo.md", "guides/en/usar.txt", "docs/usar.md", "guides/en/x/usar.md"]) {
+      assert.equal(guideOf(other), null, other);
+    }
+  });
+
+  it("writes the path of a guide back, so the two directions agree", () => {
+    assert.equal(guidePath("en", "abrir_o_capo"), "guides/en/abrir-o-capo.md");
+    assert.deepEqual(guideOf(guidePath("pt-BR", "usar")), { locale: "pt-BR", depth: "usar" });
+  });
+
+  it("records which guides a package carries, by language, in depth order", () => {
+    assert.deepEqual(
+      guideAvailability([
+        { locale: "pt-BR", depth: "abrir_o_capo" },
+        { locale: "pt-BR", depth: "usar" },
+        { locale: "en", depth: "usar" },
+      ]),
+      { "pt-BR": ["usar", "abrir_o_capo"], en: ["usar"] },
+    );
+    assert.deepEqual(guideAvailability([]), {});
   });
 });

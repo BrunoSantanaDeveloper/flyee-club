@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { recordAudit } from "@/lib/audit";
 import { inspectModulePackage } from "@/lib/catalog/package";
 import { createClient } from "@flyee/auth/server";
+import { guideAvailability } from "@flyee/catalog/guides";
 import { minimumOfRange } from "@flyee/catalog/semver";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -122,6 +123,8 @@ export async function finalizeVersionUpload(
       min_core_version: minimumOfRange(manifest.min_core),
       compatible_ais: manifest.compatible_ais,
       permissions: manifest.permissions,
+      // Which written guides the package carries (migration 0030); the text goes to catalog_guides below.
+      guides: guideAvailability(inspection.guides),
       created_by: session.userId,
     })
     .select("id, version, status, sha256, size_bytes")
@@ -130,6 +133,23 @@ export async function finalizeVersionUpload(
     // Never leave bytes behind that no version points to.
     await service.storage.from(MODULES_BUCKET).remove([storagePath]);
     return { ok: false, status: 500, error: "version_insert_failed" };
+  }
+
+  if (inspection.guides.length > 0) {
+    const { error: guidesError } = await service.from("catalog_guides").insert(
+      inspection.guides.map((guide) => ({
+        version_id: version.id,
+        depth: guide.depth,
+        locale: guide.locale,
+        body_md: guide.body,
+      })),
+    );
+    if (guidesError) {
+      // A version is its package: without its guides it is not the version uploaded.
+      await service.from("catalog_module_versions").delete().eq("id", version.id);
+      await service.storage.from(MODULES_BUCKET).remove([storagePath]);
+      return { ok: false, status: 500, error: "guides_insert_failed" };
+    }
   }
 
   if (input.stagingPath) await service.storage.from(MODULES_BUCKET).remove([input.stagingPath]);
@@ -142,6 +162,7 @@ export async function finalizeVersionUpload(
       version: manifest.version,
       sha256: inspection.sha256,
       size_bytes: inspection.sizeBytes,
+      guides: inspection.guides.map((guide) => `${guide.locale}/${guide.depth}`),
     },
   });
 

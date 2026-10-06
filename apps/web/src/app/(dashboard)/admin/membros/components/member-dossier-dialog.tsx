@@ -43,7 +43,7 @@ import { executionWeeks, isBanned, type MemberDossier } from "@/lib/admin/member
 const LIMIT_LABEL: Record<string, string> = {
   catalog_access: "Catálogo e atualizações",
   devices: "Computadores",
-  advanced_lessons: "Aulas avançadas",
+  advanced_lessons: "Guias avançados",
   recipes: "Receitas",
   roadmap_vote: "Voto no roadmap",
   meetings: "Encontros ao vivo",
@@ -379,7 +379,7 @@ export function MemberDossierBody({ dossier }: { dossier: MemberDossier }) {
           rows={[
             ["Atualizações negadas em 30 dias", formatNumber(usage.denied30d)],
             [
-              "Aulas iniciadas e concluídas",
+              "Vídeos dos guias iniciados e vistos",
               `${formatNumber(usage.lessonsStarted)} e ${formatNumber(usage.lessonsCompleted)}`,
             ],
             ["Votos no roadmap", formatNumber(usage.roadmapVotes)],

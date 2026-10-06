@@ -982,6 +982,7 @@ export const catalogModuleVersions = pgTable("catalog_module_versions", {
 	yankReason: text("yank_reason"),
 	createdBy: uuid("created_by"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	guides: jsonb().default({}).notNull(),
 }, (table) => [
 	index("catalog_module_versions_module_idx").using("btree", table.moduleId.asc().nullsLast().op("uuid_ops"), table.publishedAt.desc().nullsFirst().op("uuid_ops")).where(sql`(status = 'published'::text)`),
 	foreignKey({
@@ -1008,6 +1009,7 @@ export const catalogModuleVersions = pgTable("catalog_module_versions", {
 	check("catalog_module_versions_min_core_version_check", sql`(min_core_version IS NULL) OR semver_ok(min_core_version)`),
 	check("catalog_module_versions_permissions_check", sql`jsonb_typeof(permissions) = 'array'::text`),
 	check("catalog_module_versions_yank_reason", sql`(status <> 'yanked'::text) OR (NULLIF(btrim(yank_reason), ''::text) IS NOT NULL)`),
+	check("catalog_module_versions_guides_check", sql`jsonb_typeof(guides) = 'object'::text`),
 ]);
 
 export const catalogLessons = pgTable("catalog_lessons", {
@@ -1763,6 +1765,25 @@ export const lessonProgress = pgTable("lesson_progress", {
 	primaryKey({ columns: [table.userId, table.lessonId], name: "lesson_progress_pkey"}),
 	pgPolicy("lesson_progress_select_own", { as: "permissive", for: "select", to: ["authenticated"], using: sql`(user_id = auth.uid())` }),
 	pgPolicy("lesson_progress_select_superadmin", { as: "permissive", for: "select", to: ["authenticated"] }),
+]);
+
+export const catalogGuides = pgTable("catalog_guides", {
+	versionId: uuid("version_id").notNull(),
+	depth: text().notNull(),
+	locale: text().notNull(),
+	bodyMd: text("body_md").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.versionId],
+			foreignColumns: [catalogModuleVersions.id],
+			name: "catalog_guides_version_id_fkey"
+		}).onDelete("cascade"),
+	primaryKey({ columns: [table.versionId, table.depth, table.locale], name: "catalog_guides_pkey"}),
+	pgPolicy("catalog_guides_select_entitled", { as: "permissive", for: "select", to: ["authenticated"], using: sql`can_read_guide(version_id, depth)` }),
+	check("catalog_guides_depth_check", sql`depth = ANY (ARRAY['usar'::text, 'abrir_o_capo'::text])`),
+	check("catalog_guides_locale_check", sql`locale = ANY (ARRAY['pt-BR'::text, 'en'::text])`),
+	check("catalog_guides_body_md_check", sql`(char_length(body_md) >= 1) AND (char_length(body_md) <= 200000)`),
 ]);
 
 export const productEventsDaily = pgTable("product_events_daily", {

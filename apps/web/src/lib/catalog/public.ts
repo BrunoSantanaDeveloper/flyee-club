@@ -125,6 +125,8 @@ export const loadPublicCatalog = cache(readPublicCatalog);
 
 export type PublicModule = NonNullable<Awaited<ReturnType<typeof loadModule>>> & {
   trailName: string | null;
+  /** Which written guides the newest released version carries (migration 0030), by language. */
+  guides: Partial<Record<CatalogLocale, ("usar" | "abrir_o_capo")[]>>;
   /** The languages this module can be read in, for hreflang. */
   languages: CatalogLocale[];
 };
@@ -151,12 +153,23 @@ async function readPublicModule(slug: string, locale: CatalogLocale): Promise<Pu
     const name = names.data.name as Localized;
     if (!hasText(name, locale)) return { kind: "untranslated" };
 
+    // Which guides the newest released version carries: public metadata, never the text.
+    const { data: guidesRow } = module.latest
+      ? await client
+          .from("catalog_module_versions")
+          .select("guides")
+          .eq("module_id", module.id)
+          .eq("version", module.latest.version)
+          .maybeSingle()
+      : { data: null };
+
     const trail = (trails.data ?? []).find((row) => row.slug === module.trail);
     const trailNames = (trail?.name ?? null) as Localized;
     return {
       kind: "ready",
       module: {
         ...module,
+        guides: (guidesRow?.guides ?? {}) as PublicModule["guides"],
         trailName: trailNames?.[locale]?.trim() || trailNames?.["pt-BR"]?.trim() || null,
         languages: (["pt-BR", "en"] as const).filter((language) => hasText(name, language)),
       },

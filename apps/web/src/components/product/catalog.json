@@ -67,10 +67,10 @@
       "use": "The next rung of the ladder, shown only when decideUpsell (lib/upsell.ts) says the member's own use earned it. States WHY it is here, what the rung adds and the real price; never a countdown. Records upsell.viewed/upsell.clicked."
     },
     {
-      "name": "LessonPlayer",
-      "from": "@/components/product/lesson-player",
-      "props": "lessons[{id,depth,title,durationLabel,isAdvanced,youtubeId,completed}], upgradeHref",
-      "use": "A module's short lessons (usar / abrir o capô) in tabs. The video loads from youtube-nocookie only on play (lesson.started); a lesson the plan does not include shows why and the one way to unlock it, never an empty frame."
+      "name": "GuidePanel",
+      "from": "@/components/product/guide-panel",
+      "props": "tabs[{depth, guide:{markdown|null, otherLanguage}|null, video:{id,title,durationLabel,youtubeId,completed}|null}], versionLine, newerLine, upgradeHref",
+      "use": "An app's written guide (usar / abrir o capô) in tabs, from the package of the version shown (migration 0030), with the depth's short video above it. The video loads from youtube-nocookie only on play (lesson.started); a depth the plan does not include shows why and the one way to unlock it, never an empty frame; an app without a guide says so."
     },
     {
       "name": "CatalogIcon",

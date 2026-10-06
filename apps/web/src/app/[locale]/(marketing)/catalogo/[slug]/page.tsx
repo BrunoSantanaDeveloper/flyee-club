@@ -11,8 +11,8 @@ import SectionHeader from "@/components/marketing/section-header";
 import TerminalFrame from "@/components/marketing/terminal-frame";
 import { TONE, trailTone } from "@/components/marketing/tone";
 import { localizeHref } from "@/i18n/routing";
+import NiBook from "@/icons/nexture/ni-book";
 import NiKey from "@/icons/nexture/ni-key";
-import NiPlay from "@/icons/nexture/ni-play";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicModule, type PublicModule } from "@/lib/catalog/public";
@@ -132,6 +132,34 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
   const date = (value: string | null) =>
     value ? new Date(value).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" }) : "";
   const minutes = (seconds: number | null) => (seconds ? Math.max(1, Math.round(seconds / 60)) : null);
+
+  // One entry per depth that has a written guide in the newest version
+  // (migration 0030) or a video: its languages, and whether it has a video.
+  const guideItems = (["usar", "abrir_o_capo"] as const).flatMap((depth) => {
+    const guideLocales = (["pt-BR", "en"] as const).filter((language) => module.guides[language]?.includes(depth));
+    const videos = module.lessons.filter((lesson) => lesson.depth === depth);
+    if (guideLocales.length === 0 && videos.length === 0) return [];
+    const video = videos.find((lesson) => lesson.locale === catalogLocaleOf(locale)) ?? videos[0] ?? null;
+    const languages = [...new Set([...guideLocales, ...videos.map((lesson) => lesson.locale)])];
+    return [
+      {
+        depth,
+        title: depth === "abrir_o_capo" ? t("module-guide-hood-title") : t("module-guide-use-title"),
+        meta: [
+          languages
+            .map((language) => t(language === ENGLISH ? "module-lesson-locale-en" : "module-lesson-locale-pt"))
+            .join(" · "),
+          guideLocales.length > 0 ? t("module-guide-written") : null,
+          video && minutes(video.duration_seconds)
+            ? t("module-guide-video", { count: minutes(video.duration_seconds) ?? 0 })
+            : null,
+          depth === "abrir_o_capo" ? t("module-lesson-advanced") : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      },
+    ];
+  });
 
   return (
     <>
@@ -331,7 +359,7 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
         </Section>
       ) : null}
 
-      {module.lessons.length > 0 ? (
+      {guideItems.length > 0 ? (
         <Section background="paper" spacing="compact">
           <SectionHeader
             align="start"
@@ -341,9 +369,9 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
             subtitle={t("module-lessons-subtitle")}
           />
           <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2">
-            {module.lessons.map((lesson, index) => (
+            {guideItems.map((item) => (
               <li
-                key={`${lesson.depth}-${lesson.locale}-${index}`}
+                key={item.depth}
                 className="border-grey-100 bg-background flex flex-row items-start gap-4 rounded-3xl border p-5"
               >
                 <span
@@ -353,22 +381,11 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
                     tone.text,
                   )}
                 >
-                  <NiPlay size="medium" />
+                  <NiBook size="medium" />
                 </span>
                 <span className="flex flex-col gap-1">
-                  <span className="text-text-primary text-base font-semibold">{lesson.title}</span>
-                  <span className="text-text-secondary text-sm">
-                    {[
-                      t(lesson.depth === "abrir_o_capo" ? "module-lesson-depth-hood" : "module-lesson-depth-use"),
-                      t(lesson.locale === ENGLISH ? "module-lesson-locale-en" : "module-lesson-locale-pt"),
-                      minutes(lesson.duration_seconds)
-                        ? t("module-lesson-minutes", { count: minutes(lesson.duration_seconds) ?? 0 })
-                        : null,
-                      lesson.is_advanced ? t("module-lesson-advanced") : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
+                  <span className="text-text-primary text-base font-semibold">{item.title}</span>
+                  <span className="text-text-secondary text-sm">{item.meta}</span>
                 </span>
               </li>
             ))}

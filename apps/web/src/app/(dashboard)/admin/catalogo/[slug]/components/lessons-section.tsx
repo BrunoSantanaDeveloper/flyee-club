@@ -60,7 +60,7 @@ function LessonDialog({
     <Dialog open onClose={busy ? undefined : onClose} maxWidth="sm" fullWidth aria-labelledby="lesson-form-title">
       <DialogHeader
         id="lesson-form-title"
-        title={lesson ? "Editar aula" : "Nova aula"}
+        title={lesson ? "Editar vídeo" : "Novo vídeo do guia"}
         onClose={onClose}
         closeLabel="Fechar sem salvar"
       />
@@ -91,7 +91,7 @@ function LessonDialog({
             value={form.youtubeId}
             onChange={(value) => set("youtubeId", value)}
             placeholder="https://youtu.be/…"
-            help="Use um vídeo não listado. Sem vídeo, a aula aparece como “em breve”."
+            help="Use um vídeo não listado. Sem vídeo, o guia aparece só com o texto."
           />
           <Box className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextInput
@@ -103,7 +103,7 @@ function LessonDialog({
             <TextInput label="Ordem" type="number" value={form.sort} onChange={(value) => set("sort", Number(value))} />
           </Box>
           <CheckInput
-            label="Aula avançada"
+            label="Vídeo avançado (FlyeeClub Pro)"
             checked={form.isAdvanced}
             onChange={(value) => set("isAdvanced", value)}
             help="Só quem tem a assinatura recebe o vídeo. Os outros veem o título e o caminho para liberar."
@@ -120,7 +120,7 @@ function LessonDialog({
           Cancelar
         </Button>
         <Button variant="contained" onClick={submit} disabled={busy}>
-          {busy ? "Salvando…" : lesson ? "Salvar" : "Criar aula"}
+          {busy ? "Salvando…" : lesson ? "Salvar" : "Criar vídeo"}
         </Button>
       </DialogActions>
     </Dialog>
@@ -150,7 +150,7 @@ export default function LessonsSection({
     const result = await deleteLesson(lesson.id, moduleSlug);
     if (!result.ok) enqueueSnackbar(result.error, { variant: "error" });
     else {
-      enqueueSnackbar("Aula excluída.", { variant: "success" });
+      enqueueSnackbar("Vídeo excluído.", { variant: "success" });
       onChanged();
     }
   };
@@ -161,10 +161,11 @@ export default function LessonsSection({
         <Box className="flex flex-row flex-wrap items-center justify-between gap-3">
           <Box className="flex flex-col">
             <Typography id="lessons-title" variant="h5" component="h2" className="mb-0">
-              Aulas
+              Vídeos dos guias
             </Typography>
             <Typography variant="body2" className="text-text-secondary">
-              Uma aula por profundidade e idioma: usar e abrir o capô, em português e em inglês.
+              Um vídeo por profundidade e idioma, mostrado dentro do guia. O texto do guia vem no pacote de cada versão
+              (guides/&lt;idioma&gt;/&lt;profundidade&gt;.md), e a lista de versões diz quais guias cada uma traz.
             </Typography>
           </Box>
           <Button
@@ -173,16 +174,16 @@ export default function LessonsSection({
             startIcon={<NiPlus size="medium" />}
             onClick={() => setEditing("new")}
           >
-            Nova aula
+            Novo vídeo
           </Button>
         </Box>
 
         {lessons.length === 0 ? (
           <EmptyState
             icon={<NiPlay size="large" />}
-            title="Nenhuma aula ainda"
-            description="A aula de uso explica em poucos minutos como a ferramenta entra no dia a dia. É o que a página da ferramenta mostra primeiro."
-            action={{ label: "Criar a aula de uso", onClick: () => setEditing("new") }}
+            title="Nenhum vídeo ainda"
+            description="O vídeo é opcional: o guia escrito vem no pacote. Um vídeo curto de uso, no topo do guia, mostra em poucos minutos como o app entra no dia a dia."
+            action={{ label: "Criar o vídeo de uso", onClick: () => setEditing("new") }}
           />
         ) : (
           <Box className="flex flex-col gap-2">
@@ -196,7 +197,7 @@ export default function LessonsSection({
                     <Typography variant="subtitle2" component="h3">
                       {lesson.title}
                     </Typography>
-                    {lesson.isAdvanced ? <StatusChip label="avançada" tone="info" /> : null}
+                    {lesson.isAdvanced ? <StatusChip label="avançado" tone="info" /> : null}
                     {!lesson.youtubeId ? <StatusChip label="sem vídeo" tone="attention" /> : null}
                   </Box>
                   <Typography variant="body2" className="text-text-secondary">

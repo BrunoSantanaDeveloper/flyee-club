@@ -295,10 +295,10 @@ export async function saveLesson(input: LessonInput, moduleSlug: string): Promis
   if (!UUID.test(input.moduleId)) return { ok: false, error: "Ferramenta inválida." };
   const session = await requireSuperadmin();
   if (!session) return { ok: false, error: dbMessage("", "42501") };
-  if (!["usar", "abrir_o_capo"].includes(input.depth)) return { ok: false, error: "Escolha a profundidade da aula." };
-  if (!["pt-BR", "en"].includes(input.locale)) return { ok: false, error: "Escolha o idioma da aula." };
+  if (!["usar", "abrir_o_capo"].includes(input.depth)) return { ok: false, error: "Escolha a profundidade do vídeo." };
+  if (!["pt-BR", "en"].includes(input.locale)) return { ok: false, error: "Escolha o idioma do vídeo." };
   const title = cleanText(input.title, 160);
-  if (!title) return { ok: false, error: "Dê um título à aula." };
+  if (!title) return { ok: false, error: "Dê um título ao vídeo." };
   const youtubeId = input.youtubeId.trim() ? youtubeIdFrom(input.youtubeId) : null;
   if (input.youtubeId.trim() && !youtubeId) return { ok: false, error: "Cole o link ou o id do vídeo no YouTube." };
   const minutes = input.durationMinutes;
@@ -316,7 +316,7 @@ export async function saveLesson(input: LessonInput, moduleSlug: string): Promis
 
   let lessonId = input.id ?? null;
   if (lessonId) {
-    if (!UUID.test(lessonId)) return { ok: false, error: "Aula inválida." };
+    if (!UUID.test(lessonId)) return { ok: false, error: "Vídeo inválido." };
     const { error } = await session.supabase.from("catalog_lessons").update(row).eq("id", lessonId);
     if (error) return { ok: false, error: dbMessage(error.message, error.code) };
   } else {
@@ -326,7 +326,7 @@ export async function saveLesson(input: LessonInput, moduleSlug: string): Promis
         ok: false,
         error:
           error?.code === "23505"
-            ? "Esta ferramenta já tem uma aula nesta profundidade e neste idioma. Edite a existente."
+            ? "Esta ferramenta já tem um vídeo nesta profundidade e neste idioma. Edite o existente."
             : dbMessage(error?.message ?? "", error?.code),
       };
     }
@@ -349,7 +349,7 @@ export async function saveLesson(input: LessonInput, moduleSlug: string): Promis
 }
 
 export async function deleteLesson(id: string, moduleSlug: string): Promise<CatalogActionResult> {
-  if (!UUID.test(id)) return { ok: false, error: "Aula inválida." };
+  if (!UUID.test(id)) return { ok: false, error: "Vídeo inválido." };
   const session = await requireSuperadmin();
   if (!session) return { ok: false, error: dbMessage("", "42501") };
   const { error } = await session.supabase.from("catalog_lessons").delete().eq("id", id);

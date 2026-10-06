@@ -46,6 +46,8 @@ export type AdminVersion = {
   createdAt: string;
   downloads: number;
   downloads30d: number;
+  /** Which written guides the package carries (migration 0030), by language. */
+  guides: Partial<Record<"pt-BR" | "en", ("usar" | "abrir_o_capo")[]>>;
   /** What the package declares, read by `admin_catalog_stats`. */
   files: number | null;
   entry: string | null;
@@ -183,6 +185,7 @@ type VersionRow = {
   yanked_at: string | null;
   yank_reason: string | null;
   created_at: string;
+  guides: AdminVersion["guides"] | null;
 };
 
 type Stats = {
@@ -198,7 +201,7 @@ type Stats = {
 };
 
 const VERSION_COLUMNS =
-  "id, module_id, version, is_stable, status, sha256, size_bytes, changelog, min_core_version, compatible_ais, permissions, published_at, yanked_at, yank_reason, created_at";
+  "id, module_id, version, is_stable, status, sha256, size_bytes, changelog, min_core_version, compatible_ais, permissions, published_at, yanked_at, yank_reason, created_at, guides";
 
 const MODULE_COLUMNS =
   "id, slug, trail, store_category, type, icon, name, summary, description_md, compatible_ais, external_credentials, status, is_free_sample, entitlement_key, sort, published_at, created_at, updated_at";
@@ -222,6 +225,7 @@ function toVersion(row: VersionRow, stats: Stats["versions"][number] | undefined
     createdAt: row.created_at,
     downloads: Number(stats?.downloads ?? 0),
     downloads30d: Number(stats?.downloads30d ?? 0),
+    guides: row.guides ?? {},
     files: stats?.files ?? null,
     entry: stats?.entry ?? null,
     license: stats?.license ?? null,

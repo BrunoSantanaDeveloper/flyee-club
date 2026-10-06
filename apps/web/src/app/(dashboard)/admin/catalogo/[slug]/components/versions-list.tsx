@@ -28,6 +28,19 @@ const ACTION_ERROR: Record<string, string> = {
 const reasonText = (reason: AdminVersion["permissions"][number]["reason"]) =>
   typeof reason === "string" ? reason : textOf(reason);
 
+/** Which written guides the package carries, as the operator reads it: "Guia: pt-BR (usar, abrir o capô) · en (usar)". */
+function guidesLine(guides: AdminVersion["guides"]): string {
+  const parts = (["pt-BR", "en"] as const).flatMap((locale) => {
+    const depths = guides[locale] ?? [];
+    return depths.length > 0
+      ? [`${locale} (${depths.map((depth) => (depth === "usar" ? "usar" : "abrir o capô")).join(", ")})`]
+      : [];
+  });
+  return parts.length > 0
+    ? `Guia: ${parts.join(" · ")}`
+    : "Sem guia escrito no pacote (guides/<pt-BR|en>/<usar|abrir-o-capo>.md)";
+}
+
 /**
  * The versions of one module, newest first. A version is a package members
  * verify by its checksum, so once released it never changes: the actions are
@@ -106,6 +119,9 @@ export default function VersionsList({
                     : ""}
                   {version.entry ? ` · entrada ${version.entry}` : ""}
                   {version.license === "commercial" ? " · licença comercial" : ""}
+                </Typography>
+                <Typography variant="body2" className="text-text-secondary">
+                  {guidesLine(version.guides)}
                 </Typography>
                 <Typography variant="body2" className="text-text-secondary">
                   Funciona com{" "}

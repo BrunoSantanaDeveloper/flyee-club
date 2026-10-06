@@ -354,6 +354,7 @@ Chave desconhecida é erro: um campo novo exige um `manifest_version` novo. Cami
 
 - Um ZIP com `flyee.module.json` na raiz. A lista de arquivos do ZIP e `files` precisam bater nos dois sentidos.
 - Até 2.001 entradas e 200 MB descompactado; o arquivo enviado até `MODULE_UPLOAD_MAX_MB` (20 MB).
+- **Guias** (desde 2026-10-06, migração `0030`): o pacote pode trazer o guia escrito do app, um arquivo Markdown por idioma e profundidade, em caminho fixo: `guides/pt-BR/usar.md`, `guides/pt-BR/abrir-o-capo.md`, `guides/en/usar.md` e `guides/en/abrir-o-capo.md`. São arquivos como os outros (listados em `files`), não uma chave do manifesto, então a v1 do manifesto não muda. Qualquer outro nome dentro de `guides/` recusa o pacote (422), e cada guia tem até 200 KB de texto UTF-8, não vazio. A plataforma guarda o texto da versão e o mostra no painel, para a versão que o integrante tem instalada; links e imagens relativos ao pacote não são resolvidos no painel, então use endereços absolutos. O vídeo de cada profundidade (`lessons`) continua opcional e é cadastrado no console. A convenção está em `@flyee/catalog/guides` (`guideOf`, `guidePath`).
 - Guardado no bucket privado `modules` em `<slug>/<versão>/<slug>-<versão>.zip`. O SHA-256 publicado é o dos bytes guardados.
 - Uma versão lançada é imutável: correção é versão nova, e a versão errada é retirada (`yanked`) com motivo. Retirada continua verificável e nunca mais é servida.
 
