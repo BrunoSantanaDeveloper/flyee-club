@@ -6,7 +6,7 @@ Sep 30, 2026 · @Dev
 
 ## A ideia organizada
 
-O flyee.club é um clube com um kit de entrada de pagamento único e uma assinatura por cima: o integrante instala o seu harness na IA que já usa e recebe, continuamente, as ferramentas e as atualizações que mantêm tudo funcionando quando Claude, Codex ou as APIs mudam. A cada 30 dias sem atualizar, ele volta ao painel para revalidar o token, e é lá que vê o próximo degrau.
+O FlyeeClub é um clube com um acesso de pagamento único (o plano "FlyeeClub") e uma assinatura por cima (o "FlyeeClub Pro"): o integrante instala o seu harness na IA que já usa e recebe, continuamente, as ferramentas e as atualizações que mantêm tudo funcionando quando Claude, Codex ou as APIs mudam. A cada 30 dias sem atualizar, ele volta ao painel para revalidar o token, e é lá que vê o próximo degrau.
 
 **Tese em uma frase (proposta):** a IA muda toda semana; o flyee.club é o clube que mantém suas ferramentas funcionando e melhorando, na IA que você já usa, em português e inglês.
 
@@ -73,6 +73,14 @@ Registradas ao transformar a base copiada do MedChina na plataforma do flyee.clu
 ## Decisões tomadas 2026-10-06
 
 Registradas no alinhamento do repositório do produto com a plataforma. O que cabe à plataforma está detalhado na fase 9 de [`docs/PLANO-IMPLEMENTACAO.md`](PLANO-IMPLEMENTACAO.md); o que cabe ao produto fica no repositório dele.
+
+**O nome e a escada (alinhamento com o brief da home, opção 1)**
+
+| Tema | Decisão |
+| --- | --- |
+| Nome | A plataforma se chama **FlyeeClub**. O domínio continua flyee.club e a CLI continua `npx flyee`. |
+| Dois planos | O acesso de pagamento único é o plano **"FlyeeClub"**, e é ele que todo CTA vende ("Assinar FlyeeClub agora"). A assinatura é o **"FlyeeClub Pro"**: guias avançados, receitas, encontros, voto, a camada "abrir o capô" (herdada do Pro) e 3 máquinas. O Pro de antes saiu da vitrine: linhas `pro-*` inativas, sem apagar (migração `0025`). |
+| Ofertas depois da compra | Quem tem o FlyeeClub recebe a oferta do FlyeeClub Pro no painel e na revalidação. A mentoria remota e a consultoria completa não são planos: são contratadas sob demanda, oferecidas no painel a quem já paga e pedidas pelo formulário de contato (`/contato?assunto=mentoria` ou `consultoria`). |
 
 **O repositório do produto**
 
@@ -286,15 +294,15 @@ A escada tem três degraus claros: um produto de entrada barato para medir quem 
 | Degrau | O que é | Para quem | Preço de partida (hipótese) | O que prova |
 | --- | --- | --- | --- | --- |
 | 0 · Amostra | A versão de entrada de cada app, instalada pela CLI numa conta sem compra, + newsletter bilíngue; nunca oferecida, só alcançada pelo conteúdo (decisão de 2026-10-06) | Topo de funil | Sem preço | Interesse por segmento e idioma; qual vídeo traz cadastro e instalação |
-| 1 · Kit de entrada (low-ticket) | Harness + catálogo inteiro com atualização contínua + aula de uso por ferramenta; 1 acesso; token revalidado no painel a cada 30 dias sem update | Quem quer testar | R$ 97 único / US$ 29 | Quem paga, por qual porta entra e quem volta para revalidar |
-| 2 · Assinatura flyee | Kit + aulas avançadas, receitas, encontros, voto no roadmap, acesso em mais de uma máquina | Quem usa toda semana e quer ir fundo | R$ 67/mês ou R$ 597/ano; US$ 19/mês; fundador com preço travado | Uso semanal por segmento, conversão kit → assinatura |
-| 3 · Pro | Assinatura + camada "abrir o capô" + mais máquinas (a licença comercial passou a valer em todo plano pago em 2026-10-06) | Freelancer e agência | R$ 197/mês / US$ 49 | Quanto do público é profissional de serviço |
+| 1 · FlyeeClub, o acesso (low-ticket) | Harness + catálogo inteiro com atualização contínua + aula de uso por ferramenta; 1 acesso; token revalidado no painel a cada 30 dias sem update | Quem quer testar | R$ 97 único / US$ 29 | Quem paga, por qual porta entra e quem volta para revalidar |
+| 2 · FlyeeClub Pro, a assinatura | FlyeeClub + guias avançados, receitas, encontros, voto no roadmap, a camada "abrir o capô" (herdada do Pro em 2026-10-06), acesso em mais de uma máquina | Quem usa toda semana e quer ir fundo | R$ 67/mês ou R$ 597/ano; US$ 19/mês; fundador com preço travado | Uso semanal por segmento, conversão kit → assinatura |
+| ~~3 · Pro~~ (fora da vitrine desde 2026-10-06: a camada "abrir o capô" passou ao FlyeeClub Pro e as linhas `pro-*` ficam inativas) | Assinatura + camada "abrir o capô" + mais máquinas (a licença comercial passou a valer em todo plano pago em 2026-10-06) | Freelancer e agência | R$ 197/mês / US$ 49 | Quanto do público é profissional de serviço |
 | 4 · Mentoria em grupo | Turma trimestral, ao vivo, sobre operar produto com IA | Assinantes engajados | R$ 997 a 1.997 por turma | Demanda por acesso a você |
 | 5 · Advisory e Time | Meio dia por semana ([plano de agosto](https://claude.ai/code/artifact/a704c98b-1442-45e3-9e3f-dd4ae0f5166c)) e plano por assento | Empresas | Preço público, sob consulta | Teto da escada |
 
 Os preços desta tabela são dados configuráveis, guardados em `plans` e editados em `/admin/billing`, nunca constantes no código. Os valores são hipóteses de partida.
 
-**Upsell é gatilho de uso, não de tempo:** a revalidação de 30 dias é o momento em que todo integrante, até o do kit, passa pelo painel; é ali que a oferta certa aparece. Ofereça a assinatura a quem usa três ou mais trilhas, o Pro a quem instalou em projeto de cliente, a mentoria a quem assiste às aulas avançadas, o advisory a quem pergunta sobre a própria operação.
+**Upsell é gatilho de uso, não de tempo:** a revalidação de 30 dias é o momento em que todo integrante, até o do kit, passa pelo painel; é ali que a oferta certa aparece. Desde 2026-10-06: quem tem o FlyeeClub recebe a oferta do FlyeeClub Pro (com a razão de uso quando houver, três ou mais trilhas em 30 dias), e todo integrante pagante vê a mentoria e a consultoria, sob demanda, levando ao contato; o advisory a quem pergunta sobre a própria operação.
 
 **Consequência do kit sem limite de ferramentas:** a camada mais forte (ferramenta + atualização) passa a ser vendida uma vez, por R$ 97. A assinatura precisa valer pela camada de profundidade (aulas avançadas, receitas, encontros, voto), que é a que consome sua energia. Duas formas de proteger: canal estável para o kit (atualização mensal) e canal latest para assinantes (semanal, com beta); ou aceitar e medir a conversão kit → assinatura em 60 dias antes de mexer.
 
@@ -364,7 +372,7 @@ Das seis decisões originais, três foram tomadas em 2026-09-30 e estão marcada
 - [x] **O que "1 acesso" significa no kit.** Decidido: um dispositivo no kit, três na assinatura, cinco no Pro.
 - [x] **Canal de atualização do kit.** Decidido: o mesmo canal para todos na v1.
 - [x] **O que fica aberto.** Decidido em 2026-10-06: nenhuma skill solta; o degrau grátis é a versão de entrada de cada app, no canal `free`, instalada pela CLI numa conta sem compra. Do harness, só a CLI é pública (pacote `flyee` no npm); o core viaja dentro dela e os apps vêm do servidor de pacotes.
-- [ ] **Ordem dos upsells.** Pro (abrir o capô e mais máquinas) primeiro ou mentoria em grupo primeiro? Desde 2026-10-06 nenhum uso das ferramentas oferece o Pro por conta própria: projetos de cliente valem em todo plano pago.
+- [x] **Ordem dos upsells.** Decidido em 2026-10-06, com os dois planos: quem tem o FlyeeClub recebe a oferta do FlyeeClub Pro; a mentoria remota e a consultoria completa são serviços sob demanda, oferecidos no painel a quem já paga e contratados pelo contato; o Pro de antes saiu da vitrine. Desde 2026-10-06 nenhum uso das ferramentas oferece o Pro por conta própria: projetos de cliente valem em todo plano pago.
 - [x] **Proteção contra cópia e revenda.** Decidido em 2026-10-06. O que a IA lê fica em texto na máquina do integrante, então nenhuma trava impede copiar arquivos. O conjunto do item 10.6 do plano combina valor fora do disco, licença assinada por app e máquina que prende o harness à conta, marcas rastreáveis, relatório de downloads anômalos, cláusula nos termos, registro da marca no INPI e conteúdo dinâmico servido pela plataforma.
 
 **Levantadas no plano da plataforma**

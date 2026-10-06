@@ -16,13 +16,13 @@ import { describe, expect, it } from "vitest";
 /** Every notice of the bell, written with the arguments a real call would carry. */
 const notices = (copy: BellCopy): Record<keyof BellCopy, BellText> => ({
   welcome: copy.welcome(),
-  planActive: copy.planActive("Assinatura flyee"),
+  planActive: copy.planActive("FlyeeClub Pro"),
   accessGranted: copy.accessGranted("Acesso flyee", "6 de outubro de 2027"),
   accessEnded: copy.accessEnded("Acesso flyee", "6 de outubro de 2027"),
   paymentRecovered: copy.paymentRecovered(),
   paymentFailed: copy.paymentFailed(7),
-  subscriptionEnded: copy.subscriptionEnded("Assinatura flyee", false),
-  termEnding: copy.termEnding("Assinatura flyee", "17 de outubro de 2026"),
+  subscriptionEnded: copy.subscriptionEnded("FlyeeClub Pro", false),
+  termEnding: copy.termEnding("FlyeeClub Pro", "17 de outubro de 2026"),
   tokenReminder: copy.tokenReminder("notebook", 5),
   updatesAvailable: copy.updatesAvailable(3),
   meetingDay: copy.meetingDay("Sessão de outubro", "sexta-feira, 9 de outubro, 19:00 BRT"),

@@ -13,7 +13,7 @@ import { enabledFeatures, type EntitlementKey, isTier, limitOf, type Tier } from
 import { listPublicPlans } from "@flyee/billing/public";
 import { applyDiscount, type CheckoutCoupon } from "@flyee/billing/types";
 
-const PLACEHOLDER_SLUGS = ["plan-1", "plan-2", "plan-3"] as const;
+const PLACEHOLDER_SLUGS = ["plan-1", "plan-2"] as const;
 
 /** One hue per rung, the same everywhere on the site (docs/DESIGN.md). */
 const TIER_TONE: Record<Tier, Tone> = { kit: "accent-2", club: "primary", pro: "accent-4" };
@@ -150,9 +150,12 @@ export async function getDisplayPlans({
   const hasCycles = display.some((plan) => plan.cycle === "monthly") && display.some((plan) => plan.cycle === "yearly");
   if (!hasCycles) return { plans: display };
 
-  // The yearly saving, from real prices: the smallest across families, so the
-  // label never promises more than every plan gives.
-  const savings = ["club", "pro"]
+  // The yearly saving, from real prices: the smallest across the recurring
+  // families on sale, so the label never promises more than every plan gives.
+  const families = [...new Set(plans.filter((plan) => plan.period).map((plan) => plan.family))].filter(
+    (family): family is string => Boolean(family),
+  );
+  const savings = families
     .map((family) => {
       const monthly = plans.find((plan) => plan.family === family && plan.period === "monthly");
       const yearly = plans.find((plan) => plan.family === family && plan.period === "yearly");

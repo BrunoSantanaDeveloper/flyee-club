@@ -3,7 +3,7 @@ import type { HomeCopy } from "./pt-BR";
 /** English copy of the home. Structure is pinned by `HomeCopy` (pt-BR.ts); the text follows docs/HOME-COPY.md. */
 export const homeCopy: HomeCopy = {
   meta: {
-    title: "flyee.club: apps that automate your business in your AI",
+    title: "FlyeeClub: apps that automate your business in your AI",
     description:
       "Apps that automate sales, content, video and product work inside Claude Code, Codex or your favorite AI. Install with one command and update when AI changes.",
   },
@@ -14,18 +14,18 @@ export const homeCopy: HomeCopy = {
     title: "Apps that automate your company's work in **your favorite AI**.",
     subtitle:
       "Sales, content, video, research and product: every repetitive task becomes an app that runs in Claude Code, Codex or the AI you already use. For your business, your agency, your digital product or your dev work.",
-    secondaryCta: "Is flyee for me?",
+    secondaryCta: "Is FlyeeClub for me?",
     note: "One year of access, one payment. You use your own AI plan.",
     stripLabel: "Works with the AI you already use",
     store: {
-      label: "The flyee app store, with the published apps",
+      label: "The FlyeeClub app store, with the published apps",
       allLabel: "All",
       installLabel: "Install",
       appsLabel: "apps in the store",
     },
     terminal: {
       title: "~/my-project",
-      label: "A terminal updating the flyee apps installed in a project",
+      label: "A terminal updating the FlyeeClub apps installed in a project",
       checking: "Checking 3 installed apps…",
       updated: "product-scope updated: 1.4.0 → 1.6.0",
       changelog: "Changelog: follows the new Claude Code skills format",
@@ -39,7 +39,7 @@ export const homeCopy: HomeCopy = {
 
   store: {
     eyebrow: "App store",
-    title: "Need it? There's an app for it in flyee.",
+    title: "Need it? There's an app for it in FlyeeClub.",
     subtitle: "Each app automates one task. Open it, see what it does and install it in your Claude with one command.",
     categoriesLabel: "Store categories",
     allLabel: "All",
@@ -52,9 +52,9 @@ export const homeCopy: HomeCopy = {
     verified: "sha256 checksum verified",
     request: {
       title: "Request an app",
-      body: "Can't find it? Members vote on the next app that joins the store.",
-      badge: "Membership",
-      link: "See what the membership includes",
+      body: "Can't find it? On FlyeeClub Pro, you vote on the next app that joins the store.",
+      badge: "FlyeeClub Pro",
+      link: "See what FlyeeClub Pro includes",
     },
     footnote: "No modules to watch. You install the app and use it; each one comes with a short guide.",
     allApps: "See all apps",
@@ -71,8 +71,8 @@ export const homeCopy: HomeCopy = {
     items: [
       {
         kicker: "access",
-        title: "Get your access",
-        body: "You pick your access and the app store opens in your account.",
+        title: "Join FlyeeClub",
+        body: "One payment, valid for 1 year, and the app store opens in your account.",
       },
       {
         kicker: "login",
@@ -97,7 +97,7 @@ export const homeCopy: HomeCopy = {
       },
       {
         title: "Runs on what you have",
-        body: "The apps use your own AI plan and keep what they produce in files on your computer. flyee does not charge per use.",
+        body: "The apps use your own AI plan and keep what they produce in files on your computer. FlyeeClub does not charge per use.",
       },
       {
         title: "Updated when AI changes",
@@ -109,7 +109,7 @@ export const homeCopy: HomeCopy = {
   origin: {
     eyebrow: "Where the apps come from",
     title: "Every app here has already run in a real product.",
-    body: "Every flyee app was built for real work before it joined the store. They are built by Bruno Santana, a product engineer who maintains seven systems in production across health, credit and pharma. The flyee core is the same one that runs in two of those products.",
+    body: "Every FlyeeClub app was built for real work before it joined the store. They are built by Bruno Santana, a product engineer who maintains seven systems in production across health, credit and pharma. The FlyeeClub core is the same one that runs in two of those products.",
     facts: ["Seven systems in production", "Health", "Credit", "Pharma"],
   },
 
@@ -117,7 +117,7 @@ export const homeCopy: HomeCopy = {
     eyebrow: "Access",
     title: "Choose how to get in.",
     subtitle:
-      "Access is a one-time payment, valid for 1 year, that unlocks every app in the store, with updates. The membership adds advanced guides, live sessions, a vote on what joins the store and more computers.",
+      "FlyeeClub is a one-time payment, valid for 1 year, that unlocks every app in the store, with updates. FlyeeClub Pro adds advanced guides, recipes, live sessions, a vote on what joins the store, the under-the-hood layer and more computers.",
     requirementsTitle: "What you need",
     requirements: [
       {
@@ -147,7 +147,7 @@ export const homeCopy: HomeCopy = {
       {
         question: "On how many computers can I use it?",
         answer:
-          "With access, on one: one user, on one machine. The membership and Pro allow more computers connected at the same time.",
+          "With FlyeeClub, on one: one user, on one machine. FlyeeClub Pro allows more computers connected at the same time.",
       },
       {
         question: "Do I need to know how to code?",
@@ -156,12 +156,12 @@ export const homeCopy: HomeCopy = {
       },
       {
         question: "Does it work in the Claude or ChatGPT app, without a terminal?",
-        answer: "Not yet. Today flyee runs in terminal AIs: Claude Code, Codex, Gemini CLI and Cursor.",
+        answer: "Not yet. Today FlyeeClub runs in terminal AIs: Claude Code, Codex, Gemini CLI and Cursor.",
       },
       {
         question: "Is there an AI cost on top of the access?",
         answer:
-          "Your own AI plan. flyee does not charge per use; some apps use your account on outside services, and each app's page says so.",
+          "Your own AI plan. FlyeeClub does not charge per use; some apps use your account on outside services, and each app's page says so.",
       },
       {
         question: "What happens if I go a while without updating?",
@@ -170,7 +170,7 @@ export const homeCopy: HomeCopy = {
       },
       {
         question: "Can I use it in client projects?",
-        answer: "Yes. Access covers your own projects and your clients' projects.",
+        answer: "Yes. FlyeeClub covers your own projects and your clients' projects.",
       },
       {
         question: "Which languages?",
@@ -185,7 +185,7 @@ export const homeCopy: HomeCopy = {
 
   cta: {
     title: "Next time you need it, there will already be an app.",
-    subtitleOpen: "Get your access, install it in your Claude and use your first app today. You use your own AI plan.",
+    subtitleOpen: "Join FlyeeClub, install it in your Claude and use your first app today. You use your own AI plan.",
     subtitleWaitlist: "Join the waitlist and we will tell you when the store opens. You will use your own AI plan.",
   },
 };

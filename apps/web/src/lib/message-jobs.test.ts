@@ -461,7 +461,7 @@ describe("what a workspace is told when a subscription ends", () => {
         member_recipients: recipients(recipient("owner", { locale: "en" })),
       },
       tables: {
-        plans: () => ({ data: { name: "Assinatura flyee", limits: {} } }),
+        plans: () => ({ data: { name: "FlyeeClub Pro", limits: {} } }),
         memberships: () => ({ data: [{ user_id: "owner" }] }),
       },
     });
@@ -478,14 +478,14 @@ describe("what a workspace is told when a subscription ends", () => {
     expect(
       write({ subscriptionEnded: (plan: string, keeps: boolean) => ({ title: plan, body: String(keeps) }) }),
     ).toEqual({
-      title: "Assinatura flyee",
+      title: "FlyeeClub Pro",
       body: "false",
     });
     const [to, props] = mocks.sendSubscriptionCanceledEmail.mock.calls[0];
     expect(to).toBe("owner@flyee.invalid");
     expect(props).toMatchObject({
       locale: "en",
-      planName: "Assinatura flyee",
+      planName: "FlyeeClub Pro",
       cause: "payment",
       endedLabel: "October 2, 2026",
       keptAccess: null,
@@ -494,7 +494,7 @@ describe("what a workspace is told when a subscription ends", () => {
 
   it("never throws: a notice that fails must not replay the billing event above it", async () => {
     const { service } = fakeService({
-      tables: { plans: () => ({ data: { name: "Assinatura flyee", limits: {} } }) },
+      tables: { plans: () => ({ data: { name: "FlyeeClub Pro", limits: {} } }) },
       rpc: { org_entitlements: () => ({ error: { message: "down" } }) },
     });
     const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);

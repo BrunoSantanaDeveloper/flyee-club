@@ -66,7 +66,7 @@ function member(overrides: Partial<MemberRow> = {}): MemberRow {
 
 const plan = (overrides: Partial<NonNullable<MemberRow["plan"]>> = {}): NonNullable<MemberRow["plan"]> => ({
   slug: "club-mensal",
-  name: "Assinatura flyee",
+  name: "FlyeeClub Pro",
   status: "active",
   period: "monthly",
   priceCents: 6700,
@@ -157,13 +157,13 @@ describe("members console", () => {
   });
 
   it("says what was sold: the plan and its price, a courtesy, or the kit", () => {
-    expect(planLabel(member({ tier: "club", plan: plan() }))).toBe("Assinatura flyee · R$ 67 mensal");
+    expect(planLabel(member({ tier: "club", plan: plan() }))).toBe("FlyeeClub Pro · R$ 67 mensal");
     expect(planLabel(member({ tier: "pro", plan: plan({ name: "flyee Pro", comped: true, provider: null }) }))).toBe(
       "flyee Pro · cortesia",
     );
     const kit = { id: "g", kind: "kit", plan: "kit", source: "purchase", createdAt: "2026-09-02", expiresAt: null };
-    expect(planLabel(member({ tier: "kit", grants: [kit] }))).toBe("Kit");
-    expect(planLabel(member({ tier: "kit", grants: [{ ...kit, source: "admin" }] }))).toBe("Kit · cortesia");
+    expect(planLabel(member({ tier: "kit", grants: [kit] }))).toBe("FlyeeClub");
+    expect(planLabel(member({ tier: "kit", grants: [{ ...kit, source: "admin" }] }))).toBe("FlyeeClub · cortesia");
     expect(planLabel(member())).toBe("Sem plano");
   });
 
@@ -196,7 +196,15 @@ describe("members console", () => {
 
   it("finds a member by name, e-mail, segment, rung or campaign", () => {
     const text = memberSearchText(member({ tier: "kit", attribution: { utmCampaign: "lancamento" } }));
-    for (const term of ["ana souza", "ana@example.com", "produto próprio", "claude code", "kit", "lancamento"]) {
+    for (const term of [
+      "ana souza",
+      "ana@example.com",
+      "produto próprio",
+      "claude code",
+      "kit",
+      "flyeeclub",
+      "lancamento",
+    ]) {
       expect(text).toContain(term);
     }
   });

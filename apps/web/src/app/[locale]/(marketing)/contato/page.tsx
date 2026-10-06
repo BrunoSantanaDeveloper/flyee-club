@@ -24,13 +24,17 @@ export async function generateMetadata(): Promise<Metadata> {
  * sends the link, and echoing it into the body of an e-mail the operation reads
  * would let a stranger compose that e-mail. Unknown values are ignored.
  *
- * The one entry today comes from the closed state of `/fundadores`, which says
- * "fale com a gente" to someone who arrived after the seats ran out. Landing
- * her on an empty form made her explain from scratch what she was answering.
+ * The first entry comes from the closed state of `/fundadores`, which says
+ * "fale com a gente" to someone who arrived after the seats ran out: landing
+ * them on an empty form made them explain from scratch what they were
+ * answering. The other two are the services sold on demand (mentoring,
+ * consulting), offered in the member's home. Each value is a `marketing`
+ * key, so the message opens in the language being read.
  */
 const SUBJECT_PREFILL: Record<string, string> = {
-  fundadores:
-    "Olá! Recebi o link da condição de fundadora e cheguei depois do fechamento. Gostaria de saber quais são as opções.",
+  fundadores: "contact-prefill-fundadores",
+  mentoria: "contact-prefill-mentoria",
+  consultoria: "contact-prefill-consultoria",
 };
 
 export default async function ContactPage({
@@ -47,7 +51,7 @@ export default async function ContactPage({
       <BreadcrumbJsonLd home={t("nav-home")} trail={[{ name: t("nav-contact"), path: "/contato" }]} />
       <SectionHeader title={t("contact-title")} subtitle={t("contact-subtitle")} as="h1" />
       <Reveal>
-        <ContactForm initialMessage={SUBJECT_PREFILL[subject] ?? ""} />
+        <ContactForm initialMessage={SUBJECT_PREFILL[subject] ? t(SUBJECT_PREFILL[subject]) : ""} />
       </Reveal>
     </Section>
   );

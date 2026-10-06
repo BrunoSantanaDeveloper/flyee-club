@@ -328,7 +328,7 @@ export default function PlansAdmin() {
               value={form.kind}
               options={[
                 { value: "recurring", label: "Assinatura (recorrente)" },
-                { value: "access", label: "Acesso (pagamento único, o kit)" },
+                { value: "access", label: "Acesso (pagamento único, o FlyeeClub)" },
               ]}
               onChange={(v) => setForm({ ...form, kind: v })}
             />
@@ -341,9 +341,9 @@ export default function PlansAdmin() {
               label="Degrau"
               value={form.tier || "none"}
               options={[
-                { value: "kit", label: "Kit" },
-                { value: "club", label: "Assinatura" },
-                { value: "pro", label: "Pro" },
+                { value: "kit", label: "FlyeeClub" },
+                { value: "club", label: "FlyeeClub Pro" },
+                { value: "pro", label: "Pro (antigo, fora da vitrine)" },
                 { value: "none", label: "Nenhum (grátis ou adicional)" },
               ]}
               onChange={(v) => setForm({ ...form, tier: v === "none" ? "" : v })}

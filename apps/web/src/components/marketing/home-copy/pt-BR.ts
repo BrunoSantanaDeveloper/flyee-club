@@ -18,7 +18,7 @@
  */
 export const homeCopyPtBR = {
   meta: {
-    title: "flyee.club: apps que automatizam sua empresa na sua IA",
+    title: "FlyeeClub: apps que automatizam sua empresa na sua IA",
     description:
       "Apps que automatizam vendas, conteúdo, vídeo e produto no Claude Code, no Codex ou na sua IA favorita. Instale com um comando e atualize quando a IA mudar.",
   },
@@ -29,18 +29,18 @@ export const homeCopyPtBR = {
     title: "Apps que automatizam o trabalho da sua empresa na **sua IA favorita**.",
     subtitle:
       "Vendas, conteúdo, vídeo, pesquisa e produto: cada tarefa repetitiva vira um app que roda no Claude Code, no Codex ou na IA que você já usa. Para o seu negócio, a sua agência, o seu produto digital ou o seu trabalho de dev.",
-    secondaryCta: "O flyee é pra mim?",
+    secondaryCta: "O FlyeeClub é pra mim?",
     note: "Acesso de 1 ano, pagamento único. Você usa o seu próprio plano de IA.",
     stripLabel: "Funciona com a IA que você já usa",
     store: {
-      label: "A loja de apps do flyee, com os apps publicados",
+      label: "A loja de apps do FlyeeClub, com os apps publicados",
       allLabel: "Todos",
       installLabel: "Instalar",
       appsLabel: "apps na loja",
     },
     terminal: {
       title: "~/meu-projeto",
-      label: "Terminal atualizando os apps do flyee instalados num projeto",
+      label: "Terminal atualizando os apps do FlyeeClub instalados num projeto",
       checking: "Conferindo 3 apps instalados…",
       updated: "product-scope atualizado: 1.4.0 → 1.6.0",
       changelog: "Changelog: segue o novo formato de skills do Claude Code",
@@ -54,7 +54,7 @@ export const homeCopyPtBR = {
 
   store: {
     eyebrow: "Loja de apps",
-    title: "Precisou? Tem app no flyee.",
+    title: "Precisou? Tem app no FlyeeClub.",
     subtitle: "Cada app automatiza uma tarefa. Abra, veja o que ele faz e instale no seu Claude com um comando.",
     categoriesLabel: "Categorias da loja",
     allLabel: "Todos",
@@ -67,9 +67,9 @@ export const homeCopyPtBR = {
     verified: "Checksum sha256 conferido",
     request: {
       title: "Pedir um app",
-      body: "Não achou? Quem assina vota no próximo app que entra na loja.",
-      badge: "Assinatura",
-      link: "Ver o que a assinatura inclui",
+      body: "Não achou? No FlyeeClub Pro, você vota no próximo app que entra na loja.",
+      badge: "FlyeeClub Pro",
+      link: "Ver o que o FlyeeClub Pro inclui",
     },
     footnote: "Nada de módulo para assistir. Você instala o app e usa; cada um tem um guia curto.",
     allApps: "Ver todos os apps",
@@ -85,8 +85,8 @@ export const homeCopyPtBR = {
     items: [
       {
         kicker: "acesso",
-        title: "Garanta seu acesso",
-        body: "Você escolhe o acesso e a loja de apps fica liberada na sua conta.",
+        title: "Assine o FlyeeClub",
+        body: "Um pagamento, válido por 1 ano, e a loja de apps fica liberada na sua conta.",
       },
       {
         kicker: "login",
@@ -111,7 +111,7 @@ export const homeCopyPtBR = {
       },
       {
         title: "Roda no que você já tem",
-        body: "Os apps usam o seu plano de IA e guardam o que produzem em arquivos no seu computador. O flyee não cobra por uso.",
+        body: "Os apps usam o seu plano de IA e guardam o que produzem em arquivos no seu computador. O FlyeeClub não cobra por uso.",
       },
       {
         title: "Atualizado quando a IA muda",
@@ -123,7 +123,7 @@ export const homeCopyPtBR = {
   origin: {
     eyebrow: "De onde vêm os apps",
     title: "Todo app aqui já rodou em produto de verdade.",
-    body: "Cada app do flyee foi construído para um trabalho real antes de entrar na loja. Quem constrói é Bruno Santana, product engineer, que mantém sete sistemas em produção, em saúde, crédito e farmacêutico. O núcleo do flyee é o mesmo que roda em dois desses produtos.",
+    body: "Cada app do FlyeeClub foi construído para um trabalho real antes de entrar na loja. Quem constrói é Bruno Santana, product engineer, que mantém sete sistemas em produção, em saúde, crédito e farmacêutico. O núcleo do FlyeeClub é o mesmo que roda em dois desses produtos.",
     facts: ["Sete sistemas em produção", "Saúde", "Crédito", "Farmacêutico"],
   },
 
@@ -131,7 +131,7 @@ export const homeCopyPtBR = {
     eyebrow: "Acesso",
     title: "Escolha como entrar.",
     subtitle:
-      "O acesso é um pagamento único, válido por 1 ano, e libera todos os apps da loja, com as atualizações. A assinatura soma guias avançados, encontros ao vivo, voto no que entra na loja e mais computadores.",
+      "O FlyeeClub é um pagamento único, válido por 1 ano, e libera todos os apps da loja, com as atualizações. O FlyeeClub Pro soma guias avançados, receitas, encontros ao vivo, voto no que entra na loja, a camada abrir o capô e mais computadores.",
     requirementsTitle: "O que você precisa ter",
     requirements: [
       {
@@ -161,7 +161,7 @@ export const homeCopyPtBR = {
       {
         question: "Em quantos computadores posso usar?",
         answer:
-          "No acesso, em um: um usuário, em uma máquina. A assinatura e o Pro liberam mais computadores conectados ao mesmo tempo.",
+          "No FlyeeClub, em um: um usuário, em uma máquina. O FlyeeClub Pro libera mais computadores conectados ao mesmo tempo.",
       },
       {
         question: "Preciso saber programar?",
@@ -170,12 +170,12 @@ export const homeCopyPtBR = {
       },
       {
         question: "Funciona no app do Claude ou do ChatGPT, sem terminal?",
-        answer: "Ainda não. Hoje o flyee roda nas IAs de terminal: Claude Code, Codex, Gemini CLI e Cursor.",
+        answer: "Ainda não. Hoje o FlyeeClub roda nas IAs de terminal: Claude Code, Codex, Gemini CLI e Cursor.",
       },
       {
         question: "Tem custo de IA além do acesso?",
         answer:
-          "O seu plano de IA. O flyee não cobra por uso; alguns apps usam a sua conta em serviços externos, e a página de cada um avisa.",
+          "O seu plano de IA. O FlyeeClub não cobra por uso; alguns apps usam a sua conta em serviços externos, e a página de cada um avisa.",
       },
       {
         question: "O que acontece se eu ficar um tempo sem atualizar?",
@@ -184,7 +184,7 @@ export const homeCopyPtBR = {
       },
       {
         question: "Posso usar em projetos de clientes?",
-        answer: "Pode. O acesso cobre os seus projetos e os projetos dos seus clientes.",
+        answer: "Pode. O FlyeeClub cobre os seus projetos e os projetos dos seus clientes.",
       },
       {
         question: "Em que idiomas?",
@@ -200,7 +200,7 @@ export const homeCopyPtBR = {
   cta: {
     title: "Da próxima vez que você precisar, já vai ter um app.",
     subtitleOpen:
-      "Garanta seu acesso, instale no seu Claude e use o primeiro app hoje. Você usa o seu próprio plano de IA.",
+      "Assine o FlyeeClub, instale no seu Claude e use o primeiro app hoje. Você usa o seu próprio plano de IA.",
     subtitleWaitlist:
       "Entre na lista de espera e avisamos quando a loja abrir. Você vai usar o seu próprio plano de IA.",
   },

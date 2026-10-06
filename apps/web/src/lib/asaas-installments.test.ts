@@ -73,7 +73,7 @@ const checkout = (
     plan: {
       id: PLAN,
       slug: "club-anual",
-      name: "Assinatura flyee",
+      name: "FlyeeClub Pro",
       kind: "recurring",
       period: "yearly",
       priceCents: 59700,

@@ -43,7 +43,7 @@ function every(locale: EmailLocale): Record<string, ReactElement> {
     "kit-receipt": createElement(KitReceiptEmail, {
       locale,
       name: "Ana",
-      planName: "Kit flyee",
+      planName: "FlyeeClub",
       amountLabel: "R$ 97",
       untilLabel: null,
       fiscalNote: true,
@@ -52,13 +52,13 @@ function every(locale: EmailLocale): Record<string, ReactElement> {
     "subscription-active": createElement(SubscriptionActiveEmail, {
       locale,
       name: null,
-      planName: "Assinatura flyee",
+      planName: "FlyeeClub Pro",
       limits: { catalog_access: 1, devices: 3, advanced_lessons: 1, recipes: 1, roadmap_vote: 1, meetings: 1 },
       appUrl: APP,
     }),
     "subscription-canceled": createElement(SubscriptionCanceledEmail, {
       locale,
-      planName: "Assinatura flyee",
+      planName: "FlyeeClub Pro",
       cause: "requested",
       endedLabel: "2026-10-02",
       keptAccess: null,
@@ -72,7 +72,7 @@ function every(locale: EmailLocale): Record<string, ReactElement> {
     }),
     "term-ending": createElement(TermEndingEmail, {
       locale,
-      planName: "Assinatura flyee",
+      planName: "FlyeeClub Pro",
       endsLabel: "2026-10-17",
       billingUrl: APP,
     }),
@@ -175,7 +175,7 @@ describe("the receipt", () => {
     const base = {
       locale: "pt-BR" as const,
       name: null,
-      planName: "Kit flyee",
+      planName: "FlyeeClub",
       amountLabel: "R$ 97",
       fiscalNote: false,
       appUrl: APP,
@@ -211,10 +211,10 @@ describe("the end of a subscription", () => {
     );
     expect(without).toContain("New versions of the apps");
     const withKit = await textOf(
-      createElement(SubscriptionCanceledEmail, { ...base, cause: "requested", keptAccess: { by: "Kit flyee" } }),
+      createElement(SubscriptionCanceledEmail, { ...base, cause: "requested", keptAccess: { by: "FlyeeClub" } }),
     );
     expect(withKit).not.toContain("New versions of the apps");
-    expect(withKit).toContain("continues (Kit flyee)");
+    expect(withKit).toContain("continues (FlyeeClub)");
     const unnamed = await textOf(
       createElement(SubscriptionCanceledEmail, { ...base, cause: "requested", keptAccess: { by: null } }),
     );

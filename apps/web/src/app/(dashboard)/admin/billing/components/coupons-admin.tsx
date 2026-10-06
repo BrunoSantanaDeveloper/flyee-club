@@ -43,9 +43,9 @@ type CouponForm = {
 
 /** The plan families a code can be limited to (migration 0018). */
 const FAMILIES = [
-  { value: "kit", label: "Kit" },
-  { value: "club", label: "Assinatura" },
-  { value: "pro", label: "Pro" },
+  { value: "kit", label: "FlyeeClub" },
+  { value: "club", label: "FlyeeClub Pro" },
+  { value: "pro", label: "Pro (antigo, fora da vitrine)" },
 ];
 
 /** One coupon row, flattened for the grid; `raw` is what the edit dialog reads. */

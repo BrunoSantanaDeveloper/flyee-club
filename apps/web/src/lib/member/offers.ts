@@ -5,9 +5,9 @@ import type { BillingCurrency } from "@flyee/billing/currency";
 import { listPublicPlans, type PublicPlan } from "@flyee/billing/public";
 
 /**
- * The plan an offer card sells, in the member's currency: the kit, or the
- * monthly membership or Pro (the cheapest way in; the checkout shows the
- * yearly option). Prices come from `plans`, never from code.
+ * The plan an offer card sells, in the member's currency: FlyeeClub, or the
+ * monthly FlyeeClub Pro (the cheapest way in; the checkout shows the yearly
+ * option). Prices come from `plans`, never from code.
  */
 export type OfferPlan = {
   offer: UpsellOffer;

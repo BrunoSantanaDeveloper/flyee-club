@@ -18,9 +18,9 @@ import NiTerminal from "@/icons/nexture/ni-terminal";
 import type { DevicesOverview } from "@/lib/member/devices";
 import { FEATURE_LABEL, TIER_LABEL } from "@/lib/member/labels";
 import type { NewsItem } from "@/lib/member/news";
-import { OFFER_COPY, REASON_COPY } from "@/lib/member/offer-copy";
+import { OFFER_COPY, REASON_COPY, SERVICE_COPY } from "@/lib/member/offer-copy";
 import type { OfferPlan } from "@/lib/member/offers";
-import type { UpsellOffer, UpsellReason } from "@/lib/upsell";
+import type { ServiceOffer, UpsellOffer, UpsellReason } from "@/lib/upsell";
 import { cn } from "@/lib/utils";
 import type { Tier } from "@flyee/billing/entitlements";
 
@@ -36,6 +36,8 @@ export type HomeState =
       devices: DevicesOverview | null;
       news: NewsItem[] | null;
       upsell: { offer: UpsellOffer; reason: UpsellReason; plan: OfferPlan | null } | null;
+      /** The services sold on demand, each with the contact link in the member's language. */
+      services: { offer: ServiceOffer; href: string }[];
     }
   | { kind: "unavailable" };
 
@@ -46,8 +48,9 @@ export type HomeState =
  *
  * Order follows that job: where you stand (your rung), what keeps your tools
  * alive (the install block, machines and the revalidation date), the next
- * step (the activation checklist), what changed (the latest releases), and an
- * offer only when the member's own use earned it.
+ * step (the activation checklist), what changed (the latest releases), the
+ * next rung when there is one, and, for a paying member, the services sold
+ * on demand.
  */
 export default function HomeView({ state }: { state: HomeState }) {
   const t = useTranslations("product");
@@ -238,6 +241,36 @@ export default function HomeView({ state }: { state: HomeState }) {
           ctaLabel={t("home-offer-cta")}
           href={offer.plan ? `/assinatura?plan=${offer.plan.slug}` : "/settings/billing?source=home"}
         />
+      ) : null}
+
+      {state.services.length > 0 ? (
+        <Box component="section" aria-labelledby="home-services-title" className="flex flex-col gap-3">
+          <Box className="flex flex-col gap-1">
+            <Typography id="home-services-title" variant="subtitle1" component="h2" className="mb-0">
+              {t("home-services-title")}
+            </Typography>
+            <Typography variant="body2" className="text-text-secondary">
+              {t("home-services-body")}
+            </Typography>
+          </Box>
+          <Grid container spacing={4}>
+            {state.services.map((service) => (
+              <Grid key={service.offer} size={{ xs: 12, lg: 6 }}>
+                <UpsellCard
+                  offer={service.offer}
+                  origin="home"
+                  tone={SERVICE_COPY[service.offer].tone}
+                  title={t(SERVICE_COPY[service.offer].title)}
+                  reason={t(SERVICE_COPY[service.offer].body)}
+                  features={[]}
+                  priceLabel={null}
+                  ctaLabel={t("home-service-cta")}
+                  href={service.href}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
       ) : null}
 
       <Card>

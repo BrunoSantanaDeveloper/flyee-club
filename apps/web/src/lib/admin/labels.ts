@@ -31,7 +31,7 @@ export const AI_TOOL_LABEL: Record<string, string> = {
 
 export const LOCALE_LABEL: Record<string, string> = { "pt-BR": "Português", en: "Inglês" };
 
-export const TIER_LABEL: Record<string, string> = { kit: "Kit", club: "Assinatura", pro: "Pro" };
+export const TIER_LABEL: Record<string, string> = { kit: "FlyeeClub", club: "FlyeeClub Pro", pro: "Pro (antigo)" };
 
 export const SUBSCRIPTION_STATUS_LABEL: Record<string, string> = {
   active: "ativa",

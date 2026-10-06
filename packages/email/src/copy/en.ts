@@ -3,22 +3,22 @@ import type { EmailCopy } from "./pt-BR";
 /** English copy of every e-mail. The structure is pinned by `EmailCopy` (pt-BR.ts). */
 export const emailCopy: EmailCopy = {
   shell: {
-    signature: "flyee.club · apps that run in the AI you already use",
+    signature: "FlyeeClub · apps that run in the AI you already use",
   },
 
   memberWelcome: {
-    subject: "Your flyee.club account is ready",
+    subject: "Your FlyeeClub account is ready",
     preview: "Three steps to install your first app",
     heading: "Your account is ready",
-    greeting: (name) => (name ? `${name}, your flyee.club account is ready.` : "Your flyee.club account is ready."),
-    body: "flyee is a store of apps that run in the AI you already use, such as Claude Code and Codex. To get started:",
+    greeting: (name) => (name ? `${name}, your FlyeeClub account is ready.` : "Your FlyeeClub account is ready."),
+    body: "FlyeeClub is a store of apps that run in the AI you already use, such as Claude Code and Codex. To get started:",
     steps: [
       "Choose your access under Billing, in the dashboard.",
       "In the terminal, run npx flyee login and approve the connection in the browser.",
       "Install your first app with npx flyee add and the name of the app.",
     ],
     button: "Open the dashboard",
-    reason: "You are receiving this message because you created a flyee.club account.",
+    reason: "You are receiving this message because you created a FlyeeClub account.",
   },
 
   accessReceipt: {
@@ -119,8 +119,8 @@ export const emailCopy: EmailCopy = {
     body: (device, days) => {
       const machine = device ? `The connection of your computer "${device}"` : "Your computer's connection";
       return days <= 1
-        ? `${machine} to flyee expires within 24 hours.`
-        : `${machine} to flyee expires in ${days} days.`;
+        ? `${machine} to FlyeeClub expires within 24 hours.`
+        : `${machine} to FlyeeClub expires in ${days} days.`;
     },
     how: "Run this command in the terminal to renew it for another 30 days:",
     command: "npx flyee update",
@@ -144,17 +144,17 @@ export const emailCopy: EmailCopy = {
   },
 
   leadConfirm: {
-    subject: "Confirm your spot on the flyee.club waitlist",
-    preview: "One click to join the flyee.club waitlist",
+    subject: "Confirm your spot on the FlyeeClub waitlist",
+    preview: "One click to join the FlyeeClub waitlist",
     heading: "Confirm your spot",
-    body: "We received a request to add this address to the flyee.club waitlist. Confirm with the button below and we will let you know when it opens.",
+    body: "We received a request to add this address to the FlyeeClub waitlist. Confirm with the button below and we will let you know when it opens.",
     button: "Confirm my spot",
     expiry: "The link is valid for 7 days.",
     ignore: "Not you? Ignore this message: unconfirmed addresses are deleted after 7 days and receive nothing else.",
   },
 
   newsletter: {
-    reason: "You receive this email because you joined the flyee.club list.",
+    reason: "You receive this email because you joined the FlyeeClub list.",
     unsubscribe: "Leave the list",
   },
 

@@ -5,7 +5,7 @@ select plan(17);
 -- ============================================================
 -- org_entitlements: the single answer to "what may this workspace use?"
 -- (0004). Walks one workspace up the ladder and back down:
--- free -> kit (a grant) -> club (a subscription) -> pro (a courtesy grant),
+-- free -> kit (a grant) -> club (a subscription) -> a courtesy grant on top,
 -- then suspension, the dunning grace window, a refund, and an unconfirmed PIX.
 -- More sources never mean fewer rights, and the answer always names its tier
 -- and its sources.
@@ -101,20 +101,21 @@ select is(
   'merging never lowers a number: whichever source merges last, the greater ceiling wins'
 );
 
--- ---------- Pro: a courtesy grant ----------
+-- ---------- A courtesy grant on top (FlyeeClub Pro; the retired Pro is refused, test 0023) ----------
 
 select set_config('request.jwt.claims', '{"sub":"a3000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
-insert into snap values ('comp', public.grant_entitlement((select org from ctx), (select id from public.plans where slug = 'pro-anual'), 'partner', null));
+insert into snap values ('comp', public.grant_entitlement((select org from ctx), (select id from public.plans where slug = 'club-anual'), 'partner', null));
 reset role;
 
-select pg_temp.take('pro');
+select pg_temp.take('comp_layer');
 select ok(
-  (select payload ->> 'tier' = 'pro'
-          and (payload -> 'limits' ->> 'devices')::int = 5
+  (select payload ->> 'tier' = 'club'
+          and (payload -> 'limits' ->> 'open_the_hood')::int = 1
           and (payload -> 'limits' ->> 'commercial_license')::int = 1
-   from snap where name = 'pro'),
-  'a courtesy Pro grant lifts the tier, the ceiling and the commercial license'
+          and exists (select 1 from jsonb_array_elements(payload -> 'sources') s where s ->> 'kind' = 'comp')
+   from snap where name = 'comp_layer'),
+  'a courtesy grant of FlyeeClub Pro is listed as a source and carries the depth layer and the commercial license'
 );
 select ok(
   exists (select 1 from public.audit_events where action = 'admin.org.entitlement_granted'),
@@ -173,11 +174,11 @@ select ok(
 update public.subscriptions set status = 'canceled', canceled_at = now()
 where org_id = (select org from ctx) and status = 'past_due';
 insert into public.subscriptions (org_id, plan_id, status, provider, provider_subscription_id, period, provisional_until)
-values ((select org from ctx), (select id from public.plans where slug = 'pro-mensal'), 'incomplete', 'asaas', 'sub_pix_1', 'monthly',
+values ((select org from ctx), (select id from public.plans where slug = 'club-mensal'), 'incomplete', 'asaas', 'sub_pix_1', 'monthly',
         now() + interval '6 hours');
 select pg_temp.take('provisional');
 select ok(
-  (select payload ->> 'tier' = 'pro'
+  (select payload ->> 'tier' = 'club'
           and exists (select 1 from jsonb_array_elements(payload -> 'sources') s where s ->> 'type' = 'provisional')
    from snap where name = 'provisional'),
   'a PIX not yet confirmed releases the plan while its provisional window is open'

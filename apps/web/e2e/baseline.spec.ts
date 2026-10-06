@@ -155,7 +155,7 @@ test("an unsubscribe link asks before acting and never leaves its token in the a
   await page.goto(`/api/public/email/unsubscribe?k=l&t=${token}&l=en`);
   await expect(page).toHaveURL(/\/en\/unsubscribe$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Leave the flyee.club list?");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Leave the FlyeeClub list?");
   await expect(page.getByRole("button", { name: "Leave the list" })).toBeVisible();
 
   // A link that is not one of ours arms nothing, and disarms what was there.

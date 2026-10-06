@@ -15,23 +15,23 @@
 export const emailCopy = {
   shell: {
     /** The line under every message. */
-    signature: "flyee.club · apps que rodam na IA que você já usa",
+    signature: "FlyeeClub · apps que rodam na IA que você já usa",
   },
 
   memberWelcome: {
-    subject: "Sua conta no flyee.club está criada",
+    subject: "Sua conta no FlyeeClub está criada",
     preview: "Três passos para instalar o primeiro app",
     heading: "Sua conta está criada",
     greeting: (name: string | null) =>
-      name ? `${name}, a sua conta no flyee.club está pronta.` : "A sua conta no flyee.club está pronta.",
-    body: "O flyee é uma loja de apps que rodam na IA que você já usa, como o Claude Code e o Codex. Para começar:",
+      name ? `${name}, a sua conta no FlyeeClub está pronta.` : "A sua conta no FlyeeClub está pronta.",
+    body: "O FlyeeClub é uma loja de apps que rodam na IA que você já usa, como o Claude Code e o Codex. Para começar:",
     steps: [
       "Escolha o seu acesso em Cobrança, no painel.",
       "No terminal, rode npx flyee login e aprove a conexão no navegador.",
       "Instale o primeiro app com npx flyee add e o nome do app.",
     ],
     button: "Abrir o painel",
-    reason: "Você recebe esta mensagem porque criou uma conta no flyee.club.",
+    reason: "Você recebe esta mensagem porque criou uma conta no FlyeeClub.",
   },
 
   accessReceipt: {
@@ -136,8 +136,8 @@ export const emailCopy = {
     body: (device: string | null, days: number) => {
       const machine = device ? `do computador "${device}"` : "do seu computador";
       return days <= 1
-        ? `A conexão ${machine} com o flyee vence em até 24 horas.`
-        : `A conexão ${machine} com o flyee vence em ${days} dias.`;
+        ? `A conexão ${machine} com o FlyeeClub vence em até 24 horas.`
+        : `A conexão ${machine} com o FlyeeClub vence em ${days} dias.`;
     },
     how: "Rode este comando no terminal para renovar o prazo por mais 30 dias:",
     command: "npx flyee update",
@@ -162,10 +162,10 @@ export const emailCopy = {
   },
 
   leadConfirm: {
-    subject: "Confirme sua inscrição na lista do flyee.club",
-    preview: "Um clique para entrar na lista de espera do flyee.club",
+    subject: "Confirme sua inscrição na lista do FlyeeClub",
+    preview: "Um clique para entrar na lista de espera do FlyeeClub",
     heading: "Confirme sua inscrição",
-    body: "Recebemos um pedido para colocar este endereço na lista de espera do flyee.club. Confirme com o botão abaixo e avisaremos quando abrir.",
+    body: "Recebemos um pedido para colocar este endereço na lista de espera do FlyeeClub. Confirme com o botão abaixo e avisaremos quando abrir.",
     button: "Confirmar inscrição",
     expiry: "O link vale por 7 dias.",
     ignore:
@@ -173,7 +173,7 @@ export const emailCopy = {
   },
 
   newsletter: {
-    reason: "Você recebe este e-mail porque entrou na lista do flyee.club.",
+    reason: "Você recebe este e-mail porque entrou na lista do FlyeeClub.",
     unsubscribe: "Sair da lista",
   },
 

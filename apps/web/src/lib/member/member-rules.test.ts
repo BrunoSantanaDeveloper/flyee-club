@@ -7,27 +7,38 @@ import { type MemberMeeting, splitMeetings } from "@/lib/member/community";
 import { daysUntil } from "@/lib/member/devices";
 import { lessonsForLocale } from "@/lib/member/lessons";
 import { mergeNews, type NewsItem } from "@/lib/member/news";
-import { decideUpsell } from "@/lib/upsell";
+import { decideServiceOffers, decideUpsell } from "@/lib/upsell";
 
-describe("decideUpsell — an offer is earned by use", () => {
-  it("offers the kit to an account that has bought nothing", () => {
+describe("decideUpsell — the next rung of the two-plan ladder", () => {
+  it("offers FlyeeClub to an account that has bought nothing", () => {
     expect(decideUpsell({ tier: null, trailsUsed30d: 0 })).toEqual({
       offer: "kit",
       reason: "no_access",
     });
   });
 
-  it("offers the membership to a kit owner using three or more trails", () => {
-    expect(decideUpsell({ tier: "kit", trailsUsed30d: 2 })).toBeNull();
+  it("offers FlyeeClub Pro to every FlyeeClub member, with the reason use earned when it did", () => {
+    expect(decideUpsell({ tier: "kit", trailsUsed30d: 2 })).toEqual({
+      offer: "club",
+      reason: "member",
+    });
     expect(decideUpsell({ tier: "kit", trailsUsed30d: 3 })).toEqual({
       offer: "club",
       reason: "broad_use",
     });
   });
 
-  it("offers nothing above the membership, whatever the use: every paid plan covers client projects", () => {
+  it("offers no plan above FlyeeClub Pro, the retired Pro included", () => {
     expect(decideUpsell({ tier: "club", trailsUsed30d: 9 })).toBeNull();
     expect(decideUpsell({ tier: "pro", trailsUsed30d: 9 })).toBeNull();
+  });
+});
+
+describe("decideServiceOffers — services sold on demand, never as plans", () => {
+  it("shows them to every paying member and to nobody without a purchase", () => {
+    expect(decideServiceOffers(null)).toEqual([]);
+    expect(decideServiceOffers("kit")).toEqual(["mentoring", "consulting"]);
+    expect(decideServiceOffers("club")).toEqual(["mentoring", "consulting"]);
   });
 });
 

@@ -1,11 +1,13 @@
 import HomeView, { type HomeState } from "./home-view";
 
+import { localizeHref } from "@/i18n/routing";
 import { getMemberContext } from "@/lib/member/context";
 import { loadDevices } from "@/lib/member/devices";
 import { loadNews } from "@/lib/member/news";
+import { SERVICE_COPY } from "@/lib/member/offer-copy";
 import { loadOfferPlans } from "@/lib/member/offers";
 import { loadUpsellFacts } from "@/lib/member/upsell-facts";
-import { decideUpsell } from "@/lib/upsell";
+import { decideServiceOffers, decideUpsell } from "@/lib/upsell";
 import { enabledFeatures, limitOf } from "@flyee/billing/entitlements";
 
 /**
@@ -45,6 +47,11 @@ export default async function HomePage() {
     devices,
     news,
     upsell: upsell ? { ...upsell, plan: offerPlans[upsell.offer] ?? null } : null,
+    // The contact form in the member's language, opened on the service asked for.
+    services: decideServiceOffers(entitlements.tier).map((offer) => ({
+      offer,
+      href: localizeHref(`/contato?assunto=${SERVICE_COPY[offer].subject}`, context.locale),
+    })),
   };
   return <HomeView state={state} />;
 }

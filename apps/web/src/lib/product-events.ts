@@ -16,7 +16,7 @@ export type BrowserEventName = "upsell.viewed" | "upsell.clicked";
 export type OfferOrigin = "home" | "revalidation" | "catalog" | "module" | "billing" | "menu" | "checkout";
 
 /** Which rung the offer was for. Mirrors the `offer` allowlist. */
-export type OfferKind = "kit" | "club" | "pro" | "mentoring" | "founders";
+export type OfferKind = "kit" | "club" | "pro" | "mentoring" | "consulting" | "founders";
 
 /** An offer was shown or clicked. `offer` is omitted when the surface shows the whole ladder. */
 export function trackOffer(event: BrowserEventName, origin: OfferOrigin, offer?: OfferKind): void {

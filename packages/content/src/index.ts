@@ -18,8 +18,8 @@
  * namespace.
  */
 export const BRAND = {
-  name: "flyee.club",
-  tagline: "The AI changes every week. flyee.club keeps your tools working.",
+  name: "FlyeeClub",
+  tagline: "The AI changes every week. FlyeeClub keeps your tools working.",
   description:
     "A club that keeps your AI agent harness and tools up to date, in the AI you already use, in Portuguese and English.",
   /**

@@ -115,7 +115,7 @@ select is(
   (select org_renew::text from ctx),
   'and it is the one without a renewal'
 );
-select is((select payload -> 0 ->> 'plan_name' from res where name = 'notices'), 'Kit flyee', 'named by the plan');
+select is((select payload -> 0 ->> 'plan_name' from res where name = 'notices'), 'FlyeeClub', 'named by the plan');
 select is((select jsonb_array_length(payload) from res where name = 'notices_again'), 0, 'a second run finds nothing left');
 
 select set_config('request.jwt.claims', '{"sub":"ac000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
@@ -160,8 +160,8 @@ select ok(
 -- ---------- The terms of use ----------
 
 select is(
-  (select version from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active), 2,
-  'version 2 of the terms is in force'
+  (select version from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active), 3,
+  'version 3 of the terms is in force (the names of migration 0025)'
 );
 select ok(
   (select body_md like '%válido por 1 ano%' and body_md like '%projetos dos seus clientes%' and body_md like '%canais de contato%'

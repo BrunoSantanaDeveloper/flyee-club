@@ -119,13 +119,23 @@ export type MemberFilter = {
 /** The rung filters: every account is in exactly one of the last four. */
 export const TIER_FILTERS: MemberFilter[] = [
   { key: "accounts", label: "Todas", hint: "Todas as contas da plataforma", matches: () => true },
-  { key: "kit", label: "Kit", hint: "Têm o kit de entrada e nenhuma assinatura", matches: (row) => row.tier === "kit" },
-  { key: "club", label: "Assinatura", hint: "Assinatura do clube ativa", matches: (row) => row.tier === "club" },
-  { key: "pro", label: "Pro", hint: "Plano Pro ativo", matches: (row) => row.tier === "pro" },
+  {
+    key: "kit",
+    label: "FlyeeClub",
+    hint: "Têm o FlyeeClub e nenhuma assinatura",
+    matches: (row) => row.tier === "kit",
+  },
+  { key: "club", label: "FlyeeClub Pro", hint: "FlyeeClub Pro ativo", matches: (row) => row.tier === "club" },
+  {
+    key: "pro",
+    label: "Pro (antigo)",
+    hint: "O Pro de antes dos dois planos, fora da vitrine desde a migração 0025, ainda ativo na conta",
+    matches: (row) => row.tier === "pro",
+  },
   {
     key: "noAccess",
     label: "Sem acesso",
-    hint: "Criaram a conta e não têm kit nem assinatura",
+    hint: "Criaram a conta e não têm o FlyeeClub nem o FlyeeClub Pro",
     matches: (row) => row.tier === null,
   },
 ];
@@ -184,7 +194,7 @@ export function planLabel(row: MemberRow): string {
   }
   if (row.tier === "kit") {
     const kit = row.grants.find((grant) => grant.kind === "kit");
-    return kit?.source === "admin" ? "Kit · cortesia" : "Kit";
+    return kit?.source === "admin" ? "FlyeeClub · cortesia" : "FlyeeClub";
   }
   return plan?.name ?? "Sem plano";
 }
@@ -216,7 +226,8 @@ export function memberSearchText(row: MemberRow): string {
     row.email,
     labelOf(SEGMENT_LABEL, row.segment, ""),
     labelOf(AI_TOOL_LABEL, row.aiTool, ""),
-    row.tier ? TIER_LABEL[row.tier] : "sem acesso",
+    // The rung by its name and by its id, so "kit" still finds FlyeeClub members.
+    row.tier ? `${row.tier} ${TIER_LABEL[row.tier]}` : "sem acesso",
     row.plan?.name,
     row.attribution.origem,
     row.attribution.utmCampaign,

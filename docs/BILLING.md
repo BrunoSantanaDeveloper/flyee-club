@@ -1,10 +1,10 @@
 # Cobrança — escada, moedas e provedores
 
-Desenho vigente da cobrança do flyee.club, escrito na fase 4 de `docs/PLANO-IMPLEMENTACAO.md` (2026-10-01). `docs/BILLING-AUDIT.md` é o histórico herdado do MedChina: os achados sobre webhooks e Asaas seguem úteis, os planos e valores de lá não valem aqui.
+Desenho vigente da cobrança do FlyeeClub, escrito na fase 4 de `docs/PLANO-IMPLEMENTACAO.md` (2026-10-01). `docs/BILLING-AUDIT.md` é o histórico herdado do MedChina: os achados sobre webhooks e Asaas seguem úteis, os planos e valores de lá não valem aqui.
 
 ## Em uma tela
 
-- **Três degraus pagos**: kit (pagamento único, válido por 1 ano, renovado com uma nova compra), assinatura (mensal ou anual) e Pro (mensal ou anual). Sem compra, a conta fica no Gratuito. Todo plano pago pode ser usado em projetos de clientes.
+- **Dois planos pagos**: FlyeeClub (`kit`: pagamento único, válido por 1 ano, renovado com uma nova compra) e FlyeeClub Pro (`club`: assinatura mensal ou anual). O Pro de antes (`pro-*`) saiu da vitrine na migração `0025`: inativo, invendável, mantido pelo histórico. Sem compra, a conta fica no Gratuito. Todo plano pago pode ser usado em projetos de clientes. Mentoria e consultoria são serviços sob demanda, não planos: o painel oferece e o formulário de contato recebe.
 - **A moeda escolhe o provedor**: real vai para o Asaas, dólar vai para a Stripe. Não existe chave de provedor.
 - **Nada é liberado no checkout.** O acesso nasce no webhook do pagamento confirmado, de forma idempotente.
 - **Uma só resposta para "o que esta conta pode usar"**: a função `org_entitlements(org)`. Tela nenhuma decide pelo nome ou slug do plano.
@@ -16,9 +16,9 @@ Desenho vigente da cobrança do flyee.club, escrito na fase 4 de `docs/PLANO-IMP
 | Degrau | Planos | Cobrança | Dispositivos | O que libera |
 |---|---|---|---|---|
 | Gratuito | `gratuito` | nenhuma | 1 | amostras grátis do catálogo |
-| Kit | `kit`, `kit-usd` | pagamento único, válido por `plans.access_months` (12) a partir da fatura paga | 1 | catálogo e atualizações (`catalog_access`), uso em projetos de clientes (`commercial_license`) |
-| Assinatura | `club-mensal`, `club-anual` e as versões `-usd` | recorrente | 3 | o kit, mais `advanced_lessons`, `recipes`, `roadmap_vote` e `meetings` |
-| Pro | `pro-mensal`, `pro-anual` e as versões `-usd` | recorrente | 5 | a assinatura, mais `open_the_hood` |
+| FlyeeClub (`kit`) | `kit`, `kit-usd` | pagamento único, válido por `plans.access_months` (12) a partir da fatura paga | 1 | catálogo e atualizações (`catalog_access`), uso em projetos de clientes (`commercial_license`) |
+| FlyeeClub Pro (`club`) | `club-mensal`, `club-anual` e as versões `-usd` | recorrente | 3 | o FlyeeClub, mais `advanced_lessons`, `recipes`, `roadmap_vote`, `meetings` e `open_the_hood` |
+| Pro (fora da vitrine) | `pro-mensal`, `pro-anual` e as versões `-usd` | nenhuma: inativo desde `0025` | 5 | nada é vendido nem concedido; as linhas ficam pelo histórico |
 
 - Cada plano existe uma vez por moeda: uma linha de `plans` em BRL e outra em USD, com o mesmo `family` e `tier`.
 - `club-fundador-anual` é a oferta de fundador: BRL, fora da vitrine (`is_public = false`), alcançada só pelo link da oferta (`platform_settings.founders`).
@@ -64,8 +64,8 @@ O kit é idempotente por compra: a chave `invoice_key = provedor:id_da_compra` i
 2. `startCheckout` (`apps/web/src/app/(dashboard)/settings/billing/actions.ts`) reserva a operação em `billing_operations` (tipo `access_checkout` para o kit, `checkout` para assinatura). A reserva é o que torna o clique duplo inofensivo.
 3. O cupom passa por `validate_coupon`: família, moeda, validade e limite de usos.
 4. O provedor cria a cobrança:
-   - **Kit**: cobrança avulsa (Asaas `/payments`, à vista ou parcelada no cartão; Stripe Checkout em modo `payment`).
-   - **Assinatura ou Pro**: assinatura no provedor (Asaas `/subscriptions`; Stripe Checkout em modo `subscription`).
+   - **FlyeeClub**: cobrança avulsa (Asaas `/payments`, à vista ou parcelada no cartão; Stripe Checkout em modo `payment`).
+   - **FlyeeClub Pro**: assinatura no provedor (Asaas `/subscriptions`; Stripe Checkout em modo `subscription`).
    - **Parcelado em real** (kit ou anual): uma cobrança parcelada no Asaas (ver "Parcelamento").
 5. A operação fecha. Para o kit, só registra o link de pagamento. Para assinatura, grava a linha `incomplete` com o preço vendido, a moeda, o código do cupom e, no parcelado, a referência do parcelamento com `renews = false`.
 
@@ -139,7 +139,7 @@ Durante a carência de `past_due` (`platform_settings.dunning.grace_days`, 7 dia
 ## Cupons
 
 - **Tipos**: percentual, ou valor fixo. O valor fixo exige moeda e só vale para planos nessa moeda.
-- **Alcance**: `plan_families` limita a famílias (kit, assinatura, Pro). Vazio vale para todas.
+- **Alcance**: `plan_families` limita a famílias (`kit`, `club`; `pro` só alcança o histórico). Vazio vale para todas.
 - **Duração**: sempre `forever`. Os dois provedores aplicam o desconto em todo ciclo: o Asaas cobra o valor com desconto e a Stripe espelha um cupom permanente com id `flyee-<cupom>-<moeda>`. No kit, o desconto vale no pagamento único.
 - **Contagem de usos**: `redeem_coupon` (migração `0020`) conta um uso por compra, numa só transação. A assinatura reserva o uso gravando `coupon_id`, então uma reentrega não conta de novo. O kit conta na primeira concessão da fatura.
 
@@ -163,12 +163,12 @@ Cada transição de cobrança é avisada no sino do painel e, quando faz sentido
 | Momento | Sino | E-mail |
 |---|---|---|
 | Assinatura ativada | sim | confirmação com o que o plano libera, lido dos limites do plano |
-| Kit concedido | sim, com a data em que o acesso termina | recibo, com a data em que o acesso termina (ou "sem prazo") e o aviso da nota fiscal em compras em real |
+| FlyeeClub concedido | sim, com a data em que o acesso termina | recibo, com a data em que o acesso termina (ou "sem prazo") e o aviso da nota fiscal em compras em real |
 | Pagamento falhou (entrou em carência) | sim | não: o provedor já escreve para o pagador |
 | Pagamento atrasado confirmado | sim | não |
 | Período pago que não renova termina em até 15 dias | sim, uma vez | sim, uma vez |
-| Kit termina em até 15 dias (sem renovação encadeada) | sim, uma vez | sim, uma vez: o mesmo texto |
-| Kit terminou e nada mais mantém o catálogo | sim, uma vez | sim: o que continua, o que deixa de chegar, como renovar |
+| FlyeeClub termina em até 15 dias (sem renovação encadeada) | sim, uma vez | sim, uma vez: o mesmo texto |
+| FlyeeClub terminou e nada mais mantém a loja | sim, uma vez | sim: o que continua, o que deixa de chegar, como renovar |
 | Assinatura encerrada | sim | sim: o que continua e o que deixa de chegar |
 
 - **Um plano é sempre chamado pelo nome que tem nos dados** (`plans.name`). Nenhum texto escreve "kit" ou "assinatura" por conta própria, então renomear um plano em `/admin/billing` muda os avisos junto.
