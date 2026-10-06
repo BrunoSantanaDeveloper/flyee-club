@@ -2,7 +2,7 @@
 
 Sep 30, 2026 · @Dev
 
-> **Status:** PRD provisório, movido de `attachments/` em 2026-09-30. Este repositório é a **plataforma** do flyee.club. O **produto** (CLI `npx flyee`, core do harness e conteúdo dos módulos) é um projeto separado que consome a API e o manifesto definidos aqui. As decisões de 2026-09-30 valem sobre o texto original quando houver conflito. Plano de execução: [`docs/PLANO-IMPLEMENTACAO.md`](PLANO-IMPLEMENTACAO.md).
+> **Status:** PRD provisório, movido de `attachments/` em 2026-09-30. Este repositório é a **plataforma** do flyee.club. O **produto** (CLI `npx flyee`, core do harness e conteúdo dos módulos) é um projeto separado que consome a API e o manifesto definidos aqui. As decisões de 2026-09-30 valem sobre o texto original quando houver conflito, e as de 2026-10-06 valem sobre as de 2026-09-30. Plano de execução: [`docs/PLANO-IMPLEMENTACAO.md`](PLANO-IMPLEMENTACAO.md).
 
 ## A ideia organizada
 
@@ -70,6 +70,77 @@ Registradas ao transformar a base copiada do MedChina na plataforma do flyee.clu
 
 **Ordem.** Este documento recomenda vender o kit antes de construir o painel. O plano respeita isso: a página de espera é o primeiro deploy e o checkout do kit vem antes do painel completo, então a pré-venda pode começar enquanto o resto da plataforma avança. Construir não é abrir: os planos de assinatura podem ficar ocultos e o card de upsell desligado até o portão destacado da fase 2 (ver "Etapas").
 
+## Decisões tomadas 2026-10-06
+
+Registradas no alinhamento do repositório do produto com a plataforma. O que cabe à plataforma está detalhado na fase 9 de [`docs/PLANO-IMPLEMENTACAO.md`](PLANO-IMPLEMENTACAO.md); o que cabe ao produto fica no repositório dele.
+
+**O repositório do produto**
+
+| Tema | Decisão |
+| --- | --- |
+| Onde nasce | `C:\AppsProjects\flyee`, um monorepo privado separado deste: a CLI, o core do harness e os apps. Consome só `docs/CLI-CONTRACT.md` e o JSON Schema do manifesto publicado em `/api/cli/schema/module`; nunca importa código desta base. |
+| O que vai ao npm | Só a CLI, no pacote público `flyee`, que já pertence ao operador (hoje em 0.7.9, de um projeto anterior). A CLI nova sai como `1.0.0` nesse nome, e `platform_settings.cli.min_cli_version` sobe para `1.0.0` no dia da publicação. |
+| O que não vai ao npm | Os apps. Cada app é um ZIP com `flyee.module.json`, enviado ao servidor de pacotes da plataforma e entregue pelo token. A versão de cada app vive no manifesto e numa tag do git do produto; o `files` do manifesto é gerado pela ferramenta, nunca escrito à mão. |
+| Publicação de versões | Na v1 a CI do produto gera e valida os ZIPs e o operador os envia pelo console `/admin/catalogo`; publicar, marcar estável e retirar continuam ações do console. Um token de serviço para o `POST /api/admin/catalog/versions` fica como pedido do produto à plataforma, para a CI enviar os rascunhos sozinha. |
+| Arquivo de entrada do harness | `AGENTS.md` canônico, gerado pelo core em blocos marcados, com ponteiros de uma linha em `CLAUDE.md` (`@AGENTS.md`) e `GEMINI.md` (`@./AGENTS.md`); o Cursor lê o `AGENTS.md` da raiz. Skills de cada app em `.agents/skills/` (Codex, Gemini CLI e Cursor leem aí) com pontes em `.claude/skills/` para o Claude Code, sempre cópias, nunca symlinks. Uma cópia só dos arquivos do app, em `.flyee/modules/<slug>/`. |
+| `/flyee` dentro da IA | O core instala uma skill `flyee` que funciona como menu dentro do Claude Code, Codex, Gemini CLI e Cursor: apps instalados e disponíveis, atualizar, guia de cada app, novidades e abrir o painel local. Ela só roda a CLI com `--json`, nunca inventa estado. |
+| Painel local | `npx flyee ui`: um servidor em `127.0.0.1` que serve uma página estática com o estado do projeto (apps, versões, conexão, revalidação, credenciais externas, documentação e ofertas lidas da plataforma). Em avaliação de escopo; depende de a plataforma publicar `packages/design-tokens` como pacote npm público, para o painel usar o mesmo sistema de design sem levar código licenciado. |
+| Primeiro app | Um app de edição de vídeo, construído primeiro para uso do próprio operador e lançado com o vídeo que o apresenta. A lista de módulos iniciais da seção "Arquitetura da entrega" e a tabela "Catálogo por etapa" passam a ser referência histórica, não compromisso: os apps citados ali serão refeitos ou atualizados quando entrarem. |
+
+**O degrau grátis é uma versão, não uma cópia**
+
+| Tema | Decisão |
+| --- | --- |
+| Modelo | O direito passa a ser por versão, por canal. O plano gratuito fica no canal `free`: baixa e mantém só a versão de cada app marcada como grátis no console. Kit, assinatura e Pro continuam no canal `latest`. Um app inteiro grátis continua possível pela flag `is_free_sample` do módulo, mas é exceção. |
+| Qual versão é grátis | Marcação manual, por versão, no console; a primeira versão publicada de um app vem pré-marcada. Marcar outra move o degrau grátis; retirar a versão grátis exige marcar outra. A regra comercial nunca entra no manifesto. |
+| Congelamento | A versão grátis nunca recebe atualização porque não há versão nova no canal `free`, não porque a plataforma a bloqueie. A conta sem compra roda `npx flyee update`, renova o token e não recebe nada. É a tese "a cópia envelhece" aplicada ao degrau zero. |
+| A distância é visível | O catálogo passa a devolver também a versão mais nova de verdade (`newest`), e a conta sem compra vê, na CLI e no painel, quantas versões está atrás e o changelog do que não tem. Pedir uma versão fora do canal responde `denied_entitlement` com o link de upgrade e grava `update.denied_entitlement`. |
+| Lançamento de um app | No dia do vídeo, a 1.0 é a última. Nos apps principais, a 1.0 nasce deliberadamente reduzida e a 1.1 sai no mesmo dia com a fatia completa: a versão grátis vira uma tag antiga no git, nunca mantida em paralelo. Nos apps menores, a paridade inicial é aceita, porque a venda é a loja inteira e as atualizações. |
+| O que não existe | Teste grátis do acesso completo (`trial_days` fica em 0), cupom ou desconto por vídeo, e duas versões completas de um mesmo app. |
+
+**O plano gratuito nunca é oferecido**
+
+- Ninguém "assina grátis". A conta sem compra é consequência de um cadastro que veio do conteúdo (o link de um vídeo) ou da mensagem do instalador; ela nunca é vendida, anunciada ou listada: nenhum botão, coluna de preço, selo ou texto público oferece um plano gratuito ou uma "conta grátis". O plano `gratuito` continua com `is_public = false`.
+- O site público não anuncia versões grátis nem "amostra grátis". O que a conta sem compra pode instalar aparece dentro do painel, depois do cadastro, com o cadeado e a oferta do kit no resto.
+- Dentro do painel, o degrau sem compra é descrito pelo que é ("sem acesso ao catálogo", "versão de entrada"), nunca como um plano com nome comercial.
+
+**O funil de conteúdo**
+
+| Passo | Como funciona na plataforma |
+| --- | --- |
+| O vídeo entrega o método completo | Decisão de conteúdo: vídeo que para no problema é teaser. O que se vende é o app pronto, as atualizações e a loja. |
+| Um link por vídeo | `/catalogo/<slug>?origem=youtube&utm_campaign=<id do vídeo>`: a primeira visita grava a origem num cookie de 90 dias e o cadastro a copia para `signup_attribution`; `account.created` leva `origem`. É o que diz qual vídeo vende. |
+| A conta sem compra é o lead | Substitui a skill por e-mail: o cadastro já confirma o endereço e registra segmento, IA, idioma, máquina e instalação, que uma lista de e-mail não registra. A newsletter continua para quem não quer criar conta. |
+| `npx flyee add <app>` sem login | A CLI mostra "este app faz parte do acesso flyee.club" e o link da página pública do app, com `origem=cli`, vindo do servidor (a CLI nunca monta URL da plataforma). A origem possível aqui é `cli`; o vídeo só é identificado pelo link da descrição. |
+| Conta sem compra pedindo um app pago | O servidor já responde `denied_entitlement` com a mensagem no idioma e o link de upgrade, e grava `update.denied_entitlement`. |
+| A revalidação traz de volta | A conta sem compra tem o mesmo token de 30 dias; `/revalidar` mostra a oferta do kit. |
+| Arrependimento | Os 7 dias são obrigatórios pelo CDC e têm o mesmo efeito de um teste para quem quiser copiar; o risco está aceito pela tese da cópia que envelhece. |
+
+**Apps com pipeline e execução automática**
+
+| Tema | Decisão |
+| --- | --- |
+| Pipeline dentro do app | Um app de tipo `workflow` é uma pipeline empacotada: passos de script e passos de IA, arquivos de entrada e saída, estado por execução em `.flyee/runs/<app>/<id>/`. A mesma definição roda dentro da sessão da IA, que executa os passos de IA inline, e fora dela, pela CLI. O app continua sendo um app; personas e subagentes, quando existirem, são detalhe de implementação invisível para quem instala. |
+| Duas metades | A metade automática não tem ponto de aprovação; toda decisão fica para a metade sob demanda, que recebe o material pronto em arquivo. Exemplo: às 7h, buscar e pontuar notícias e escrever o material; depois, com o integrante presente, escolher a pauta e escrever o roteiro com aprovações. |
+| Disparo | Local, nunca pela plataforma: `flyee schedule <app>` registra a tarefa no Agendador do Windows, no `launchd` ou num timer do `systemd`; `flyee run <app>` executa; tarefa perdida roda na próxima oportunidade. Passos de IA sem supervisão usam a IA do integrante em modo não interativo, com as permissões do manifesto como lista de ferramentas liberadas. Sem processo residente e sem agendadores em nuvem de fornecedor. |
+| Custo e consentimento | A metade automática gasta a IA do integrante sem ele presente: é opcional, com horário confirmado na instalação, visível no painel e desligável. Todo app declara quais passos usam IA; onde não há raciocínio, o passo é script puro. |
+| Manifesto v2 | Campos novos, só quando o primeiro app automático ou com dependência chegar: `automation` (horário sugerido, uso de IA sem supervisão, o que lê e escreve), `requires` (dependência entre apps) e `example_prompt` ("peça assim"). Propriedade de evento `trigger` com `scheduled` ou `manual`. |
+
+**Compatibilidade, qualidade e distribuição** (aprendido do agency-agents e do goose-skills)
+
+| Tema | Decisão |
+| --- | --- |
+| Registro declarativo de ferramentas | O core tem uma tabela de ferramentas, não adaptadores escritos à mão: por ferramenta, como detectar, onde escrever, em que formato, em que escopo (projeto ou usuário) e a regra para arquivo alheio (nunca sobrescrever; anexar bloco gerenciado ou registrar que pulou). Adicionar uma ferramenta é uma linha de dados. |
+| Dois níveis de compatibilidade | "Testado": as IAs declaradas em `compatible_ais`; no lançamento, Claude Code, Codex, Gemini CLI e Cursor. "Compatível pelo padrão": toda ferramenta que o core detecta e atende por `AGENTS.md` e `.agents/skills`, instalada sem promessa e reportada como `other`; no lançamento, GitHub Copilot, OpenCode, Antigravity, Kimi Code, Windsurf e Aider. Promoção: 30 máquinas vivas numa ferramenta por 4 semanas seguidas a levam ao enum, à matriz de testes e à página de compatibilidade. |
+| Avaliação e canário | Todo app leva `tests/eval.json`: casos com prompt, fixtures, asserções e rubrica para um juiz. Roda antes de publicar uma versão e como canário: diário no Claude Code e no Codex, semanal no Gemini CLI e no Cursor, e a matriz inteira quando a versão de uma IA muda. De 3 a 5 casos por app, para caber no plano do operador. Toda falha de suporte vira um caso. |
+| Instalação por URL | `flyee.club/instalar.md`: a pessoa cola o endereço na IA, que explica o que vai fazer, pede confirmação, roda só `npx flyee@latest`, confere com `flyee doctor --json` e manda reiniciar a IA. É a resposta ao "nunca abri um terminal". |
+| Índice e importação | O repositório do produto gera um índice de apps a partir dos manifestos e READMEs. O primeiro app entra pelo console; a importação do índice pela plataforma, com o token de serviço, entra antes do segundo app. |
+| `/flyee` como roteador | Responde "o que você quer fazer?" com os apps certos, inclusive os com cadeado, gerado do catálogo. |
+| Metadados por ferramenta | O core gera, de uma fonte só, o `agents/openai.yaml` do Codex, as flags do Cursor e o `whenToUse` do Kimi. |
+| Regras de autoria | App com chave externa sempre tem um modo sem a chave que entrega algo. Todo app traz um prompt de exemplo. Descrições de skill têm teto de tamanho, porque entram no contexto de toda sessão; o `/flyee` liga e desliga apps por projeto. |
+| Perfil de instalação | `flyee.apps.json` exportável e aplicável com `npx flyee add --from`, para repetir a mesma instalação em projetos de cliente. |
+| Porta MCP | Entra no plano em duas partes. Um servidor MCP local dentro da CLI, com estado, catálogo, instalação, guia e telemetria como ferramentas, para qualquer IA com MCP. E um servidor MCP remoto na plataforma, só leitura, para quem usa só o app do Claude ou do ChatGPT: catálogo, guias, novidades e estado da conta, autenticado pelo servidor OAuth que já existe. |
+
 ## Mercado: onde está o vão
 
 O concorrente mais próximo tem nome: o Ratos OS vende um `AGENTS.md` com pastas e skills para Claude Code, Codex e Hermes por R$ 97, com um ano de acesso e sem renovação automática. O vão que sobra é exatamente o seu modelo: ninguém vende a atualização contínua como produto, e ninguém entrega em mais de um idioma.
@@ -123,6 +194,8 @@ Cinco ajustes transformam "painel com ícones de ferramentas" em algo difícil d
 
 As ferramentas empacotadas até aqui servem marketing e venda; as etapas de engenharia, que são o seu diferencial, ainda estão vazias no catálogo.
 
+*Nota de 2026-10-06: o primeiro app a entrar no catálogo será o de edição de vídeo, construído para uso do operador antes do vídeo de lançamento. Esta tabela é referência histórica (seção "Decisões tomadas 2026-10-06").*
+
 ## O que você pode não estar considerando
 
 Suas decisões resolvem metade dos riscos da primeira versão (cópia, custo de IA, licença, nome). Sobram oito, e os dois primeiros são os que mais podem atrasar: como o npm vai controlar o acesso e como você vai medir o público para decidir o foco.
@@ -172,7 +245,7 @@ Um cadastro, um comando: o painel emite o token do integrante, `npx flyee` insta
 - **`npx flyee` (pacote público no npm).** Só o instalador é público: pede o token, baixa o pacote do plano do seu servidor, instala o harness e roda `npx flyee update` depois. O controle de versão fica com você, sem repositório exposto e sem exigir conta npm do integrante.
 - **Servidor de pacotes.** Um pacote versionado por plano e idioma, changelog por versão, checksum e registro de instalação e uso por ferramenta. Valida o token a cada `update`: passados 30 dias do último contato, responde "revalide no painel" com o link. As ferramentas já instaladas continuam funcionando; só a atualização espera, e o harness avisa a partir do dia 25.
 - **Harness flyee (`agent.md`).** O que você já construiu: um ponto de entrada que centraliza skills, workflows e rules e torna tudo agnóstico. É o que faz "qualquer IA" ser verdade sem um conector por IA.
-- **Skills soltas.** Arquivo `SKILL.md` avulso, sem harness e sem atualização. Camada de amostra grátis e porta de entrada.
+- **Skills soltas.** Arquivo `SKILL.md` avulso, sem harness e sem atualização. Camada de amostra grátis e porta de entrada. *Substituída em 2026-10-06 pela versão de entrada de cada app no canal `free` (seção "Decisões tomadas 2026-10-06"): a porta de entrada passa a ser a conta sem compra, instalando pela própria CLI, e nenhuma skill solta é distribuída.*
 
 **O limite a aceitar na v1:** `npx` alcança quem usa terminal (Claude Code, Codex, Gemini CLI, Cursor). Quem só usa o app do Claude ou do ChatGPT entra depois, por skills enviadas na conta ou por um conector MCP, quando a medição mostrar que vale.
 
@@ -212,7 +285,7 @@ A escada tem três degraus claros: um produto de entrada barato para medir quem 
 
 | Degrau | O que é | Para quem | Preço de partida (hipótese) | O que prova |
 | --- | --- | --- | --- | --- |
-| 0 · Amostra | Skills soltas + newsletter bilíngue | Topo de funil | Grátis | Interesse por segmento e idioma |
+| 0 · Amostra | A versão de entrada de cada app, instalada pela CLI numa conta sem compra, + newsletter bilíngue; nunca oferecida, só alcançada pelo conteúdo (decisão de 2026-10-06) | Topo de funil | Sem preço | Interesse por segmento e idioma; qual vídeo traz cadastro e instalação |
 | 1 · Kit de entrada (low-ticket) | Harness + catálogo inteiro com atualização contínua + aula de uso por ferramenta; 1 acesso; token revalidado no painel a cada 30 dias sem update | Quem quer testar | R$ 97 único / US$ 29 | Quem paga, por qual porta entra e quem volta para revalidar |
 | 2 · Assinatura flyee | Kit + aulas avançadas, receitas, encontros, voto no roadmap, acesso em mais de uma máquina | Quem usa toda semana e quer ir fundo | R$ 67/mês ou R$ 597/ano; US$ 19/mês; fundador com preço travado | Uso semanal por segmento, conversão kit → assinatura |
 | 3 · Pro | Assinatura + camada "abrir o capô" + mais máquinas (a licença comercial passou a valer em todo plano pago em 2026-10-06) | Freelancer e agência | R$ 197/mês / US$ 49 | Quanto do público é profissional de serviço |
@@ -290,8 +363,9 @@ Das seis decisões originais, três foram tomadas em 2026-09-30 e estão marcada
 - [ ] **A regra que dispara o foco.** Aceita a proposta (um segmento lidera em compra, ativação e uso semanal por 4 semanas, com 30 ou mais pessoas por segmento) ou prefere outra? O painel de métricas usa a proposta como indicador até você decidir.
 - [x] **O que "1 acesso" significa no kit.** Decidido: um dispositivo no kit, três na assinatura, cinco no Pro.
 - [x] **Canal de atualização do kit.** Decidido: o mesmo canal para todos na v1.
-- [ ] **O que fica aberto.** Quais skills viram amostra grátis e que parte do harness é pública.
+- [x] **O que fica aberto.** Decidido em 2026-10-06: nenhuma skill solta; o degrau grátis é a versão de entrada de cada app, no canal `free`, instalada pela CLI numa conta sem compra. Do harness, só a CLI é pública (pacote `flyee` no npm); o core viaja dentro dela e os apps vêm do servidor de pacotes.
 - [ ] **Ordem dos upsells.** Pro (abrir o capô e mais máquinas) primeiro ou mentoria em grupo primeiro? Desde 2026-10-06 nenhum uso das ferramentas oferece o Pro por conta própria: projetos de cliente valem em todo plano pago.
+- [x] **Proteção contra cópia e revenda.** Decidido em 2026-10-06. O que a IA lê fica em texto na máquina do integrante, então nenhuma trava impede copiar arquivos. O conjunto do item 10.6 do plano combina valor fora do disco, licença assinada por app e máquina que prende o harness à conta, marcas rastreáveis, relatório de downloads anômalos, cláusula nos termos, registro da marca no INPI e conteúdo dinâmico servido pela plataforma.
 
 **Levantadas no plano da plataforma**
 
@@ -302,12 +376,12 @@ Das seis decisões originais, três foram tomadas em 2026-09-30 e estão marcada
 - [x] **Revisão jurídica.** Decidido: os termos são considerados revisados.
 - [ ] **Quem opera o flyee.club.** Razão social, CNPJ e cidade que os termos de uso e a política de privacidade identificam. Os textos legais herdados ainda identificam a empresa do MedChina; o seed dos termos (fase 2) precisa desse dado antes do primeiro deploy.
 - [ ] **Preço anual em USD.** Este documento só traz US$ 19 por mês. A hipótese do plano é 10 vezes a mensal.
-- [ ] **Trial da assinatura.** Nenhum na v1, ou dias de teste pelo provedor mais tarde?
+- [x] **Trial da assinatura.** Decidido em 2026-10-06: nenhum. `trial_days` fica em 0; a versão de entrada no canal `free` cumpre o papel de teste sem entregar a loja inteira.
 
 **Do lado do produto (fora deste repositório)**
 
 - [ ] **Licenças do saas-starter.** Um módulo derivado desta base não pode levar a chave do MUI X Premium, que é licenciado por desenvolvedor; cada integrante precisaria da própria licença. O código do template licenciado (a vitrine `/ui` e os ícones Nexture) e as fontes comerciais precisam de checagem de licença antes de qualquer redistribuição.
-- [ ] **Arquivo de entrada do harness.** Este documento fala em `agent.md`. O nome mais difundido é `AGENTS.md`, e cada IA lê o seu próprio arquivo, como o `CLAUDE.md` do Claude Code. O core vai precisar gerar adaptadores por IA, como este repositório já faz em `scripts/sync-agent-harness.mjs`.
+- [x] **Arquivo de entrada do harness.** Decidido em 2026-10-06: `AGENTS.md` canônico com ponteiros `CLAUDE.md` e `GEMINI.md`, skills em `.agents/skills/` com pontes em `.claude/skills/`, geradas pelo core como este repositório já faz em `scripts/sync-agent-harness.mjs` (seção "Decisões tomadas 2026-10-06").
 
 ## Fontes
 

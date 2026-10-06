@@ -366,3 +366,23 @@ Chave desconhecida é erro: um campo novo exige um `manifest_version` novo. Cami
 ## 8. Verificação pública
 
 `/verificar/<slug>@<versão>` (inglês: `/en/verify/…`) mostra para qualquer pessoa o SHA-256, o tamanho, as IAs compatíveis, as permissões declaradas e se a versão foi retirada. É o `verify_url` das respostas. Fora do índice dos buscadores.
+
+## 9. Mudanças planejadas (fase 9 do plano, ainda não servidas)
+
+Decididas em 2026-10-06 (`docs/PRODUCT.md`, "Decisões tomadas 2026-10-06"; `docs/PLANO-IMPLEMENTACAO.md`, fase 9). Nenhuma está no ar: a CLI não deve depender delas até cada item ser movido para o corpo deste contrato. Todas são compatíveis com a v1, porque só acrescentam campos e recusas que a CLI já sabe tratar.
+
+| Onde | Mudança |
+|---|---|
+| Canais | O plano da conta define o canal: `free` (conta sem compra) e `latest` (kit, assinatura, Pro); `stable` continua reservado. `channel` em 4.3 passa a dizer o canal da conta. |
+| 4.3 `GET /api/cli/catalog` | `latest` passa a ser a versão mais nova **que a conta pode baixar** no seu canal. Campo novo `newest` por módulo, com a versão mais nova publicada para qualquer conta, para a CLI dizer quantas versões a conta está atrás. `entitled` continua dizendo se a conta pode baixar algo do módulo. |
+| 4.4 `GET /api/cli/modules/{slug}` | Cada versão ganha `entitled` (booleano), para a CLI imprimir com o cadeado o changelog do que a conta não tem. |
+| 4.5 download | Versão fora do canal da conta: 403 `denied_entitlement`, com `action_url` de upgrade, igual ao módulo sem direito. Uma versão marcada como grátis é baixável por qualquer conta ativa. |
+| 4.9 `GET /api/cli/version` | Campo novo `links.module_page`, um modelo de URL da página pública de um app com a origem `cli` (por exemplo `https://flyee.club/catalogo/{slug}?origem=cli`). É o link que a CLI mostra a quem roda `npx flyee add <slug>` sem conexão: "este app faz parte do acesso flyee.club", mais o link. A CLI continua sem montar URL da plataforma por conta própria. |
+| 4.9 `min_cli_version` | Sobe para `1.0.0` quando a CLI `flyee@1.0.0` for publicada no npm: a linha 0.x do pacote `flyee` é de outro projeto e não fala este contrato. |
+| Regra operacional | A versão grátis de um módulo é marcada no console, uma por módulo, com a primeira publicada pré-marcada. Não há bloqueio técnico de atualização para a conta sem compra: ela não recebe nada porque o canal `free` não ganha versão nova. |
+| 4.2 `POST /api/cli/installs` | Campo opcional `ai_tool_detail`: nome curto da ferramenta detectada quando `ai_tool` é `other`; aceito só se estiver em `platform_settings.cli.known_tools`, descartado fora disso (fase 10.4). |
+| 4.5 download | Campo novo `license`: um JWT assinado pela plataforma, verificável offline pela chave pública em `/.well-known/jwks.json`, com identificador opaco da conta, `device_id`, módulo, versão e data, sem expiração. A CLI o guarda em `.flyee/licenses/<slug>.jwt` e só executa pipelines, agendamentos e ações do painel de um app cuja licença seja desta máquina (fase 10.6, confirmada em 2026-10-06). |
+| 4.7 `POST /api/cli/events` | Propriedade nova `trigger`, com `scheduled` ou `manual`, na lista fechada (fase 10.1). |
+| 6. Manifesto | `manifest_version: 2` acrescenta `automation`, `requires` e `example_prompt`; a v1 continua aceita; o JSON Schema de 4.8 publica as duas versões (fase 10.1). |
+| Porta MCP | Servidor MCP remoto em `/api/mcp`, só leitura, atrás do mesmo servidor OAuth e das mesmas barreiras: catálogo, guia de um app, novidades, estado da conta e instruções de instalação (fase 10.5). O servidor MCP local da CLI fica fora deste contrato. |
+| `/instalar.md` | Página pública em markdown para uma IA ler e instalar a CLI com confirmação do usuário (fase 10.3). Fora da API, citada aqui por ser a porta de entrada da CLI. |
