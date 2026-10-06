@@ -16,6 +16,11 @@ import { createAnonClient } from "@/lib/public-content";
  * NAME has no English text stays out of the English pages and out of the
  * English half of the sitemap, and its English address leads to the catalog.
  *
+ * The store categories (migration 0029) ride beside the shared reader: each
+ * module gets its `storeCategory` and the catalog its `storeCategories`, so
+ * the store filters by kind of work while the CLI API, which uses the same
+ * reader, keeps answering by stage.
+ *
  * "unavailable" (no Supabase, an error) is never rendered as an empty catalog.
  */
 
@@ -33,12 +38,22 @@ export type CatalogStats = {
   lastReleaseAt: string | null;
 };
 
-export type PublicCatalog = Awaited<ReturnType<typeof loadCatalog>> & { stats: CatalogStats };
+type SharedCatalog = Awaited<ReturnType<typeof loadCatalog>>;
+
+/** A kind of work the store filters by, named in the language of the address (Portuguese when it has no translation). */
+export type PublicStoreCategory = { slug: string; name: string };
+
+export type PublicCatalog = Omit<SharedCatalog, "modules"> & {
+  modules: (SharedCatalog["modules"][number] & { storeCategory: string | null })[];
+  storeCategories: PublicStoreCategory[];
+  stats: CatalogStats;
+};
 
 export type PublicCatalogResult = { kind: "ready"; catalog: PublicCatalog } | { kind: "unavailable" };
 
 export type CatalogRows = {
-  modules: { id: string; slug: string; name: Localized }[];
+  modules: { id: string; slug: string; name: Localized; store_category?: string | null }[];
+  storeCategories: { slug: string; name: Localized; sort: number }[];
   versions: { module_id: string; published_at: string | null }[];
   recipes: { slug: string; name: Localized }[];
 };
@@ -48,11 +63,7 @@ export type CatalogRows = {
  * rows carry the raw texts that the shared reader already collapsed with its
  * Portuguese fallback.
  */
-export function readableCatalog(
-  catalog: Awaited<ReturnType<typeof loadCatalog>>,
-  rows: CatalogRows,
-  locale: CatalogLocale,
-): PublicCatalog {
+export function readableCatalog(catalog: SharedCatalog, rows: CatalogRows, locale: CatalogLocale): PublicCatalog {
   const readable = rows.modules.filter((row) => hasText(row.name, locale));
   const readableIds = new Set(readable.map((row) => row.id));
   const readableSlugs = new Set(readable.map((row) => row.slug));
@@ -64,9 +75,20 @@ export function readableCatalog(
     .sort()
     .at(-1);
 
+  const categoryOf = new Map(rows.modules.map((row) => [row.slug, row.store_category ?? null]));
+  const storeCategories = [...rows.storeCategories]
+    .sort((a, b) => a.sort - b.sort)
+    .map((row) => ({
+      slug: row.slug,
+      name: row.name?.[locale]?.trim() || row.name?.["pt-BR"]?.trim() || row.slug,
+    }));
+
   return {
     ...catalog,
-    modules: catalog.modules.filter((module) => readableSlugs.has(module.slug)),
+    modules: catalog.modules
+      .filter((module) => readableSlugs.has(module.slug))
+      .map((module) => ({ ...module, storeCategory: categoryOf.get(module.slug) ?? null })),
+    storeCategories,
     recipes: catalog.recipes
       .filter((recipe) => readableRecipes.has(recipe.slug))
       .map((recipe) => ({ ...recipe, modules: recipe.modules.filter((slug) => readableSlugs.has(slug)) })),
@@ -78,15 +100,17 @@ async function readPublicCatalog(locale: CatalogLocale): Promise<PublicCatalogRe
   const client = createAnonClient();
   if (!client) return { kind: "unavailable" };
   try {
-    const [catalog, modules, versions, recipes] = await Promise.all([
+    const [catalog, modules, versions, recipes, categories] = await Promise.all([
       loadCatalog(client, { locale, stableOnly: false, limits: {} }),
-      client.from("catalog_modules").select("id, slug, name").eq("status", "published"),
+      client.from("catalog_modules").select("id, slug, name, store_category").eq("status", "published"),
       client.from("catalog_module_versions").select("module_id, published_at").eq("status", "published"),
       client.from("catalog_recipes").select("slug, name").eq("status", "published"),
+      client.from("catalog_store_categories").select("slug, name, sort").order("sort"),
     ]);
-    if (modules.error || versions.error || recipes.error) return { kind: "unavailable" };
+    if (modules.error || versions.error || recipes.error || categories.error) return { kind: "unavailable" };
     const rows = {
       modules: (modules.data ?? []) as CatalogRows["modules"],
+      storeCategories: (categories.data ?? []) as CatalogRows["storeCategories"],
       versions: (versions.data ?? []) as CatalogRows["versions"],
       recipes: (recipes.data ?? []) as CatalogRows["recipes"],
     };

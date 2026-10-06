@@ -3,9 +3,12 @@
 import {
   type CatalogActionResult,
   deleteRecipe,
+  deleteStoreCategory,
   saveDelivery,
+  saveStoreCategory,
   saveTrail,
   setRecipeStatus,
+  type StoreCategoryInput,
   type TrailInput,
 } from "../actions";
 import { LocalizedInput, TextInput } from "./fields";
@@ -20,10 +23,12 @@ import DialogHeader from "@/components/product/dialog-header";
 import EmptyState from "@/components/product/empty-state";
 import StatusChip from "@/components/product/status-chip";
 import NiListSquare from "@/icons/nexture/ni-list-square";
+import NiPen from "@/icons/nexture/ni-pen";
 import NiPlus from "@/icons/nexture/ni-plus";
 import {
   type AdminModule,
   type AdminRecipe,
+  type AdminStoreCategory,
   type AdminTrail,
   type DeliverySettings,
   textOf,
@@ -312,6 +317,194 @@ export function TrailsTab({
         <TrailDialog
           key={editing.slug}
           trail={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            onChanged();
+          }}
+        />
+      ) : null}
+    </Box>
+  );
+}
+
+// ---------- Store categories ----------
+
+function StoreCategoryDialog({
+  category,
+  nextSort,
+  onClose,
+  onSaved,
+}: {
+  category: AdminStoreCategory | null;
+  nextSort: number;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<StoreCategoryInput>({
+    slug: category?.slug ?? "",
+    name: category?.name ?? {},
+    sort: category?.sort ?? nextSort,
+    isNew: !category,
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    const result = await saveStoreCategory(form);
+    setBusy(false);
+    if (!result.ok) setError(result.error);
+    else onSaved();
+  };
+  return (
+    <Dialog
+      open
+      onClose={busy ? undefined : onClose}
+      maxWidth="sm"
+      fullWidth
+      aria-labelledby="store-category-form-title"
+    >
+      <DialogHeader
+        id="store-category-form-title"
+        title={category ? `Categoria ${textOf(category.name, category.slug)}` : "Nova categoria da loja"}
+        onClose={onClose}
+        closeLabel="Fechar sem salvar"
+      />
+      <DialogContent dividers>
+        <Box className="flex flex-col gap-4">
+          <LocalizedInput label="Nome" value={form.name} onChange={(name) => setForm({ ...form, name })} required />
+          <Box className="grid grid-cols-2 gap-3">
+            <TextInput
+              label="Identificador"
+              value={form.slug}
+              onChange={(slug) => setForm({ ...form, slug: slug.toLowerCase() })}
+              disabled={!form.isNew}
+              placeholder="design"
+              help={form.isNew ? "Não muda depois de criada: os links e os eventos usam ele." : "Fixo desde a criação."}
+            />
+            <TextInput
+              label="Ordem"
+              type="number"
+              value={form.sort}
+              onChange={(sort) => setForm({ ...form, sort: Number(sort) })}
+            />
+          </Box>
+          {error ? (
+            <Alert severity="error" className="neutral bg-background-paper/60!">
+              {error}
+            </Alert>
+          ) : null}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button variant="text" color="grey" onClick={onClose} disabled={busy}>
+          Cancelar
+        </Button>
+        <Button variant="contained" onClick={submit} disabled={busy}>
+          {busy ? "Salvando…" : category ? "Salvar" : "Criar categoria"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+/**
+ * The kinds of work the public store filters by (migration 0029). Unlike the
+ * stages they are free: create, rename, reorder; delete one no app is in.
+ * Which category an app is in is set on the app, in its form.
+ */
+export function StoreCategoriesTab({
+  categories,
+  modules,
+  onChanged,
+}: {
+  categories: AdminStoreCategory[];
+  modules: AdminModule[];
+  onChanged: () => void;
+}) {
+  const run = useRun(onChanged);
+  const [editing, setEditing] = useState<AdminStoreCategory | "new" | null>(null);
+  const uncategorized = modules.filter((module) => !module.storeCategory).length;
+  const nextSort = (categories.at(-1)?.sort ?? 0) + 10;
+  return (
+    <Box className="flex flex-col gap-4">
+      <Box className="flex flex-row flex-wrap items-start justify-between gap-3">
+        <Typography variant="body1" className="text-text-secondary max-w-2xl">
+          Os tipos de trabalho pelos quais a loja pública (a home e /catalogo) filtra os apps. As etapas continuam
+          organizando o catálogo, o painel e a CLI; a categoria só muda onde o app aparece na loja e não pede versão
+          nova.{" "}
+          {uncategorized > 0
+            ? `${formatNumber(uncategorized)} ${uncategorized === 1 ? "ferramenta está" : "ferramentas estão"} sem categoria e ${uncategorized === 1 ? "aparece" : "aparecem"} só em Todos.`
+            : "Toda ferramenta tem categoria."}
+        </Typography>
+        <Button variant="contained" startIcon={<NiPlus size="medium" />} onClick={() => setEditing("new")}>
+          Nova categoria
+        </Button>
+      </Box>
+      {categories.length === 0 ? (
+        <EmptyState
+          icon={<NiListSquare size="large" />}
+          title="Nenhuma categoria na loja"
+          description="Sem categorias, a loja pública mostra só Todos. Crie a primeira para os visitantes filtrarem os apps."
+          action={{ label: "Criar a primeira categoria", onClick: () => setEditing("new") }}
+        />
+      ) : (
+        <Box className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {categories.map((category) => {
+            const count = modules.filter((module) => module.storeCategory === category.slug).length;
+            return (
+              <Card key={category.slug} component="article">
+                <CardContent className="flex flex-col gap-2">
+                  <Typography variant="h6" component="h3" className="mb-0">
+                    {textOf(category.name, category.slug)}
+                  </Typography>
+                  <Typography variant="body2" className="text-text-secondary">
+                    {category.name.en
+                      ? `EN: ${category.name.en}`
+                      : "Sem nome em inglês: a página em inglês usa o português."}
+                  </Typography>
+                  <Typography variant="body2" className="text-text-secondary">
+                    {formatNumber(count)} {count === 1 ? "ferramenta" : "ferramentas"} · {category.slug} · ordem{" "}
+                    {category.sort}
+                  </Typography>
+                  <Box className="flex flex-row flex-wrap gap-2">
+                    <Button
+                      variant="outlined"
+                      color="grey"
+                      size="small"
+                      startIcon={<NiPen size="small" />}
+                      onClick={() => setEditing(category)}
+                    >
+                      Editar
+                    </Button>
+                    {count === 0 ? (
+                      <Button
+                        variant="text"
+                        color="error"
+                        size="small"
+                        onClick={() =>
+                          run(
+                            () => deleteStoreCategory(category.slug),
+                            `Categoria ${textOf(category.name, category.slug)} excluída.`,
+                          )
+                        }
+                      >
+                        Excluir
+                      </Button>
+                    ) : null}
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
+      )}
+      {editing ? (
+        <StoreCategoryDialog
+          key={editing === "new" ? "new" : editing.slug}
+          category={editing === "new" ? null : editing}
+          nextSort={nextSort}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);

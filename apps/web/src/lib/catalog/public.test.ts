@@ -18,8 +18,17 @@ const catalog = {
 
 const rows: CatalogRows = {
   modules: [
-    { id: "m1", slug: "deploy-check", name: { "pt-BR": "Checagem de deploy", en: "Deploy check" } },
-    { id: "m2", slug: "product-scope", name: { "pt-BR": "Escopo do produto" } },
+    {
+      id: "m1",
+      slug: "deploy-check",
+      name: { "pt-BR": "Checagem de deploy", en: "Deploy check" },
+      store_category: "build",
+    },
+    { id: "m2", slug: "product-scope", name: { "pt-BR": "Escopo do produto" }, store_category: null },
+  ],
+  storeCategories: [
+    { slug: "video", name: { "pt-BR": "Vídeo" }, sort: 30 },
+    { slug: "build", name: { "pt-BR": "Construir", en: "Build" }, sort: 50 },
   ],
   versions: [
     { module_id: "m1", published_at: "2026-09-14T10:00:00Z" },
@@ -47,6 +56,18 @@ describe("readableCatalog: an address in a language serves that language", () =>
     expect(pt.modules.map((module) => module.slug)).toEqual(["deploy-check", "product-scope"]);
     expect(pt.recipes.map((recipe) => recipe.slug)).toEqual(["launch", "pt-only"]);
     expect(pt.stats).toEqual({ modules: 2, versions: 3, lastReleaseAt: "2026-09-30T10:00:00Z" });
+  });
+
+  it("attaches each app's store category and names the categories in the language, by their order", () => {
+    const en = readableCatalog(catalog, rows, "en");
+    expect(en.modules.map((module) => module.storeCategory)).toEqual(["build"]);
+    // A category without an English name keeps its Portuguese one: it is a label, not content.
+    expect(en.storeCategories).toEqual([
+      { slug: "video", name: "Vídeo" },
+      { slug: "build", name: "Build" },
+    ]);
+    const pt = readableCatalog(catalog, rows, "pt-BR");
+    expect(pt.modules.map((module) => module.storeCategory)).toEqual(["build", null]);
   });
 
   it("treats a blank English name as no English name", () => {

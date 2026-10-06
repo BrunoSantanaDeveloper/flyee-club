@@ -37,6 +37,7 @@ select is(
     'catalog_modules',
     'catalog_recipe_modules',
     'catalog_recipes',
+    'catalog_store_categories',
     'catalog_trails',
     'consent_terms',
     'help_articles',

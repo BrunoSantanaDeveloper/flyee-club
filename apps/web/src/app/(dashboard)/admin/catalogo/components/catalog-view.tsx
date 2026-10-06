@@ -1,6 +1,6 @@
 "use client";
 
-import { DeliveryTab, RecipesTab, TrailsTab } from "./catalog-tabs";
+import { DeliveryTab, RecipesTab, StoreCategoriesTab, TrailsTab } from "./catalog-tabs";
 import ModuleFormDialog from "./module-form-dialog";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -23,6 +23,7 @@ import NiUploadCloud from "@/icons/nexture/ni-upload-cloud";
 import {
   type AdminModule,
   type AdminRecipe,
+  type AdminStoreCategory,
   type AdminTrail,
   type DeliverySettings,
   latestPublished,
@@ -34,6 +35,7 @@ import type { ConsoleState } from "@/lib/admin/session";
 
 export type CatalogState = ConsoleState<{
   trails: AdminTrail[];
+  storeCategories: AdminStoreCategory[];
   modules: AdminModule[];
   recipes: AdminRecipe[];
   delivery: DeliverySettings;
@@ -96,7 +98,7 @@ const CRUMBS = [{ label: "Início", href: "/inicio" }, { label: "Admin", href: "
  */
 export default function CatalogView({ state }: { state: CatalogState }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"modules" | "recipes" | "trails" | "delivery">("modules");
+  const [tab, setTab] = useState<"modules" | "recipes" | "trails" | "categories" | "delivery">("modules");
   const [filter, setFilter] = useState<Filter>("all");
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
@@ -279,6 +281,7 @@ export default function CatalogView({ state }: { state: CatalogState }) {
               <Tab value="modules" label={`Ferramentas (${formatNumber(modules.length)})`} />
               <Tab value="recipes" label={`Receitas (${formatNumber(ready.recipes.length)})`} />
               <Tab value="trails" label="Trilhas" />
+              <Tab value="categories" label="Categorias da loja" />
               <Tab value="delivery" label="Entrega" />
             </Tabs>
 
@@ -320,6 +323,8 @@ export default function CatalogView({ state }: { state: CatalogState }) {
               <RecipesTab recipes={ready.recipes} modules={modules} onChanged={refresh} />
             ) : tab === "trails" ? (
               <TrailsTab trails={trails} modules={modules} onChanged={refresh} />
+            ) : tab === "categories" ? (
+              <StoreCategoriesTab categories={ready.storeCategories} modules={modules} onChanged={refresh} />
             ) : (
               <DeliveryTab delivery={ready.delivery} onChanged={refresh} />
             )}
@@ -331,6 +336,7 @@ export default function CatalogView({ state }: { state: CatalogState }) {
         <ModuleFormDialog
           module={null}
           trails={trails}
+          storeCategories={ready?.storeCategories ?? []}
           onClose={() => setCreating(false)}
           onSaved={(saved) => {
             setCreating(false);

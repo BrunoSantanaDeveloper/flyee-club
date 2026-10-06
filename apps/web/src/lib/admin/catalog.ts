@@ -15,6 +15,9 @@ export type Credential = { name: string; env: string; url?: string; required: bo
 
 export type AdminTrail = { slug: string; name: Localized; description: Localized; icon: string | null; sort: number };
 
+/** A kind of work the public store filters by (migration 0029). */
+export type AdminStoreCategory = { slug: string; name: Localized; sort: number };
+
 export type ModuleUsage = {
   downloads: number;
   downloads30d: number;
@@ -53,6 +56,8 @@ export type AdminModule = {
   id: string;
   slug: string;
   trail: string;
+  /** The store category, null when the app shows only under "Todos". */
+  storeCategory: string | null;
   type: string;
   icon: string | null;
   name: Localized;
@@ -196,7 +201,7 @@ const VERSION_COLUMNS =
   "id, module_id, version, is_stable, status, sha256, size_bytes, changelog, min_core_version, compatible_ais, permissions, published_at, yanked_at, yank_reason, created_at";
 
 const MODULE_COLUMNS =
-  "id, slug, trail, type, icon, name, summary, description_md, compatible_ais, external_credentials, status, is_free_sample, entitlement_key, sort, published_at, created_at, updated_at";
+  "id, slug, trail, store_category, type, icon, name, summary, description_md, compatible_ais, external_credentials, status, is_free_sample, entitlement_key, sort, published_at, created_at, updated_at";
 
 function toVersion(row: VersionRow, stats: Stats["versions"][number] | undefined): AdminVersion {
   return {
@@ -228,6 +233,7 @@ function toModule(row: Record<string, unknown>, usage: ModuleUsage | undefined, 
     id: row.id as string,
     slug: row.slug as string,
     trail: row.trail as string,
+    storeCategory: (row.store_category as string | null) ?? null,
     type: row.type as string,
     icon: (row.icon as string | null) ?? null,
     name: (row.name as Localized) ?? {},
@@ -268,27 +274,41 @@ export async function loadTrails(supabase: SupabaseClient): Promise<AdminTrail[]
   }));
 }
 
-/** Every module with its versions and usage, the recipes, the trails and the delivery settings. */
+export async function loadStoreCategories(supabase: SupabaseClient): Promise<AdminStoreCategory[]> {
+  const { data, error } = await supabase.from("catalog_store_categories").select("slug, name, sort").order("sort");
+  if (error) throw new Error("store_categories_failed");
+  return (data ?? []).map((row) => ({ slug: row.slug, name: row.name ?? {}, sort: row.sort }));
+}
+
+/** Every module with its versions and usage, the recipes, the trails, the store categories and the delivery settings. */
 export async function loadCatalogAdmin(supabase: SupabaseClient): Promise<{
   trails: AdminTrail[];
+  storeCategories: AdminStoreCategory[];
   modules: AdminModule[];
   recipes: AdminRecipe[];
   delivery: DeliverySettings;
 }> {
-  const [trails, modulesRead, versionsRead, recipesRead, recipeModulesRead, workflowsRead, settingsRead, stats] =
-    await Promise.all([
-      loadTrails(supabase),
-      supabase.from("catalog_modules").select(MODULE_COLUMNS).order("sort").order("created_at"),
-      supabase.from("catalog_module_versions").select(VERSION_COLUMNS),
-      supabase
-        .from("catalog_recipes")
-        .select("id, slug, name, summary, icon, status, sort, published_at")
-        .order("sort"),
-      supabase.from("catalog_recipe_modules").select("recipe_id, module_id, sort"),
-      supabase.from("catalog_recipe_workflows").select("recipe_id, body_md"),
-      supabase.from("platform_settings").select("value").eq("key", "cli").maybeSingle(),
-      readStats(supabase),
-    ]);
+  const [
+    trails,
+    storeCategories,
+    modulesRead,
+    versionsRead,
+    recipesRead,
+    recipeModulesRead,
+    workflowsRead,
+    settingsRead,
+    stats,
+  ] = await Promise.all([
+    loadTrails(supabase),
+    loadStoreCategories(supabase),
+    supabase.from("catalog_modules").select(MODULE_COLUMNS).order("sort").order("created_at"),
+    supabase.from("catalog_module_versions").select(VERSION_COLUMNS),
+    supabase.from("catalog_recipes").select("id, slug, name, summary, icon, status, sort, published_at").order("sort"),
+    supabase.from("catalog_recipe_modules").select("recipe_id, module_id, sort"),
+    supabase.from("catalog_recipe_workflows").select("recipe_id, body_md"),
+    supabase.from("platform_settings").select("value").eq("key", "cli").maybeSingle(),
+    readStats(supabase),
+  ]);
   for (const read of [modulesRead, versionsRead, recipesRead, recipeModulesRead, workflowsRead, settingsRead]) {
     if (read.error) throw new Error("catalog_admin_failed");
   }
@@ -312,6 +332,7 @@ export async function loadCatalogAdmin(supabase: SupabaseClient): Promise<{
 
   return {
     trails,
+    storeCategories,
     modules: (modulesRead.data ?? []).map((row) =>
       toModule(
         row as Record<string, unknown>,
@@ -339,7 +360,12 @@ export async function loadCatalogAdmin(supabase: SupabaseClient): Promise<{
 export async function loadModuleAdmin(
   supabase: SupabaseClient,
   slug: string,
-): Promise<{ module: AdminModule; lessons: AdminLesson[]; trails: AdminTrail[] } | null> {
+): Promise<{
+  module: AdminModule;
+  lessons: AdminLesson[];
+  trails: AdminTrail[];
+  storeCategories: AdminStoreCategory[];
+} | null> {
   const { data: row, error } = await supabase
     .from("catalog_modules")
     .select(MODULE_COLUMNS)
@@ -349,8 +375,9 @@ export async function loadModuleAdmin(
   if (!row) return null;
   const moduleId = row.id as string;
 
-  const [trails, versionsRead, lessonsRead, stats] = await Promise.all([
+  const [trails, storeCategories, versionsRead, lessonsRead, stats] = await Promise.all([
     loadTrails(supabase),
+    loadStoreCategories(supabase),
     supabase.from("catalog_module_versions").select(VERSION_COLUMNS).eq("module_id", moduleId),
     supabase
       .from("catalog_lessons")
@@ -372,6 +399,7 @@ export async function loadModuleAdmin(
   return {
     module: toModule(row as Record<string, unknown>, usage, versions),
     trails,
+    storeCategories,
     lessons: (lessonsRead.data ?? []).map((lesson) => {
       const video = lesson.catalog_lesson_videos as { youtube_id: string } | { youtube_id: string }[] | null;
       const youtubeId = Array.isArray(video) ? (video[0]?.youtube_id ?? null) : (video?.youtube_id ?? null);

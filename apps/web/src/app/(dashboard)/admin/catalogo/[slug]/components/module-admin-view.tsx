@@ -18,7 +18,14 @@ import MetricBars from "@/components/product/metric-bars";
 import PageHeader from "@/components/product/page-header";
 import StatusChip from "@/components/product/status-chip";
 import NiCatalog from "@/icons/nexture/ni-catalog";
-import { type AdminLesson, type AdminModule, type AdminTrail, latestPublished, textOf } from "@/lib/admin/catalog";
+import {
+  type AdminLesson,
+  type AdminModule,
+  type AdminStoreCategory,
+  type AdminTrail,
+  latestPublished,
+  textOf,
+} from "@/lib/admin/catalog";
 import { formatNumber } from "@/lib/admin/format";
 import { AI_TOOL_LABEL, labelOf, MODULE_STATUS_LABEL, MODULE_TYPE_LABEL } from "@/lib/admin/labels";
 import type { ConsoleState } from "@/lib/admin/session";
@@ -27,6 +34,7 @@ export type ModuleAdminState = ConsoleState<{
   module: AdminModule | null;
   lessons: AdminLesson[];
   trails: AdminTrail[];
+  storeCategories: AdminStoreCategory[];
 }>;
 
 const STATUS_TONE = { draft: "neutral", published: "positive", archived: "neutral" } as const;
@@ -89,6 +97,7 @@ export default function ModuleAdminView({ state, slug }: { state: ModuleAdminSta
   const module = state.module;
   const latest = latestPublished(module.versions);
   const trail = state.trails.find((entry) => entry.slug === module.trail);
+  const storeCategory = state.storeCategories.find((entry) => entry.slug === module.storeCategory);
 
   const changeStatus = async (status: "draft" | "published" | "archived", success: string) => {
     setBusy(true);
@@ -165,7 +174,9 @@ export default function ModuleAdminView({ state, slug }: { state: ModuleAdminSta
               </Box>
             </Box>
             <Typography variant="body2" className="text-text-secondary">
-              {module.slug} · {textOf(trail?.name, module.trail)} · {labelOf(MODULE_TYPE_LABEL, module.type)}
+              {module.slug} · {textOf(trail?.name, module.trail)} ·{" "}
+              {storeCategory ? `loja: ${textOf(storeCategory.name, storeCategory.slug)}` : "sem categoria na loja"} ·{" "}
+              {labelOf(MODULE_TYPE_LABEL, module.type)}
             </Typography>
             <Typography variant="body2" className="text-text-secondary">
               Funciona com{" "}
@@ -283,6 +294,7 @@ export default function ModuleAdminView({ state, slug }: { state: ModuleAdminSta
         <ModuleFormDialog
           module={module}
           trails={state.trails}
+          storeCategories={state.storeCategories}
           onClose={() => setEditing(false)}
           onSaved={(saved) => {
             setEditing(false);

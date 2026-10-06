@@ -1,7 +1,7 @@
 // GENERATED from packages/db/migrations by `npm run db:schema:pull`.
 // Regenerate after every migration instead of editing by hand.
 import { relations } from "drizzle-orm/relations";
-import { usersInAuth, profiles, organizations, memberships, auditEvents, consentTerms, consentAcceptances, accessEvents, platformSettings, notifications, announcements, onboardingState, subscriptions, plans, coupons, billingOperations, subscriptionModules, modules, invoices, entitlementGrants, metaAttribution, signupAttribution, purchaseAttributions, productEvents, helpCategories, helpArticles, blogPosts, blogComments, catalogTrails, catalogModules, catalogModuleVersions, catalogLessons, catalogLessonVideos, catalogRecipes, catalogRecipeWorkflows, roadmapItems, oauthClients, oauthGrants, oauthTokens, oauthDeviceCodes, memberDevices, cliRequests, leads, moduleDownloads, impersonationSessions, meetings, meetingLinks, meetingRegistrations, newsletterSends, aiSpend, announcementDismissals, catalogRecipeModules, newsletterDeliveries, roadmapVotes, lessonProgress } from "./schema";
+import { usersInAuth, profiles, organizations, memberships, auditEvents, consentTerms, consentAcceptances, accessEvents, platformSettings, notifications, announcements, onboardingState, subscriptions, plans, coupons, billingOperations, subscriptionModules, modules, invoices, entitlementGrants, metaAttribution, signupAttribution, purchaseAttributions, productEvents, helpCategories, helpArticles, blogPosts, blogComments, catalogTrails, catalogModules, catalogStoreCategories, catalogModuleVersions, catalogLessons, catalogLessonVideos, catalogRecipes, catalogRecipeWorkflows, roadmapItems, oauthClients, oauthGrants, oauthTokens, oauthDeviceCodes, memberDevices, cliRequests, leads, moduleDownloads, impersonationSessions, meetings, meetingLinks, meetingRegistrations, newsletterSends, aiSpend, announcementDismissals, catalogRecipeModules, newsletterDeliveries, roadmapVotes, lessonProgress } from "./schema";
 
 export const profilesRelations = relations(profiles, ({one, many}) => ({
 	usersInAuth: one(usersInAuth, {
@@ -347,6 +347,10 @@ export const catalogModulesRelations = relations(catalogModules, ({one, many}) =
 		fields: [catalogModules.createdBy],
 		references: [profiles.id]
 	}),
+	catalogStoreCategory: one(catalogStoreCategories, {
+		fields: [catalogModules.storeCategory],
+		references: [catalogStoreCategories.slug]
+	}),
 	catalogModuleVersions: many(catalogModuleVersions),
 	catalogLessons: many(catalogLessons),
 	roadmapItems: many(roadmapItems),
@@ -357,6 +361,10 @@ export const catalogModulesRelations = relations(catalogModules, ({one, many}) =
 export const catalogTrailsRelations = relations(catalogTrails, ({many}) => ({
 	catalogModules: many(catalogModules),
 	roadmapItems: many(roadmapItems),
+}));
+
+export const catalogStoreCategoriesRelations = relations(catalogStoreCategories, ({many}) => ({
+	catalogModules: many(catalogModules),
 }));
 
 export const catalogModuleVersionsRelations = relations(catalogModuleVersions, ({one, many}) => ({

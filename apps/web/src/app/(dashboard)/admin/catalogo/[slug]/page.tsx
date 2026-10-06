@@ -10,7 +10,7 @@ export default async function ModuleAdminPage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const state = await loadConsole(async ({ supabase }) => {
     const found = await loadModuleAdmin(supabase, slug);
-    return found ?? { module: null, lessons: [], trails: [] };
+    return found ?? { module: null, lessons: [], trails: [], storeCategories: [] };
   });
   return <ModuleAdminView state={state} slug={slug} />;
 }

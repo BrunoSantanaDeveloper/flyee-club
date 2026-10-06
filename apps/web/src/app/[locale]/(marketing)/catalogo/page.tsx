@@ -8,11 +8,11 @@ import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import StoreGrid from "@/components/marketing/store-grid";
 import TerminalFrame from "@/components/marketing/terminal-frame";
-import { trailTone } from "@/components/marketing/tone";
 import CatalogIcon from "@/components/product/catalog-icon";
 import NiPath from "@/icons/nexture/ni-path";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
+import { storeLook } from "@/lib/catalog/store-look";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { publicPageMetadata } from "@/lib/seo";
 
@@ -44,12 +44,13 @@ type App = PublicCatalog["modules"][number];
 
 /**
  * /catalogo (EN /catalog): the app store, read-only. One grid of every
- * published app, filtered by category (the trails) as docs/HOME-COPY.md lays
- * the store out; each card says what the app does, its current version and the
- * AIs it runs on, and leads to its page. Installing is a member action
- * (`npx flyee add`). Categories with nothing published yet are named, never
- * padded with placeholders. A store that could not be read says so instead of
- * looking empty.
+ * published app, filtered by store category, the kinds of work of the home
+ * brief (`catalog_store_categories`, migration 0029; the stages stay the
+ * catalog's taxonomy and name the module pages). Each card says what the app
+ * does, its current version and the AIs it runs on, and leads to its page.
+ * Installing is a member action (`npx flyee add`). Categories with nothing
+ * published yet are named, never padded with placeholders. A store that could
+ * not be read says so instead of looking empty.
  */
 export default async function CatalogPage() {
   const [t, locale, stage] = await Promise.all([getTranslations("marketing"), getLocale(), getLaunchStage()]);
@@ -85,27 +86,24 @@ export default async function CatalogPage() {
   }
 
   const { catalog } = result;
-  const trails = catalog.trails.map((trail, index) => ({ ...trail, tone: trailTone(trail.slug, index) }));
-  const trailOf = new Map(trails.map((trail) => [trail.slug, trail]));
-  const filled = trails.filter((trail) => catalog.modules.some((module) => module.trail === trail.slug));
-  const empty = trails.filter((trail) => !catalog.modules.some((module) => module.trail === trail.slug));
-  // The order of the store: by category, in the stage order of the trails.
-  const order = new Map(trails.map((trail, index) => [trail.slug, index]));
-  const apps = [...catalog.modules].sort((a, b) => (order.get(a.trail) ?? 99) - (order.get(b.trail) ?? 99));
+  const look = storeLook(catalog);
+  const apps = look.sort(catalog.modules);
+  const empty = look.emptyFor(apps);
   const example = apps.find((module) => module.latest) ?? null;
 
   const card = (app: App) => {
-    const trail = trailOf.get(app.trail);
+    const category = look.lookOf(app);
     const ais = app.compatible_ais.map((ai) => AI_NAME[ai] ?? t("catalog-ai-other"));
     const version = app.latest ? `v${app.latest.version}` : t("catalog-no-version");
     return (
       <RuledCard
         item={{
           icon: <CatalogIcon name={app.icon} size="medium" />,
-          tone: trail?.tone ?? "accent-1",
+          tone: category.tone,
           title: app.name ?? app.slug,
           body: app.summary ?? t(TYPE_KEY[app.type] ?? "catalog-type-tool"),
-          badge: app.is_free_sample ? t("catalog-free-sample") : (trail?.name ?? undefined),
+          // The category, never a "free" badge: the free rung is not advertised (docs/PRODUCT.md, 2026-10-06).
+          badge: category.name,
           meta: [version, ...ais].join(" · "),
           link: { label: t("catalog-module-link"), href: `/catalogo/${app.slug}` },
         }}
@@ -150,20 +148,15 @@ export default async function CatalogPage() {
 
       <Section background="paper" spacing="compact">
         <StoreGrid
-          label={t("catalog-trails-label")}
+          label={t("catalog-categories-label")}
           allLabel={t("catalog-all")}
           columns={3}
-          categories={filled.map((trail) => ({
-            slug: trail.slug,
-            label: trail.name ?? trail.slug,
-            tone: trail.tone,
-            description: trail.description,
-          }))}
-          items={apps.map((app) => ({ key: app.slug, category: app.trail, card: card(app) }))}
+          categories={look.chipsFor(apps)}
+          items={apps.map((app) => ({ key: app.slug, category: app.storeCategory, card: card(app) }))}
         />
         {empty.length > 0 ? (
           <p className="text-text-secondary mt-10 mb-0 text-center text-base leading-7">
-            {t("catalog-empty-trails", { trails: empty.map((trail) => trail.name ?? trail.slug).join(", ") })}{" "}
+            {t("catalog-empty-categories", { categories: empty.map((category) => category.name).join(", ") })}{" "}
             {t("catalog-roadmap-note")}
           </p>
         ) : null}

@@ -24,7 +24,7 @@ import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import StoreGrid from "@/components/marketing/store-grid";
 import TerminalFrame from "@/components/marketing/terminal-frame";
-import { TONE, type Tone, trailTone } from "@/components/marketing/tone";
+import { TONE } from "@/components/marketing/tone";
 import CatalogIcon from "@/components/product/catalog-icon";
 import { COOKIE_KEYS } from "@/constants";
 import NiAi from "@/icons/nexture/ni-ai";
@@ -40,6 +40,7 @@ import NiServer from "@/icons/nexture/ni-server";
 import { resolveCurrency } from "@/lib/billing-currency";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
+import { storeLook } from "@/lib/catalog/store-look";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
 import { publicPageMetadata } from "@/lib/seo";
@@ -117,14 +118,9 @@ export default async function Home() {
   const date = (iso: string | null | undefined) =>
     iso ? new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long" }) : "";
 
-  const trails = new Map<string, { name: string; tone: Tone }>(
-    (catalog?.trails ?? []).map((trail, index) => [
-      trail.slug,
-      { name: trail.name ?? trail.slug, tone: trailTone(trail.slug, index) },
-    ]),
-  );
-  const categories = (catalog?.trails ?? []).filter((trail) => apps.some((app) => app.trail === trail.slug));
-  const trailOf = (app: App) => trails.get(app.trail) ?? { name: app.trail, tone: "accent-1" as Tone };
+  // The store filters by store category (migration 0029); an app without one shows its stage.
+  const look = storeLook(catalog ?? { trails: [], storeCategories: [] });
+  const trailOf = (app: App) => look.lookOf(app);
 
   const heroMedia =
     catalog && apps.length > 0 ? (
@@ -135,7 +131,7 @@ export default async function Home() {
               label={copy.hero.store.label}
               allLabel={copy.hero.store.allLabel}
               installLabel={copy.hero.store.installLabel}
-              categories={categories.map((trail) => trail.name ?? trail.slug)}
+              categories={look.chipsFor(apps).map((chip) => chip.label)}
               apps={apps.slice(0, 8).map((app) => ({
                 slug: app.slug,
                 name: app.name ?? app.slug,
@@ -221,13 +217,7 @@ export default async function Home() {
   // The store grid of the home: every app but the featured one, up to fifteen
   // (the store page lists them all), filtered by the categories they are in.
   const storeApps = apps.filter((app) => app.slug !== featured?.slug).slice(0, 15);
-  const storeCategories = categories
-    .filter((trail) => storeApps.some((app) => app.trail === trail.slug))
-    .map((trail) => ({
-      slug: trail.slug,
-      label: trail.name ?? trail.slug,
-      tone: trails.get(trail.slug)?.tone ?? ("accent-1" as Tone),
-    }));
+  const storeCategories = look.chipsFor(storeApps);
 
   return (
     <>
@@ -310,7 +300,7 @@ export default async function Home() {
                 items={[
                   ...storeApps.map((app) => ({
                     key: app.slug,
-                    category: app.trail,
+                    category: app.storeCategory,
                     card: <RuledCard item={appCard(app)} />,
                   })),
                   {

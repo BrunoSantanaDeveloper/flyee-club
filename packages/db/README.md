@@ -37,6 +37,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0026_roadmap_proposals` | the custom app, the minimal honest way: a FlyeeClub Pro member proposes a roadmap item into a moderated queue (`submitted`, `propose_roadmap_item`, ceiling in `platform_settings.roadmap`), visible to the author and the operator only; `roadmap_month_leader(month)` names the open idea with the most votes cast in the month; `roadmap.proposed` joins the events and `custom_app` the offers. |
 | `0027_legal_texts_v3` | version 3 of the privacy and cookie policies, built from version 2 by checked replacements: the cookie policy names the segment cookie and the click measurement, the privacy policy names the platform FlyeeClub; no consent change. |
 | `0028_segments_from_the_site` | the segments are the public site's personas: `member_segment` renamed to `negocio`, `agencia`, `produto`, `dev`, `outro`; the rows of the retired `profissional_ia` become `outro` before its slot takes the name `negocio`, and the daily rollup (segment as text) is summed into `outro` and renamed. |
+| `0029_store_categories` | two layers in the catalog: `catalog_store_categories` (the kinds of work the public store filters by, seeded with the home brief's Vender, Divulgar, Vídeo, Pesquisa, Construir; public read, operator write) and an optional `catalog_modules.store_category` (on delete set null); the stages stay the catalog's taxonomy. |
 
 ## Conventions every migration follows
 

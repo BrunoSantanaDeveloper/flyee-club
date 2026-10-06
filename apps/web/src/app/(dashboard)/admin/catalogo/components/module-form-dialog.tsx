@@ -10,7 +10,7 @@ import CatalogIcon from "@/components/product/catalog-icon";
 import DialogHeader from "@/components/product/dialog-header";
 import NiBinEmpty from "@/icons/nexture/ni-bin-empty";
 import NiPlus from "@/icons/nexture/ni-plus";
-import type { AdminModule, AdminTrail, Credential } from "@/lib/admin/catalog";
+import type { AdminModule, AdminStoreCategory, AdminTrail, Credential } from "@/lib/admin/catalog";
 import { textOf } from "@/lib/admin/catalog";
 import { AI_TOOL_LABEL, MODULE_TYPE_LABEL } from "@/lib/admin/labels";
 
@@ -24,6 +24,7 @@ function initialForm(module: AdminModule | null, trails: AdminTrail[]): ModuleIn
     id: module?.id ?? null,
     slug: module?.slug ?? "",
     trail: module?.trail ?? trails[0]?.slug ?? "planejar",
+    storeCategory: module?.storeCategory ?? null,
     type: module?.type ?? "skill",
     icon: module?.icon ?? "",
     name: module?.name ?? {},
@@ -46,11 +47,13 @@ function initialForm(module: AdminModule | null, trails: AdminTrail[]): ModuleIn
 export default function ModuleFormDialog({
   module,
   trails,
+  storeCategories,
   onClose,
   onSaved,
 }: {
   module: AdminModule | null;
   trails: AdminTrail[];
+  storeCategories: AdminStoreCategory[];
   onClose: () => void;
   onSaved: (saved: { id: string; slug: string }) => void;
 }) {
@@ -116,6 +119,18 @@ export default function ModuleFormDialog({
               value={form.type}
               options={TYPE_OPTIONS}
               onChange={(value) => set("type", value)}
+            />
+            <SelectInput
+              label="Categoria da loja"
+              value={form.storeCategory ?? ""}
+              options={[
+                { value: "", label: "Sem categoria (aparece só em Todos)" },
+                ...storeCategories.map((category) => ({
+                  value: category.slug,
+                  label: textOf(category.name, category.slug),
+                })),
+              ]}
+              onChange={(value) => set("storeCategory", value || null)}
             />
           </Box>
 

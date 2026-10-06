@@ -158,11 +158,6 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
               <li className={cn("text-text-primary rounded-full px-3 py-1 text-sm font-semibold", tone.softBg)}>
                 {t(TYPE_KEY[module.type] ?? "catalog-type-tool")}
               </li>
-              {module.is_free_sample ? (
-                <li className="bg-grey-50 text-text-primary rounded-full px-3 py-1 text-sm font-semibold">
-                  {t("catalog-free-sample")}
-                </li>
-              ) : null}
               {module.compatible_ais.map((ai) => (
                 <li
                   key={ai}
@@ -173,7 +168,8 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
               ))}
             </ul>
             <p className="text-text-secondary m-0 text-sm leading-6">
-              {t(module.is_free_sample ? "module-access-free" : "module-access-plan")}{" "}
+              {/* What installs it, never "free": the free rung is not advertised (docs/PRODUCT.md, 2026-10-06). */}
+              {t("module-access-plan")}{" "}
               <LocaleLink href="/planos" className="text-text-primary font-semibold underline">
                 {t("module-access-link")}
               </LocaleLink>

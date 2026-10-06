@@ -66,6 +66,8 @@ export type ModuleInput = {
   id?: string | null;
   slug: string;
   trail: string;
+  /** The store category (migration 0029); null lists the app only under "Todos". */
+  storeCategory: string | null;
   type: string;
   icon: string;
   name: Localized;
@@ -118,6 +120,7 @@ export async function saveModule(input: ModuleInput): Promise<CatalogActionResul
   const row = {
     slug,
     trail: input.trail,
+    store_category: input.storeCategory || null,
     type: input.type,
     icon: icon || null,
     name,
@@ -505,6 +508,76 @@ export async function saveTrail(input: TrailInput): Promise<CatalogActionResult>
   await recordAudit(session.supabase, "admin.catalog.trail.updated", {
     entityType: "catalog_trail",
     entityId: input.slug,
+  });
+  refresh();
+  return { ok: true, data: null };
+}
+
+// ---------- Store categories ----------
+
+export type StoreCategoryInput = { slug: string; name: Localized; sort: number; isNew: boolean };
+
+const CATEGORY_SLUG = /^[a-z][a-z0-9-]{1,30}$/;
+
+/**
+ * Creates or edits a kind of work the public store filters by (migration
+ * 0029). The slug is fixed once created (links and events carry it); the
+ * names and the order change freely.
+ */
+export async function saveStoreCategory(input: StoreCategoryInput): Promise<CatalogActionResult> {
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: dbMessage("", "42501") };
+  const slug = cleanText(input.slug, 31).toLowerCase();
+  if (!CATEGORY_SLUG.test(slug)) {
+    return { ok: false, error: "O identificador usa letras minúsculas, números e hífens, começando por uma letra." };
+  }
+  const name = localized(input.name, 40, true);
+  if (!name) return { ok: false, error: "Dê um nome em português." };
+  const sort = Number.isFinite(input.sort) ? Math.round(input.sort) : 0;
+
+  if (input.isNew) {
+    const { error } = await session.supabase.from("catalog_store_categories").insert({ slug, name, sort });
+    if (error) return { ok: false, error: dbMessage(error.message, error.code) };
+    await recordAudit(session.supabase, "admin.catalog.store_category.created", {
+      entityType: "catalog_store_category",
+      entityId: slug,
+    });
+  } else {
+    const { data, error } = await session.supabase
+      .from("catalog_store_categories")
+      .update({ name, sort })
+      .eq("slug", slug)
+      .select("slug")
+      .maybeSingle();
+    if (error) return { ok: false, error: dbMessage(error.message, error.code) };
+    if (!data) return { ok: false, error: "Esta categoria não existe mais. Recarregue a página." };
+    await recordAudit(session.supabase, "admin.catalog.store_category.updated", {
+      entityType: "catalog_store_category",
+      entityId: slug,
+    });
+  }
+  refresh();
+  return { ok: true, data: null };
+}
+
+/** Only a category no app is in is deleted: moving the apps first is a choice the operator makes, not a side effect. */
+export async function deleteStoreCategory(slug: string): Promise<CatalogActionResult> {
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: dbMessage("", "42501") };
+  if (!CATEGORY_SLUG.test(slug)) return { ok: false, error: "Categoria inválida." };
+  const { count, error: countError } = await session.supabase
+    .from("catalog_modules")
+    .select("id", { count: "exact", head: true })
+    .eq("store_category", slug);
+  if (countError) return { ok: false, error: dbMessage(countError.message, countError.code) };
+  if ((count ?? 0) > 0) {
+    return { ok: false, error: "Há ferramentas nesta categoria. Mude a categoria delas antes de excluir." };
+  }
+  const { error } = await session.supabase.from("catalog_store_categories").delete().eq("slug", slug);
+  if (error) return { ok: false, error: dbMessage(error.message, error.code) };
+  await recordAudit(session.supabase, "admin.catalog.store_category.deleted", {
+    entityType: "catalog_store_category",
+    entityId: slug,
   });
   refresh();
   return { ok: true, data: null };

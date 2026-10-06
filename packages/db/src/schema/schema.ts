@@ -930,8 +930,10 @@ export const catalogModules = pgTable("catalog_modules", {
 	createdBy: uuid("created_by"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	storeCategory: text("store_category"),
 }, (table) => [
-	index("catalog_modules_trail_idx").using("btree", table.trail.asc().nullsLast().op("int4_ops"), table.sort.asc().nullsLast().op("int4_ops")).where(sql`(status = 'published'::text)`),
+	index("catalog_modules_store_category_idx").using("btree", table.storeCategory.asc().nullsLast().op("text_ops")).where(sql`(store_category IS NOT NULL)`),
+	index("catalog_modules_trail_idx").using("btree", table.trail.asc().nullsLast().op("text_ops"), table.sort.asc().nullsLast().op("text_ops")).where(sql`(status = 'published'::text)`),
 	foreignKey({
 			columns: [table.trail],
 			foreignColumns: [catalogTrails.slug],
@@ -942,6 +944,11 @@ export const catalogModules = pgTable("catalog_modules", {
 			foreignColumns: [profiles.id],
 			name: "catalog_modules_created_by_fkey"
 		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.storeCategory],
+			foreignColumns: [catalogStoreCategories.slug],
+			name: "catalog_modules_store_category_fkey"
+		}).onUpdate("cascade").onDelete("set null"),
 	unique("catalog_modules_slug_key").on(table.slug),
 	pgPolicy("catalog_modules_select_published", { as: "permissive", for: "select", to: ["anon", "authenticated"], using: sql`(status = 'published'::text)` }),
 	pgPolicy("catalog_modules_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"] }),
@@ -1612,6 +1619,19 @@ export const aiSpend = pgTable("ai_spend", {
 	check("ai_spend_tokens_out_check", sql`tokens_out >= 0`),
 	check("ai_spend_feature_check", sql`feature = ANY (ARRAY['insights'::text, 'other'::text])`),
 	check("ai_spend_tokens_in_check", sql`tokens_in >= 0`),
+]);
+
+export const catalogStoreCategories = pgTable("catalog_store_categories", {
+	slug: text().primaryKey().notNull(),
+	name: jsonb().notNull(),
+	sort: integer().default(0).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	pgPolicy("catalog_store_categories_select", { as: "permissive", for: "select", to: ["anon", "authenticated"], using: sql`true` }),
+	pgPolicy("catalog_store_categories_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"] }),
+	check("catalog_store_categories_slug_check", sql`slug ~ '^[a-z][a-z0-9-]{1,30}$'::text`),
+	check("catalog_store_categories_name_check", sql`CHECK (i18n_ok(name, true`),
 ]);
 
 export const announcementDismissals = pgTable("announcement_dismissals", {

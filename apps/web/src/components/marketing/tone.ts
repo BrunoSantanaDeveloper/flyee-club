@@ -43,3 +43,20 @@ export const TRAIL_TONE: Record<string, Tone> = {
 };
 
 export const trailTone = (slug: string, index: number): Tone => TRAIL_TONE[slug] ?? toneAt(index);
+
+/**
+ * The store categories (`catalog_store_categories`, migration 0029) keep one
+ * hue each in the public store. A category named like a stage keeps that
+ * stage's hue (Vender accent-4, Divulgar accent-1, Construir accent-2); Vídeo
+ * and Pesquisa take the two the stages leave freest. A category the operator
+ * creates later falls back to the rotation.
+ */
+export const STORE_CATEGORY_TONE: Record<string, Tone> = {
+  sell: "accent-4",
+  promote: "accent-1",
+  video: "secondary",
+  research: "accent-3",
+  build: "accent-2",
+};
+
+export const storeCategoryTone = (slug: string, index: number): Tone => STORE_CATEGORY_TONE[slug] ?? toneAt(index);
