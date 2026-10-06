@@ -52,8 +52,12 @@ back:
 
 `CONSENT_VERSION` is **4** since the member area joined (2026-10-01); the
 privacy policy and the cookie policy went to **version 2** in the same change
-(migration `0022_tracking_terms`), and those are the texts `/legal/privacidade`
-and `/legal/cookies` render.
+(migration `0022_tracking_terms`). **Version 3** (migration `0027_legal_texts_v3`,
+2026-10-06) adds the segment cookie and the click measurement to the cookie
+policy and the name FlyeeClub to the privacy policy; nothing in it needs
+consent, so `CONSENT_VERSION` stays at 4. Version 3 is what `/legal/privacidade`
+and `/legal/cookies` render. A new cookie or a new kind of measurement is a new
+version of the cookie policy, in the same change.
 
 ### Server-side conversions and the opt-out
 
