@@ -29,6 +29,7 @@ import { formatNumber } from "@/lib/admin/format";
 import { labelOf, ROADMAP_STATUS_LABEL } from "@/lib/admin/labels";
 import {
   type AdminRoadmapItem,
+  type AdminRoadmapLeader,
   ROADMAP_STATUSES,
   type RoadmapModuleOption,
   type RoadmapStatus,
@@ -39,12 +40,21 @@ export type RoadmapAdminState = ConsoleState<{
   items: AdminRoadmapItem[];
   modules: RoadmapModuleOption[];
   trails: { slug: string; name: Localized }[];
+  leaders: { current: AdminRoadmapLeader | null; previous: AdminRoadmapLeader | null };
 }>;
+
+/** A date, not an instant: parsed by its parts so the month never shifts with the zone. */
+const monthName = (monthStart: string) => {
+  const [year, month] = monthStart.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date(year, month - 1, 1));
+};
+const dayLabel = (value: string) => new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(new Date(value));
 
 const CRUMBS = [{ label: "Início", href: "/inicio" }, { label: "Admin", href: "/admin" }, { label: "Roadmap" }];
 
 /** The next step of an open item, the one button each card offers. */
 const NEXT: Partial<Record<RoadmapStatus, { status: RoadmapStatus; label: string }>> = {
+  submitted: { status: "proposed", label: "Abrir para votos" },
   proposed: { status: "planned", label: "Planejar" },
   planned: { status: "building", label: "Começar a construir" },
 };
@@ -165,9 +175,11 @@ function ItemDialog({
 }
 
 /**
- * What the club builds next, as members voted. The operator comes to read the
- * demand (votes), move ideas along, and close the loop when an idea ships or is
- * declined: members see each of those states on their own roadmap.
+ * What the club builds next, as members voted. The operator comes to review
+ * what members proposed (open it for votes or decline it), read the demand
+ * (votes), plan the month's most voted idea, move ideas along, and close the
+ * loop when an idea ships or is declined: members see each of those states on
+ * their own roadmap.
  */
 export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }) {
   const router = useRouter();
@@ -179,7 +191,7 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
     <PageHeader
       title="Roadmap"
       crumbs={CRUMBS}
-      description="As ideias do que construir, com os votos dos assinantes. Mover um item muda o que os integrantes veem no roadmap deles."
+      description="As ideias do que construir, com os votos dos assinantes. As propostas dos integrantes chegam em análise: abra para votos ou recuse. Mover um item muda o que os integrantes veem no roadmap deles."
       action={
         state.kind === "ready" ? (
           <Button variant="contained" startIcon={<NiPlus size="medium" />} onClick={() => setEditing("new")}>
@@ -231,10 +243,53 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
   };
   const trailName = (slug: string | null) =>
     slug ? textOf(state.trails.find((trail) => trail.slug === slug)?.name, slug) : null;
+  const leaders = [
+    { label: "Mês passado", leader: state.leaders.previous },
+    { label: "Este mês", leader: state.leaders.current },
+  ].filter((entry): entry is { label: string; leader: AdminRoadmapLeader } => entry.leader !== null);
 
   return (
     <Grid container spacing={5}>
       <Grid size={12}>{header}</Grid>
+      {leaders.length > 0 ? (
+        <Grid size={12}>
+          <Card component="section" aria-labelledby="roadmap-leaders-title">
+            <CardContent className="flex flex-col gap-2">
+              <Typography id="roadmap-leaders-title" variant="subtitle1" component="h2" className="mb-0">
+                Mais votado do mês
+              </Typography>
+              <Typography variant="body2" className="text-text-secondary">
+                O mais votado de cada mês entra em produção: na virada do mês, planeje o líder do mês anterior. Conta os
+                votos dados no mês, entre as ideias abertas.
+              </Typography>
+              {leaders.map(({ label, leader }) => {
+                const item = state.items.find((entry) => entry.id === leader.itemId);
+                return (
+                  <Box key={leader.monthStart} className="flex flex-row flex-wrap items-center gap-2">
+                    <Typography variant="body2">
+                      {label} ({monthName(leader.monthStart)}): “{textOf(leader.title)}”,{" "}
+                      {formatNumber(leader.votesInMonth)} {leader.votesInMonth === 1 ? "voto" : "votos"} no mês,{" "}
+                      {formatNumber(leader.votesTotal)} no total.
+                    </Typography>
+                    {item && item.status === "proposed" ? (
+                      <Button
+                        variant="outlined"
+                        color="grey"
+                        size="small"
+                        onClick={() =>
+                          run(() => setRoadmapStatus(item.id, "planned"), `“${textOf(item.title)}”: planejado.`)
+                        }
+                      >
+                        Planejar
+                      </Button>
+                    ) : null}
+                  </Box>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </Grid>
+      ) : null}
       <Grid size={12}>
         {state.items.length === 0 ? (
           <EmptyState
@@ -244,7 +299,7 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
             action={{ label: "Propor a primeira ideia", onClick: () => setEditing("new") }}
           />
         ) : (
-          <Box className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-5">
+          <Box className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-6">
             {ROADMAP_STATUSES.map((status) => {
               const items = state.items.filter((item) => item.status === status);
               return (
@@ -280,6 +335,12 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
                               {formatNumber(item.votes)} {item.votes === 1 ? "voto" : "votos"}
                               {trailName(item.trail) ? ` · ${trailName(item.trail)}` : ""}
                             </Typography>
+                            {item.proposedBy ? (
+                              <Typography variant="body2" className="text-text-secondary">
+                                Proposta de {item.proposedBy.name}
+                                {item.submittedAt ? ` em ${dayLabel(item.submittedAt)}` : ""}
+                              </Typography>
+                            ) : null}
                             {item.status === "shipped" ? (
                               <Typography variant="body2" className="text-text-secondary">
                                 {moduleName(item.shippedModuleId)
@@ -306,7 +367,22 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
                                   {next.label}
                                 </Button>
                               ) : null}
-                              {item.votes === 0 && item.status !== "shipped" ? (
+                              {item.status === "submitted" ? (
+                                <Button
+                                  variant="text"
+                                  color="error"
+                                  size="small"
+                                  onClick={() =>
+                                    run(
+                                      () => setRoadmapStatus(item.id, "declined"),
+                                      "Proposta recusada: quem propôs vê o desfecho.",
+                                    )
+                                  }
+                                >
+                                  Recusar
+                                </Button>
+                              ) : null}
+                              {item.votes === 0 && item.status !== "shipped" && !item.proposedBy ? (
                                 <Button
                                   variant="text"
                                   color="error"

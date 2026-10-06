@@ -255,7 +255,7 @@ export default function HomeView({ state }: { state: HomeState }) {
           </Box>
           <Grid container spacing={4}>
             {state.services.map((service) => (
-              <Grid key={service.offer} size={{ xs: 12, lg: 6 }}>
+              <Grid key={service.offer} size={{ xs: 12, lg: 4 }}>
                 <UpsellCard
                   offer={service.offer}
                   origin="home"

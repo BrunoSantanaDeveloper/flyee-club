@@ -94,6 +94,41 @@ export async function withdrawRoadmapVote(itemId: string): Promise<MemberActionR
   return result;
 }
 
+export type ProposeResult = { ok: true; id: string } | { ok: false; code: string; max?: number };
+
+/**
+ * A proposal into the moderated queue (`propose_roadmap_item`, migration
+ * 0026). The function re-checks the right, the trail and the ceiling of
+ * proposals under review; the answer carries that ceiling so the screen can
+ * say it in words.
+ */
+export async function proposeRoadmapItem(input: {
+  title: string;
+  description: string;
+  trail: string | null;
+  locale: string;
+}): Promise<ProposeResult> {
+  const title = input.title.trim().slice(0, 120);
+  const description = input.description.trim().slice(0, 1000);
+  if (title.length < 4) return { ok: false, code: "invalid_title" };
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("propose_roadmap_item", {
+      target_title: title,
+      target_description: description || null,
+      target_trail: input.trail || null,
+      target_locale: input.locale === "en" ? "en" : "pt-BR",
+    });
+    if (error) return { ok: false, code: error.code === "42501" ? "not_authenticated" : "failed" };
+    const result = (data ?? {}) as { ok?: boolean; code?: string; id?: string; max?: number };
+    if (result.ok === false || !result.id) return { ok: false, code: result.code ?? "failed", max: result.max };
+    revalidatePath("/roadmap");
+    return { ok: true, id: result.id };
+  } catch {
+    return { ok: false, code: "failed" };
+  }
+}
+
 /** Disconnects one machine and every token of its chain (`device.revoked`). */
 export async function revokeDevice(deviceRowId: string): Promise<MemberActionResult> {
   if (!UUID.test(deviceRowId)) return { ok: false, code: "invalid" };

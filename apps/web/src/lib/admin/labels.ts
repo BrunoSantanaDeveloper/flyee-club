@@ -87,6 +87,7 @@ export const PERMISSION_KIND_LABEL: Record<string, string> = {
 };
 
 export const ROADMAP_STATUS_LABEL: Record<string, string> = {
+  submitted: "em análise",
   proposed: "proposto",
   planned: "planejado",
   building: "em construção",

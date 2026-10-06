@@ -1048,43 +1048,6 @@ export const catalogLessonVideos = pgTable("catalog_lesson_videos", {
 	check("catalog_lesson_videos_youtube_id_check", sql`youtube_id ~ '^[A-Za-z0-9_-]{6,20}$'::text`),
 ]);
 
-export const roadmapItems = pgTable("roadmap_items", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	title: jsonb().notNull(),
-	description: jsonb().default({}).notNull(),
-	trail: text(),
-	status: text().default('proposed').notNull(),
-	votesCount: integer("votes_count").default(0).notNull(),
-	shippedModuleId: uuid("shipped_module_id"),
-	sort: integer().default(0).notNull(),
-	createdBy: uuid("created_by"),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-}, (table) => [
-	index("roadmap_items_status_idx").using("btree", table.status.asc().nullsLast().op("int4_ops"), table.votesCount.desc().nullsFirst().op("int4_ops")),
-	foreignKey({
-			columns: [table.trail],
-			foreignColumns: [catalogTrails.slug],
-			name: "roadmap_items_trail_fkey"
-		}).onUpdate("cascade"),
-	foreignKey({
-			columns: [table.shippedModuleId],
-			foreignColumns: [catalogModules.id],
-			name: "roadmap_items_shipped_module_id_fkey"
-		}).onDelete("set null"),
-	foreignKey({
-			columns: [table.createdBy],
-			foreignColumns: [profiles.id],
-			name: "roadmap_items_created_by_fkey"
-		}).onDelete("set null"),
-	pgPolicy("roadmap_items_select_member", { as: "permissive", for: "select", to: ["authenticated"], using: sql`true` }),
-	pgPolicy("roadmap_items_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"] }),
-	check("roadmap_items_title_check", sql`CHECK (i18n_ok(title, true`),
-	check("roadmap_items_description_check", sql`CHECK (i18n_ok(description`),
-	check("roadmap_items_status_check", sql`status = ANY (ARRAY['proposed'::text, 'planned'::text, 'building'::text, 'shipped'::text, 'declined'::text])`),
-	check("roadmap_items_votes_count_check", sql`votes_count >= 0`),
-]);
-
 export const catalogRecipes = pgTable("catalog_recipes", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	slug: text().notNull(),
@@ -1140,6 +1103,51 @@ export const oauthClients = pgTable("oauth_clients", {
 	unique("oauth_clients_client_id_key").on(table.clientId),
 	pgPolicy("oauth_clients_select_superadmin", { as: "permissive", for: "select", to: ["authenticated"], using: sql`is_superadmin()` }),
 	check("oauth_clients_token_endpoint_auth_method_check", sql`token_endpoint_auth_method = ANY (ARRAY['none'::text, 'client_secret_post'::text, 'client_secret_basic'::text])`),
+]);
+
+export const roadmapItems = pgTable("roadmap_items", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	title: jsonb().notNull(),
+	description: jsonb().default({}).notNull(),
+	trail: text(),
+	status: text().default('proposed').notNull(),
+	votesCount: integer("votes_count").default(0).notNull(),
+	shippedModuleId: uuid("shipped_module_id"),
+	sort: integer().default(0).notNull(),
+	createdBy: uuid("created_by"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	proposedBy: uuid("proposed_by"),
+	submittedAt: timestamp("submitted_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+	index("roadmap_items_proposed_by_idx").using("btree", table.proposedBy.asc().nullsLast().op("uuid_ops")).where(sql`(proposed_by IS NOT NULL)`),
+	index("roadmap_items_status_idx").using("btree", table.status.asc().nullsLast().op("int4_ops"), table.votesCount.desc().nullsFirst().op("int4_ops")),
+	foreignKey({
+			columns: [table.trail],
+			foreignColumns: [catalogTrails.slug],
+			name: "roadmap_items_trail_fkey"
+		}).onUpdate("cascade"),
+	foreignKey({
+			columns: [table.shippedModuleId],
+			foreignColumns: [catalogModules.id],
+			name: "roadmap_items_shipped_module_id_fkey"
+		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [profiles.id],
+			name: "roadmap_items_created_by_fkey"
+		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.proposedBy],
+			foreignColumns: [profiles.id],
+			name: "roadmap_items_proposed_by_fkey"
+		}).onDelete("set null"),
+	pgPolicy("roadmap_items_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"], using: sql`is_superadmin()`, withCheck: sql`is_superadmin()`  }),
+	pgPolicy("roadmap_items_select_member", { as: "permissive", for: "select", to: ["authenticated"] }),
+	check("roadmap_items_title_check", sql`CHECK (i18n_ok(title, true`),
+	check("roadmap_items_description_check", sql`CHECK (i18n_ok(description`),
+	check("roadmap_items_votes_count_check", sql`votes_count >= 0`),
+	check("roadmap_items_status_check", sql`status = ANY (ARRAY['submitted'::text, 'proposed'::text, 'planned'::text, 'building'::text, 'shipped'::text, 'declined'::text])`),
 ]);
 
 export const oauthGrants = pgTable("oauth_grants", {

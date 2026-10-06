@@ -12,15 +12,17 @@ import type { Tier } from "@flyee/billing/entitlements";
  *    recipes, meetings) lands on apps already used broadly;
  *  - FlyeeClub Pro (and the retired Pro) → no plan above it.
  *
- * The services sold on demand (mentoring, consulting) are not plans: every
- * paying member sees them, and their card leads to the contact form.
+ * The services sold on demand (the custom app, mentoring, consulting) are
+ * not plans: every paying member sees them, and their card leads to the
+ * contact form. The custom app also has the proposal route on the roadmap
+ * for FlyeeClub Pro members (migration 0026).
  */
 
 export type UpsellOffer = "kit" | "club";
 
 export type UpsellReason = "no_access" | "broad_use" | "member";
 
-export type ServiceOffer = "mentoring" | "consulting";
+export type ServiceOffer = "custom_app" | "mentoring" | "consulting";
 
 export type UpsellFacts = {
   tier: Tier | null;
@@ -40,5 +42,5 @@ export function decideUpsell(facts: UpsellFacts): { offer: UpsellOffer; reason: 
 
 /** The services a member may book: every paid rung sees both; an account without a purchase is sold nothing on demand. */
 export function decideServiceOffers(tier: Tier | null): ServiceOffer[] {
-  return tier ? ["mentoring", "consulting"] : [];
+  return tier ? ["custom_app", "mentoring", "consulting"] : [];
 }

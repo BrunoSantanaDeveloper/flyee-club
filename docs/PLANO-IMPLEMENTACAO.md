@@ -24,6 +24,8 @@
 
 **Dois planos e o nome (2026-10-06, opção 1 do alinhamento com o brief).** A plataforma se chama FlyeeClub; o acesso é o plano "FlyeeClub", vendido por todo CTA ("Assinar FlyeeClub agora"), e a assinatura é o "FlyeeClub Pro", que herda a camada "abrir o capô"; o Pro de antes saiu da vitrine (migração `0025`, linhas inativas, sem apagar). A mentoria remota e a consultoria completa são ofertas sob demanda no painel de quem já paga, levando ao contato. Decisões em `docs/PRODUCT.md`, "O nome e a escada".
 
+**App sob medida (2026-10-06, opção 1).** No FlyeeClub Pro, o integrante propõe o app no roadmap (fila em análise, teto em `platform_settings.roadmap`), o operador abre para votos ou recusa, e o roadmap mostra o mais votado do mês, que o operador planeja na virada do mês (migração `0026`). Contratar direto é o formulário de contato (`?assunto=app`), sem cotação, pagamento ou acompanhamento no painel.
+
 ## Contexto
 
 A pasta `C:\AppsProjects\flyee-club` é uma cópia sem `.git` do repositório MedChina (prontuário clínico de MTC), derivado do template flyee. Ela vira a **plataforma** do flyee.club: contas, cobrança, emissão e revalidação de token, API de entrega de pacotes para a CLI, gestão de catálogo e releases, painel do integrante, consoles admin, analytics por segmento, lista de espera, site público bilíngue e legal. O **produto** (`npx flyee`, core do harness, conteúdo dos módulos) nasce depois em outro projeto e consome o contrato de API e o schema de manifesto definidos aqui. O harness de desenvolvimento do repositório (`.claude/*`, hooks, `scripts/sync-agent-harness.mjs`) fica como harness da plataforma; nada dele é distribuído.

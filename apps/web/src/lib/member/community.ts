@@ -61,7 +61,7 @@ export function splitMeetings(meetings: MemberMeeting[]): { upcoming: MemberMeet
   };
 }
 
-export type RoadmapStatus = "proposed" | "planned" | "building" | "shipped" | "declined";
+export type RoadmapStatus = "submitted" | "proposed" | "planned" | "building" | "shipped" | "declined";
 
 export type RoadmapItem = {
   id: string;
@@ -71,8 +71,15 @@ export type RoadmapItem = {
   status: RoadmapStatus;
   votes: number;
   voted: boolean;
+  /** Proposed by this member (migration 0026): followed under "your proposals" whatever its state. */
+  mine: boolean;
   shippedModule: { slug: string; name: string } | null;
 };
+
+export type RoadmapTrail = { slug: string; name: string };
+
+/** The open idea with the most votes cast in the month (`roadmap_month_leader`). */
+export type RoadmapLeader = { id: string; title: string; votesInMonth: number; monthStart: string };
 
 export async function loadRoadmap(
   supabase: SupabaseClient,
@@ -81,7 +88,7 @@ export async function loadRoadmap(
   const [{ data: items, error }, { data: votes }] = await Promise.all([
     supabase
       .from("roadmap_items")
-      .select("id, title, description, trail, status, votes_count, shipped_module_id, sort")
+      .select("id, title, description, trail, status, votes_count, shipped_module_id, sort, proposed_by")
       .order("sort", { ascending: true })
       .order("votes_count", { ascending: false }),
     supabase.from("roadmap_votes").select("item_id").eq("user_id", input.userId),
@@ -108,6 +115,43 @@ export async function loadRoadmap(
     status: row.status as RoadmapStatus,
     votes: Number(row.votes_count ?? 0),
     voted: voted.has(row.id as string),
+    mine: row.proposed_by === input.userId,
     shippedModule: row.shipped_module_id ? (moduleById.get(row.shipped_module_id as string) ?? null) : null,
   }));
+}
+
+/**
+ * What the roadmap needs besides the items: the trails a proposal may name,
+ * and the month's most voted idea. Neither failing blanks the page: the
+ * proposal form offers no trail, and the leader tile stays out.
+ */
+export async function loadRoadmapContext(
+  supabase: SupabaseClient,
+  input: { locale: CatalogLocale },
+): Promise<{ trails: RoadmapTrail[]; leader: RoadmapLeader | null }> {
+  const [{ data: trails }, { data: leader }] = await Promise.all([
+    supabase.from("catalog_trails").select("slug, name").order("sort"),
+    supabase.rpc("roadmap_month_leader"),
+  ]);
+  const raw = (leader ?? null) as {
+    item_id?: string;
+    title?: Record<string, string>;
+    votes_in_month?: number;
+    month_start?: string;
+  } | null;
+  return {
+    trails: ((trails ?? []) as { slug: string; name: Record<string, string> }[]).map((row) => ({
+      slug: row.slug,
+      name: localize(row.name, input.locale) ?? row.slug,
+    })),
+    leader:
+      raw?.item_id && raw.month_start
+        ? {
+            id: raw.item_id,
+            title: localize(raw.title ?? {}, input.locale) ?? "",
+            votesInMonth: Number(raw.votes_in_month ?? 0),
+            monthStart: raw.month_start,
+          }
+        : null,
+  };
 }

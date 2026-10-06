@@ -52,7 +52,7 @@ export const homeCopy: HomeCopy = {
     verified: "sha256 checksum verified",
     request: {
       title: "Request an app",
-      body: "Can't find it? On FlyeeClub Pro, you vote on the next app that joins the store.",
+      body: "Can't find it? On FlyeeClub Pro, you propose and vote on the next app that joins the store.",
       badge: "FlyeeClub Pro",
       link: "See what FlyeeClub Pro includes",
     },

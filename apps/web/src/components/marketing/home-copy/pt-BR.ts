@@ -67,7 +67,7 @@ export const homeCopyPtBR = {
     verified: "Checksum sha256 conferido",
     request: {
       title: "Pedir um app",
-      body: "Não achou? No FlyeeClub Pro, você vota no próximo app que entra na loja.",
+      body: "Não achou? No FlyeeClub Pro, você propõe e vota no próximo app que entra na loja.",
       badge: "FlyeeClub Pro",
       link: "Ver o que o FlyeeClub Pro inclui",
     },

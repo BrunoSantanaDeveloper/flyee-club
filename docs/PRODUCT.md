@@ -80,7 +80,8 @@ Registradas no alinhamento do repositório do produto com a plataforma. O que ca
 | --- | --- |
 | Nome | A plataforma se chama **FlyeeClub**. O domínio continua flyee.club e a CLI continua `npx flyee`. |
 | Dois planos | O acesso de pagamento único é o plano **"FlyeeClub"**, e é ele que todo CTA vende ("Assinar FlyeeClub agora"). A assinatura é o **"FlyeeClub Pro"**: guias avançados, receitas, encontros, voto, a camada "abrir o capô" (herdada do Pro) e 3 máquinas. O Pro de antes saiu da vitrine: linhas `pro-*` inativas, sem apagar (migração `0025`). |
-| Ofertas depois da compra | Quem tem o FlyeeClub recebe a oferta do FlyeeClub Pro no painel e na revalidação. A mentoria remota e a consultoria completa não são planos: são contratadas sob demanda, oferecidas no painel a quem já paga e pedidas pelo formulário de contato (`/contato?assunto=mentoria` ou `consultoria`). |
+| Ofertas depois da compra | Quem tem o FlyeeClub recebe a oferta do FlyeeClub Pro no painel e na revalidação. O app sob medida, a mentoria remota e a consultoria completa não são planos: são contratados sob demanda, oferecidos no painel a quem já paga e pedidos pelo formulário de contato (`/contato?assunto=app`, `mentoria` ou `consultoria`). |
+| App sob medida | Opção 1, o mínimo honesto (2026-10-06, migração `0026`): no FlyeeClub Pro, o integrante propõe o app no roadmap (`propose_roadmap_item`); a proposta fica em análise, visível só ao autor e ao operador, com teto de propostas em análise em `platform_settings.roadmap`; o console abre para votos ou recusa. O roadmap mostra o mais votado do mês (votos dados no mês entre as ideias abertas, `roadmap_month_leader`), que o operador planeja na virada do mês. Contratar direto é o formulário de contato, sem cotação na hora, pagamento ou acompanhamento no painel. A home diz só isso; o bloco "App sob medida" do brief perde a faixa de valor, o pagamento e o acompanhamento. |
 
 **O repositório do produto**
 

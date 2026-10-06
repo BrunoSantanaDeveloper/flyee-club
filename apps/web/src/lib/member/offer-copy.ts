@@ -32,8 +32,14 @@ export const REASON_COPY: Record<UpsellReason, string> = {
  */
 export const SERVICE_COPY: Record<
   ServiceOffer,
-  { title: string; body: string; subject: string; tone: "accent-3" | "accent-4" }
+  { title: string; body: string; subject: string; tone: "accent-1" | "accent-3" | "accent-4" }
 > = {
+  custom_app: {
+    title: "home-service-app-title",
+    body: "home-service-app-body",
+    subject: "app",
+    tone: "accent-1",
+  },
   mentoring: {
     title: "home-service-mentoring-title",
     body: "home-service-mentoring-body",

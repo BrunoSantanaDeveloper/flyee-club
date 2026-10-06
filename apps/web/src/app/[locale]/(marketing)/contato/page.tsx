@@ -27,12 +27,14 @@ export async function generateMetadata(): Promise<Metadata> {
  * The first entry comes from the closed state of `/fundadores`, which says
  * "fale com a gente" to someone who arrived after the seats ran out: landing
  * them on an empty form made them explain from scratch what they were
- * answering. The other two are the services sold on demand (mentoring,
- * consulting), offered in the member's home. Each value is a `marketing`
- * key, so the message opens in the language being read.
+ * answering. The others are the services sold on demand (a custom app,
+ * mentoring, consulting), offered in the member's home and on the roadmap.
+ * Each value is a `marketing` key, so the message opens in the language
+ * being read.
  */
 const SUBJECT_PREFILL: Record<string, string> = {
   fundadores: "contact-prefill-fundadores",
+  app: "contact-prefill-app",
   mentoria: "contact-prefill-mentoria",
   consultoria: "contact-prefill-consultoria",
 };

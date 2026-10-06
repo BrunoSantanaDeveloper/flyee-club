@@ -37,8 +37,8 @@ describe("decideUpsell — the next rung of the two-plan ladder", () => {
 describe("decideServiceOffers — services sold on demand, never as plans", () => {
   it("shows them to every paying member and to nobody without a purchase", () => {
     expect(decideServiceOffers(null)).toEqual([]);
-    expect(decideServiceOffers("kit")).toEqual(["mentoring", "consulting"]);
-    expect(decideServiceOffers("club")).toEqual(["mentoring", "consulting"]);
+    expect(decideServiceOffers("kit")).toEqual(["custom_app", "mentoring", "consulting"]);
+    expect(decideServiceOffers("club")).toEqual(["custom_app", "mentoring", "consulting"]);
   });
 });
 
