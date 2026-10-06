@@ -272,7 +272,7 @@
     "waitlist-faq-2-question": "When does FlyeeClub open?",
     "waitlist-faq-2-answer": "There is no date yet. Everyone on the list gets an email when the store opens.",
     "waitlist-faq-3-question": "What do I need to use it?",
-    "waitlist-faq-3-answer": "One of the supported AIs (Claude Code, Codex, Gemini CLI or Cursor) on your own plan, and a terminal: version 1 installs with the npx flyee command.",
+    "waitlist-faq-3-answer": "One of the supported AIs (Claude Code, Codex, Gemini CLI or Cursor) on your own plan, and a terminal: version 1 installs with the npx flyee command. Each app's page says which AIs it was tested on.",
     "waitlist-faq-4-question": "What do you do with my email?",
     "waitlist-faq-4-answer": "We send the confirmation, the opening notice and FlyeeClub news. We never sell or hand over your email, and unconfirmed addresses are deleted after 7 days.",
     "waitlist-cta-title": "Hear first when it opens",

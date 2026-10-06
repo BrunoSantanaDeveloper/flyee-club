@@ -122,7 +122,7 @@ export const homeCopy: HomeCopy = {
     requirements: [
       {
         title: "A terminal AI",
-        body: "Claude Code, Codex, Gemini CLI or Cursor, on your own plan or API key.",
+        body: "Claude Code, Codex, Gemini CLI or Cursor, on your own plan or API key. Each app's page says which ones it was tested on.",
       },
       {
         title: "A computer of your own",

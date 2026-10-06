@@ -136,7 +136,7 @@ export const homeCopyPtBR = {
     requirements: [
       {
         title: "Uma IA de terminal",
-        body: "Claude Code, Codex, Gemini CLI ou Cursor, com o seu plano ou a sua chave de API.",
+        body: "Claude Code, Codex, Gemini CLI ou Cursor, com o seu plano ou a sua chave de API. A página de cada app diz em quais ele foi testado.",
       },
       {
         title: "Um computador seu",
