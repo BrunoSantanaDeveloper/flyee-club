@@ -134,7 +134,7 @@
     "faq-1-question": "Quanto tempo dura o acesso?",
     "faq-1-answer": "Um ano a partir da confirmação do pagamento, em 1 computador, sem renovação automática. Você paga à vista ou parcelado no cartão, e parcelado continua sendo uma única compra. Depois do ano, você compra o acesso de novo para continuar recebendo atualizações e apps novos, e o novo prazo começa quando o atual termina. O que já está instalado continua funcionando. Para atualizar, o token precisa estar válido: ele é renovado a cada update e revalidado no painel quando você passa 30 dias sem atualizar.",
     "faq-2-question": "Qual é a diferença entre o FlyeeClub e o FlyeeClub Pro?",
-    "faq-2-answer": "O FlyeeClub entrega os apps e as atualizações por 1 ano. O FlyeeClub Pro soma a camada de profundidade: guias avançados, receitas, encontros ao vivo, voto no que entra na loja, a camada abrir o capô e até 3 computadores.",
+    "faq-2-answer": "O FlyeeClub entrega os apps e as atualizações por 1 ano. O FlyeeClub Pro soma a camada de profundidade: guias avançados, receitas, encontros ao vivo, voto no que entra na loja, a camada abrir o capô e mais computadores para a mesma pessoa.",
     "faq-3-question": "Preciso pagar crédito de IA?",
     "faq-3-answer": "Não. Os apps rodam na IA que você já usa (Claude Code, Codex, Gemini CLI ou Cursor), com o seu próprio plano ou API. O FlyeeClub não consome crédito de IA do seu lado.",
     "faq-4-question": "Posso cancelar o FlyeeClub Pro?",
@@ -624,7 +624,9 @@
     "module-guide-hood-title": "Guia abrir o capô",
     "module-guide-written": "texto com o passo a passo",
     "module-guide-video": "vídeo de {count} min",
-    "pricing-installments": "ou em até {count}x de {amount} no cartão"
+    "pricing-installments": "ou em até {count}x de {amount} no cartão",
+    "faq-5-question": "Tenho uma equipe. Como faço?",
+    "faq-5-answer": "Cada pessoa precisa do próprio FlyeeClub, porque cada acesso é de um usuário e não pode ser compartilhado. O FlyeeClub Pro libera mais computadores para a mesma pessoa, não mais pessoas. Para uma equipe, fale com a gente pela página de contato."
   },
   "product": {
     "security-title": "Segurança",

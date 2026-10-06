@@ -134,7 +134,7 @@
     "faq-1-question": "How long does access last?",
     "faq-1-answer": "One year from the confirmation of the payment, on 1 computer, with no automatic renewal. In reais you can pay at once or in card installments, and a split payment is still a single purchase. After the year, you buy the access again to keep getting updates and new apps, and the new term starts when the current one ends. What is already installed keeps working. To update, your token must be valid: every update renews it, and after 30 days without updating you revalidate it in the dashboard.",
     "faq-2-question": "What is the difference between FlyeeClub and FlyeeClub Pro?",
-    "faq-2-answer": "FlyeeClub delivers the apps and their updates for 1 year. FlyeeClub Pro adds the depth layer: advanced guides, recipes, live sessions, a vote on what joins the store, the under-the-hood layer and up to 3 computers.",
+    "faq-2-answer": "FlyeeClub delivers the apps and their updates for 1 year. FlyeeClub Pro adds the depth layer: advanced guides, recipes, live sessions, a vote on what joins the store, the under-the-hood layer and more computers for the same person.",
     "faq-3-question": "Do I pay for AI credits?",
     "faq-3-answer": "No. The apps run in the AI you already use (Claude Code, Codex, Gemini CLI or Cursor), on your own plan or API. FlyeeClub never spends AI credits on your side.",
     "faq-4-question": "Can I cancel FlyeeClub Pro?",
@@ -624,7 +624,9 @@
     "module-guide-hood-title": "Under-the-hood guide",
     "module-guide-written": "step-by-step text",
     "module-guide-video": "{count} min video",
-    "pricing-installments": "or up to {count} card installments of {amount}"
+    "pricing-installments": "or up to {count} card installments of {amount}",
+    "faq-5-question": "I have a team. What do I do?",
+    "faq-5-answer": "Each person needs their own FlyeeClub, because each access belongs to one user and cannot be shared. FlyeeClub Pro allows more computers for the same person, not more people. For a team, talk to us through the contact page."
   },
   "product": {
     "security-title": "Security",

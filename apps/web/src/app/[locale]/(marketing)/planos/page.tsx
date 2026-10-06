@@ -136,7 +136,7 @@ export default async function PricingPage({
       <Faq
         eyebrow={t("faq-eyebrow")}
         title={t("faq-title")}
-        items={[1, 2, 3, 4].map((index) => ({
+        items={[1, 2, 3, 4, 5].map((index) => ({
           question: t(`faq-${index}-question`),
           answer: t(`faq-${index}-answer`),
         }))}
