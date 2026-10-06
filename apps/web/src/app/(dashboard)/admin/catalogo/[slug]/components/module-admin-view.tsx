@@ -27,7 +27,7 @@ import {
   textOf,
 } from "@/lib/admin/catalog";
 import { formatNumber } from "@/lib/admin/format";
-import { AI_TOOL_LABEL, labelOf, MODULE_STATUS_LABEL, MODULE_TYPE_LABEL } from "@/lib/admin/labels";
+import { AI_TOOL_LABEL, labelOf, MODULE_STATUS_LABEL, MODULE_TYPE_LABEL, SEGMENT_LABEL } from "@/lib/admin/labels";
 import type { ConsoleState } from "@/lib/admin/session";
 
 export type ModuleAdminState = ConsoleState<{
@@ -176,7 +176,10 @@ export default function ModuleAdminView({ state, slug }: { state: ModuleAdminSta
             <Typography variant="body2" className="text-text-secondary">
               {module.slug} · {textOf(trail?.name, module.trail)} ·{" "}
               {storeCategory ? `loja: ${textOf(storeCategory.name, storeCategory.slug)}` : "sem categoria na loja"} ·{" "}
-              {labelOf(MODULE_TYPE_LABEL, module.type)}
+              {module.personas.length > 0
+                ? `começo para: ${module.personas.map((persona) => labelOf(SEGMENT_LABEL, persona)).join(", ")}`
+                : "sem perfil marcado"}{" "}
+              · {labelOf(MODULE_TYPE_LABEL, module.type)}
             </Typography>
             <Typography variant="body2" className="text-text-secondary">
               Funciona com{" "}

@@ -44,7 +44,11 @@ type SharedCatalog = Awaited<ReturnType<typeof loadCatalog>>;
 export type PublicStoreCategory = { slug: string; name: string };
 
 export type PublicCatalog = Omit<SharedCatalog, "modules"> & {
-  modules: (SharedCatalog["modules"][number] & { storeCategory: string | null })[];
+  modules: (SharedCatalog["modules"][number] & {
+    storeCategory: string | null;
+    /** The site personas the operator marked this app a good start for (migration 0032). */
+    personas: string[];
+  })[];
   storeCategories: PublicStoreCategory[];
   stats: CatalogStats;
 };
@@ -52,7 +56,7 @@ export type PublicCatalog = Omit<SharedCatalog, "modules"> & {
 export type PublicCatalogResult = { kind: "ready"; catalog: PublicCatalog } | { kind: "unavailable" };
 
 export type CatalogRows = {
-  modules: { id: string; slug: string; name: Localized; store_category?: string | null }[];
+  modules: { id: string; slug: string; name: Localized; store_category?: string | null; personas?: string[] | null }[];
   storeCategories: { slug: string; name: Localized; sort: number }[];
   versions: { module_id: string; published_at: string | null }[];
   recipes: { slug: string; name: Localized }[];
@@ -76,6 +80,7 @@ export function readableCatalog(catalog: SharedCatalog, rows: CatalogRows, local
     .at(-1);
 
   const categoryOf = new Map(rows.modules.map((row) => [row.slug, row.store_category ?? null]));
+  const personasOf = new Map(rows.modules.map((row) => [row.slug, row.personas ?? []]));
   const storeCategories = [...rows.storeCategories]
     .sort((a, b) => a.sort - b.sort)
     .map((row) => ({
@@ -87,7 +92,11 @@ export function readableCatalog(catalog: SharedCatalog, rows: CatalogRows, local
     ...catalog,
     modules: catalog.modules
       .filter((module) => readableSlugs.has(module.slug))
-      .map((module) => ({ ...module, storeCategory: categoryOf.get(module.slug) ?? null })),
+      .map((module) => ({
+        ...module,
+        storeCategory: categoryOf.get(module.slug) ?? null,
+        personas: personasOf.get(module.slug) ?? [],
+      })),
     storeCategories,
     recipes: catalog.recipes
       .filter((recipe) => readableRecipes.has(recipe.slug))
@@ -102,7 +111,7 @@ async function readPublicCatalog(locale: CatalogLocale): Promise<PublicCatalogRe
   try {
     const [catalog, modules, versions, recipes, categories] = await Promise.all([
       loadCatalog(client, { locale, stableOnly: false, limits: {} }),
-      client.from("catalog_modules").select("id, slug, name, store_category").eq("status", "published"),
+      client.from("catalog_modules").select("id, slug, name, store_category, personas").eq("status", "published"),
       client.from("catalog_module_versions").select("module_id, published_at").eq("status", "published"),
       client.from("catalog_recipes").select("slug, name").eq("status", "published"),
       client.from("catalog_store_categories").select("slug, name, sort").order("sort"),

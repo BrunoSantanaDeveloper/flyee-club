@@ -6,6 +6,7 @@ import type { Credential, DeliverySettings, Localized } from "@/lib/admin/catalo
 import { requireSuperadmin } from "@/lib/admin/session";
 import { recordAudit } from "@/lib/audit";
 import { MODULES_BUCKET } from "@/lib/catalog/upload";
+import { PERSONA_SEGMENTS } from "@/lib/site-segment";
 import { createServiceClient } from "@flyee/auth/service";
 import { AI_TOOLS, MODULE_TYPES } from "@flyee/catalog/manifest";
 import { isSemver } from "@flyee/catalog/semver";
@@ -68,6 +69,8 @@ export type ModuleInput = {
   trail: string;
   /** The store category (migration 0029); null lists the app only under "Todos". */
   storeCategory: string | null;
+  /** The site personas this app is a good start for (migration 0032); never `outro`. */
+  personas: string[];
   type: string;
   icon: string;
   name: Localized;
@@ -96,6 +99,7 @@ export async function saveModule(input: ModuleInput): Promise<CatalogActionResul
   const compatibleAis = [...new Set(input.compatibleAis)].filter((tool) =>
     (AI_TOOLS as readonly string[]).includes(tool),
   );
+  const personas = PERSONA_SEGMENTS.filter((persona) => (input.personas ?? []).includes(persona));
 
   const credentials: Credential[] = [];
   for (const credential of input.externalCredentials ?? []) {
@@ -121,6 +125,7 @@ export async function saveModule(input: ModuleInput): Promise<CatalogActionResul
     slug,
     trail: input.trail,
     store_category: input.storeCategory || null,
+    personas,
     type: input.type,
     icon: icon || null,
     name,

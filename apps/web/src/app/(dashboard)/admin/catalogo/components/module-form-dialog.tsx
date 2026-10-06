@@ -12,9 +12,15 @@ import NiBinEmpty from "@/icons/nexture/ni-bin-empty";
 import NiPlus from "@/icons/nexture/ni-plus";
 import type { AdminModule, AdminStoreCategory, AdminTrail, Credential } from "@/lib/admin/catalog";
 import { textOf } from "@/lib/admin/catalog";
-import { AI_TOOL_LABEL, MODULE_TYPE_LABEL } from "@/lib/admin/labels";
+import { AI_TOOL_LABEL, MODULE_TYPE_LABEL, SEGMENT_LABEL } from "@/lib/admin/labels";
+import { PERSONA_SEGMENTS } from "@/lib/site-segment";
 
 const AI_OPTIONS = Object.entries(AI_TOOL_LABEL).map(([value, label]) => ({ value, label }));
+/** The site personas an app can be a good start for (migration 0032); `outro` is an answer, not a persona. */
+const PERSONA_OPTIONS = PERSONA_SEGMENTS.map((persona) => ({
+  value: persona,
+  label: SEGMENT_LABEL[persona] ?? persona,
+}));
 const TYPE_OPTIONS = Object.entries(MODULE_TYPE_LABEL).map(([value, label]) => ({ value, label }));
 
 const EMPTY_CREDENTIAL: Credential = { name: "", env: "", url: "", required: true, purpose: {} };
@@ -25,6 +31,7 @@ function initialForm(module: AdminModule | null, trails: AdminTrail[]): ModuleIn
     slug: module?.slug ?? "",
     trail: module?.trail ?? trails[0]?.slug ?? "planejar",
     storeCategory: module?.storeCategory ?? null,
+    personas: module?.personas ?? [],
     type: module?.type ?? "skill",
     icon: module?.icon ?? "",
     name: module?.name ?? {},
@@ -157,6 +164,13 @@ export default function ModuleFormDialog({
             options={AI_OPTIONS}
             value={form.compatibleAis}
             onChange={(value) => set("compatibleAis", value)}
+          />
+
+          <CheckGroup
+            label="Bom começo para (bloco Para quem é da home: até 3 apps por perfil, na ordem do catálogo)"
+            options={PERSONA_OPTIONS}
+            value={form.personas}
+            onChange={(value) => set("personas", value)}
           />
 
           <Box className="grid grid-cols-1 items-start gap-3 md:grid-cols-3">

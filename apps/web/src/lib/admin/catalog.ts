@@ -60,6 +60,8 @@ export type AdminModule = {
   trail: string;
   /** The store category, null when the app shows only under "Todos". */
   storeCategory: string | null;
+  /** The site personas this app is a good start for (migration 0032). */
+  personas: string[];
   type: string;
   icon: string | null;
   name: Localized;
@@ -204,7 +206,7 @@ const VERSION_COLUMNS =
   "id, module_id, version, is_stable, status, sha256, size_bytes, changelog, min_core_version, compatible_ais, permissions, published_at, yanked_at, yank_reason, created_at, guides";
 
 const MODULE_COLUMNS =
-  "id, slug, trail, store_category, type, icon, name, summary, description_md, compatible_ais, external_credentials, status, is_free_sample, entitlement_key, sort, published_at, created_at, updated_at";
+  "id, slug, trail, store_category, personas, type, icon, name, summary, description_md, compatible_ais, external_credentials, status, is_free_sample, entitlement_key, sort, published_at, created_at, updated_at";
 
 function toVersion(row: VersionRow, stats: Stats["versions"][number] | undefined): AdminVersion {
   return {
@@ -238,6 +240,7 @@ function toModule(row: Record<string, unknown>, usage: ModuleUsage | undefined, 
     slug: row.slug as string,
     trail: row.trail as string,
     storeCategory: (row.store_category as string | null) ?? null,
+    personas: (row.personas as string[] | null) ?? [],
     type: row.type as string,
     icon: (row.icon as string | null) ?? null,
     name: (row.name as Localized) ?? {},

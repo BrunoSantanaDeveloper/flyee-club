@@ -23,6 +23,7 @@ const rows: CatalogRows = {
       slug: "deploy-check",
       name: { "pt-BR": "Checagem de deploy", en: "Deploy check" },
       store_category: "build",
+      personas: ["dev"],
     },
     { id: "m2", slug: "product-scope", name: { "pt-BR": "Escopo do produto" }, store_category: null },
   ],
@@ -68,6 +69,8 @@ describe("readableCatalog: an address in a language serves that language", () =>
     ]);
     const pt = readableCatalog(catalog, rows, "pt-BR");
     expect(pt.modules.map((module) => module.storeCategory)).toEqual(["build", null]);
+    // The personas an app is marked for ride along; none marked reads as none.
+    expect(pt.modules.map((module) => module.personas)).toEqual([["dev"], []]);
   });
 
   it("treats a blank English name as no English name", () => {

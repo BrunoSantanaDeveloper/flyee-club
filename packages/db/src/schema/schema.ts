@@ -911,57 +911,6 @@ export const blogComments = pgTable("blog_comments", {
 	check("blog_comments_body_check", sql`(char_length(body) >= 1) AND (char_length(body) <= 4000)`),
 ]);
 
-export const catalogModules = pgTable("catalog_modules", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	slug: text().notNull(),
-	trail: text().notNull(),
-	type: text().notNull(),
-	icon: text(),
-	name: jsonb().notNull(),
-	summary: jsonb().default({}).notNull(),
-	descriptionMd: jsonb("description_md").default({}).notNull(),
-	compatibleAis: aiTool("compatible_ais").array().default(sql`'{}'`).notNull(),
-	externalCredentials: jsonb("external_credentials").default([]).notNull(),
-	status: text().default('draft').notNull(),
-	isFreeSample: boolean("is_free_sample").default(false).notNull(),
-	entitlementKey: text("entitlement_key").default('catalog_access').notNull(),
-	sort: integer().default(0).notNull(),
-	publishedAt: timestamp("published_at", { withTimezone: true, mode: 'string' }),
-	createdBy: uuid("created_by"),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	storeCategory: text("store_category"),
-}, (table) => [
-	index("catalog_modules_store_category_idx").using("btree", table.storeCategory.asc().nullsLast().op("text_ops")).where(sql`(store_category IS NOT NULL)`),
-	index("catalog_modules_trail_idx").using("btree", table.trail.asc().nullsLast().op("text_ops"), table.sort.asc().nullsLast().op("text_ops")).where(sql`(status = 'published'::text)`),
-	foreignKey({
-			columns: [table.trail],
-			foreignColumns: [catalogTrails.slug],
-			name: "catalog_modules_trail_fkey"
-		}).onUpdate("cascade"),
-	foreignKey({
-			columns: [table.createdBy],
-			foreignColumns: [profiles.id],
-			name: "catalog_modules_created_by_fkey"
-		}).onDelete("set null"),
-	foreignKey({
-			columns: [table.storeCategory],
-			foreignColumns: [catalogStoreCategories.slug],
-			name: "catalog_modules_store_category_fkey"
-		}).onUpdate("cascade").onDelete("set null"),
-	unique("catalog_modules_slug_key").on(table.slug),
-	pgPolicy("catalog_modules_select_published", { as: "permissive", for: "select", to: ["anon", "authenticated"], using: sql`(status = 'published'::text)` }),
-	pgPolicy("catalog_modules_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"] }),
-	check("catalog_modules_slug_check", sql`slug ~ '^[a-z0-9][a-z0-9-]{1,59}$'::text`),
-	check("catalog_modules_type_check", sql`type = ANY (ARRAY['skill'::text, 'workflow'::text, 'framework'::text, 'tool'::text])`),
-	check("catalog_modules_name_check", sql`CHECK (i18n_ok(name, true`),
-	check("catalog_modules_summary_check", sql`CHECK (i18n_ok(summary`),
-	check("catalog_modules_description_md_check", sql`CHECK (i18n_ok(description_md`),
-	check("catalog_modules_external_credentials_check", sql`jsonb_typeof(external_credentials) = 'array'::text`),
-	check("catalog_modules_status_check", sql`status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])`),
-	check("catalog_modules_entitlement_key_check", sql`entitlement_key ~ '^[a-z][a-z0-9_]{1,39}$'::text`),
-]);
-
 export const catalogModuleVersions = pgTable("catalog_module_versions", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	moduleId: uuid("module_id").notNull(),
@@ -1010,6 +959,60 @@ export const catalogModuleVersions = pgTable("catalog_module_versions", {
 	check("catalog_module_versions_permissions_check", sql`jsonb_typeof(permissions) = 'array'::text`),
 	check("catalog_module_versions_yank_reason", sql`(status <> 'yanked'::text) OR (NULLIF(btrim(yank_reason), ''::text) IS NOT NULL)`),
 	check("catalog_module_versions_guides_check", sql`jsonb_typeof(guides) = 'object'::text`),
+]);
+
+export const catalogModules = pgTable("catalog_modules", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	slug: text().notNull(),
+	trail: text().notNull(),
+	type: text().notNull(),
+	icon: text(),
+	name: jsonb().notNull(),
+	summary: jsonb().default({}).notNull(),
+	descriptionMd: jsonb("description_md").default({}).notNull(),
+	compatibleAis: aiTool("compatible_ais").array().default(sql`'{}'`).notNull(),
+	externalCredentials: jsonb("external_credentials").default([]).notNull(),
+	status: text().default('draft').notNull(),
+	isFreeSample: boolean("is_free_sample").default(false).notNull(),
+	entitlementKey: text("entitlement_key").default('catalog_access').notNull(),
+	sort: integer().default(0).notNull(),
+	publishedAt: timestamp("published_at", { withTimezone: true, mode: 'string' }),
+	createdBy: uuid("created_by"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	storeCategory: text("store_category"),
+	personas: memberSegment().array().default(sql`'{}'`).notNull(),
+}, (table) => [
+	index("catalog_modules_personas_idx").using("gin", table.personas.asc().nullsLast().op("array_ops")),
+	index("catalog_modules_store_category_idx").using("btree", table.storeCategory.asc().nullsLast().op("text_ops")).where(sql`(store_category IS NOT NULL)`),
+	index("catalog_modules_trail_idx").using("btree", table.trail.asc().nullsLast().op("int4_ops"), table.sort.asc().nullsLast().op("int4_ops")).where(sql`(status = 'published'::text)`),
+	foreignKey({
+			columns: [table.trail],
+			foreignColumns: [catalogTrails.slug],
+			name: "catalog_modules_trail_fkey"
+		}).onUpdate("cascade"),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [profiles.id],
+			name: "catalog_modules_created_by_fkey"
+		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.storeCategory],
+			foreignColumns: [catalogStoreCategories.slug],
+			name: "catalog_modules_store_category_fkey"
+		}).onUpdate("cascade").onDelete("set null"),
+	unique("catalog_modules_slug_key").on(table.slug),
+	pgPolicy("catalog_modules_select_published", { as: "permissive", for: "select", to: ["anon", "authenticated"], using: sql`(status = 'published'::text)` }),
+	pgPolicy("catalog_modules_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"] }),
+	check("catalog_modules_slug_check", sql`slug ~ '^[a-z0-9][a-z0-9-]{1,59}$'::text`),
+	check("catalog_modules_type_check", sql`type = ANY (ARRAY['skill'::text, 'workflow'::text, 'framework'::text, 'tool'::text])`),
+	check("catalog_modules_name_check", sql`CHECK (i18n_ok(name, true`),
+	check("catalog_modules_summary_check", sql`CHECK (i18n_ok(summary`),
+	check("catalog_modules_description_md_check", sql`CHECK (i18n_ok(description_md`),
+	check("catalog_modules_external_credentials_check", sql`jsonb_typeof(external_credentials) = 'array'::text`),
+	check("catalog_modules_status_check", sql`status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])`),
+	check("catalog_modules_entitlement_key_check", sql`entitlement_key ~ '^[a-z][a-z0-9_]{1,39}$'::text`),
+	check("catalog_modules_personas_check", sql`(NOT ('outro'::member_segment = ANY (personas))) AND (cardinality(personas) <= 4)`),
 ]);
 
 export const catalogLessons = pgTable("catalog_lessons", {
