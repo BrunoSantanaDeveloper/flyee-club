@@ -29,3 +29,14 @@ export type PrimaryCta = { labelKey: "cta-primary" | "cta-waitlist"; href: strin
 
 export const primaryCtaFor = (stage: LaunchStage): PrimaryCta =>
   stage === "open" ? { labelKey: "cta-primary", href: "/auth/sign-up" } : { labelKey: "cta-waitlist", href: "/espera" };
+
+/**
+ * The header's button in a stage (decided 2026-10-06, docs/PRODUCT.md). Once
+ * the store is open it is deliberately not a purchase: "Quero montar meu
+ * sistema" takes the visitor to the plans, where every purchase button names
+ * its plan. Before that it is the waitlist button, like every other one.
+ */
+export type NavCta = { labelKey: "cta-nav" | "cta-waitlist"; href: string };
+
+export const navCtaFor = (stage: LaunchStage): NavCta =>
+  stage === "open" ? { labelKey: "cta-nav", href: "/planos" } : { labelKey: "cta-waitlist", href: "/espera" };

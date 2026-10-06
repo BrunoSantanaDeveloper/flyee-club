@@ -143,7 +143,8 @@ export async function getDisplayPlans({
       tone: tier ? TIER_TONE[tier] : undefined,
       cycle: plan.period === "monthly" || plan.period === "yearly" ? plan.period : undefined,
       href: stage === "open" ? `/auth/sign-up?next=${encodeURIComponent(`/assinatura?plan=${plan.slug}`)}` : "/espera",
-      ctaLabel: stage === "open" && isKit ? t("pricing-cta-kit") : undefined,
+      // Each purchase button names its plan; before the opening, the section's waitlist label.
+      ctaLabel: stage === "open" ? (isKit ? t("pricing-cta-kit") : t("pricing-cta-pro")) : undefined,
       // The split the checkout offers on the one-time access, at the price this card shows.
       installmentsLabel:
         isKit && maxInstallments > 1

@@ -627,7 +627,9 @@
     "pricing-installments": "or up to {count} card installments of {amount}",
     "faq-5-question": "I have a team. What do I do?",
     "faq-5-answer": "Each person needs their own FlyeeClub, because each access belongs to one user and cannot be shared. FlyeeClub Pro allows more computers for the same person, not more people. For a team, talk to us through the contact page.",
-    "contact-note-app": "A commissioned app joins the store for every member once it is ready, unless an exclusivity agreement is made here before the work is hired."
+    "contact-note-app": "A commissioned app joins the store for every member once it is ready, unless an exclusivity agreement is made here before the work is hired.",
+    "cta-nav": "Build my system",
+    "pricing-cta-pro": "Subscribe to FlyeeClub Pro"
   },
   "product": {
     "security-title": "Security",

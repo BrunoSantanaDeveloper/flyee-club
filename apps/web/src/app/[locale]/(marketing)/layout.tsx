@@ -10,7 +10,7 @@ import MarketingFooter from "@/components/marketing/marketing-footer";
 import MarketingHeader from "@/components/marketing/marketing-header";
 import SiteJsonLd from "@/components/marketing/site-json-ld";
 import SupportWidget from "@/components/support/support-widget";
-import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
+import { getLaunchStage, navCtaFor, primaryCtaFor } from "@/lib/launch";
 import { getLegalEntity, getSupportChannels } from "@/lib/platform-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,12 +37,14 @@ export default async function MarketingLayout({ children }: { children: React.Re
   ]);
   const cta = primaryCtaFor(stage);
   const primaryCta = { label: t(cta.labelKey), href: cta.href };
+  const nav = navCtaFor(stage);
+  const navCta = { label: t(nav.labelKey), href: nav.href };
   return (
     <div className="bg-background flex min-h-[100dvh] flex-col">
       {/* Site-wide identity for search + AI engines; rebrands with @flyee/content. */}
       <SiteJsonLd />
       <LanguageSuggestion />
-      <MarketingHeader primaryCta={primaryCta} />
+      <MarketingHeader navCta={navCta} />
       <main className="flex flex-1 flex-col">{children}</main>
       <MarketingFooter primaryCta={primaryCta} legalEntity={legalEntity} />
       <SupportWidget support={support} />

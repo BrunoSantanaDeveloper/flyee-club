@@ -1,4 +1,5 @@
 "use client";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -27,7 +28,14 @@ const NAV_LINKS = [
  * The primary CTA comes from the layout, which knows the launch stage
  * (lib/launch.ts): the waitlist until the site opens, sign-up after.
  */
-export default function MarketingHeader({ primaryCta }: { primaryCta: { label: string; href: string } }) {
+/** The home's pricing section, where the header's button scrolls instead of leaving the page. */
+const HOME_PRICING_ANCHOR = "#acesso";
+
+export default function MarketingHeader({ navCta }: { navCta: { label: string; href: string } }) {
+  // On the home, "the plans" is a section of the page: scroll to it.
+  const pathname = usePathname();
+  const onHome = pathname === "/" || pathname === "/en";
+  const primaryCta = { ...navCta, href: onHome && navCta.href === "/planos" ? HOME_PRICING_ANCHOR : navCta.href };
   const t = useTranslations("marketing");
   const [open, setOpen] = useState(false);
 
