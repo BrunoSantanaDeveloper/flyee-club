@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { TONE, type Tone } from "@/components/marketing/tone";
+import { trackSiteEvent } from "@/lib/site-events";
 import { cn } from "@/lib/utils";
 
 export type StoreCategory = {
@@ -48,6 +49,11 @@ export default function StoreGrid({
 }) {
   const [active, setActive] = useState<string | null>(null);
   const current = categories.find((category) => category.slug === active) ?? null;
+  // A category chosen (or cleared) is a site event; re-pressing the active chip clears it.
+  const choose = (slug: string | null) => {
+    setActive(slug);
+    trackSiteEvent("store_filter", { category: slug ?? "all" });
+  };
 
   const chip = (selected: boolean, tone?: Tone) =>
     cn(
@@ -63,7 +69,7 @@ export default function StoreGrid({
         <button
           type="button"
           aria-pressed={active === null}
-          onClick={() => setActive(null)}
+          onClick={() => choose(null)}
           className={chip(active === null)}
         >
           {allLabel}
@@ -73,7 +79,7 @@ export default function StoreGrid({
             key={category.slug}
             type="button"
             aria-pressed={active === category.slug}
-            onClick={() => setActive(active === category.slug ? null : category.slug)}
+            onClick={() => choose(active === category.slug ? null : category.slug)}
             className={chip(active === category.slug, category.tone)}
           >
             {category.label}

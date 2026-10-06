@@ -43,6 +43,7 @@ import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
 import { publicPageMetadata } from "@/lib/seo";
+import { trackAttributes } from "@/lib/site-events";
 import { resolvePublicCoupon } from "@flyee/billing/public";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -214,6 +215,7 @@ export default async function Home() {
     badge: trailOf(app).name,
     meta: app.latest ? fill(copy.store.updatedOn, { date: date(app.latest.published_at) }) : undefined,
     link: { label: copy.store.viewApp, href: `/catalogo/${app.slug}` },
+    track: trackAttributes({ event: "app_card_click", app: app.slug }),
   });
 
   // The store grid of the home: every app but the featured one, up to fifteen
@@ -232,6 +234,7 @@ export default async function Home() {
       <Hero
         layout="center"
         decor="glow"
+        track="hero"
         eyebrow={featured ? `${copy.store.featuredLabel} · ${featured.name ?? featured.slug}` : copy.hero.eyebrow}
         title={rich(copy.hero.title)}
         subtitle={copy.hero.subtitle}
@@ -246,6 +249,7 @@ export default async function Home() {
         <>
           <FeatureRows
             id="apps"
+            track="store"
             eyebrow={copy.store.eyebrow}
             title={copy.store.title}
             subtitle={copy.store.subtitle}
@@ -321,6 +325,7 @@ export default async function Home() {
                           body: copy.store.request.body,
                           badge: copy.store.request.badge,
                           link: { label: copy.store.request.link, href: "/planos" },
+                          track: trackAttributes({ event: "locked_click", item: "request" }),
                         }}
                       />
                     ),
@@ -329,7 +334,11 @@ export default async function Home() {
               />
               <p className="text-text-secondary m-0 text-center text-base leading-7">
                 {copy.store.footnote}{" "}
-                <LocaleLink href="/catalogo" className="text-text-primary font-semibold underline">
+                <LocaleLink
+                  href="/catalogo"
+                  className="text-text-primary font-semibold underline"
+                  data-track="see_all_apps_click"
+                >
                   {copy.store.allApps}
                 </LocaleLink>
               </p>
@@ -337,14 +346,20 @@ export default async function Home() {
           </FeatureRows>
         </>
       ) : (
-        <Section id="apps">
+        <Section id="apps" track="store">
           <SectionHeader
             eyebrow={copy.store.eyebrow}
             title={catalog ? copy.store.emptyTitle : copy.store.unavailableTitle}
             subtitle={catalog ? copy.store.emptyBody : copy.store.unavailableBody}
           />
           <div className="flex justify-center">
-            <Button variant="pastel" color="primary" LinkComponent={LocaleLink} href="/catalogo">
+            <Button
+              variant="pastel"
+              color="primary"
+              LinkComponent={LocaleLink}
+              href="/catalogo"
+              data-track="see_all_apps_click"
+            >
               {copy.store.allApps}
             </Button>
           </div>
@@ -352,6 +367,7 @@ export default async function Home() {
       )}
 
       <ProcessSteps
+        track="howItWorks"
         variant="mono"
         eyebrow={copy.steps.eyebrow}
         title={copy.steps.title}
@@ -361,7 +377,7 @@ export default async function Home() {
         }))}
       />
 
-      <Section background="paper">
+      <Section background="paper" track="whyStore">
         <SectionHeader eyebrow={copy.why.eyebrow} title={copy.why.title} />
         <RuledGrid
           columns={3}
@@ -402,6 +418,7 @@ export default async function Home() {
 
       <PricingSection
         id="acesso"
+        track="pricing"
         decor="glow"
         eyebrow={copy.access.eyebrow}
         title={copy.access.title}
@@ -412,7 +429,7 @@ export default async function Home() {
         ctaHref={primary.href}
       />
 
-      <Section spacing="compact" background="paper">
+      <Section spacing="compact" background="paper" track="requirements">
         <SectionHeader title={copy.access.requirementsTitle} />
         <RuledGrid
           columns={3}
@@ -430,6 +447,7 @@ export default async function Home() {
 
       <Faq
         id="perguntas"
+        track="faq"
         layout="split"
         eyebrow={copy.faq.eyebrow}
         title={copy.faq.title}
@@ -439,6 +457,7 @@ export default async function Home() {
 
       <Cta
         decor="orbit"
+        track="finalCta"
         title={copy.cta.title}
         subtitle={stage === "open" ? copy.cta.subtitleOpen : copy.cta.subtitleWaitlist}
         cta={primary}

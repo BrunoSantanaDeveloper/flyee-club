@@ -42,6 +42,8 @@ export type PublicPlanDisplay = {
   ctaLabel?: string;
   /** With `periodToggle`, the cycle this card belongs to; a card without one (the kit) always shows. */
   cycle?: "monthly" | "yearly";
+  /** What the button's click is reported as (`cta_click`, `cta_id`): the access or the subscription. */
+  ctaId?: "plan_access" | "plan_full";
 };
 
 /**
@@ -51,6 +53,7 @@ export type PublicPlanDisplay = {
  */
 export default function PricingSection({
   id,
+  track,
   eyebrow,
   title,
   subtitle,
@@ -65,6 +68,8 @@ export default function PricingSection({
   periodToggle,
 }: {
   id?: string;
+  /** The section's key in the measurement (`section_view`). */
+  track?: string;
   eyebrow?: string;
   title: string;
   subtitle?: string;
@@ -98,7 +103,7 @@ export default function PricingSection({
   // is the page <h1> (/planos), h3 otherwise. A fixed h3 skipped a level there.
   const PlanHeading = headingAs === "h1" ? "h2" : "h3";
   return (
-    <Section id={id} decor={decor}>
+    <Section id={id} track={track} decor={decor}>
       {plans
         .filter((plan) => plan.priceAmount !== undefined && plan.priceCurrency)
         .map((plan) => (
@@ -247,6 +252,8 @@ export default function PricingSection({
                 color="primary"
                 href={plan.href ?? ctaHref}
                 LinkComponent={Link}
+                data-track="cta_click"
+                data-track-cta-id={plan.ctaId ?? "plan_full"}
               >
                 {plan.ctaLabel ?? ctaLabel}
               </Button>

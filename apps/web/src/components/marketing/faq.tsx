@@ -7,8 +7,9 @@ import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import NiChevronDownSmall from "@/icons/nexture/ni-chevron-down-small";
+import { trackSiteEvent } from "@/lib/site-events";
 
-export type FaqItem = { question: string; answer: string };
+export type FaqItem = { question: string; answer: string; id?: string };
 
 /**
  * Funnel stage: objection handling. Each question should be a REAL purchase
@@ -27,6 +28,7 @@ export default function Faq({
   subtitle,
   items,
   id,
+  track,
   layout = "stack",
   link,
 }: {
@@ -35,18 +37,24 @@ export default function Faq({
   subtitle?: string;
   items: FaqItem[];
   id?: string;
+  /** The section's key in the measurement (`section_view`). */
+  track?: string;
   layout?: "stack" | "split";
   /** Split layout only: conversion link under the intro (repeats the page CTA). */
   link?: { label: string; href: string };
 }) {
   const accordions = (
     <Reveal className="flex w-full flex-col gap-2">
-      {items.map((item) => (
+      {items.map((item, index) => (
         <Accordion
           key={item.question}
           elevation={0}
           disableGutters
           className="border-grey-100 bg-background-paper rounded-2xl! border"
+          // Opening a question is a site event (`faq_open`); closing it is not.
+          onChange={(_event, expanded) => {
+            if (expanded) trackSiteEvent("faq_open", { question_id: item.id ?? String(index + 1) });
+          }}
         >
           <AccordionSummary expandIcon={<NiChevronDownSmall />} className="px-6! py-4!">
             <Typography component="h3" variant="subtitle1">
@@ -65,7 +73,7 @@ export default function Faq({
 
   if (layout === "split") {
     return (
-      <Section id={id}>
+      <Section id={id} track={track}>
         <JsonLd
           data={{
             "@context": "https://schema.org",
@@ -93,7 +101,7 @@ export default function Faq({
   }
 
   return (
-    <Section id={id}>
+    <Section id={id} track={track}>
       <JsonLd
         data={{
           "@context": "https://schema.org",

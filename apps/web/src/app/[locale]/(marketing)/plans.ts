@@ -93,6 +93,7 @@ export async function getDisplayPlans({
         period: t(`${slug}-period`),
         features: [t(`${slug}-feature-1`), t(`${slug}-feature-2`), t(`${slug}-feature-3`)],
         highlighted: slug === "plan-2",
+        ctaId: slug === "plan-1" ? "plan_access" : "plan_full",
       })),
     };
   }
@@ -139,6 +140,7 @@ export async function getDisplayPlans({
       cycle: plan.period === "monthly" || plan.period === "yearly" ? plan.period : undefined,
       href: stage === "open" ? `/auth/sign-up?next=${encodeURIComponent(`/assinatura?plan=${plan.slug}`)}` : "/espera",
       ctaLabel: stage === "open" && isKit ? t("pricing-cta-kit") : undefined,
+      ctaId: isKit ? "plan_access" : "plan_full",
       // Raw values power the Offer JSON-LD (formatted `price` is display-only).
       // Deliberately the LIST price: the structured data describes the offer
       // open to everyone, and crawlers never carry a campaign code anyway.

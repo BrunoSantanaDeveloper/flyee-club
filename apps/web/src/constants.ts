@@ -75,6 +75,12 @@ export const COOKIE_KEYS = {
   // of the address on the way to the page that asks before acting
   // (lib/unsubscribe.ts). httpOnly, 15 minutes, consumed by that page.
   unsubscribe: `${storagePrefix}-descadastro`,
+  // The audience the visitor declared before any account exists: a segment
+  // link (`?segment=`, written by the middleware) or a click on the page
+  // (lib/site-events.ts). The newest choice wins. Readable by the client: it
+  // stamps every site event and pre-fills the waitlist; the sign-up and the
+  // onboarding pre-fill the profile from it (lib/site-segment.ts).
+  segment: `${storagePrefix}-segmento`,
 };
 
 export const SESSION_STORAGE_KEYS = {

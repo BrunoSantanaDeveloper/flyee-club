@@ -75,6 +75,34 @@ commit and bumping `CONSENT_VERSION`.
 | `PageView` | every public page (SSR snippet + `MarketingAnalytics`) and every member page outside `/admin` (`DashboardTrackers`) |
 | `ViewContent` | `/planos` (`content_category: "pricing"`) and the open founders offer `/fundadores` (`content_category: "offer"`), through `TrackEvent` |
 
+**Site events (GA4 custom events + Meta custom events, opt-out)**
+
+The vocabulary of the home brief, sent through `trackSiteEvent`
+(`lib/site-events.ts`) to the trackers above, never to a third one. Every
+event carries `locale` and, when the visitor declared one, `segment`; the
+campaign (`utm_*`, `origem`) is GA4's own session attribution from the landing
+URL and is not repeated per event. A click is DECLARED on the element
+(`data-track="<event>"` plus `data-track-<prop>` attributes, or
+`trackAttributes()` for a link built in code) and reported by the one listener
+in `MarketingAnalytics`, so a server component declares an event without
+client code; a section view is declared with `track="<key>"` on `Section` (and
+the components that wrap one), reported once per load when half of it is on
+screen.
+
+| Event | Props | Where it fires today |
+|---|---|---|
+| `section_view` | `section` | the home's sections: `hero`, `store`, `howItWorks`, `whyStore`, `pricing`, `requirements`, `faq`, `finalCta` |
+| `cta_click` | `cta_id`: `nav`, `hero`, `plan_access`, `plan_full`, `final`, `footer` | the header, the hero, each pricing card, the final CTA, the footer |
+| `quiz_click` | `location` | the hero's secondary button ("O FlyeeClub é pra mim?") |
+| `segment_click` | `segment`, `location` | the waitlist's segment select (`waitlist`); the hero links and the "Para quem é" cards when the home carries them |
+| `store_filter` | `category` (`all` when cleared) | the store grid's category chips |
+| `app_card_click` | `app` | an app card's link on the home |
+| `locked_click` | `item` | the locked "Pedir um app" card (`request`) |
+| `see_all_apps_click` | — | the "Ver todos os apps" links of the home |
+| `faq_open` | `question_id` (the item's id, else its position) | opening a question in any `Faq` |
+| `contact_click` | `location` | the footer's contact link |
+| `app_install_click`, `app_command_copy`, `compat_click` | `app` / — | reserved for the store cards and the compatibility block of the rebuilt home |
+
 **Server (Meta Conversions API)**
 
 | Event | Where it fires | event_id | Match keys |
@@ -126,6 +154,20 @@ signal exists, so a plain checkout never wipes a stored one.
   window). The webhook adds it to the `Purchase` (`last_origem`, `last_utm_*`)
   and writes one `purchase_attributions` row per invoice that started a
   subscription; a refund or chargeback drops it (`purchase_attribution_is_paid`).
+
+### Segment capture
+
+The audience a visitor declares before any account exists: a segment link
+(`?segment=agencia`, the brief's personas `negocio`, `agencia`, `produto`,
+`dev`, or a profile segment) is kept by the middleware in a readable cookie
+(90 days, the newest wins, an unknown value writes nothing), and a click on
+the page writes the same cookie (`rememberSegment`). It stamps every site
+event, pre-fills the waitlist's select, goes into the sign-up's metadata (so
+`handle_new_user` stamps the profile and `account.created` carries it) and
+pre-fills the onboarding's first step. The pre-fill happens only where the two
+vocabularies mean the same (`profileSegmentFor`, `lib/site-segment.ts`):
+`negocio` has no honest counterpart in `member_segment` yet, so the member
+answers.
 
 ### Visits per page and door (first-party, no cookie)
 

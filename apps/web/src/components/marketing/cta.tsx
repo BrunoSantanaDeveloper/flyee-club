@@ -23,6 +23,7 @@ export default function Cta({
   kicker,
   decor = "none",
   variant = "panel",
+  track,
 }: {
   title: string;
   subtitle?: string;
@@ -36,10 +37,12 @@ export default function Cta({
   /** Ambient layer on the surrounding Section (orbit is the classic closer). */
   decor?: "none" | "orbit" | "mesh" | "dots";
   variant?: "panel" | "deep";
+  /** The section's key in the measurement (`section_view`). */
+  track?: string;
 }) {
   if (variant === "deep") {
     return (
-      <Section background="deep" decor={decor}>
+      <Section background="deep" decor={decor} track={track}>
         <Reveal>
           <div className="flex flex-col items-start gap-4 py-6 md:py-10">
             {kicker && <p className="text-secondary-light font-mono text-xs tracking-widest uppercase">{kicker}</p>}
@@ -56,6 +59,8 @@ export default function Cta({
                 href={cta.href}
                 LinkComponent={Link}
                 className="bg-text-contrast! text-background-deep! shadow-darker-sm hover:bg-text-contrast/90!"
+                data-track="cta_click"
+                data-track-cta-id="final"
               >
                 {cta.label}
               </Button>
@@ -85,7 +90,7 @@ export default function Cta({
   }
 
   return (
-    <Section decor={decor}>
+    <Section decor={decor} track={track}>
       <Reveal>
         <div className="border-grey-100 bg-background-paper relative overflow-hidden rounded-4xl border px-6 py-16 text-center md:py-24">
           <div
@@ -100,7 +105,15 @@ export default function Cta({
             <h2 className="font-display text-display-lg text-text-primary max-w-2xl font-bold">{title}</h2>
             {subtitle && <p className="text-text-secondary max-w-xl text-lg leading-6">{subtitle}</p>}
             <div className="mt-2 flex flex-col items-center gap-4 sm:flex-row">
-              <Button size="large" variant="contained" color="primary" href={cta.href} LinkComponent={Link}>
+              <Button
+                size="large"
+                variant="contained"
+                color="primary"
+                href={cta.href}
+                LinkComponent={Link}
+                data-track="cta_click"
+                data-track-cta-id="final"
+              >
                 {cta.label}
               </Button>
               {secondaryCta && (

@@ -24,6 +24,7 @@ export type FeatureRowItem = {
  */
 export default function FeatureRows({
   id,
+  track,
   eyebrow,
   title,
   subtitle,
@@ -32,6 +33,8 @@ export default function FeatureRows({
   children,
 }: {
   id?: string;
+  /** The section's key in the measurement (`section_view`). */
+  track?: string;
   eyebrow?: string;
   title?: string;
   subtitle?: string;
@@ -46,7 +49,7 @@ export default function FeatureRows({
   children?: React.ReactNode;
 }) {
   return (
-    <Section id={id} decor={decor}>
+    <Section id={id} track={track} decor={decor}>
       {title && <SectionHeader eyebrow={eyebrow} title={title} subtitle={subtitle} />}
       <div className="flex flex-col gap-[var(--section-space-sm)]">
         {items.map((item, index) => {

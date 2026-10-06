@@ -31,8 +31,11 @@ export default function Hero({
   media,
   layout = "center",
   decor = "glow",
+  track,
 }: {
   eyebrow?: string;
+  /** The section's key in the measurement (`section_view`). */
+  track?: string;
   /** Accepts rich content (e.g. t.rich with <em> for the two-tone blueprint headline). */
   title: React.ReactNode;
   subtitle: string;
@@ -72,7 +75,15 @@ export default function Hero({
   const ctas = action ?? (
     <div className="flex flex-col items-center gap-2 sm:flex-row">
       {primaryCta && (
-        <Button size="large" variant="contained" color="primary" href={primaryCta.href} LinkComponent={Link}>
+        <Button
+          size="large"
+          variant="contained"
+          color="primary"
+          href={primaryCta.href}
+          LinkComponent={Link}
+          data-track="cta_click"
+          data-track-cta-id="hero"
+        >
           {primaryCta.label}
         </Button>
       )}
@@ -84,6 +95,8 @@ export default function Hero({
           href={secondaryCta.href}
           LinkComponent={Link}
           startIcon={secondaryCta.icon}
+          data-track="quiz_click"
+          data-track-location="hero"
         >
           {secondaryCta.label}
         </Button>
@@ -95,7 +108,7 @@ export default function Hero({
 
   if (layout === "split") {
     return (
-      <Section spacing="default" decor={decor} className="overflow-hidden">
+      <Section spacing="default" decor={decor} className="overflow-hidden" track={track}>
         {/* 0.84/1.16 = the blueprint's copy/visual ratio (attachment hero). */}
         <div
           data-hero
@@ -132,7 +145,7 @@ export default function Hero({
   }
 
   return (
-    <Section spacing="default" decor={decor} className="overflow-hidden">
+    <Section spacing="default" decor={decor} className="overflow-hidden" track={track}>
       <div data-hero style={entrance} className="flex flex-col items-center">
         <div data-hero-copy className="flex flex-col items-center gap-6 text-center">
           {eyebrow && <p className="text-primary text-sm font-semibold tracking-wide uppercase">{eyebrow}</p>}

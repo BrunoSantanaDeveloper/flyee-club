@@ -55,7 +55,14 @@ export default function MarketingHeader({ primaryCta }: { primaryCta: { label: s
           <Button variant="text" color="text-primary" href="/auth/sign-in" LinkComponent={Link}>
             {t("nav-sign-in")}
           </Button>
-          <Button variant="contained" color="primary" href={primaryCta.href} LinkComponent={Link}>
+          <Button
+            variant="contained"
+            color="primary"
+            href={primaryCta.href}
+            LinkComponent={Link}
+            data-track="cta_click"
+            data-track-cta-id="nav"
+          >
             {primaryCta.label}
           </Button>
         </Box>
@@ -110,7 +117,14 @@ export default function MarketingHeader({ primaryCta }: { primaryCta: { label: s
               <LanguageSwitch fullWidth className="justify-start" />
             </ListItem>
           </List>
-          <Button variant="contained" color="primary" href={primaryCta.href} LinkComponent={Link}>
+          <Button
+            variant="contained"
+            color="primary"
+            href={primaryCta.href}
+            LinkComponent={Link}
+            data-track="cta_click"
+            data-track-cta-id="nav"
+          >
             {primaryCta.label}
           </Button>
         </Box>

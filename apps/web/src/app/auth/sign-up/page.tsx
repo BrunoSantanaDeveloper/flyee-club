@@ -30,6 +30,8 @@ import NiCross from "@/icons/nexture/ni-cross";
 import NiCrossSquare from "@/icons/nexture/ni-cross-square";
 import { resolvePostAuthDestination } from "@/lib/onboarding";
 import { sanitizeInternalNext } from "@/lib/safe-next";
+import { readSegmentCookie } from "@/lib/site-events";
+import { profileSegmentFor } from "@/lib/site-segment";
 import { cn } from "@/lib/utils";
 import { welcomeNewMember } from "@/lib/welcome-actions";
 import { useThemeContext } from "@/theme/theme-provider";
@@ -106,7 +108,13 @@ export default function Page() {
         password: values.password,
         options: {
           emailRedirectTo: callback.toString(),
-          data: { display_name: values.name.trim(), locale },
+          // The segment declared on the site pre-fills the profile where the two
+          // vocabularies agree (lib/site-segment.ts); the trigger ignores anything else.
+          data: {
+            display_name: values.name.trim(),
+            locale,
+            segment: profileSegmentFor(readSegmentCookie()) ?? undefined,
+          },
         },
       });
       if (error) {

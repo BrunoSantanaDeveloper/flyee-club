@@ -4,7 +4,7 @@ import { joinWaitlist, type WaitlistStatus } from "./actions";
 import { WAITLIST_FORM_ID } from "./form-anchor";
 import { useFormik } from "formik";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Yup from "yup";
 
 import {
@@ -23,6 +23,8 @@ import {
 
 import Link from "@/components/marketing/locale-link";
 import NiCheckSquare from "@/icons/nexture/ni-check-square";
+import { readSegmentCookie, rememberSegment, trackSiteEvent } from "@/lib/site-events";
+import { profileSegmentFor } from "@/lib/site-segment";
 
 /** Segment value (enum member_segment) → its label key. "" = not declared. */
 const SEGMENT_OPTIONS = [
@@ -49,6 +51,7 @@ export default function WaitlistForm() {
   const locale = useLocale();
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [failure, setFailure] = useState<WaitlistStatus | null>(null);
+  const prefilled = useRef(false);
 
   const formik = useFormik({
     initialValues: { email: "", segment: "", consent: false, website: "" },
@@ -70,6 +73,15 @@ export default function WaitlistForm() {
       else setFailure(status);
     },
   });
+
+  // The segment declared on the site (a link, a click) pre-fills the select once.
+  const { setFieldValue, values } = formik;
+  useEffect(() => {
+    if (prefilled.current) return;
+    prefilled.current = true;
+    const declared = profileSegmentFor(readSegmentCookie());
+    if (declared && !values.segment) void setFieldValue("segment", declared);
+  }, [setFieldValue, values.segment]);
 
   if (sentTo) {
     return (
@@ -132,7 +144,15 @@ export default function WaitlistForm() {
           labelId="waitlist-segment-label"
           displayEmpty
           value={formik.values.segment}
-          onChange={formik.handleChange}
+          onChange={(event) => {
+            formik.handleChange(event);
+            // Choosing a segment here is the same declaration a segment card makes.
+            const chosen = String(event.target.value ?? "");
+            if (chosen) {
+              rememberSegment(chosen);
+              trackSiteEvent("segment_click", { segment: chosen, location: "waitlist" });
+            }
+          }}
           renderValue={(value) => {
             const option = SEGMENT_OPTIONS.find((candidate) => candidate.value === value);
             return option ? t(option.labelKey) : t("waitlist-segment-none");

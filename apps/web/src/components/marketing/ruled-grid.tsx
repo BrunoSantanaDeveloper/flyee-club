@@ -12,6 +12,8 @@ export type RuledGridItem = {
   tone?: Tone;
   /** Optional trailing text link (e.g. "Ver como é explicado" → #rastreabilidade). */
   link?: { label: string; href: string };
+  /** The site event the link's click reports (`trackAttributes`, lib/site-events.ts). */
+  track?: Record<string, string>;
   /** Cards variant: a short label beside the icon, in the item's hue (e.g. "Amostra grátis"). */
   badge?: string;
   /** Cards variant: one mono line under the body for identifiers (a version, the AIs it runs on). */
@@ -51,6 +53,7 @@ export function RuledCard({ item }: { item: RuledGridItem }) {
         <Link
           href={item.link.href}
           className="text-text-primary mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-bold hover:underline"
+          {...item.track}
         >
           {item.link.label}
           <NiArrowRight size="small" className={tone.text} />

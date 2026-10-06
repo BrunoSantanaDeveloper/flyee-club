@@ -356,3 +356,20 @@ test("@a11y core entry and product routes have no critical axe violations", asyn
     expect(critical, `Critical accessibility violations at ${route}`).toEqual([]);
   }
 });
+
+test("a segment link is remembered for the sign-up, and an unknown value changes nothing", async ({
+  page,
+  context,
+}) => {
+  const segmentCookie = async () => (await context.cookies()).find((cookie) => cookie.name.endsWith("segmento"));
+
+  await page.goto("/?segment=agencia");
+  expect((await segmentCookie())?.value).toBe("agencia");
+  expect((await segmentCookie())?.httpOnly).toBe(false);
+
+  await page.goto("/en?segment=marketing");
+  expect((await segmentCookie())?.value).toBe("agencia");
+
+  await page.goto("/planos?segment=dev");
+  expect((await segmentCookie())?.value).toBe("dev");
+});

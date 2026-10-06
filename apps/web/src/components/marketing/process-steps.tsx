@@ -29,6 +29,7 @@ export type ProcessStep = {
  */
 export default function ProcessSteps({
   id,
+  track,
   eyebrow,
   title,
   subtitle,
@@ -36,6 +37,8 @@ export default function ProcessSteps({
   variant = "icon",
 }: {
   id?: string;
+  /** The section's key in the measurement (`section_view`). */
+  track?: string;
   eyebrow?: string;
   title: string;
   subtitle?: string;
@@ -43,7 +46,7 @@ export default function ProcessSteps({
   variant?: "icon" | "mono";
 }) {
   return (
-    <Section id={id} decor="grid">
+    <Section id={id} track={track} decor="grid">
       <SectionHeader eyebrow={eyebrow} title={title} subtitle={subtitle} />
       <Reveal
         stagger={0.1}

@@ -127,6 +127,7 @@ export { DECOR as SECTION_DECOR };
  */
 export default function Section({
   id,
+  track,
   spacing = "default",
   background = "default",
   decor = "none",
@@ -135,6 +136,8 @@ export default function Section({
   children,
 }: {
   id?: string;
+  /** The section's key in the measurement (`section_view`, docs/TRACKING.md); none means the view is not reported. */
+  track?: string;
   spacing?: keyof typeof SPACING;
   background?: keyof typeof BACKGROUND;
   decor?: keyof typeof DECOR;
@@ -149,6 +152,7 @@ export default function Section({
   return (
     <section
       id={id}
+      data-section={track}
       className={cn("relative w-full overflow-x-clip", SPACING[spacing], BACKGROUND[background], className)}
     >
       {DECOR[decor]}

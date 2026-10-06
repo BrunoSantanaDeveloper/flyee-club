@@ -74,6 +74,8 @@ export default function MarketingFooter({
                   <Link
                     href={primaryCta.href}
                     className="text-text-contrast/60 hover:text-text-contrast text-base leading-6 transition-colors"
+                    data-track="cta_click"
+                    data-track-cta-id="footer"
                   >
                     {primaryCta.label}
                   </Link>
@@ -83,6 +85,9 @@ export default function MarketingFooter({
                     key={link.key}
                     href={link.href}
                     className="text-text-contrast/60 hover:text-text-contrast text-base leading-6 transition-colors"
+                    {...(link.key === "nav-contact"
+                      ? { "data-track": "contact_click", "data-track-location": "footer" }
+                      : {})}
                   >
                     {t(link.key)}
                   </Link>
