@@ -8,23 +8,24 @@ import { INVOICE_DESCRIPTION_LIMIT, invoiceDescription } from "@flyee/billing/ty
  * Built from `plans.description`, which a superadmin edits freely in
  * /admin/billing. Asaas refuses a subscription whose description exceeds 500
  * characters (measured), so whatever is typed there must never reach the
- * provider longer than that — otherwise every checkout of that plan fails at
- * the last step.
+ * provider longer than that, otherwise every checkout of that plan fails at
+ * the last step. The name and the description are joined by a colon: the
+ * copy rules (docs/PRODUCT.md, 2026-10-07) keep the dash out of every text a
+ * customer reads, and the invoice is one.
  */
 const PRO_ANUAL = {
-  name: "Pro anual",
-  description:
-    "Tudo do Assistente, mais a preparação do raciocínio terapêutico para sua validação e a revisão dos casos dos seus pacientes na biblioteca.",
+  name: "FlyeeClub Pro anual",
+  description: "Tudo do FlyeeClub, mais guias avançados, receitas, encontros ao vivo e mais computadores.",
 };
 
 describe("invoiceDescription", () => {
   it("puts the plan's name in front of what it includes", () => {
     expect(invoiceDescription(PRO_ANUAL)).toBe(
-      "Pro anual — Tudo do Assistente, mais a preparação do raciocínio terapêutico para sua validação e a revisão dos casos dos seus pacientes na biblioteca.",
+      "FlyeeClub Pro anual: Tudo do FlyeeClub, mais guias avançados, receitas, encontros ao vivo e mais computadores.",
     );
   });
 
-  it("falls back to the name when the plan has no description (pro-fundador has none today)", () => {
+  it("falls back to the name when the plan has no description", () => {
     expect(invoiceDescription({ name: "PRO FUNDADOR", description: null })).toBe("PRO FUNDADOR");
     expect(invoiceDescription({ name: "PRO FUNDADOR", description: "" })).toBe("PRO FUNDADOR");
     expect(invoiceDescription({ name: "PRO FUNDADOR", description: "   \n  " })).toBe("PRO FUNDADOR");
@@ -33,20 +34,22 @@ describe("invoiceDescription", () => {
 
   it("collapses the line breaks an admin textarea produces", () => {
     expect(invoiceDescription({ name: "Pro", description: "Linha um.\n\n  Linha dois.\tFim." })).toBe(
-      "Pro — Linha um. Linha dois. Fim.",
+      "Pro: Linha um. Linha dois. Fim.",
     );
   });
 
   it("never exceeds the provider's limit, however long the admin text is", () => {
     const result = invoiceDescription({ name: "Pro anual", description: "palavra ".repeat(200) });
-    expect(result.length).toBe(INVOICE_DESCRIPTION_LIMIT);
+    // A cut that lands on a space trims it, so the text may end one short.
+    expect(result.length).toBeLessThanOrEqual(INVOICE_DESCRIPTION_LIMIT);
+    expect(result.length).toBeGreaterThanOrEqual(INVOICE_DESCRIPTION_LIMIT - 1);
     expect(result.endsWith("…")).toBe(true);
   });
 
   it("leaves a description that fits exactly alone", () => {
     const name = "P";
-    // "P — " is 4 characters; fill the rest to land exactly on the limit.
-    const description = "x".repeat(INVOICE_DESCRIPTION_LIMIT - 4);
+    // "P: " is 3 characters; fill the rest to land exactly on the limit.
+    const description = "x".repeat(INVOICE_DESCRIPTION_LIMIT - 3);
     const result = invoiceDescription({ name, description });
     expect(result.length).toBe(INVOICE_DESCRIPTION_LIMIT);
     expect(result.endsWith("…")).toBe(false);
@@ -54,7 +57,7 @@ describe("invoiceDescription", () => {
 
   it("names order-bump add-ons next to the plan", () => {
     expect(invoiceDescription({ name: "Pro", description: "Inclui X." }, ["Módulo A", "Módulo B"])).toBe(
-      "Pro + Módulo A, Módulo B — Inclui X.",
+      "Pro + Módulo A, Módulo B: Inclui X.",
     );
   });
 });

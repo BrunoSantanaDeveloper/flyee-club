@@ -89,7 +89,7 @@ export default function BlogComments({ postId }: { postId: string }) {
           <Avatar className="medium">{(comment.authorName ?? "?").charAt(0).toUpperCase()}</Avatar>
           <Box className="flex min-w-0 flex-col gap-1">
             <Box className="flex flex-row items-center gap-2">
-              <Typography variant="subtitle2">{comment.authorName ?? "—"}</Typography>
+              {comment.authorName ? <Typography variant="subtitle2">{comment.authorName}</Typography> : null}
               <Typography variant="body2" className="text-text-secondary">
                 {new Date(comment.createdAt).toLocaleDateString()}
               </Typography>

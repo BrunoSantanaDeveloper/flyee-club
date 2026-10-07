@@ -46,7 +46,7 @@ export const emailCopy: EmailCopy = {
     preview: (plan) => `${plan} is live on your account`,
     heading: "Payment confirmed",
     greeting: (name, plan) => (name ? `${name}, ${plan} is live on your account.` : `${plan} is live on your account.`),
-    includes: "What it unlocks:",
+    includes: "What's included:",
     features: {
       catalog_access: "Every app in the store, upcoming ones included, with updates",
       devices: (count) =>

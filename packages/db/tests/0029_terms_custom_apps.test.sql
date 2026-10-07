@@ -9,9 +9,9 @@ select plan(4);
 -- ============================================================
 
 select is(
-  (select array_agg(version order by locale) from public.consent_terms where slug = 'terms' and is_active),
-  array[4, 4],
-  'version 4 of the terms is in force in both languages'
+  (select array_agg(version >= 4 order by locale) from public.consent_terms where slug = 'terms' and is_active),
+  array[true, true],
+  'version 4 of the terms, or a later one, is in force in both languages (the English 5 came with migration 0035)'
 );
 select ok(
   (select body_md like '%entra na loja para todos os integrantes%' and body_md like '%acordo de exclusividade%'

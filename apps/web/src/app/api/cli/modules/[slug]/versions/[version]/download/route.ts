@@ -47,7 +47,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
           ok: false,
           status: 410,
           code: "version_yanked",
-          values: { reason: (row.yank_reason as string | null) ?? "—" },
+          // The database refuses a yanked version without a public reason
+          // (catalog_module_versions_yank_reason).
+          values: { reason: String(row.yank_reason ?? "").trim() },
           extra: { yank_reason: row.yank_reason },
           trail: "error",
         };

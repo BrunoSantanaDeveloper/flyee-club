@@ -43,7 +43,7 @@ export default function ConfirmActionDialog({
   stays,
   reasonLabel = "Por que você está fazendo isto?",
   reasonPlaceholder,
-  reasonHelp = "Fica na trilha de auditoria com o seu nome e a data. A trilha registra quem e quando de qualquer jeito — o motivo é o único lugar onde o porquê sobrevive.",
+  reasonHelp = "Fica na trilha de auditoria com o seu nome e a data. A trilha registra quem e quando de qualquer jeito, e o motivo é o único lugar onde o porquê sobrevive.",
   reasonMinLength = 8,
   confirmLabel,
   tone = "warning",

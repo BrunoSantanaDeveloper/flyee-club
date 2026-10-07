@@ -118,7 +118,7 @@ export const homeCopy: HomeCopy = {
     eyebrow: "Access",
     title: "Choose how to get in.",
     subtitle:
-      "FlyeeClub is a one-time payment, valid for 1 year, that unlocks every app in the store, with updates. FlyeeClub Pro adds advanced guides, recipes, live sessions, a vote on what joins the store, the under-the-hood layer and more computers.",
+      "FlyeeClub is a one-time payment, valid for 1 year, that gives you every app in the store, with updates. FlyeeClub Pro adds advanced guides, recipes, live sessions, a vote on what joins the store, the under-the-hood layer and more computers.",
     requirementsTitle: "What you need",
     requirements: [
       {

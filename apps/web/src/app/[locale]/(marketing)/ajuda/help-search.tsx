@@ -65,7 +65,7 @@ export default function HelpSearch({
               <span className="text-text-primary font-medium">{article.title}</span>
               <span className="text-text-secondary text-sm">
                 {article.category}
-                {article.excerpt ? ` — ${article.excerpt}` : ""}
+                {article.excerpt ? ` · ${article.excerpt}` : ""}
               </span>
             </Link>
           ))}

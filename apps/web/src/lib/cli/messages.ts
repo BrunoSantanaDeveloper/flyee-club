@@ -41,8 +41,8 @@ const MESSAGES: Record<CliErrorCode, Record<CliLocale, string>> = {
     en: "Your account has no active plan. See the options in your dashboard.",
   },
   suspended: {
-    "pt-BR": "Sua conta está suspensa. Fale com o suporte do flyee.club.",
-    en: "Your account is suspended. Contact flyee.club support.",
+    "pt-BR": "Sua conta está suspensa. Fale com o suporte do FlyeeClub.",
+    en: "Your account is suspended. Contact FlyeeClub support.",
   },
   device_required: {
     "pt-BR": "Esta chamada precisa identificar o computador (header X-Flyee-Device). Atualize a CLI.",
@@ -74,7 +74,7 @@ const MESSAGES: Record<CliErrorCode, Record<CliLocale, string>> = {
   },
   denied_entitlement: {
     "pt-BR": "Esta ferramenta não faz parte do seu plano. Veja como liberar no painel.",
-    en: "This tool is not part of your plan. See how to unlock it in your dashboard.",
+    en: "This tool is not part of your plan. See how to get it in your dashboard.",
   },
   not_found: {
     "pt-BR": "Não encontramos isso no catálogo.",
@@ -89,8 +89,8 @@ const MESSAGES: Record<CliErrorCode, Record<CliLocale, string>> = {
     en: "The call was incomplete or in a format we do not understand. Update the CLI.",
   },
   unavailable: {
-    "pt-BR": "O flyee.club não conseguiu responder agora. Tente de novo em instantes.",
-    en: "flyee.club could not answer right now. Try again in a moment.",
+    "pt-BR": "O FlyeeClub não conseguiu responder agora. Tente de novo em instantes.",
+    en: "FlyeeClub could not answer right now. Try again in a moment.",
   },
 };
 

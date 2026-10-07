@@ -132,7 +132,7 @@ const en: BellCopy = {
   }),
 
   accessGranted: (plan, until) => ({
-    title: "Access unlocked",
+    title: "Your access is active",
     body: until
       ? `Payment confirmed: ${plan}. Every app in the store and its updates are on your account until ${until}.`
       : `Payment confirmed: ${plan}. Every app in the store and its updates are on your account.`,

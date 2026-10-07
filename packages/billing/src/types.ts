@@ -372,7 +372,7 @@ export const INVOICE_DESCRIPTION_LIMIT = 500;
 export function invoiceDescription(plan: { name: string; description?: string | null }, extras: string[] = []): string {
   const title = extras.length > 0 ? `${plan.name} + ${extras.join(", ")}` : plan.name;
   const detail = (plan.description ?? "").replace(/\s+/gu, " ").trim();
-  const full = detail ? `${title} — ${detail}` : title;
+  const full = detail ? `${title}: ${detail}` : title;
   if (full.length <= INVOICE_DESCRIPTION_LIMIT) return full;
   return `${full.slice(0, INVOICE_DESCRIPTION_LIMIT - 1).trimEnd()}…`;
 }

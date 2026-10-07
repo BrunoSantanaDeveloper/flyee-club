@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useId, useMemo, useRef } from "react";
 
 import { Box, FormLabel, TextField } from "@mui/material";
@@ -44,6 +45,7 @@ export default function VerificationCodeInput({
   autoFocus?: boolean;
   disabled?: boolean;
 }) {
+  const t = useTranslations("auth");
   const labelId = useId();
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
   const digits = Array.from({ length }, (_, i) => value[i] ?? "");
@@ -145,7 +147,7 @@ export default function VerificationCodeInput({
                 // Only the first box claims the OTP, or the OS offers to fill
                 // all six with the same code.
                 autoComplete: index === 0 ? "one-time-code" : "off",
-                "aria-label": `${label} — ${index + 1} de ${length}`,
+                "aria-label": t("code-digit", { label, position: index + 1, length }),
                 className: "text-center",
               },
             }}

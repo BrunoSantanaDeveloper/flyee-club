@@ -6,7 +6,7 @@ import { BRAND } from "@/brand";
 import { DEFAULTS } from "@/config";
 import { common, hsl, type ThemeName, themes } from "@flyee/design-tokens";
 
-export const alt = `${BRAND.name} — ${BRAND.tagline}`;
+export const alt = `${BRAND.name}: ${BRAND.tagline}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 // fs is the only way to reach the art without the renderer calling back into

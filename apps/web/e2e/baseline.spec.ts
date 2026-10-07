@@ -388,3 +388,42 @@ test("asking for a custom app says, before any price, that a commissioned app is
   await page.goto("/contato?assunto=mentoria");
   await expect(page.getByText("Um app contratado entra na loja")).toHaveCount(0);
 });
+
+test("the text people read has no dash, exclamation mark or emoji, in either language", async ({ page }) => {
+  // The home brief's acceptance check (copy rules, docs/PRODUCT.md): the text
+  // of the rendered page, not the code. © and → are kept on purpose.
+  const forbidden = /[–—!]|(?![©→])\p{Extended_Pictographic}/gu;
+  for (const route of [
+    "/",
+    "/en",
+    "/planos",
+    "/en/pricing",
+    "/como-funciona",
+    "/en/how-it-works",
+    "/catalogo",
+    "/en/catalog",
+    "/sobre",
+    "/en/about",
+    "/contato",
+    "/en/contact",
+    "/espera",
+    "/en/waitlist",
+    "/fundadores",
+    "/en/founders",
+    "/ajuda",
+    "/en/help",
+    "/blog",
+    "/en/blog",
+    "/legal/termos",
+    "/en/legal/terms",
+    "/auth/sign-in",
+    "/auth/sign-up",
+  ]) {
+    await page.goto(route);
+    const text = await page.locator("body").innerText();
+    const found = [...text.matchAll(forbidden)].map((match) =>
+      text.slice(Math.max(0, match.index - 30), match.index + 10).replace(/\s+/g, " "),
+    );
+    expect(found, `text the copy rules forbid at ${route}`).toEqual([]);
+  }
+});

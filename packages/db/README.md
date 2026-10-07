@@ -43,6 +43,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0032_module_personas` | `catalog_modules.personas`: the site personas (`member_segment` without `outro`) an app is a good start for, marked by the operator, public on published apps; read by the home brief's "Para quem é" block. |
 | `0033_roadmap_coming_next` | "Próximos na loja": `roadmap_items.won_month` (the month an idea was the most voted, recorded when planned from the leaders card) and `commissioned` (a paid request), and `roadmap_coming_next()`, the only part of the roadmap a visitor reads (planned and building ideas, with those two marks). |
 | `0034_store_badges` | `platform_settings.catalog` (public): how many days after its first publication an app shows "Novo" in the store (30 to start); "Usa sua conta" comes from each app's required external credentials. |
+| `0035_legal_copy_rules` | The copy rules (no dash, exclamation mark, emoji or banned word) in the legal texts: version 5 of the English terms of use and version 2 of the English CLI connection term, each built from the text in force by one checked replacement ("unlocks" out). The Portuguese texts keep their versions. pgTAP `0033_copy_rules` keeps every seeded text in force inside the rules. |
 
 ## Conventions every migration follows
 

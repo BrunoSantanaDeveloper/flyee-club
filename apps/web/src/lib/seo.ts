@@ -48,7 +48,7 @@ const SOCIAL_CARD = {
   url: "/opengraph-image",
   width: 1200,
   height: 630,
-  alt: `${BRAND.name} — ${BRAND.tagline}`,
+  alt: `${BRAND.name}: ${BRAND.tagline}`,
 };
 
 /**

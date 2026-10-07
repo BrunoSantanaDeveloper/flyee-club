@@ -92,7 +92,7 @@ export default function AnnouncementBanner() {
           }
         >
           <span className="font-medium">{item.title}</span>
-          {item.body ? <> — {item.body}</> : null}
+          {item.body ? <>: {item.body}</> : null}
         </Alert>
       ))}
     </Box>

@@ -108,8 +108,14 @@ export default async function VerifyPage({ params }: { params: Promise<{ ref: st
     );
   }
 
-  const date = (value: string | null) =>
-    value ? new Date(value).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" }) : "—";
+  const withdrawn = result.status === "yanked";
+  // The database stamps the date of every status change (0008), so a version
+  // shown here has the date of its state; a row without one gets no date
+  // sentence rather than a placeholder.
+  const stateDate = withdrawn ? (result.yanked_at ?? result.published_at) : result.published_at;
+  const dated = stateDate
+    ? new Date(stateDate).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })
+    : null;
   const size =
     result.size_bytes >= 1024 * 1024
       ? `${(result.size_bytes / (1024 * 1024)).toLocaleString(locale, { maximumFractionDigits: 1 })} MB`
@@ -117,7 +123,6 @@ export default async function VerifyPage({ params }: { params: Promise<{ ref: st
   const file = `${result.slug}-${result.version}.zip`;
   const reasonOf = (reason: Record<string, string> | string | undefined) =>
     typeof reason === "string" ? reason : (reason?.[locale] ?? reason?.["pt-BR"] ?? "");
-  const withdrawn = result.status === "yanked";
 
   return (
     <>
@@ -129,9 +134,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ ref: st
           eyebrow={t("verify-eyebrow")}
           title={t("verify-title", { module: result.slug, version: result.version })}
           subtitle={
-            withdrawn
-              ? t("verify-status-yanked", { date: date(result.yanked_at) })
-              : t("verify-status-published", { date: date(result.published_at) })
+            dated ? t(withdrawn ? "verify-status-yanked" : "verify-status-published", { date: dated }) : undefined
           }
         />
 
