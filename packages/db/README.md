@@ -41,6 +41,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0030_guides` | written guides carried by each version's package: `catalog_module_versions.guides` (which guides a version carries, public) and `catalog_guides` (the text, written only by the upload, read through `can_read_guide`: the basic depth with the app's entitlement, "abrir o capô" with `advanced_lessons`, drafts by the operator only). |
 | `0031_terms_custom_apps` | terms of use version 4, built from version 3 by one checked replacement: an app built on demand joins the store for every member unless an exclusivity agreement is made in writing before hiring. |
 | `0032_module_personas` | `catalog_modules.personas`: the site personas (`member_segment` without `outro`) an app is a good start for, marked by the operator, public on published apps; read by the home brief's "Para quem é" block. |
+| `0033_roadmap_coming_next` | "Próximos na loja": `roadmap_items.won_month` (the month an idea was the most voted, recorded when planned from the leaders card) and `commissioned` (a paid request), and `roadmap_coming_next()`, the only part of the roadmap a visitor reads (planned and building ideas, with those two marks). |
 
 ## Conventions every migration follows
 

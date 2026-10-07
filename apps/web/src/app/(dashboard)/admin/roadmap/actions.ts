@@ -34,6 +34,8 @@ export type RoadmapItemInput = {
   status: string;
   shippedModuleId: string | null;
   sort: number;
+  /** An idea from a paid request, public by default (migration 0033). */
+  commissioned: boolean;
 };
 
 export async function saveRoadmapItem(input: RoadmapItemInput): Promise<RoadmapActionResult<{ id: string }>> {
@@ -54,6 +56,7 @@ export async function saveRoadmapItem(input: RoadmapItemInput): Promise<RoadmapA
     status: input.status,
     shipped_module_id: shipped,
     sort: Number.isFinite(input.sort) ? Math.round(input.sort) : 0,
+    commissioned: Boolean(input.commissioned),
   };
 
   if (input.id) {
@@ -111,6 +114,35 @@ export async function setRoadmapStatus(id: string, status: string): Promise<Road
     entityType: "roadmap_item",
     entityId: id,
     metadata: { status },
+  });
+  revalidatePath("/admin/roadmap");
+  revalidatePath("/roadmap");
+  return { ok: true, data: null };
+}
+
+const MONTH_START = /^\d{4}-\d{2}-01$/;
+
+/**
+ * Plans the month's most voted idea and records the month it won (migration
+ * 0033), which "Próximos na loja" shows as "Mais votado de {mês}". The month
+ * comes from the leaders card, which read it from roadmap_month_leader.
+ */
+export async function planMonthLeader(id: string, monthStart: string): Promise<RoadmapActionResult> {
+  if (!UUID.test(id) || !MONTH_START.test(monthStart)) return { ok: false, error: "Pedido inválido." };
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: "Só quem tem o papel de superadmin muda o roadmap." };
+  const { data, error } = await session.supabase
+    .from("roadmap_items")
+    .update({ status: "planned", won_month: monthStart, shipped_module_id: null })
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Este item não existe mais. Recarregue a página." };
+  await recordAudit(session.supabase, "admin.roadmap.item.month_leader_planned", {
+    entityType: "roadmap_item",
+    entityId: id,
+    metadata: { won_month: monthStart },
   });
   revalidatePath("/admin/roadmap");
   revalidatePath("/roadmap");

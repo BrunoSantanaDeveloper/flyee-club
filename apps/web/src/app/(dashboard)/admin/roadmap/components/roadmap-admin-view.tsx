@@ -1,7 +1,13 @@
 "use client";
 
-import { LocalizedInput, SelectInput, TextInput } from "../../catalogo/components/fields";
-import { deleteRoadmapItem, type RoadmapItemInput, saveRoadmapItem, setRoadmapStatus } from "../actions";
+import { CheckInput, LocalizedInput, SelectInput, TextInput } from "../../catalogo/components/fields";
+import {
+  deleteRoadmapItem,
+  planMonthLeader,
+  type RoadmapItemInput,
+  saveRoadmapItem,
+  setRoadmapStatus,
+} from "../actions";
 import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { useCallback, useState } from "react";
@@ -85,6 +91,7 @@ function ItemDialog({
     status: item?.status ?? "proposed",
     shippedModuleId: item?.shippedModuleId ?? null,
     sort: item?.sort ?? 0,
+    commissioned: item?.commissioned ?? false,
   }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +155,17 @@ function ItemDialog({
               ]}
               onChange={(value) => set("shippedModuleId", value || null)}
             />
+          ) : null}
+          <CheckInput
+            label="App contratado (sai para todos)"
+            checked={form.commissioned}
+            onChange={(value) => set("commissioned", value)}
+            help="Veio de um pedido pago. Em Próximos na loja aparece como “Em desenvolvimento, sai para todos”."
+          />
+          {item?.wonMonth ? (
+            <Typography variant="body2" className="text-text-secondary">
+              Mais votado de {monthName(item.wonMonth)}: registrado ao planejar pelo card do mais votado.
+            </Typography>
           ) : null}
           <TextInput
             label="Ordem entre itens com os mesmos votos"
@@ -277,7 +295,10 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
                         color="grey"
                         size="small"
                         onClick={() =>
-                          run(() => setRoadmapStatus(item.id, "planned"), `“${textOf(item.title)}”: planejado.`)
+                          run(
+                            () => planMonthLeader(item.id, leader.monthStart),
+                            `“${textOf(item.title)}”: planejado, mais votado de ${monthName(leader.monthStart)}.`,
+                          )
                         }
                       >
                         Planejar
@@ -335,6 +356,16 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
                               {formatNumber(item.votes)} {item.votes === 1 ? "voto" : "votos"}
                               {trailName(item.trail) ? ` · ${trailName(item.trail)}` : ""}
                             </Typography>
+                            {item.wonMonth || item.commissioned ? (
+                              <Typography variant="body2" className="text-text-secondary">
+                                {[
+                                  item.wonMonth ? `Mais votado de ${monthName(item.wonMonth)}` : null,
+                                  item.commissioned ? "Contratado, sai para todos" : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </Typography>
+                            ) : null}
                             {item.proposedBy ? (
                               <Typography variant="body2" className="text-text-secondary">
                                 Proposta de {item.proposedBy.name}

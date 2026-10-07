@@ -26,6 +26,10 @@ export type AdminRoadmapItem = {
   /** The member who proposed it, when a member did. */
   proposedBy: { id: string; name: string } | null;
   submittedAt: string | null;
+  /** The first day of the month it was the most voted, recorded when planned from the leaders card (0033). */
+  wonMonth: string | null;
+  /** It came from a paid request: public by default (terms of use, version 4). */
+  commissioned: boolean;
 };
 
 export type RoadmapModuleOption = { id: string; slug: string; name: Localized; status: string };
@@ -85,7 +89,7 @@ export async function loadRoadmapAdmin(supabase: SupabaseClient): Promise<{
     supabase
       .from("roadmap_items")
       .select(
-        "id, title, description, trail, status, votes_count, shipped_module_id, sort, created_at, updated_at, proposed_by, submitted_at",
+        "id, title, description, trail, status, votes_count, shipped_module_id, sort, created_at, updated_at, proposed_by, submitted_at, won_month, commissioned",
       ),
     supabase.from("catalog_modules").select("id, slug, name, status").order("slug"),
     supabase.from("catalog_trails").select("slug, name").order("sort"),
@@ -120,6 +124,8 @@ export async function loadRoadmapAdmin(supabase: SupabaseClient): Promise<{
           ? { id: row.proposed_by, name: nameOf.get(row.proposed_by)?.trim() || "integrante" }
           : null,
         submittedAt: row.submitted_at ?? null,
+        wonMonth: row.won_month ?? null,
+        commissioned: Boolean(row.commissioned),
       })),
     ),
     leaders: { current, previous },

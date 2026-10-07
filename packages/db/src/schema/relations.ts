@@ -1,7 +1,7 @@
 // GENERATED from packages/db/migrations by `npm run db:schema:pull`.
 // Regenerate after every migration instead of editing by hand.
 import { relations } from "drizzle-orm/relations";
-import { usersInAuth, profiles, organizations, memberships, auditEvents, consentTerms, consentAcceptances, accessEvents, platformSettings, notifications, announcements, onboardingState, subscriptions, plans, coupons, billingOperations, subscriptionModules, modules, invoices, entitlementGrants, metaAttribution, signupAttribution, purchaseAttributions, productEvents, helpCategories, helpArticles, blogPosts, blogComments, catalogModules, catalogModuleVersions, catalogTrails, catalogStoreCategories, catalogLessons, catalogLessonVideos, catalogRecipes, catalogRecipeWorkflows, roadmapItems, oauthClients, oauthGrants, oauthTokens, oauthDeviceCodes, memberDevices, cliRequests, leads, moduleDownloads, impersonationSessions, meetings, meetingLinks, meetingRegistrations, newsletterSends, aiSpend, announcementDismissals, catalogRecipeModules, newsletterDeliveries, roadmapVotes, lessonProgress, catalogGuides } from "./schema";
+import { usersInAuth, profiles, organizations, memberships, auditEvents, consentTerms, consentAcceptances, accessEvents, platformSettings, notifications, announcements, onboardingState, subscriptions, plans, coupons, billingOperations, subscriptionModules, modules, invoices, entitlementGrants, metaAttribution, signupAttribution, purchaseAttributions, productEvents, helpCategories, helpArticles, blogPosts, blogComments, catalogModules, catalogModuleVersions, catalogTrails, catalogStoreCategories, catalogLessons, catalogLessonVideos, roadmapItems, catalogRecipes, catalogRecipeWorkflows, oauthClients, oauthGrants, oauthTokens, oauthDeviceCodes, memberDevices, cliRequests, leads, moduleDownloads, impersonationSessions, meetings, meetingLinks, meetingRegistrations, newsletterSends, aiSpend, announcementDismissals, catalogRecipeModules, newsletterDeliveries, roadmapVotes, lessonProgress, catalogGuides } from "./schema";
 
 export const profilesRelations = relations(profiles, ({one, many}) => ({
 	usersInAuth: one(usersInAuth, {
@@ -396,18 +396,6 @@ export const catalogLessonVideosRelations = relations(catalogLessonVideos, ({one
 	}),
 }));
 
-export const catalogRecipeWorkflowsRelations = relations(catalogRecipeWorkflows, ({one}) => ({
-	catalogRecipe: one(catalogRecipes, {
-		fields: [catalogRecipeWorkflows.recipeId],
-		references: [catalogRecipes.id]
-	}),
-}));
-
-export const catalogRecipesRelations = relations(catalogRecipes, ({many}) => ({
-	catalogRecipeWorkflows: many(catalogRecipeWorkflows),
-	catalogRecipeModules: many(catalogRecipeModules),
-}));
-
 export const roadmapItemsRelations = relations(roadmapItems, ({one, many}) => ({
 	catalogTrail: one(catalogTrails, {
 		fields: [roadmapItems.trail],
@@ -428,6 +416,18 @@ export const roadmapItemsRelations = relations(roadmapItems, ({one, many}) => ({
 		relationName: "roadmapItems_proposedBy_profiles_id"
 	}),
 	roadmapVotes: many(roadmapVotes),
+}));
+
+export const catalogRecipeWorkflowsRelations = relations(catalogRecipeWorkflows, ({one}) => ({
+	catalogRecipe: one(catalogRecipes, {
+		fields: [catalogRecipeWorkflows.recipeId],
+		references: [catalogRecipes.id]
+	}),
+}));
+
+export const catalogRecipesRelations = relations(catalogRecipes, ({many}) => ({
+	catalogRecipeWorkflows: many(catalogRecipeWorkflows),
+	catalogRecipeModules: many(catalogRecipeModules),
 }));
 
 export const oauthGrantsRelations = relations(oauthGrants, ({one}) => ({

@@ -70,8 +70,8 @@ select is(
       and has_function_privilege('anon', p.oid, 'EXECUTE')
       and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
   ),
-  array['catalog_latest_version', 'current_consent_terms', 'founders_offer', 'verify_module_version'],
-  'an anonymous visitor can call exactly four functions'
+  array['catalog_latest_version', 'current_consent_terms', 'founders_offer', 'roadmap_coming_next', 'verify_module_version'],
+  'an anonymous visitor can call exactly five functions (roadmap_coming_next since 0033)'
 );
 
 select ok(
