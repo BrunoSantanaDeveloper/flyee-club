@@ -17,6 +17,7 @@ import { getGuaranteeDays } from "@/lib/guarantee";
 import { pendingPixCharge } from "@/lib/pending-pix";
 import { createClient } from "@flyee/auth/server";
 import { isPixAvailable } from "@flyee/billing";
+import { formatPrice } from "@flyee/billing/currency";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("product");
@@ -141,14 +142,8 @@ export default async function AssinaturaPage({
 
   const oneTime = planRow.kind === "access";
   const planCurrency = planRow.currency === "USD" ? "USD" : "BRL";
-  const money = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: planCurrency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
   const suffix = planRow.period ? t(`billing-period-${planRow.period}` as never) : t("billing-one-time");
-  const priceLabel = `${money.format(Number(planRow.price_cents) / 100)} ${suffix}`;
+  const priceLabel = `${formatPrice(Number(planRow.price_cents), planCurrency, locale)} ${suffix}`;
 
   // An access the workspace already holds: buying again is a RENEWAL, and the
   // new term starts when the current one ends (grant_entitlement_on_invoice,

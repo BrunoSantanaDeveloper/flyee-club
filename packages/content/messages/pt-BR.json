@@ -106,8 +106,6 @@
     "pricing-note": "*Valores de lançamento em validação. A contratação e a cobrança acontecem pela web.",
     "pricing-coupon-applied": "Cupom {code} aplicado: preços já com desconto",
     "pricing-coupon-unknown": "O cupom {code} não está mais disponível. Os preços abaixo são os vigentes.",
-    "pricing-coupon-off-percent": "{value}% de desconto",
-    "pricing-coupon-off-fixed": "{value} de desconto",
     "pricing-guarantee-title": "Compra sem risco",
     "pricing-guarantee-body": "Se não servir, você pede o reembolso integral dentro do prazo de garantia, direto pelo suporte. Os apps rodam na IA que você já usa, com o seu próprio plano: nada de crédito de IA cobrado por nós.",
     "pricing-meta-title": "Preços do FlyeeClub: acesso de 1 ano e FlyeeClub Pro",
@@ -556,7 +554,6 @@
     "founders-seats-label": "vagas restantes",
     "founders-seats-value": "{left} de {total}",
     "founders-deadline": "até {date}",
-    "founders-saving": "{percent}% abaixo do preço anual",
     "founders-price-eyebrow": "O que entra",
     "founders-price-title": "Tudo do FlyeeClub Pro anual",
     "founders-price-subtitle": "O mesmo plano da tabela, pelo preço de fundador.",
@@ -580,7 +577,7 @@
     "founders-closed-off-body": "Quando ela abrir, esta página mostra o preço e as vagas. Enquanto isso, os planos estão na tabela.",
     "founders-closed-cta-title": "Escolha como continuar",
     "founders-closed-cta-plans": "Ver os planos",
-    "pricing-founders-open": "Preço de fundador aberto: restam {left} de {total} vagas.",
+    "pricing-founders-open": "O preço de fundador está aberto.",
     "pricing-founders-link": "Ver a oferta",
     "about-builder-eyebrow": "Quem constrói",
     "about-builder-title": "Todo app aqui já rodou em produto de verdade.",
@@ -631,7 +628,8 @@
     "cta-nav": "Quero montar meu sistema",
     "pricing-cta-pro": "Assinar FlyeeClub Pro",
     "catalog-badge-new": "Novo",
-    "catalog-badge-account": "Usa sua conta {service}"
+    "catalog-badge-account": "Usa sua conta {service}",
+    "pricing-price-coupon": "Com o cupom {code}"
   },
   "product": {
     "security-title": "Segurança",
@@ -1245,7 +1243,8 @@
     "module-guide-empty-title": "O guia deste app ainda não saiu",
     "module-guide-empty-body": "Ele chega com uma próxima versão do app. Enquanto isso, a descrição abaixo mostra o que o app faz.",
     "billing-installments": "ou em até {count}x de {amount} no cartão",
-    "checkout-installments-last": "A última parcela é de {amount}: os centavos que não se dividem igualmente ficam nela."
+    "checkout-installments-last": "A última parcela é de {amount}: os centavos que não se dividem igualmente ficam nela.",
+    "billing-price-coupon": "Com o cupom {code}"
   },
   "auth": {
     "continue": "Continuar",

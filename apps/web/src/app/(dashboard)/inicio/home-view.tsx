@@ -22,6 +22,7 @@ import { OFFER_COPY, REASON_COPY, SERVICE_COPY } from "@/lib/member/offer-copy";
 import type { OfferPlan } from "@/lib/member/offers";
 import type { ServiceOffer, UpsellOffer, UpsellReason } from "@/lib/upsell";
 import { cn } from "@/lib/utils";
+import { formatPrice } from "@flyee/billing/currency";
 import type { Tier } from "@flyee/billing/entitlements";
 
 export type HomeState =
@@ -66,12 +67,7 @@ export default function HomeView({ state }: { state: HomeState }) {
     );
   }
 
-  const money = (plan: OfferPlan) =>
-    new Intl.NumberFormat(state.locale, {
-      style: "currency",
-      currency: plan.currency,
-      maximumFractionDigits: 0,
-    }).format(plan.priceCents / 100);
+  const money = (plan: OfferPlan) => formatPrice(plan.priceCents, plan.currency, state.locale);
   const priceLabel = (plan: OfferPlan | null) =>
     plan
       ? plan.period === "monthly"

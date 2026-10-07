@@ -18,38 +18,23 @@ const PERIOD_WORD: Record<string, string> = { yearly: "ano", monthly: "mês", we
  * What the visitor will actually SEE, resolved from the same plan rows the
  * offer page reads.
  *
- * Every offer console needs this and none of them should compute it twice: a
- * console that only writes settings hides its own typos, and the failure it
- * hides is silent by nature — an anchor price that never renders (wrong slug,
- * inactive plan, another currency, or a price below the offer's).
+ * A console that only writes settings hides its own typos, and the failure it
+ * hides is silent by nature: a slug that matches no plan, or an inactive plan
+ * that cannot be bought. The page shows the offer's price alone, never beside
+ * a struck-through regular price (docs/PRODUCT.md, "Preço e vagas"), so there
+ * is no anchor to preview.
  */
 export default function OfferPreview({
   plans,
   planSlug,
-  compareSlug,
   label,
 }: {
   plans: OfferPlanRow[];
   planSlug: string;
-  compareSlug: string;
   /** Where these numbers show up, for the operator reading the line. */
   label: string;
 }) {
   const plan = plans.find((row) => row.slug === planSlug.trim()) ?? null;
-  const comparePlan = compareSlug.trim() ? (plans.find((row) => row.slug === compareSlug.trim()) ?? null) : null;
-
-  // Mirrors the page exactly: a monthly anchor is annualized, a period or
-  // currency mismatch yields no anchor, and an anchor cheaper than the offer
-  // is dropped.
-  const anchorCents =
-    comparePlan && plan && comparePlan.currency === plan.currency
-      ? comparePlan.period === "monthly" && plan.period === "yearly"
-        ? comparePlan.price_cents * 12
-        : comparePlan.period === plan.period
-          ? comparePlan.price_cents
-          : 0
-      : 0;
-  const anchorRenders = Boolean(plan && comparePlan?.is_active && anchorCents > plan.price_cents);
 
   if (!plan) {
     return (
@@ -75,16 +60,10 @@ export default function OfferPreview({
   return (
     <RowLine>
       <RowText
-        primary={`${label} mostra ${money.format(plan.price_cents / 100)} por ${periodWord}${
-          anchorRenders ? ` · riscado ${money.format(anchorCents / 100)}` : " · SEM preço riscado"
-        }`}
+        primary={`${label} mostra ${money.format(plan.price_cents / 100)} por ${periodWord}`}
         secondary={`${devices > 0 ? `${devices} dispositivo${devices === 1 ? "" : "s"}` : "sem dispositivo"}${
-          anchorRenders
-            ? ""
-            : comparePlan
-              ? ` · a âncora "${comparePlan.slug}" não aparece (inativa, em outra moeda, mais barata que a oferta, ou período incomparável)`
-              : " · nenhum plano de âncora definido"
-        }${plan.is_active ? "" : " · O PLANO ESTÁ INATIVO e não pode ser comprado"}`}
+          plan.is_active ? "" : " · O PLANO ESTÁ INATIVO e não pode ser comprado"
+        }`}
       />
     </RowLine>
   );

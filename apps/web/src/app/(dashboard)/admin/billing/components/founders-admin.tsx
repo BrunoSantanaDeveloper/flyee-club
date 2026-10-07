@@ -12,8 +12,6 @@ import { createClient } from "@flyee/auth/client";
 type OfferConfig = {
   enabled: boolean;
   plan_slug: string;
-  /** Plan whose price the landing page strikes through. Empty = no anchor. */
-  compare_plan_slug: string;
   seats: number;
   /** ISO string, or "" for no deadline. */
   deadline: string;
@@ -31,7 +29,6 @@ type OfferState = {
 const EMPTY: OfferConfig = {
   enabled: false,
   plan_slug: "pro-fundador",
-  compare_plan_slug: "",
   seats: 30,
   deadline: "",
 };
@@ -58,17 +55,16 @@ function toLocalInput(iso: string): string {
  * plan, which would also make it unbuyable for the founders who already hold it
  * and for anyone finishing a checkout.
  *
- * Two things this console got wrong, both fixed here because both were silent:
+ * Two rules keep this console honest, both because the failures were silent:
  *
- *  - It wrote the whole `founders` JSON from four fields, so every Save DELETED
- *    `compare_plan_slug` — the anchor the landing page strikes through — and
- *    offered no field to put it back. It now edits that key and merges over
- *    whatever else the row holds, so an unknown key can never be dropped again.
- *  - It reported seats but never whether the page will actually RENDER what was
- *    configured. The readout below resolves both plans and says what the
- *    visitor will see: the price in the plan's own currency, the device
- *    ceiling, whether the plan can still be bought, and why an anchor does
- *    not render (another currency or period, inactive, or cheaper).
+ *  - Save merges over whatever else the row holds, so a key this form does not
+ *    edit is never dropped. One such key is `compare_plan_slug`, the anchor the
+ *    page used to strike through: since 2026-10-07 the page shows the offer's
+ *    price alone (docs/PRODUCT.md, "Preço e vagas"), so the field left this
+ *    form and the key is no longer read.
+ *  - The readout below says what the visitor will see, resolved from the
+ *    plans: the price in the plan's own currency, the device ceiling and
+ *    whether the plan can still be bought.
  */
 export default function FoundersAdmin() {
   const [config, setConfig] = useState<OfferConfig>(EMPTY);
@@ -92,7 +88,6 @@ export default function FoundersAdmin() {
     setConfig({
       enabled: value.enabled === true,
       plan_slug: typeof value.plan_slug === "string" ? value.plan_slug : EMPTY.plan_slug,
-      compare_plan_slug: typeof value.compare_plan_slug === "string" ? value.compare_plan_slug : "",
       seats: Number.isFinite(Number(value.seats)) ? Number(value.seats) : EMPTY.seats,
       deadline: typeof value.deadline === "string" ? value.deadline : "",
     });
@@ -116,7 +111,6 @@ export default function FoundersAdmin() {
         ...rawValue,
         enabled: config.enabled,
         plan_slug: config.plan_slug.trim(),
-        compare_plan_slug: config.compare_plan_slug.trim(),
         seats: Number(config.seats) || 0,
         deadline: config.deadline || null,
       },
@@ -131,7 +125,6 @@ export default function FoundersAdmin() {
         enabled: config.enabled,
         seats: Number(config.seats) || 0,
         plan_slug: config.plan_slug.trim(),
-        compare_plan_slug: config.compare_plan_slug.trim(),
       },
     });
     setSaved(true);
@@ -169,12 +162,7 @@ export default function FoundersAdmin() {
 
       {/* What the visitor will actually see, resolved by the same component
           the campaign console uses. */}
-      <OfferPreview
-        plans={plans}
-        planSlug={config.plan_slug}
-        compareSlug={config.compare_plan_slug}
-        label="/fundadores"
-      />
+      <OfferPreview plans={plans} planSlug={config.plan_slug} label="/fundadores" />
 
       <FormControlLabel
         control={
@@ -190,11 +178,6 @@ export default function FoundersAdmin() {
         label="Slug do plano da oferta"
         value={config.plan_slug}
         onChange={(value) => setConfig({ ...config, plan_slug: value })}
-      />
-      <Field
-        label="Slug do plano de âncora (preço riscado — vazio para nenhum)"
-        value={config.compare_plan_slug}
-        onChange={(value) => setConfig({ ...config, compare_plan_slug: value })}
       />
       <Field
         label="Vagas"

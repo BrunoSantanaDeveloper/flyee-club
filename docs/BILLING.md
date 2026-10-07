@@ -203,7 +203,7 @@ Os tokens da CLI só valem enquanto a conta tem `catalog_access`. Eles são revo
 | `platform_settings` | `dunning` | dias de carência |
 | `platform_settings` | `billing` | teto de parcelas |
 | `platform_settings` | `guarantee` | prazo de garantia exibido |
-| `platform_settings` | `founders` | oferta de fundador: plano, âncora, vagas, prazo |
+| `platform_settings` | `founders` | oferta de fundador: plano, vagas, prazo (a chave `compare_plan_slug`, a âncora riscada de antes, não é mais lida desde 2026-10-07) |
 | `platform_settings` | `pix_provisional_access` | acesso provisório do Pix |
 | env | `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `ASAAS_BASE_URL` | Asaas (BRL) |
 | env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe (USD) |

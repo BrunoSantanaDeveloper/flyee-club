@@ -30,6 +30,7 @@ import { decideUpsell, type UpsellOffer, type UpsellReason } from "@/lib/upsell"
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
+import { formatPrice } from "@flyee/billing/currency";
 import { isTier } from "@flyee/billing/entitlements";
 
 /**
@@ -142,11 +143,7 @@ export default async function AuthorizePage({
   }
   const offerPrice = (plan: OfferPlan | null) => {
     if (!plan) return null;
-    const price = new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: plan.currency,
-      maximumFractionDigits: 0,
-    }).format(plan.priceCents / 100);
+    const price = formatPrice(plan.priceCents, plan.currency, locale);
     return plan.period === "monthly" ? t("home-offer-price-monthly", { price }) : t("home-offer-price-once", { price });
   };
 

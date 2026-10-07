@@ -10,7 +10,7 @@ import { splitInstallments } from "@/lib/installments";
 const termKey = (months: number) =>
   accessTermParts(months).unit === "years" ? "access-term-years" : "access-term-months";
 import type { LaunchStage } from "@/lib/launch";
-import type { BillingCurrency } from "@flyee/billing/currency";
+import { type BillingCurrency, formatPrice } from "@flyee/billing/currency";
 import { enabledFeatures, type EntitlementKey, isTier, limitOf, type Tier } from "@flyee/billing/entitlements";
 import { listPublicPlans } from "@flyee/billing/public";
 import { applyDiscount, type CheckoutCoupon } from "@flyee/billing/types";
@@ -66,9 +66,10 @@ export type DisplayPricing = {
  * button leads to the waitlist; afterwards each leads to sign-up and then to
  * that plan's own checkout.
  *
- * With a campaign coupon, every card the coupon applies to also carries its
- * ORIGINAL price and the discount label, using the same helper the providers
- * charge with.
+ * With a campaign coupon, every card the coupon applies to shows the price the
+ * coupon gives, computed with the same helper the providers charge with, and
+ * names the coupon beside it. The list price is never shown struck through
+ * (docs/PRODUCT.md, "Preço e vagas").
  */
 export async function getDisplayPlans({
   coupon,
@@ -103,12 +104,7 @@ export async function getDisplayPlans({
   }
 
   const plans = rows.filter((plan) => !plan.isFree && (plan.kind === "access" || plan.period));
-  const money = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
+  const money = (cents: number) => formatPrice(cents, currency, locale);
   // A fixed discount is an amount in one currency; a percentage applies anywhere.
   const planCoupon = coupon && (coupon.discountType === "percent" || coupon.currency === currency) ? coupon : undefined;
 
@@ -123,13 +119,8 @@ export async function getDisplayPlans({
       slug: plan.slug,
       name: plan.name,
       description: plan.description ?? undefined,
-      price: money.format(payableCents / 100),
-      originalPrice: discounted ? money.format(plan.priceCents / 100) : undefined,
-      discountLabel: discounted
-        ? planCoupon?.discountType === "percent"
-          ? t("pricing-coupon-off-percent", { value: planCoupon.discountValue })
-          : t("pricing-coupon-off-fixed", { value: money.format((planCoupon?.discountValue ?? 0) / 100) })
-        : undefined,
+      price: money(payableCents),
+      priceCondition: discounted && planCoupon ? t("pricing-price-coupon", { code: planCoupon.code }) : undefined,
       period: isKit
         ? plan.accessMonths
           ? t("pricing-access-term", {
@@ -150,7 +141,7 @@ export async function getDisplayPlans({
         isKit && maxInstallments > 1
           ? t("pricing-installments", {
               count: maxInstallments,
-              amount: money.format(splitInstallments(payableCents, maxInstallments).each / 100),
+              amount: money(splitInstallments(payableCents, maxInstallments).each),
             })
           : undefined,
       ctaId: isKit ? "plan_access" : "plan_full",

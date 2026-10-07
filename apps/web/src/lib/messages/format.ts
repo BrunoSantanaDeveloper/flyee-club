@@ -1,3 +1,4 @@
+import { formatPrice } from "@flyee/billing/currency";
 import { BRAND } from "@flyee/content";
 
 /**
@@ -51,12 +52,7 @@ export function dateTimeLabel(value: string | Date, locale: MessageLocale, timeZ
 
 /** "R$ 97" / "$29.50": what was paid, without decimals when there are none. */
 export function moneyLabel(amountCents: number, currency: string, locale: MessageLocale): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amountCents / 100);
+  return formatPrice(amountCents, currency, locale);
 }
 
 /**

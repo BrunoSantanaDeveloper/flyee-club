@@ -4,8 +4,6 @@ export type FoundersOfferReason = "open" | "disabled" | "expired" | "sold_out" |
 
 export type FoundersOffer = {
   planSlug: string | null;
-  /** Plan whose price is shown struck through, as the anchor. Optional. */
-  comparePlanSlug: string | null;
   seatsTotal: number;
   seatsTaken: number;
   seatsLeft: number;
@@ -38,7 +36,6 @@ export async function getFoundersOffer(): Promise<FoundersOffer | null> {
 
   const row = data as {
     plan_slug?: string | null;
-    compare_plan_slug?: string | null;
     seats_total?: number;
     seats_taken?: number;
     seats_left?: number;
@@ -49,7 +46,6 @@ export async function getFoundersOffer(): Promise<FoundersOffer | null> {
 
   return {
     planSlug: row.plan_slug ?? null,
-    comparePlanSlug: row.compare_plan_slug ?? null,
     seatsTotal: Number(row.seats_total ?? 0),
     seatsTaken: Number(row.seats_taken ?? 0),
     seatsLeft: Number(row.seats_left ?? 0),

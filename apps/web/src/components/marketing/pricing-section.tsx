@@ -20,10 +20,13 @@ export type PublicPlanDisplay = {
   name: string;
   description?: string;
   price: string;
-  /** List price, struck through, when a campaign coupon lowered `price`. */
-  originalPrice?: string;
-  /** What the coupon takes off this card ("20% de desconto"). */
-  discountLabel?: string;
+  /**
+   * What this price depends on, named instead of compared with another price:
+   * the campaign coupon that lowered it ("Com o cupom LANCAMENTO"). No card
+   * strikes a price through or pairs a "from" with a "to" (docs/PRODUCT.md,
+   * "Preço e vagas").
+   */
+  priceCondition?: string;
   period?: string;
   features: string[];
   highlighted?: boolean;
@@ -224,14 +227,10 @@ export default function PricingSection({
               </div>
 
               <div className="flex flex-col gap-1">
-                {plan.originalPrice && (
-                  <p className="flex flex-row items-center gap-2">
-                    <span className="text-text-secondary text-base line-through">{plan.originalPrice}</span>
-                    {plan.discountLabel && (
-                      <span className="bg-secondary/10 text-text-primary rounded-full px-2 py-0.5 text-xs font-bold">
-                        {plan.discountLabel}
-                      </span>
-                    )}
+                {plan.priceCondition && (
+                  <p className="bg-primary/10 text-text-primary flex w-fit flex-row items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold">
+                    <NiTag size="small" className="flex-none" />
+                    {plan.priceCondition}
                   </p>
                 )}
                 <p className="flex flex-row items-baseline gap-1">

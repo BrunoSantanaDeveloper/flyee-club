@@ -128,7 +128,7 @@ describe("dates and amounts in a message", () => {
 
   it("writes an amount in its own currency, without decimals it does not have", () => {
     expect(moneyLabel(9700, "BRL", "pt-BR").replace(/\s/g, " ")).toBe("R$ 97");
-    expect(moneyLabel(2950, "USD", "en")).toBe("$29.5");
+    expect(moneyLabel(2950, "USD", "en")).toBe("$29.50");
     expect(moneyLabel(2900, "USD", "en")).toBe("$29");
   });
 

@@ -33,7 +33,7 @@ import { splitInstallments } from "@/lib/installments";
 import { clearCouponCookie, normalizeCouponCode, readCouponCookie, writeCouponCookie } from "@/lib/offer-link";
 import { type OfferKind, trackOffer } from "@/lib/product-events";
 import { cn } from "@/lib/utils";
-import type { BillingCurrency } from "@flyee/billing/currency";
+import { type BillingCurrency, formatPrice } from "@flyee/billing/currency";
 import { enabledFeatures, type EntitlementKey, limitOf } from "@flyee/billing/entitlements";
 import { applyDiscount } from "@flyee/billing/types";
 
@@ -222,13 +222,7 @@ export default function PlansGrid({
     ) : null;
   }
 
-  const money = (plan: PlanRow, cents: number) =>
-    new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: plan.currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(cents / 100);
+  const money = (plan: PlanRow, cents: number) => formatPrice(cents, plan.currency, locale);
   // A fixed discount is an amount in one currency; a percentage applies anywhere.
   const couponFor = (plan: PlanRow) =>
     coupon && (coupon.discountType === "percent" || coupon.currency === plan.currency) ? coupon : undefined;
@@ -269,10 +263,7 @@ export default function PlansGrid({
                 ? t("billing-coupon-applied-percent", { code: coupon.code, value: coupon.discountValue })
                 : t("billing-coupon-applied-fixed", {
                     code: coupon.code,
-                    value: new Intl.NumberFormat(locale, {
-                      style: "currency",
-                      currency: coupon.currency ?? currency,
-                    }).format(coupon.discountValue / 100),
+                    value: formatPrice(coupon.discountValue, coupon.currency ?? currency, locale),
                   })}
             </Alert>
           ) : couponOpen ? (
@@ -374,15 +365,6 @@ export default function PlansGrid({
                         {isOffer && !current && <Chip label={t("billing-offer-chip")} size="small" color="primary" />}
                       </Box>
                       <Typography variant="h4" component="p">
-                        {discounted && (
-                          <Typography
-                            component="span"
-                            variant="body2"
-                            className="text-text-secondary mr-2 line-through"
-                          >
-                            {money(plan, plan.priceCents)}
-                          </Typography>
-                        )}
                         {money(plan, discountedCents)}
                         <Typography component="span" variant="body2" className="text-text-secondary">
                           {" "}
@@ -397,6 +379,14 @@ export default function PlansGrid({
                               : t("billing-one-time")}
                         </Typography>
                       </Typography>
+                      {/* The coupon is named beside the price it gives; the list
+                          price is never struck through (docs/PRODUCT.md, "Preço
+                          e vagas"). */}
+                      {discounted && planCoupon ? (
+                        <Typography variant="body2" className="text-text-secondary">
+                          {t("billing-price-coupon", { code: planCoupon.code })}
+                        </Typography>
+                      ) : null}
                       {plan.kind === "access" && currency === "BRL" && maxInstallments > 1 ? (
                         <Typography variant="body2" className="text-text-secondary">
                           {t("billing-installments", {

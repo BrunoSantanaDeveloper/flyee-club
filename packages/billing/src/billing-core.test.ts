@@ -1,8 +1,26 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { currencyForLocale, isBillingCurrency, providerNameForCurrency } from "./currency.ts";
+import { currencyForLocale, formatPrice, isBillingCurrency, providerNameForCurrency } from "./currency.ts";
 import { enabledFeatures, hasEntitlement, limitOf, tierOf } from "./entitlements.ts";
+
+describe("prices as people write them", () => {
+  // Intl separates the symbol with a no-break space; compare words, not bytes.
+  const read = (text: string) => text.replace(/\s/g, " ");
+
+  it("prints a whole amount without decimals and cents always with two digits", () => {
+    assert.equal(read(formatPrice(9700, "BRL", "pt-BR")), "R$ 97");
+    assert.equal(read(formatPrice(7760, "BRL", "pt-BR")), "R$ 77,60");
+    assert.equal(read(formatPrice(646, "BRL", "pt-BR")), "R$ 6,46");
+    assert.equal(formatPrice(2900, "USD", "en"), "$29");
+    assert.equal(formatPrice(2950, "USD", "en"), "$29.50");
+  });
+
+  it("never rounds a price away from what is charged", () => {
+    assert.equal(read(formatPrice(9790, "BRL", "pt-BR")), "R$ 97,90");
+    assert.equal(formatPrice(1999, "USD", "en"), "$19.99");
+  });
+});
 
 describe("currency routing", () => {
   it("routes BRL to Asaas and USD to Stripe, whatever the casing", () => {

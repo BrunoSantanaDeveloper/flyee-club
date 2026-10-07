@@ -89,12 +89,13 @@ export default async function PricingPage({
         }
       />
 
-      {/* The founders price, only while it is open and with the database's own
-          seat count (founders_offer(), the same number the checkout enforces). */}
+      {/* The founders price, only while it is open. The seats and the deadline
+          stay on /fundadores, the page of the offer (docs/PRODUCT.md, "Preço e
+          vagas"). */}
       {founders && !founders.closed ? (
         <Container>
           <p className="text-text-primary mx-auto mb-6 max-w-2xl text-center text-base leading-6">
-            {t("pricing-founders-open", { left: founders.seatsLeft, total: founders.seatsTotal })}{" "}
+            {t("pricing-founders-open")}{" "}
             <LocaleLink href="/fundadores" className="font-semibold underline">
               {t("pricing-founders-link")}
             </LocaleLink>

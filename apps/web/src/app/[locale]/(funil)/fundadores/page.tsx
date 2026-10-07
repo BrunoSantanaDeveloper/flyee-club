@@ -17,6 +17,7 @@ import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import { type FoundersOffer, getFoundersOffer } from "@/lib/founders-offer";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { publicPageMetadata } from "@/lib/seo";
+import { formatPrice } from "@flyee/billing/currency";
 import { getPlanBySlug } from "@flyee/billing/public";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -46,9 +47,12 @@ function closedReason(offer: FoundersOffer | null): "sold_out" | "expired" | "of
 /**
  * /fundadores (EN /founders): the limited founders price of the yearly
  * membership (`founders_offer()`, migration 0004). Every number on the page is
- * the database's: the seats left, the deadline, the price of the offer plan and
- * of the plan it is compared with. The checkout refuses the sale once the seats
- * are gone (settings/billing), so the counter and the guard cannot disagree.
+ * the database's: the seats left, the deadline and the price of the offer plan.
+ * The checkout refuses the sale once the seats are gone (settings/billing), so
+ * the counter and the guard cannot disagree. This is the one page that shows
+ * the seats and the deadline, and the price stands alone: never beside a
+ * struck-through regular price, which lives on /planos (docs/PRODUCT.md,
+ * "Preço e vagas").
  *
  * Closed — sold out, past its deadline, switched off or not configured — the
  * page says which, and points at the regular plans. Until the site opens
@@ -63,12 +67,7 @@ export default async function FoundersPage() {
   ]);
   const siteCta = primaryCtaFor(stage);
   const open = offer && !offer.closed && offer.planSlug ? offer : null;
-  const [plan, compare] = open
-    ? await Promise.all([
-        getPlanBySlug(open.planSlug ?? ""),
-        open.comparePlanSlug ? getPlanBySlug(open.comparePlanSlug) : Promise.resolve(null),
-      ])
-    : [null, null];
+  const plan = open ? await getPlanBySlug(open.planSlug ?? "") : null;
 
   if (!open || !plan) {
     const reason = closedReason(offer);
@@ -95,15 +94,6 @@ export default async function FoundersPage() {
     );
   }
 
-  const money = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: plan.currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-  // The anchor is struck through only when it is the same currency and dearer.
-  const anchor = compare && compare.currency === plan.currency && compare.priceCents > plan.priceCents ? compare : null;
-  const saving = anchor ? Math.round((1 - plan.priceCents / anchor.priceCents) * 100) : 0;
   const checkout =
     stage === "open"
       ? {
@@ -193,9 +183,7 @@ export default async function FoundersPage() {
             slug: plan.slug,
             name: plan.name,
             description: plan.description ?? undefined,
-            price: money.format(plan.priceCents / 100),
-            originalPrice: anchor ? money.format(anchor.priceCents / 100) : undefined,
-            discountLabel: anchor && saving > 0 ? t("founders-saving", { percent: saving }) : undefined,
+            price: formatPrice(plan.priceCents, plan.currency, locale),
             period: plan.period ? t(`pricing-period-${plan.period}`) : t("pricing-one-time"),
             features: planFeatureKeys(plan.limits).map(({ key, values }) => t(key, values)),
             highlighted: true,
