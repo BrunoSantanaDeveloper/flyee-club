@@ -1,32 +1,27 @@
-import "@/style/global.css";
+import "@/style/base.css";
 
 import { Metadata } from "next";
 import { JetBrains_Mono, Londrina_Solid, Mulish } from "next/font/google";
 import Script from "next/script";
-import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
-
-import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
+import { getLocale } from "next-intl/server";
 
 import { BRAND } from "@/brand";
-import BackgroundWrapper from "@/components/layout/containers/background-wrapper";
 import InitialLoaderGuard from "@/components/layout/containers/initial-loader-guard";
-import SnackbarWrapper from "@/components/layout/containers/snackbar-wrapper";
-import LayoutContextProvider from "@/components/layout/layout-context";
 import { DEFAULTS } from "@/config";
 import { LOCAL_STORAGE_KEYS } from "@/constants";
 import { languageOfferScript } from "@/lib/language-offer";
 import { isPublicPageRequest } from "@/lib/locale-request";
-import ThemeProvider from "@/theme/theme-provider";
 
 /**
  * Runs before the first paint. The server renders the palette and mode classes
  * on <html> with the defaults, and the tokens are scoped to those classes, so
  * the page has its colours from the first paint; this script only corrects the
  * mode for a browser that stored another choice (the mode switcher, or
- * "system"). The theme provider keeps the classes in sync afterwards. Before,
- * the provider added them after hydration: until then the page had no palette
- * at all, which is what the loader overlay existed to hide.
+ * "system"). In the signed-in areas the theme provider keeps the classes in
+ * sync afterwards (components/layout/app-shell.tsx); the public site has no
+ * provider, so this script is the whole of its theming. Before, the provider
+ * added the classes after hydration: until then the page had no palette at
+ * all, which is what the loader overlay existed to hide.
  */
 const THEME_BOOT = `(function(){try{var d=document.documentElement,m=JSON.parse(localStorage.getItem(${JSON.stringify(
   LOCAL_STORAGE_KEYS.themeMode,
@@ -110,7 +105,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getLocale();
-  const messages = await getMessages();
   // The loader overlay covers the page until the window load event. A public
   // page arrives complete and styled, so covering it only delays what the
   // visitor can already read (on a slow phone, by several seconds). The
@@ -142,29 +136,20 @@ export default async function RootLayout({
             <InitialLoaderGuard />
           </>
         )}
-        <AppRouterCacheProvider
-          options={{
-            key: "css",
-            prepend: false,
-            enableCssLayer: true,
-          }}
-        >
-          <ThemeProvider>
-            <NextIntlClientProvider messages={messages}>
-              <LayoutContextProvider>
-                <BackgroundWrapper />
-                {/*
-                  No loading boundary here, and no app/loading.tsx: a boundary
-                  above the public pages sends the first bytes before a page
-                  can call notFound() or redirect(), so a missing app answered
-                  200 with a noindex tag and a moved address a meta refresh.
-                  Each signed-in area keeps its own boundary in its layout.
-                */}
-                <SnackbarWrapper>{children}</SnackbarWrapper>
-              </LayoutContextProvider>
-            </NextIntlClientProvider>
-          </ThemeProvider>
-        </AppRouterCacheProvider>
+        {/*
+          No provider here. MUI, its theme, the snackbars and the full message
+          catalogs belong to the signed-in areas and are mounted by the layout
+          of each of them (components/layout/app-shell.tsx); the public site
+          (app/[locale]) renders without any of it and brings only its own
+          messages. Mounted here, they made every public page hydrate MUI.
+
+          No loading boundary either, and no app/loading.tsx: a boundary above
+          the public pages sends the first bytes before a page can call
+          notFound() or redirect(), so a missing app answered 200 with a
+          noindex tag and a moved address a meta refresh. Each signed-in area
+          keeps its own boundary in its layout.
+        */}
+        {children}
       </body>
     </html>
   );

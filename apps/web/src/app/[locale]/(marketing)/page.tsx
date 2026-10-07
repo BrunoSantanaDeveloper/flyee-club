@@ -3,8 +3,6 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { Button } from "@mui/material";
-
 import AppStorePreview from "@/components/marketing/app-store-preview";
 import Band from "@/components/marketing/band";
 import Cta from "@/components/marketing/cta";
@@ -26,6 +24,7 @@ import StoreGrid from "@/components/marketing/store-grid";
 import TerminalFrame from "@/components/marketing/terminal-frame";
 import { TONE } from "@/components/marketing/tone";
 import CatalogIcon from "@/components/product/catalog-icon";
+import SiteButton from "@/components/site/button";
 import { COOKIE_KEYS } from "@/constants";
 import NiAi from "@/icons/nexture/ni-ai";
 import NiCells from "@/icons/nexture/ni-cells";
@@ -297,15 +296,9 @@ export default async function Home() {
                           : []),
                       ]}
                     />
-                    <Button
-                      variant="pastel"
-                      color="primary"
-                      LinkComponent={LocaleLink}
-                      href={`/catalogo/${featured.slug}`}
-                      className="self-start"
-                    >
+                    <SiteButton variant="pastel" href={`/catalogo/${featured.slug}`} className="self-start">
                       {copy.store.viewApp}
-                    </Button>
+                    </SiteButton>
                   </div>
                 ),
               },
@@ -362,15 +355,9 @@ export default async function Home() {
             subtitle={catalog ? copy.store.emptyBody : copy.store.unavailableBody}
           />
           <div className="flex justify-center">
-            <Button
-              variant="pastel"
-              color="primary"
-              LinkComponent={LocaleLink}
-              href="/catalogo"
-              data-track="see_all_apps_click"
-            >
+            <SiteButton variant="pastel" href="/catalogo" data-track="see_all_apps_click">
               {copy.store.allApps}
-            </Button>
+            </SiteButton>
           </div>
         </Section>
       )}

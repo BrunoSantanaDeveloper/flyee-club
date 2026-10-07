@@ -4,9 +4,9 @@ import { type ConfirmStatus, confirmWaitlist } from "../actions";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
-import { Alert, Box, Button } from "@mui/material";
-
 import Link from "@/components/marketing/locale-link";
+import SiteAlert from "@/components/site/alert";
+import SiteButton from "@/components/site/button";
 import NiCheckSquare from "@/icons/nexture/ni-check-square";
 
 /**
@@ -23,7 +23,7 @@ export default function ConfirmPanel({ pending }: { pending: boolean }) {
   if (status === "confirmed" || status === "resubscribed") {
     const titleKey = status === "resubscribed" ? "waitlist-resubscribed-title" : "waitlist-confirmed-title";
     return (
-      <Box
+      <div
         role="status"
         className="border-grey-100 bg-background-paper mx-auto flex w-full max-w-xl flex-col items-start gap-3 rounded-3xl border p-6 md:p-8"
       >
@@ -32,33 +32,32 @@ export default function ConfirmPanel({ pending }: { pending: boolean }) {
         </span>
         <p className="font-display text-text-primary text-xl font-normal">{t(titleKey)}</p>
         <p className="text-text-secondary text-base leading-6">{t("waitlist-confirmed-body")}</p>
-        <Button variant="pastel" color="primary" href="/blog" LinkComponent={Link}>
+        <SiteButton variant="pastel" href="/blog">
           {t("waitlist-confirmed-cta")}
-        </Button>
-      </Box>
+        </SiteButton>
+      </div>
     );
   }
 
   return (
-    <Box className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
+    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
       {status === "invalid" && (
-        <Alert severity="warning" className="neutral bg-background-paper/60! w-full">
+        <SiteAlert severity="warning" neutral className="w-full">
           {t("waitlist-confirm-invalid")}{" "}
           <Link href="/espera" className="text-primary underline">
             {t("waitlist-confirm-again")}
           </Link>
-        </Alert>
+        </SiteAlert>
       )}
       {status === "unavailable" && (
-        <Alert severity="error" className="neutral bg-background-paper/60! w-full">
+        <SiteAlert severity="error" neutral className="w-full">
           {t("waitlist-error-unavailable")}
-        </Alert>
+        </SiteAlert>
       )}
       {status !== "invalid" && (
-        <Button
+        <SiteButton
           size="large"
           variant="contained"
-          color="primary"
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
@@ -68,8 +67,8 @@ export default function ConfirmPanel({ pending }: { pending: boolean }) {
           }
         >
           {isPending ? t("waitlist-submitting") : t("waitlist-confirm-button")}
-        </Button>
+        </SiteButton>
       )}
-    </Box>
+    </div>
   );
 }

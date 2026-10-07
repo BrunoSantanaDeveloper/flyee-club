@@ -3,8 +3,6 @@
 import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { Button, IconButton } from "@mui/material";
-
 import Container from "@/components/marketing/container";
 import {
   alternateAddress,
@@ -12,6 +10,7 @@ import {
   otherLocale,
   rememberLanguageAnswer,
 } from "@/components/marketing/language-switch";
+import SiteButton, { SiteIconButton } from "@/components/site/button";
 import NiCross from "@/icons/nexture/ni-cross";
 import { LANGUAGE_OFFER_ATTRIBUTE } from "@/lib/language-offer";
 
@@ -52,10 +51,10 @@ export default function LanguageSuggestion() {
       <Container className="flex flex-row items-center justify-between gap-3 py-2">
         <p className="text-text-primary text-sm leading-5">{t("language-suggest-message")}</p>
         <div className="flex flex-none flex-row items-center gap-1">
-          <Button
+          <SiteButton
+            plain
             size="small"
             variant="pastel"
-            color="primary"
             href={equivalentAddress(pathname, target)}
             onClick={(event) => {
               event.preventDefault();
@@ -64,10 +63,10 @@ export default function LanguageSuggestion() {
             }}
           >
             {t("language-suggest-action")}
-          </Button>
-          <IconButton size="small" aria-label={t("language-suggest-dismiss")} onClick={answer}>
+          </SiteButton>
+          <SiteIconButton size="small" aria-label={t("language-suggest-dismiss")} onClick={answer}>
             <NiCross size="small" />
-          </IconButton>
+          </SiteIconButton>
         </div>
       </Container>
     </div>

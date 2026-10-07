@@ -1,0 +1,76 @@
+/* --------------------------- */
+/* App: the MUI components of the signed-in areas */
+/* --------------------------- */
+
+/*
+  Loaded by the app shell (components/layout/app-shell.tsx), on top of base.css:
+  the overrides that give the MUI components this project's look, plus the
+  MUI X and plugin styles. Nothing here reaches the public site.
+
+  `@reference` gives these files the theme, the variants and the utilities of
+  base.css for `@apply`, without emitting them a second time.
+*/
+@reference "./base.css";
+
+/* --------- Surfaces --------- */
+@import "./surfaces/accordion.css";
+@import "./surfaces/card.css";
+@import "./surfaces/paper.css";
+
+/* --------- Data Display --------- */
+@import "./data-display/avatar.css";
+@import "./data-display/badge.css";
+@import "./data-display/chip.css";
+@import "./data-display/divider.css";
+@import "./data-display/list.css";
+@import "./data-display/table.css";
+@import "./data-display/tooltip.css";
+@import "./data-display/typography.css";
+
+/* --------- Navigation --------- */
+@import "./navigation/breadcrumb.css";
+@import "./navigation/menu.css";
+@import "./navigation/bottom-navigation.css";
+@import "./navigation/drawer.css";
+@import "./navigation/link.css";
+@import "./navigation/pagination.css";
+@import "./navigation/stepper.css";
+@import "./navigation/tabs.css";
+
+/* --------- Inputs --------- */
+@import "./inputs/autocomplete.css";
+@import "./inputs/button.css";
+@import "./inputs/button-group.css";
+@import "./inputs/checkbox.css";
+@import "./inputs/fab.css";
+@import "./inputs/input.css";
+@import "./inputs/radiobutton.css";
+@import "./inputs/rating.css";
+@import "./inputs/select.css";
+@import "./inputs/slider.css";
+@import "./inputs/switch.css";
+@import "./inputs/tooglebutton.css";
+
+/* --------- Layout --------- */
+@import "./layout/image-list.css";
+@import "./layout/backgrounds.css";
+
+/* --------- Feedback --------- */
+@import "./feedback/alert.css";
+@import "./feedback/dialog.css";
+@import "./feedback/progress.css";
+@import "./feedback/skeleton.css";
+@import "./feedback/snackbar.css";
+
+/* --------- Lab --------- */
+@import "./lab/timeline.css";
+
+/* --------- Mui X --------- */
+@import "./mui-x/chart.css";
+@import "./mui-x/data-grid.css";
+@import "./mui-x/date-time-picker.css";
+@import "./mui-x/tree-view.css";
+
+/* --------- Plugins --------- */
+@import "./plugins/video-player-vidstack.css";
+@import "./plugins/file-upload-react-dropzone.css";

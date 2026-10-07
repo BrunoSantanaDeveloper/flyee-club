@@ -82,6 +82,29 @@ const lintClaude = runHook("marketing-lint.mjs", {
 });
 assert(lintClaude?.decision === "block", "Claude marketing lint compatibility failed");
 
+// The public shell: a marketing file that imports MUI is blocked; a type-only import is not.
+const lintMui = runHook("marketing-lint.mjs", {
+  cwd: repoRoot,
+  hook_event_name: "PostToolUse",
+  tool_input: {
+    file_path: join(repoRoot, lintPath),
+    content: 'import { Button } from "@mui/material";\nexport const probe = Button;',
+  },
+});
+assert(
+  lintMui?.decision === "block" && lintMui.reason.includes("[mui-on-public]"),
+  "Marketing lint let a MUI import into a public file",
+);
+const lintMuiType = runHook("marketing-lint.mjs", {
+  cwd: repoRoot,
+  hook_event_name: "PostToolUse",
+  tool_input: {
+    file_path: join(repoRoot, lintPath),
+    content: 'import type { ButtonProps } from "@mui/material";\nexport type Probe = ButtonProps;',
+  },
+});
+assert(lintMuiType === null, "Marketing lint flagged a type-only MUI import");
+
 const productLintPath = "apps/web/src/app/(dashboard)/__harness_probe__/page.tsx";
 const productViolation = [
   'const color = "#fff";',

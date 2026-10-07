@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { Box } from "@mui/material";
 
+import AppShell from "@/components/layout/app-shell";
 import Loading from "@/components/layout/containers/loading-screen";
 import LocaleAutoNotice from "@/components/layout/locale/locale-auto-notice";
 import LocaleSwitch from "@/components/layout/locale/locale-switch";
@@ -22,12 +23,14 @@ export default async function AuthLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <Box className="relative">
-      <Box className="absolute inset-x-0 top-0 z-10 flex flex-wrap items-start gap-3 p-3 sm:p-4">
-        <LocaleAutoNotice className="mb-0 max-w-lg flex-1 basis-80" />
-        <LocaleSwitch className="ml-auto shrink-0" />
+    <AppShell>
+      <Box className="relative">
+        <Box className="absolute inset-x-0 top-0 z-10 flex flex-wrap items-start gap-3 p-3 sm:p-4">
+          <LocaleAutoNotice className="mb-0 max-w-lg flex-1 basis-80" />
+          <LocaleSwitch className="ml-auto shrink-0" />
+        </Box>
+        <Suspense fallback={<Loading />}>{children}</Suspense>
       </Box>
-      <Suspense fallback={<Loading />}>{children}</Suspense>
-    </Box>
+    </AppShell>
   );
 }

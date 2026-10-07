@@ -3,8 +3,6 @@ import WaitlistForm from "./waitlist-form";
 import { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { Button } from "@mui/material";
-
 import Band from "@/components/marketing/band";
 import BentoGrid from "@/components/marketing/bento-grid";
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
@@ -16,6 +14,7 @@ import ProductComposition, { type Satellite } from "@/components/marketing/produ
 import { KpiChip, ReadoutChip } from "@/components/marketing/satellite-chips";
 import TerminalFrame from "@/components/marketing/terminal-frame";
 import { TONE, trailTone } from "@/components/marketing/tone";
+import SiteButton from "@/components/site/button";
 import NiCheckSquare from "@/icons/nexture/ni-check-square";
 import NiEmail from "@/icons/nexture/ni-email";
 import NiEmailOpen from "@/icons/nexture/ni-email-open";
@@ -236,9 +235,9 @@ export default async function WaitlistPage() {
           <p className="font-display text-display-lg text-text-primary [&_em]:text-primary max-w-3xl font-extrabold [&_em]:not-italic">
             {t.rich("waitlist-band-title", { em: (chunks) => <em>{chunks}</em> })}
           </p>
-          <Button size="large" variant="contained" color="primary" href={anchor}>
+          <SiteButton plain size="large" variant="contained" href={anchor}>
             {t("cta-waitlist")}
-          </Button>
+          </SiteButton>
         </div>
       </Band>
 

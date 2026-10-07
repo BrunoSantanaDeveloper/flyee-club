@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { Button } from "@mui/material";
-
 import Band from "@/components/marketing/band";
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Cta from "@/components/marketing/cta";
 import Faq from "@/components/marketing/faq";
 import FeatureRows from "@/components/marketing/feature-row";
 import Hero from "@/components/marketing/hero";
-import LocaleLink from "@/components/marketing/locale-link";
 import ProcessSteps from "@/components/marketing/process-steps";
 import ProductComposition from "@/components/marketing/product-composition";
 import RuledGrid from "@/components/marketing/ruled-grid";
@@ -18,6 +15,7 @@ import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import TerminalFrame from "@/components/marketing/terminal-frame";
 import { TONE } from "@/components/marketing/tone";
+import SiteButton from "@/components/site/button";
 import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
 import NiKey from "@/icons/nexture/ni-key";
 import NiTerminal from "@/icons/nexture/ni-terminal";
@@ -198,9 +196,9 @@ export default async function HowItWorksPage() {
           <p className="font-display text-display-lg text-text-primary [&_em]:text-primary max-w-3xl font-extrabold [&_em]:not-italic">
             {t.rich("how-band-title", { em: (chunks) => <em>{chunks}</em> })}
           </p>
-          <Button size="large" variant="contained" color="primary" LinkComponent={LocaleLink} href={primary.href}>
+          <SiteButton size="large" variant="contained" href={primary.href}>
             {primary.label}
-          </Button>
+          </SiteButton>
         </div>
       </Band>
 

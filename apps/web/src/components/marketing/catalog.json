@@ -8,7 +8,9 @@
     "Icons only via @/icons/nexture/ni-* alias; meaningful concept icons, never decoration",
     "Exactly one <h1> per page (Hero, or SectionHeader/PricingSection as/headingAs=\"h1\")",
     "New public pages: folder under app/[locale]/(marketing) named after the Portuguese path + declared in src/i18n/routing.ts (pt-BR and English addresses) + src/app/sitemap.ts when indexed + generateMetadata spreading publicPageMetadata (lib/seo.ts)",
-    "Internal links through <LocaleLink> (also as MUI LinkComponent) with the Portuguese path: it renders the address of the language being read; /auth/* and external URLs pass through",
+    "Internal links through <LocaleLink> (or <SiteButton href>) with the Portuguese path: it renders the address of the language being read; /auth/* and external URLs pass through",
+    "No MUI on a public page: no @mui/*, @emotion/*, notistack, Formik or Yup anywhere a public page reaches (marketing-lint [mui-on-public], lib/public-shell.test.ts). Buttons, fields, notices and the rest are the components/site primitives below; a disclosure is <details className=\"site-disclosure\">, a menu or modal a native <dialog className=\"site-drawer\">, a floating card .site-card",
+    "Client components of the public site read only the marketing keys listed in src/i18n/public-client-messages.ts; a key goes there, under its component, written as a literal in the component",
     "Structured data via <JsonLd> only; Organization/FAQPage/Product already emitted by layout/Faq/PricingSection",
     "Motion is CSS first: the hero entrance (built into <Hero>), <Float>, <Reveal> (a transition started by watchEntry in motion.ts), <CountUp>; transform + opacity; reduced-motion safe. No scripted timeline, no ScrollTrigger: GSAP is loaded by <Parallax> alone, on demand",
     "Layer scale: compositions are relative isolate with z-0 (back) / z-10 (frame) / z-20 (front); z-30 is reserved for site chrome",
@@ -256,7 +258,35 @@
       "file": "locale-link.tsx",
       "role": "navigation",
       "props": "href (internal Portuguese path, query and hash kept), every next/link prop",
-      "use": "every internal link of a public surface, and LinkComponent of MUI Buttons; never next/link directly on a public page, which would send an English reader to the Portuguese address"
+      "use": "every internal link of a public surface (SiteButton uses it for an internal href); never next/link directly on a public page, which would send an English reader to the Portuguese address. A link that leaves the public site (sign-in, the member area) is not prefetched: it loads the other shell"
+    },
+    {
+      "name": "SiteButton",
+      "file": "../site/button.tsx",
+      "role": "action",
+      "props": "variant: text|contained|pastel|outlined, tone: primary|text-primary|grey|inherit, size: small|medium|large, fullWidth, startIcon, href? (internal Portuguese path through LocaleLink), plain? (a bare <a> for a hash or a full page load), plus the props of <button> or <a>",
+      "use": "every button and button-shaped link of the public site, with the look the MUI Button had there (sizes, radii, colours, focus ring); one contained primary action per view"
+    },
+    {
+      "name": "SiteIconButton",
+      "file": "../site/button.tsx",
+      "role": "action",
+      "props": "aria-label (required), size: small|medium|large, plus the props of <button>",
+      "use": "an icon-only button (menu, close); the name is required because the icon says nothing to a screen reader"
+    },
+    {
+      "name": "SiteField / SiteLabel / SiteInput / SiteTextarea / SiteSelect / SiteCheckbox / SiteHelp",
+      "file": "../site/field.tsx",
+      "role": "form",
+      "props": "SiteInput: fieldSize, error, startAdornment; SiteTextarea: rows; SiteSelect: a native <select>; SiteCheckbox: label; SiteHelp: error",
+      "use": "the fields of the public forms (waitlist, contact, help search, comments): a label above, the error written under the field and tied with aria-describedby; validation is plain state with the rules of the server action, never Formik or Yup here"
+    },
+    {
+      "name": "SiteAlert",
+      "file": "../site/alert.tsx",
+      "role": "feedback",
+      "props": "severity: success|info|warning|error, neutral",
+      "use": "the outcome of a form or an action (sent, unavailable, failed), with role=alert; red only for a failure"
     },
     {
       "name": "LegalDocument",

@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { Alert, Avatar, Box, Button, Chip, FormControl, Input, Typography } from "@mui/material";
-
+import SiteAlert from "@/components/site/alert";
+import SiteButton from "@/components/site/button";
+import { SiteTextarea } from "@/components/site/field";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
 
@@ -85,59 +85,60 @@ export default function BlogComments({ postId }: { postId: string }) {
       {comments.length === 0 && <p className="text-text-secondary text-base">{t("blog-comments-empty")}</p>}
 
       {comments.map((comment) => (
-        <Box key={comment.id} className="flex flex-row items-start gap-3">
-          <Avatar className="medium">{(comment.authorName ?? "?").charAt(0).toUpperCase()}</Avatar>
-          <Box className="flex min-w-0 flex-col gap-1">
-            <Box className="flex flex-row items-center gap-2">
-              {comment.authorName ? <Typography variant="subtitle2">{comment.authorName}</Typography> : null}
-              <Typography variant="body2" className="text-text-secondary">
-                {new Date(comment.createdAt).toLocaleDateString()}
-              </Typography>
+        <div key={comment.id} className="flex flex-row items-start gap-3">
+          <span
+            aria-hidden
+            className="bg-grey-300 text-background flex h-9 w-9 flex-none items-center justify-center rounded-md text-sm font-semibold"
+          >
+            {(comment.authorName ?? "?").charAt(0).toUpperCase()}
+          </span>
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex flex-row items-center gap-2">
+              {comment.authorName ? <span className="text-base font-semibold">{comment.authorName}</span> : null}
+              <span className="text-text-secondary text-sm">{new Date(comment.createdAt).toLocaleDateString()}</span>
               {comment.status === "pending" && (
-                <Chip label={t("blog-comment-pending-badge")} size="small" color="warning" variant="outlined" />
+                <span className="text-text-primary outline-warning rounded-sm px-2 py-0.5 text-sm font-medium outline-1 -outline-offset-1">
+                  {t("blog-comment-pending-badge")}
+                </span>
               )}
-            </Box>
-            <Typography variant="body1" className="text-text-secondary leading-6">
-              {comment.body}
-            </Typography>
-          </Box>
-        </Box>
+            </div>
+            <p className="text-text-secondary m-0 text-base leading-6">{comment.body}</p>
+          </div>
+        </div>
       ))}
 
       {submitted && (
-        <Alert severity="success" className="neutral bg-background-paper/60!">
+        <SiteAlert severity="success" neutral>
           {t("blog-comment-pending")}
-        </Alert>
+        </SiteAlert>
       )}
       {error && (
-        <Alert severity="error" className="neutral bg-background-paper/60!">
+        <SiteAlert severity="error" neutral>
           {error}
-        </Alert>
+        </SiteAlert>
       )}
 
       {signedIn ? (
-        <Box className="flex flex-col gap-3">
-          <FormControl className="outlined" variant="standard" size="small" fullWidth>
-            <Input
-              multiline
-              minRows={3}
-              placeholder={t("blog-comment-placeholder")}
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-            />
-          </FormControl>
-          <Box>
-            <Button variant="contained" size="small" onClick={submit} disabled={!body.trim()}>
+        <div className="flex flex-col gap-3">
+          <SiteTextarea
+            rows={3}
+            placeholder={t("blog-comment-placeholder")}
+            aria-label={t("blog-comment-placeholder")}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+          />
+          <div>
+            <SiteButton variant="contained" size="small" onClick={submit} disabled={!body.trim()}>
               {t("blog-comment-submit")}
-            </Button>
-          </Box>
-        </Box>
+            </SiteButton>
+          </div>
+        </div>
       ) : (
-        <Box>
-          <Button variant="outlined" size="small" component={Link} href="/auth/sign-in">
+        <div>
+          <SiteButton variant="outlined" size="small" href="/auth/sign-in">
             {t("blog-comments-signin")}
-          </Button>
-        </Box>
+          </SiteButton>
+        </div>
       )}
     </div>
   );

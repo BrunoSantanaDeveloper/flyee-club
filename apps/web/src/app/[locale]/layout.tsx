@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { pickPublicClientMessages } from "@/i18n/public-client-messages";
 import { isPublicLocale } from "@/i18n/routing";
 
 /**
@@ -11,11 +12,16 @@ import { isPublicLocale } from "@/i18n/routing";
  * URL. The member area, sign-in and checkout are not under it and keep the
  * visitor's own language (lib/locale-request.ts).
  *
- * The provider is repeated on purpose. The root layout is shared by every
- * route and is not re-rendered by a client-side navigation, so its messages
- * stay those of the first page loaded; this segment does re-render when the
- * language in the URL changes, so the client components of a public page
- * always speak the language of its address.
+ * This is the only provider of the public site: the root layout mounts none,
+ * and MUI with the full catalogs belongs to the signed-in areas
+ * (components/layout/app-shell.tsx). It carries only the `marketing` keys the
+ * client components of the public site read (i18n/public-client-messages.ts;
+ * lib/public-shell.test.ts fails if one of them asks for another namespace or
+ * for a key the list lacks). The four catalogs went to every phone before,
+ * twice over, for strings only the server renders.
+ *
+ * It re-renders when the language in the URL changes, so those components
+ * always speak the language of the address.
  */
 export default async function LocaleLayout({
   children,
@@ -29,10 +35,10 @@ export default async function LocaleLayout({
   // languages of the site are pages.
   if (!isPublicLocale(locale)) notFound();
   setRequestLocale(locale);
-  const messages = await getMessages();
+  const { marketing } = await getMessages();
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={{ marketing: pickPublicClientMessages(marketing) }}>
       {children}
     </NextIntlClientProvider>
   );

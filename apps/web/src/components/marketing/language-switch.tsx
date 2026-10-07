@@ -3,8 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { Button } from "@mui/material";
-
+import SiteButton from "@/components/site/button";
 import { LOCAL_STORAGE_KEYS } from "@/constants";
 import { localizeHref, matchPublicPath, routing } from "@/i18n/routing";
 import NiWorld from "@/icons/nexture/ni-world";
@@ -66,9 +65,10 @@ export default function LanguageSwitch({
   const target = otherLocale(locale);
 
   return (
-    <Button
+    <SiteButton
+      plain
       variant="text"
-      color={color}
+      tone={color}
       fullWidth={fullWidth}
       className={className}
       href={equivalentAddress(pathname, target)}
@@ -86,6 +86,6 @@ export default function LanguageSwitch({
       */}
       <span lang={target}>{t("language-switch-name")}</span>
       <span className="sr-only">, {t("language-switch-label")}</span>
-    </Button>
+    </SiteButton>
   );
 }

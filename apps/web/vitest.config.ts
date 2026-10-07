@@ -3,6 +3,9 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [tsconfigPaths()],
+  // tsconfig keeps JSX for Next to compile ("preserve"); a test that renders a
+  // component needs it compiled here.
+  oxc: { jsx: { runtime: "automatic", importSource: "react" } },
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],

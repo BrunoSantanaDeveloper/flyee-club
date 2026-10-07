@@ -35,6 +35,13 @@ const RAW_COLOR_FN = /\b(?:rgba?|oklch)\s*\(/;
 const RAW_HSL = /\bhsla?\(\s*(?!var\()/;
 const ICON_LIB_IMPORT = /from\s+["'](?:@phosphor-icons\/|lucide-react|react-icons|@tabler\/icons|@mui\/icons-material)/;
 /**
+ * The public shell: MUI, its styling engine, the snackbars and the form
+ * libraries belong to the signed-in areas. A public page that imports one of
+ * them hydrates it on every visitor's phone (the home scored 55 with MUI in
+ * the root layout). `import type` is erased by the compiler and is fine.
+ */
+const APP_ONLY_IMPORT = /^\s*(?:import|export)\s+(?!type\b)[^"']*["'](?:@mui\/|@emotion\/|notistack["']|formik["']|yup["'])/;
+/**
  * The heading face (Londrina Solid) ships Regular and Black and nothing in
  * between: every class from font-semibold up renders Black, whose counters
  * close under 24px. Below the display scale a heading is set in font-normal.
@@ -112,6 +119,10 @@ function lint(filePath, content) {
       if (ICON_LIB_IMPORT.test(line))
         violations.push(
           `[icon-import] ${at}: direct icon-library import — marketing imports icons only via @/icons/nexture/ni-* (see .claude/rules/icons.md).`,
+        );
+      if (APP_ONLY_IMPORT.test(line))
+        violations.push(
+          `[mui-on-public] ${at}: MUI, its styling engine, notistack, formik and yup stay in the signed-in areas — a public page builds on the site primitives (components/site: SiteButton, SiteIconButton, SiteInput, SiteTextarea, SiteSelect, SiteCheckbox, SiteAlert) and keeps its own form state. lib/public-shell.test.ts fails on this import.`,
         );
       if (HEADING_FACE.test(line) && SMALL_TEXT_SIZE.test(line) && HEAVY_WEIGHT.test(line))
         advisories.push(

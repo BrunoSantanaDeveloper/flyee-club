@@ -1,15 +1,13 @@
 "use client";
 import { useState } from "react";
 
-import { Button } from "@mui/material";
-
 import { BRAND } from "@/brand";
 import JsonLd from "@/components/marketing/json-ld";
-import Link from "@/components/marketing/locale-link";
 import Reveal from "@/components/marketing/reveal";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import { TONE, type Tone, toneAt } from "@/components/marketing/tone";
+import SiteButton from "@/components/site/button";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiTag from "@/icons/nexture/ni-tag";
 import { cn } from "@/lib/utils";
@@ -249,16 +247,14 @@ export default function PricingSection({
                 ))}
               </ul>
 
-              <Button
+              <SiteButton
                 variant={plan.highlighted ? "contained" : "pastel"}
-                color="primary"
                 href={plan.href ?? ctaHref}
-                LinkComponent={Link}
                 data-track="cta_click"
                 data-track-cta-id={plan.ctaId ?? "plan_full"}
               >
                 {plan.ctaLabel ?? ctaLabel}
-              </Button>
+              </SiteButton>
             </div>
           );
         })}

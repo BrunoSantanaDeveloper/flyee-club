@@ -1,6 +1,17 @@
 /* --------------------------- */
-/* Global */
+/* Base: what every page loads */
 /* --------------------------- */
+
+/*
+  The stylesheet of the root layout, so of every page: Tailwind, the design
+  tokens, the rules of plain elements and the site primitives. It is all the
+  public site carries.
+
+  The overrides of the MUI components are NOT here. They are app.css, loaded by
+  the shell of the signed-in areas (components/layout/app-shell.tsx): together
+  they are four times this file, and a public page renders no MUI component
+  (docs/PLANO-IMPLEMENTACAO.md, "Casca pública").
+*/
 
 /* 
   Define the CSS layer order. 
@@ -26,70 +37,15 @@
 @import "@flyee/design-tokens/css/orange.css";
 @import "@flyee/design-tokens/css/marketing.css";
 
-/* --------- Surfaces --------- */
-@import "./surfaces/accordion.css";
-@import "./surfaces/card.css";
-@import "./surfaces/paper.css";
-
-/* --------- Data Display --------- */
-@import "./data-display/avatar.css";
-@import "./data-display/badge.css";
-@import "./data-display/chip.css";
-@import "./data-display/divider.css";
-@import "./data-display/list.css";
-@import "./data-display/table.css";
-@import "./data-display/tooltip.css";
-@import "./data-display/typography.css";
-
-/* --------- Navigation --------- */
-@import "./navigation/breadcrumb.css";
-@import "./navigation/menu.css";
-@import "./navigation/bottom-navigation.css";
-@import "./navigation/drawer.css";
-@import "./navigation/link.css";
-@import "./navigation/pagination.css";
-@import "./navigation/stepper.css";
-@import "./navigation/tabs.css";
-
-/* --------- Inputs --------- */
-@import "./inputs/autocomplete.css";
-@import "./inputs/button.css";
-@import "./inputs/button-group.css";
-@import "./inputs/checkbox.css";
-@import "./inputs/fab.css";
-@import "./inputs/input.css";
-@import "./inputs/radiobutton.css";
-@import "./inputs/rating.css";
-@import "./inputs/select.css";
-@import "./inputs/slider.css";
-@import "./inputs/switch.css";
-@import "./inputs/tooglebutton.css";
-
-/* --------- Layout --------- */
+/* --------- Page (scrollbars, the hero entrance of the public site) --------- */
 @import "./layout/scrollbar.css";
-@import "./layout/image-list.css";
-@import "./layout/backgrounds.css";
 @import "./layout/marketing-motion.css";
 
-/* --------- Feedback --------- */
-@import "./feedback/alert.css";
-@import "./feedback/dialog.css";
-@import "./feedback/progress.css";
-@import "./feedback/skeleton.css";
-@import "./feedback/snackbar.css";
+/* --------- Plain elements (letter spacing, code, selection, text areas, autofill) --------- */
+@import "./base/elements.css";
 
-/* --------- Lab --------- */
-@import "./lab/timeline.css";
-
-/* --------- Mui X --------- */
-@import "./mui-x/chart.css";
-@import "./mui-x/data-grid.css";
-@import "./mui-x/date-time-picker.css";
-@import "./mui-x/tree-view.css";
-
-/* --------- Plugins --------- */
-@import "./plugins/video-player-vidstack.css";
-@import "./plugins/file-upload-react-dropzone.css";
+/* --------- Site primitives (the public site's own buttons, fields and notices: no MUI) --------- */
+@import "./site/site.css";
 
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,

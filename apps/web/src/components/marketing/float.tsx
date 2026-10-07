@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
  * Gentle oscillation for composition satellites (chips/cards around the hero
  * frame): y plus an optional rotation, tiny amplitude, so it stays on for
  * touch devices too. A CSS animation (`animate-mkt-float`, keyframes in
- * style/global.css), not a script, and it settles after five cycles (see the
+ * style/base.css), not a script, and it settles after five cycles (see the
  * note there): the page a visitor is reading ends up doing no work at all,
  * where a scripted tween restyled every chip on every frame, forever.
  * `prefers-reduced-motion` renders it static (`motion-safe`). Float animates

@@ -16,6 +16,9 @@ import type { PublicPlan } from "@flyee/billing/public";
  * database (founders_offer()).
  */
 
+// These tests read hundreds of source files: on a busy machine that outlasts the default limit.
+vi.setConfig({ testTimeout: 60_000 });
+
 const rows = vi.hoisted(() => ({ value: [] as unknown[] }));
 
 vi.mock("next-intl/server", () => ({

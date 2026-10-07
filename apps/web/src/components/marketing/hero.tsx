@@ -1,7 +1,5 @@
-import { Button } from "@mui/material";
-
-import Link from "@/components/marketing/locale-link";
 import Section from "@/components/marketing/section";
+import SiteButton from "@/components/site/button";
 
 export type HeroCta = { label: string; href: string; icon?: React.ReactNode };
 
@@ -75,31 +73,27 @@ export default function Hero({
   const ctas = action ?? (
     <div className="flex flex-col items-center gap-2 sm:flex-row">
       {primaryCta && (
-        <Button
+        <SiteButton
           size="large"
           variant="contained"
-          color="primary"
           href={primaryCta.href}
-          LinkComponent={Link}
           data-track="cta_click"
           data-track-cta-id="hero"
         >
           {primaryCta.label}
-        </Button>
+        </SiteButton>
       )}
       {secondaryCta && (
-        <Button
+        <SiteButton
           size="large"
           variant="pastel"
-          color="primary"
           href={secondaryCta.href}
-          LinkComponent={Link}
           startIcon={secondaryCta.icon}
           data-track="quiz_click"
           data-track-location="hero"
         >
           {secondaryCta.label}
-        </Button>
+        </SiteButton>
       )}
     </div>
   );

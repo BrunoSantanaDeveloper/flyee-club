@@ -31,7 +31,7 @@ function catalogDigest(cwd) {
     );
     if (!lines.length) return "";
     return [
-      "5. COMPONENT CATALOG (compose these — never invent per-page layout):",
+      "6. COMPONENT CATALOG (compose these — never invent per-page layout):",
       ...lines,
       `   Tones: ${catalog.tones?.rule ?? ""}`,
     ].join("\n");
@@ -66,6 +66,7 @@ process.stdin.on("end", () => {
     '2. If `docs/DESIGN.md` exists, INHERIT that committed direction. Do NOT re-run the direction engine and do NOT restyle the UI — STRICT MODE: only redesign when the user explicitly asks ("redesign" / "nova direção"). If it does not exist yet, run Pass 0 and write it.',
     "3. Applies equally to NEW pages, EDITS to existing pages, and ADDING/CHANGING a section. Whenever you add or change a section, run a WHOLE-PAGE coherence pass: every existing section must stay aesthetically aligned with the new one and pass the premium bar. If the new work raises the bar, bring the older sections up to it — never leave a page half at the old level and half at the new.",
     '4. SEO is part of the page (see the skill\'s SEO section + `docs/SEO.md`): exactly one <h1> (the page title — `SectionHeader as="h1"` / `PricingSection headingAs="h1"` when the lead is not a <Hero>), a localized title + distinct description via `generateMetadata` (with `publicPageMetadata` from `lib/seo.ts` for canonical + hreflang), the page declared in `src/i18n/routing.ts` (its pt-BR and English addresses) + `sitemap.ts`, internal links through `LocaleLink`, and structured data via <JsonLd> for schema-eligible blocks (Organization/FAQPage/Product are already emitted — don\'t duplicate).',
+    '5. The public shell (docs/PLANO-IMPLEMENTACAO.md, "Casca pública"): nothing a public page reaches imports MUI, Emotion, notistack, Formik or Yup (the marketing lint blocks it, lib/public-shell.test.ts walks the imports). Buttons, fields and notices are the components/site primitives in the catalog below; a disclosure is <details className="site-disclosure">, a menu a native <dialog className="site-drawer">. A client component reads only the marketing keys listed in src/i18n/public-client-messages.ts.',
     catalogDigest(input?.cwd ?? process.cwd()),
   ]
     .filter(Boolean)

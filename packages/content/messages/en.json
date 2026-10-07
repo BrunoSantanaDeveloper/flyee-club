@@ -629,7 +629,8 @@
     "pricing-cta-pro": "Subscribe to FlyeeClub Pro",
     "catalog-badge-new": "New",
     "catalog-badge-account": "Uses your {service} account",
-    "pricing-price-coupon": "With coupon {code}"
+    "pricing-price-coupon": "With coupon {code}",
+    "nav-menu": "Menu"
   },
   "product": {
     "security-title": "Security",

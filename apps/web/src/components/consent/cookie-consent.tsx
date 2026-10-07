@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { Box, Button, Card, Slide, Typography } from "@mui/material";
-
 import Link from "@/components/marketing/locale-link";
+import SiteButton from "@/components/site/button";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import { ANALYTICS_ENABLED, getStoredConsent, optOutOfAnalytics, storeConsent } from "@/lib/analytics";
 
@@ -20,11 +19,14 @@ import { ANALYTICS_ENABLED, getStoredConsent, optOutOfAnalytics, storeConsent } 
  *
  * **Its footprint is a conversion decision, not a styling one.** As a tall
  * card with stacked buttons it covered the price and the primary CTA of
- * `/fundadores` on a 375px screen, and the CTA on a 1440px one — and a first
+ * `/fundadores` on a 375px screen, and the CTA on a 1440px one, and a first
  * visit is exactly what every campaign link produces. So it is a slim bar: one
  * sentence, buttons inline beside the text from `sm` up, pinned to the bottom
  * edge. Both actions are real `<button>` elements; the acknowledge action used
  * to be an `<a>` with no `href`, which kept it out of the tab order entirely.
+ *
+ * Mounted on the public site and in the member area, so it is built on the
+ * site primitives (components/site): the public site carries no MUI.
  */
 export default function CookieConsent() {
   const t = useTranslations("marketing");
@@ -50,48 +52,43 @@ export default function CookieConsent() {
   };
 
   return (
-    <Slide direction="up" in={open}>
-      <Card
-        component="section"
-        aria-label={t("cookie-consent-title")}
-        className="shadow-darker-sm! fixed right-3 bottom-3 left-3 z-50 flex flex-col gap-2.5 p-3 sm:right-5 sm:bottom-5 sm:left-auto sm:max-w-2xl sm:flex-row sm:items-center sm:gap-5 sm:p-5"
-      >
-        <Box className="flex items-start gap-3">
-          <Box className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-            <NiShieldCheck size="small" />
-          </Box>
-          <Box className="flex flex-col gap-0.5">
-            <Typography variant="subtitle2" component="h2">
-              {t("cookie-consent-title")}
-            </Typography>
-            <Typography variant="caption" className="text-text-secondary leading-snug">
-              {t("cookie-consent-description")}{" "}
-              <Link href="/legal/privacidade" className="text-primary underline">
-                {t("cookie-consent-privacy")}
-              </Link>
-            </Typography>
-          </Box>
-        </Box>
-        <Box className="flex shrink-0 gap-2">
-          <Button
-            variant="contained"
-            size="small"
-            className="flex-1 whitespace-nowrap sm:flex-none"
-            onClick={acknowledge}
-          >
-            {t("cookie-consent-accept")}
-          </Button>
-          <Button
-            variant="outlined"
-            color="grey"
-            size="small"
-            className="flex-1 whitespace-nowrap sm:flex-none"
-            onClick={optOut}
-          >
-            {t("cookie-consent-reject")}
-          </Button>
-        </Box>
-      </Card>
-    </Slide>
+    <section
+      aria-label={t("cookie-consent-title")}
+      className="site-card site-slide-up shadow-darker-sm fixed right-3 bottom-3 left-3 z-50 flex flex-col gap-2.5 p-3 sm:right-5 sm:bottom-5 sm:left-auto sm:max-w-2xl sm:flex-row sm:items-center sm:gap-5 sm:p-5"
+    >
+      <div className="flex items-start gap-3">
+        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+          <NiShieldCheck size="small" />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <h2 className="font-body m-0 text-base leading-normal font-semibold">{t("cookie-consent-title")}</h2>
+          <span className="text-text-secondary block text-xs leading-snug">
+            {t("cookie-consent-description")}{" "}
+            <Link href="/legal/privacidade" className="text-primary underline">
+              {t("cookie-consent-privacy")}
+            </Link>
+          </span>
+        </div>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <SiteButton
+          variant="contained"
+          size="small"
+          className="flex-1 whitespace-nowrap sm:flex-none"
+          onClick={acknowledge}
+        >
+          {t("cookie-consent-accept")}
+        </SiteButton>
+        <SiteButton
+          variant="outlined"
+          tone="grey"
+          size="small"
+          className="flex-1 whitespace-nowrap sm:flex-none"
+          onClick={optOut}
+        >
+          {t("cookie-consent-reject")}
+        </SiteButton>
+      </div>
+    </section>
   );
 }

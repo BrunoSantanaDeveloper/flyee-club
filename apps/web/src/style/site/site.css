@@ -1,0 +1,434 @@
+/* --------------------------- */
+/* Site primitives */
+/* --------------------------- */
+
+/*
+  The plain buttons, fields, notices and panels of the public site, and of the
+  chrome it shares with the member area (the cookie notice, the support
+  widget). No MUI behind them: components/site/* render ordinary elements with
+  these classes.
+
+  Every value here is what the MUI component, with this project's overrides,
+  computed in the browser (measured property by property on 2026-10-07, light
+  and dark, and compared again after the port), so a page moved onto these
+  keeps its look. They sit in `components`, below `utilities`: a utility class
+  on the element (`mt-3`, `justify-start`, a colour) wins without `!`.
+*/
+@layer components {
+  /* ---------- Button ---------- */
+  .site-btn {
+    @apply font-body relative inline-flex min-w-16 cursor-pointer items-center justify-center border-0 bg-transparent font-medium tracking-normal normal-case no-underline transition-all select-none;
+    box-sizing: border-box;
+    margin: 0;
+    vertical-align: middle;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The ring of every button of the app (style/inputs/button.css), 4.89:1 on paper. */
+  .site-btn:focus-visible {
+    @apply ring-primary dark:ring-primary-light rounded-lg ring-2 ring-offset-2 outline-hidden;
+  }
+
+  /* An icon button keeps the radius of its size under the ring. */
+  .site-icon-btn:focus-visible {
+    @apply ring-primary dark:ring-primary-light ring-2 ring-offset-2 outline-hidden;
+  }
+
+  .site-btn:disabled,
+  .site-btn[aria-disabled="true"] {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .site-btn-lg {
+    @apply rounded-lg px-6 py-2 text-base leading-6;
+  }
+
+  .site-btn-md {
+    @apply rounded-md px-5 py-2 text-base leading-5;
+  }
+
+  .site-btn-sm {
+    @apply rounded-sm px-4 py-2 text-base leading-4;
+  }
+
+  .site-btn-full {
+    @apply w-full;
+  }
+
+  /* Contained: the page's primary action. */
+  .site-btn-contained {
+    @apply bg-primary text-text-contrast dark:bg-primary-dark;
+  }
+
+  .site-btn-contained:hover {
+    @apply bg-primary-dark;
+  }
+
+  .site-btn-contained:disabled,
+  .site-btn-contained[aria-disabled="true"] {
+    color: hsla(var(--text-disabled) / 0.95);
+    background-color: hsla(var(--text-disabled) / 0.5);
+  }
+
+  /* Pastel: the quieter action beside a contained one. */
+  .site-btn-pastel {
+    @apply bg-primary-light/10 text-primary-dark dark:text-primary-light outline-1 -outline-offset-1 outline-transparent;
+  }
+
+  .site-btn-pastel:hover {
+    @apply bg-primary-light/20;
+  }
+
+  .site-btn-pastel:active {
+    @apply bg-primary-light/25;
+  }
+
+  .site-btn-pastel:disabled,
+  .site-btn-pastel[aria-disabled="true"] {
+    @apply opacity-disabled;
+  }
+
+  /* Text and outlined take their colour from the tone. */
+  .site-btn-outlined {
+    @apply border border-solid;
+  }
+
+  .site-btn-outlined.site-btn-md {
+    @apply px-[calc(1.25rem-1px)] py-[calc(0.5rem-1px)];
+  }
+
+  .site-btn-outlined.site-btn-sm {
+    @apply px-4 py-[calc(0.5rem-1px)];
+  }
+
+  .site-btn-outlined.site-btn-lg {
+    @apply px-[calc(1.5rem-1px)] py-[calc(0.5rem-1px)];
+  }
+
+  .site-btn-tone-primary {
+    @apply text-primary border-primary dark:text-primary-light dark:border-primary-light;
+  }
+
+  .site-btn-tone-text-primary,
+  .site-btn-tone-grey {
+    @apply text-text-primary border-text-primary;
+  }
+
+  .site-btn-tone-inherit {
+    color: inherit;
+    border-color: currentcolor;
+  }
+
+  .site-btn-text:disabled,
+  .site-btn-outlined:disabled {
+    color: hsla(var(--text-disabled) / 0.95);
+    border-color: hsla(var(--text-disabled) / 0.5);
+  }
+
+  .site-btn-start {
+    @apply mr-2 -ml-1 flex items-center;
+  }
+
+  /* ---------- Icon button ---------- */
+  .site-icon-btn {
+    @apply font-body text-text-primary relative inline-flex flex-none cursor-pointer items-center justify-center border-0 bg-transparent p-2 text-base font-medium transition-all select-none;
+    box-sizing: border-box;
+    margin: 0;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .site-icon-btn-md {
+    @apply rounded-md leading-5;
+  }
+
+  .site-icon-btn-sm {
+    @apply rounded-sm leading-4;
+  }
+
+  /* ---------- Field ---------- */
+  .site-field {
+    @apply relative mb-4 flex min-w-0 flex-col border-0 p-0;
+  }
+
+  .site-label {
+    @apply font-body text-text-primary mb-2 block text-base leading-normal font-semibold;
+  }
+
+  .site-input {
+    @apply border-grey-200 font-body text-text-primary relative flex min-h-0 cursor-text items-center rounded-md border border-solid bg-transparent px-[calc(1rem-1px)] py-[calc(0.375rem-1px)] text-base leading-5 outline-2 -outline-offset-1 outline-transparent transition-all;
+    box-sizing: border-box;
+  }
+
+  .site-input-md {
+    @apply rounded-lg py-[calc(0.5rem-1px)];
+  }
+
+  .site-input:hover {
+    @apply border-grey-500;
+  }
+
+  .site-input:focus-within {
+    @apply outline-primary/40 border-transparent;
+  }
+
+  .site-input-error:not(:hover):not(:focus-within) {
+    @apply border-error;
+  }
+
+  .site-input > input,
+  .site-input > textarea,
+  .site-input > select {
+    @apply font-body text-text-primary m-0 block h-auto min-h-0 w-full min-w-0 flex-1 border-0 bg-transparent px-0 py-0.5 text-base leading-5;
+    outline: none;
+    appearance: none;
+  }
+
+  .site-input > input::placeholder,
+  .site-input > textarea::placeholder {
+    @apply opacity-disabled;
+    color: currentcolor;
+  }
+
+  /* Grows with what is typed where the browser can (field-sizing), from the rows it was given. */
+  .site-input > textarea {
+    resize: none;
+    field-sizing: content;
+  }
+
+  .site-input > select {
+    @apply cursor-pointer pr-6;
+    text-overflow: ellipsis;
+  }
+
+  .site-input-chevron {
+    @apply text-text-secondary pointer-events-none absolute top-1/2 right-[10px] -translate-y-1/2;
+  }
+
+  .site-help {
+    @apply font-body text-text-secondary mx-4 mt-1 mb-0 text-left text-sm leading-4 font-normal tracking-normal;
+  }
+
+  .site-help-error {
+    @apply text-error;
+  }
+
+  /* ---------- Checkbox ---------- */
+  .site-check {
+    @apply font-body text-text-primary flex cursor-pointer items-start text-base leading-5;
+  }
+
+  .site-check-input {
+    @apply border-grey-200 mt-px mr-2 h-[18px] w-[18px] flex-none cursor-pointer rounded-[6px] border border-solid bg-transparent transition-colors;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-bottom: 0;
+    appearance: none;
+  }
+
+  .site-check-input:hover {
+    @apply border-grey-500;
+  }
+
+  /* The tick is cut out of the box, like the icon it replaces: what shows through is the page. */
+  .site-check-input:checked {
+    @apply bg-primary border-0;
+    -webkit-mask: var(--site-check-mask) center / 18px 18px no-repeat;
+    mask: var(--site-check-mask) center / 18px 18px no-repeat;
+    --site-check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M6 0C2.68629 0 0 2.68628 0 6V12C0 15.3137 2.68629 18 6 18H12C15.3137 18 18 15.3137 18 12V6C18 2.68628 15.3137 0 12 0H6ZM8.38373 12.6768L14.5303 6.53033C14.8232 6.23743 14.8232 5.76257 14.5303 5.46967C14.2374 5.17676 13.7626 5.17676 13.4697 5.46967L7.49986 11.4394L5.03035 8.96967C4.73747 8.67676 4.26259 8.67676 3.9697 8.96967C3.67679 9.26251 3.67677 9.73743 3.96965 10.0303L6.61594 12.6768C7.10408 13.165 7.89555 13.165 8.38373 12.6768Z'/%3E%3C/svg%3E");
+  }
+
+  .site-check-input:checked:hover {
+    @apply bg-primary-light;
+  }
+
+  /* A mask clips a ring drawn on the box itself, so the focus ring of the tick goes on its label. */
+  .site-check:has(.site-check-input:focus-visible) {
+    @apply ring-primary dark:ring-primary-light rounded-sm ring-2 ring-offset-2 outline-hidden;
+  }
+
+  .site-check-input:focus-visible {
+    outline: none;
+  }
+
+  /* ---------- Notice ---------- */
+  .site-alert {
+    @apply font-body text-text-primary flex rounded-md px-4 py-1.5 text-base leading-5 font-normal;
+    box-sizing: border-box;
+  }
+
+  .site-alert-icon {
+    @apply mr-3 flex flex-none py-[7px] opacity-90;
+  }
+
+  .site-alert-message {
+    @apply min-w-0 py-2;
+  }
+
+  .site-alert-success {
+    @apply bg-success-light/20;
+  }
+
+  .site-alert-info {
+    @apply bg-info-light/20;
+  }
+
+  .site-alert-warning {
+    @apply bg-warning-light/20;
+  }
+
+  .site-alert-error {
+    @apply bg-error-light/20;
+  }
+
+  .site-alert-success > .site-alert-icon {
+    @apply text-success;
+  }
+
+  .site-alert-info > .site-alert-icon {
+    @apply text-info;
+  }
+
+  .site-alert-warning > .site-alert-icon {
+    @apply text-warning;
+  }
+
+  .site-alert-error > .site-alert-icon {
+    @apply text-error;
+  }
+
+  /* The quiet notice: a bordered panel, the severity carried by the icon alone. */
+  .site-alert-neutral {
+    @apply border-grey-100 bg-background-paper/60 border border-solid;
+  }
+
+  .site-alert-neutral > .site-alert-message {
+    @apply text-text-secondary;
+  }
+
+  /* ---------- Disclosure (the FAQ) ---------- */
+  .site-disclosure {
+    @apply border-grey-100 bg-background-paper font-body text-text-primary relative rounded-2xl border border-solid;
+  }
+
+  .site-disclosure > summary {
+    @apply flex cursor-pointer list-none items-center rounded-2xl px-6 py-4 font-medium transition-all select-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The answer slides open where the browser can animate to its natural height; elsewhere it just opens. */
+  .site-disclosure {
+    interpolate-size: allow-keywords;
+  }
+
+  .site-disclosure::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      content-visibility 0.3s allow-discrete;
+  }
+
+  .site-disclosure[open]::details-content {
+    block-size: auto;
+  }
+
+  .site-disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .site-disclosure > summary:focus-visible {
+    @apply ring-primary dark:ring-primary-light rounded-lg ring-2 ring-offset-2 outline-hidden;
+    background-color: rgb(0 0 0 / 0.12);
+  }
+
+  .site-disclosure-title {
+    @apply m-0 flex-1 text-base leading-normal font-bold;
+  }
+
+  .site-disclosure-icon {
+    @apply flex flex-none transition-transform;
+  }
+
+  .site-disclosure[open] .site-disclosure-icon {
+    transform: rotate(180deg);
+  }
+
+  .site-disclosure-body {
+    @apply text-text-secondary m-0 px-6 pb-6 text-base leading-6;
+  }
+
+  /* ---------- Panel ---------- */
+  .site-card {
+    @apply bg-background-paper text-text-primary overflow-hidden rounded-3xl;
+    box-sizing: border-box;
+  }
+
+  /* ---------- Drawer (the mobile menu), on a native <dialog> ---------- */
+  .site-drawer {
+    @apply bg-background-paper text-text-primary m-0 ml-auto h-dvh max-h-none w-fit max-w-[85vw] rounded-l-2xl border-0 p-0;
+    box-shadow:
+      0 8px 10px -5px rgb(0 0 0 / 0.2),
+      0 16px 24px 2px rgb(0 0 0 / 0.14),
+      0 6px 30px 5px rgb(0 0 0 / 0.12);
+  }
+
+  .site-drawer::backdrop {
+    background-color: rgb(0 0 0 / 0.5);
+  }
+
+  .site-drawer[open] {
+    animation: site-drawer-in 225ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  .site-drawer[open]::backdrop {
+    animation: site-fade-in 225ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* The page behind an open drawer does not scroll. */
+  html:has(.site-drawer[open]) {
+    overflow: hidden;
+  }
+
+  /* ---------- Popover (the support channels) ---------- */
+  .site-popover {
+    animation: site-fade-in 225ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .site-slide-up {
+    animation: site-slide-up 225ms cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@keyframes site-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes site-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes site-slide-up {
+  from {
+    transform: translateY(calc(100% + 1.25rem));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-drawer[open],
+  .site-drawer[open]::backdrop,
+  .site-popover,
+  .site-slide-up {
+    animation: none;
+  }
+
+  .site-disclosure::details-content {
+    transition: none;
+  }
+}

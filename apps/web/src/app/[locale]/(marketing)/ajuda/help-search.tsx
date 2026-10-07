@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { FormControl, Input } from "@mui/material";
-
+import { SiteInput } from "@/components/site/field";
 import NiSearch from "@/icons/nexture/ni-search";
 
 export type SearchableArticle = {
@@ -45,14 +44,16 @@ export default function HelpSearch({
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-3">
-      <FormControl className="outlined" variant="standard" size="medium" fullWidth>
-        <Input
-          startAdornment={<NiSearch size="medium" className="text-text-secondary mr-2" />}
-          placeholder={placeholder}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </FormControl>
+      <SiteInput
+        enterKeyHint="search"
+        fieldSize="medium"
+        frameClassName="mb-4"
+        startAdornment={<NiSearch size="medium" className="text-text-secondary mr-2 flex-none" />}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
 
       {query.trim() && (
         <div className="border-grey-100 bg-background-paper flex flex-col overflow-hidden rounded-2xl border">

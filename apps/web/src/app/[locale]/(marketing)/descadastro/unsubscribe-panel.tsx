@@ -4,9 +4,8 @@ import { confirmUnsubscribe, type UnsubscribeStatus } from "./actions";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
-import { Alert, Box, Button } from "@mui/material";
-
-import Link from "@/components/marketing/locale-link";
+import SiteAlert from "@/components/site/alert";
+import SiteButton from "@/components/site/button";
 import NiCheckSquare from "@/icons/nexture/ni-check-square";
 
 /**
@@ -25,11 +24,11 @@ export default function UnsubscribePanel({ kind }: { kind: "member" | "lead" | n
 
   if (!kind) {
     return (
-      <Box className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
-        <Button variant="pastel" color="primary" href="/" LinkComponent={Link}>
+      <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
+        <SiteButton variant="pastel" href="/">
           {t("unsubscribe-home-cta")}
-        </Button>
-      </Box>
+        </SiteButton>
+      </div>
     );
   }
 
@@ -37,7 +36,7 @@ export default function UnsubscribePanel({ kind }: { kind: "member" | "lead" | n
 
   if (status === "done") {
     return (
-      <Box
+      <div
         role="status"
         className="border-grey-100 bg-background-paper mx-auto flex w-full max-w-xl flex-col items-start gap-3 rounded-3xl border p-6 md:p-8"
       >
@@ -50,30 +49,29 @@ export default function UnsubscribePanel({ kind }: { kind: "member" | "lead" | n
         <p className="text-text-secondary text-base leading-6">
           {t(member ? "unsubscribe-member-done-body" : "unsubscribe-lead-done-body")}
         </p>
-        <Button variant="pastel" color="primary" href={member ? "/settings" : "/"} LinkComponent={Link}>
+        <SiteButton variant="pastel" href={member ? "/settings" : "/"}>
           {t(member ? "unsubscribe-member-done-cta" : "unsubscribe-home-cta")}
-        </Button>
-      </Box>
+        </SiteButton>
+      </div>
     );
   }
 
   return (
-    <Box className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
+    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4">
       {status === "expired" && (
-        <Alert severity="warning" className="neutral bg-background-paper/60! w-full">
+        <SiteAlert severity="warning" neutral className="w-full">
           {t("unsubscribe-expired")}
-        </Alert>
+        </SiteAlert>
       )}
       {status === "unavailable" && (
-        <Alert severity="error" className="neutral bg-background-paper/60! w-full">
+        <SiteAlert severity="error" neutral className="w-full">
           {t("unsubscribe-error")}
-        </Alert>
+        </SiteAlert>
       )}
       {status !== "expired" && (
-        <Button
+        <SiteButton
           size="large"
           variant="contained"
-          color="primary"
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
@@ -83,8 +81,8 @@ export default function UnsubscribePanel({ kind }: { kind: "member" | "lead" | n
           }
         >
           {isPending ? t("unsubscribe-working") : t(member ? "unsubscribe-member-button" : "unsubscribe-lead-button")}
-        </Button>
+        </SiteButton>
       )}
-    </Box>
+    </div>
   );
 }

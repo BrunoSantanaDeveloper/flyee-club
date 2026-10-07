@@ -65,21 +65,8 @@
     @apply font-body text-xs font-normal;
   }
 
-  * {
-    @apply tracking-normal;
-  }
-
-  code,
-  pre {
-    @apply border-grey-100 bg-grey-20 rounded-[0.5rem] border border-solid px-1.5 py-0.25;
-  }
-
   .syntax-highlighter code,
   .syntax-highlighter pre {
     @apply rounded-none border-none bg-transparent p-0;
-  }
-
-  *::selection {
-    @apply bg-primary/50;
   }
 }

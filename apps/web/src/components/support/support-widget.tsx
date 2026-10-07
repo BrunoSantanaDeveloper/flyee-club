@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { Box, Button, Card, ClickAwayListener, Fade, Tooltip } from "@mui/material";
-
 import { BRAND } from "@/brand";
-import Link from "@/components/marketing/locale-link";
+import SiteButton from "@/components/site/button";
 import NiCross from "@/icons/nexture/ni-cross";
 import NiEmail from "@/icons/nexture/ni-email";
 import NiHeadset from "@/icons/nexture/ni-headset";
@@ -24,6 +22,10 @@ import { isSupabaseConfigured } from "@flyee/auth";
  * link, email, help center. Renders nothing until a HUMAN channel
  * (whatsapp/email) is configured — a floating button that only repeats
  * the footer is noise.
+ *
+ * Built on the site primitives (components/site), with no MUI: the public
+ * site mounts it too, and carries none. The panel closes on a click outside
+ * it and on Esc.
  */
 
 /**
@@ -57,6 +59,23 @@ export default function SupportWidget({ support }: { support?: SupportChannels }
   // (the dashboard layout is a client component). Server-provided `support`
   // (marketing layout) always wins and skips the round trip.
   const [fetched, setFetched] = useState<SupportChannels | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (support || !isSupabaseConfigured) return;
@@ -118,7 +137,7 @@ export default function SupportWidget({ support }: { support?: SupportChannels }
 
   /** The icon in its channel's tinted badge — decorative, the label names it. */
   const badge = (channel: { key: string; icon: React.ReactNode }) => (
-    <Box
+    <span
       aria-hidden="true"
       className={cn(
         "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
@@ -126,60 +145,42 @@ export default function SupportWidget({ support }: { support?: SupportChannels }
       )}
     >
       {channel.icon}
-    </Box>
+    </span>
   );
 
   return (
-    <ClickAwayListener onClickAway={() => setOpen(false)}>
-      <Box className={cn("fixed right-5 bottom-5 z-50 flex flex-col items-end gap-3")}>
-        <Fade in={open} unmountOnExit>
-          <Card className="shadow-darker-sm! flex w-72 flex-col gap-1 p-2">
-            {channels.map((channel) =>
-              channel.external ? (
-                <Button
-                  key={channel.key}
-                  component="a"
-                  href={channel.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  variant="text"
-                  color="text-primary"
-                  size="medium"
-                  className="justify-start gap-2"
-                  startIcon={badge(channel)}
-                >
-                  {channel.label}
-                </Button>
-              ) : (
-                <Button
-                  key={channel.key}
-                  component={Link}
-                  href={channel.href}
-                  variant="text"
-                  color="text-primary"
-                  size="medium"
-                  className="justify-start gap-2"
-                  startIcon={badge(channel)}
-                  onClick={() => setOpen(false)}
-                >
-                  {channel.label}
-                </Button>
-              ),
-            )}
-          </Card>
-        </Fade>
-        <Tooltip title={t("support-widget-label")} placement="left">
-          <Button
-            variant="contained"
-            color="primary"
-            aria-label={t("support-widget-label")}
-            onClick={() => setOpen((current) => !current)}
-            className="h-14 w-14 min-w-0 rounded-full p-0 shadow-lg [&_svg]:h-7 [&_svg]:w-7"
-          >
-            {open ? <NiCross size="large" /> : <NiHeadset size="large" />}
-          </Button>
-        </Tooltip>
-      </Box>
-    </ClickAwayListener>
+    <div ref={root} className="fixed right-5 bottom-5 z-50 flex flex-col items-end gap-3">
+      {open ? (
+        <div className="site-card site-popover shadow-darker-sm flex w-72 flex-col gap-1 p-2">
+          {channels.map((channel) => (
+            <SiteButton
+              key={channel.key}
+              href={channel.href}
+              // The help centre is a page of the site; WhatsApp and e-mail leave it.
+              plain={channel.external}
+              target={channel.external ? "_blank" : undefined}
+              rel={channel.external ? "noopener noreferrer" : undefined}
+              variant="text"
+              tone="text-primary"
+              className="justify-start gap-2"
+              startIcon={badge(channel)}
+              onClick={channel.external ? undefined : () => setOpen(false)}
+            >
+              {channel.label}
+            </SiteButton>
+          ))}
+        </div>
+      ) : null}
+      <SiteButton
+        variant="contained"
+        aria-label={t("support-widget-label")}
+        aria-expanded={open}
+        title={t("support-widget-label")}
+        onClick={() => setOpen((current) => !current)}
+        className="h-14 w-14 min-w-0 rounded-full p-0 shadow-lg [&_svg]:h-7 [&_svg]:w-7"
+      >
+        {open ? <NiCross size="large" /> : <NiHeadset size="large" />}
+      </SiteButton>
+    </div>
   );
 }

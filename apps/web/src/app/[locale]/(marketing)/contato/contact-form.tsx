@@ -1,118 +1,133 @@
 "use client";
 import { ContactResult, submitContact } from "./actions";
-import { useFormik } from "formik";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
-import * as Yup from "yup";
+import { type FormEvent, useState } from "react";
 
-import { Alert, Box, Button, FormControl, FormLabel, Input, Tooltip } from "@mui/material";
+import SiteAlert from "@/components/site/alert";
+import SiteButton from "@/components/site/button";
+import { SiteField, SiteHelp, SiteInput, SiteLabel, SiteTextarea } from "@/components/site/field";
 
-import NiExclamationSquare from "@/icons/nexture/ni-exclamation-square";
+/** The same shape the server action accepts (contato/actions.ts). */
+const EMAIL = /^\S+@\S+\.\S+$/;
 
-const InputErrorTooltip = ({ title }: { title: string }) => {
-  return (
-    <Tooltip title={title}>
-      <span className="text-error ml-auto leading-4">
-        <NiExclamationSquare size="small" />
-      </span>
-    </Tooltip>
-  );
-};
-
+/**
+ * The public contact form: name, e-mail and message. What is missing is said
+ * under its field, from the first attempt to send on, in words a screen reader
+ * reaches (it used to be an icon whose only text was a hover tooltip).
+ */
 export default function ContactForm({ initialMessage = "" }: { initialMessage?: string }) {
   const t = useTranslations("marketing");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  // Prefilled from a known `?assunto=` so a visitor sent here from a campaign
+  // page does not have to restate the context she was answering.
+  const [message, setMessage] = useState(initialMessage);
+  const [attempted, setAttempted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<ContactResult["status"] | null>(null);
 
-  const validationSchema = Yup.object({
-    name: Yup.string().required(t("contact-required")),
-    email: Yup.string().email(t("contact-invalid-email")).required(t("contact-required")),
-    message: Yup.string().required(t("contact-required")),
-  });
+  const errors = {
+    name: name.trim() ? null : t("contact-required"),
+    email: !email.trim() ? t("contact-required") : EMAIL.test(email.trim()) ? null : t("contact-invalid-email"),
+    message: message.trim() ? null : t("contact-required"),
+  };
+  const shown = attempted ? errors : { name: null, email: null, message: null };
 
-  const formik = useFormik({
-    // Prefilled from a known `?assunto=` so a visitor sent here from a campaign
-    // page does not have to restate the context she was answering.
-    initialValues: { name: "", email: "", message: initialMessage },
-    validationSchema,
-    onSubmit: async (values, helpers) => {
-      setResult(null);
-      const { status } = await submitContact(values);
-      setResult(status);
-      if (status === "sent") helpers.resetForm();
-    },
-    validateOnBlur: false,
-    validateOnMount: false,
-  });
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAttempted(true);
+    setResult(null);
+    if (errors.name || errors.email || errors.message) return;
+
+    setSubmitting(true);
+    const { status } = await submitContact({ name, email, message });
+    setSubmitting(false);
+    setResult(status);
+    if (status === "sent") {
+      setName("");
+      setEmail("");
+      setMessage("");
+      setAttempted(false);
+    }
+  };
 
   return (
-    <Box component="form" onSubmit={formik.handleSubmit} className="mx-auto flex w-full max-w-xl flex-col">
-      <FormControl className="outlined" variant="standard" size="small">
-        <FormLabel component="label" className="flex flex-row">
-          {t("contact-name")}
-          {formik.touched.name && formik.errors.name && <InputErrorTooltip title={formik.errors.name} />}
-        </FormLabel>
-        <Input
+    <form noValidate onSubmit={submit} className="mx-auto flex w-full max-w-xl flex-col">
+      <SiteField>
+        <SiteLabel htmlFor="name">{t("contact-name")}</SiteLabel>
+        <SiteInput
           id="name"
           name="name"
           autoComplete="name"
-          value={formik.values.name}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
+          error={Boolean(shown.name)}
+          aria-describedby={shown.name ? "name-error" : undefined}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
         />
-      </FormControl>
+        {shown.name && (
+          <SiteHelp id="name-error" error>
+            {shown.name}
+          </SiteHelp>
+        )}
+      </SiteField>
 
-      <FormControl className="outlined" variant="standard" size="small">
-        <FormLabel component="label" className="flex flex-row">
-          {t("contact-email")}
-          {formik.touched.email && formik.errors.email && <InputErrorTooltip title={formik.errors.email} />}
-        </FormLabel>
-        <Input
+      <SiteField>
+        <SiteLabel htmlFor="email">{t("contact-email")}</SiteLabel>
+        <SiteInput
           id="email"
           name="email"
           type="email"
           autoComplete="email"
-          inputProps={{ inputMode: "email" }}
-          value={formik.values.email}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
+          inputMode="email"
+          error={Boolean(shown.email)}
+          aria-describedby={shown.email ? "email-error" : undefined}
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
         />
-      </FormControl>
+        {shown.email && (
+          <SiteHelp id="email-error" error>
+            {shown.email}
+          </SiteHelp>
+        )}
+      </SiteField>
 
-      <FormControl className="outlined" variant="standard" size="small">
-        <FormLabel component="label" className="flex flex-row">
-          {t("contact-message")}
-          {formik.touched.message && formik.errors.message && <InputErrorTooltip title={formik.errors.message} />}
-        </FormLabel>
-        <Input
+      <SiteField>
+        <SiteLabel htmlFor="message">{t("contact-message")}</SiteLabel>
+        <SiteTextarea
           id="message"
           name="message"
-          multiline
-          minRows={5}
-          value={formik.values.message}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
+          rows={5}
+          error={Boolean(shown.message)}
+          aria-describedby={shown.message ? "message-error" : undefined}
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
         />
-      </FormControl>
+        {shown.message && (
+          <SiteHelp id="message-error" error>
+            {shown.message}
+          </SiteHelp>
+        )}
+      </SiteField>
 
       {result === "sent" && (
-        <Alert severity="success" className="mb-4">
+        <SiteAlert severity="success" className="mb-4">
           {t("contact-success")}
-        </Alert>
+        </SiteAlert>
       )}
       {result === "not-configured" && (
-        <Alert severity="info" className="mb-4">
+        <SiteAlert severity="info" className="mb-4">
           {t("contact-not-configured")}
-        </Alert>
+        </SiteAlert>
       )}
       {result === "error" && (
-        <Alert severity="error" className="mb-4">
+        <SiteAlert severity="error" className="mb-4">
           {t("contact-error")}
-        </Alert>
+        </SiteAlert>
       )}
 
-      <Button type="submit" variant="contained" color="primary" size="large" disabled={formik.isSubmitting}>
+      <SiteButton type="submit" variant="contained" size="large" disabled={submitting}>
         {t("contact-submit")}
-      </Button>
-    </Box>
+      </SiteButton>
+    </form>
   );
 }

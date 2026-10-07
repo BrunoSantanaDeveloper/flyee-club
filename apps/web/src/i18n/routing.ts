@@ -170,3 +170,15 @@ export function localizeHref(href: string, locale: string): string {
   }
   return href;
 }
+
+/**
+ * Whether an address of this site leads out of the public site: sign-in, the
+ * member area, the checkout. Those screens are another shell, with MUI behind
+ * them (components/layout/app-shell.tsx), and a link of a public page must not
+ * fetch that shell ahead of the click (components/marketing/locale-link.tsx).
+ * An external URL or an anchor of the page is not this site's address.
+ */
+export function leavesPublicSite(href: string): boolean {
+  if (!href.startsWith("/") || href.startsWith("//")) return false;
+  return matchPublicPath(splitHref(href)[0]) === null;
+}

@@ -1,0 +1,52 @@
+/* --------------------------- */
+/* Plain elements */
+/* --------------------------- */
+
+/*
+  Rules for ordinary elements, on every page. They used to sit inside the MUI
+  override files (typography.css, input.css); the public site depends on them
+  and loads none of those, so they live with the base.
+*/
+@layer utilities {
+  * {
+    @apply tracking-normal;
+  }
+
+  code,
+  pre {
+    @apply border-grey-100 bg-grey-20 rounded-[0.5rem] border border-solid px-1.5 py-0.25;
+  }
+
+  *::selection {
+    @apply bg-primary/50;
+  }
+
+  /* Text area */
+  textarea {
+    @apply placeholder:opacity-disabled placeholder:text-text-primary font-body leading-5;
+
+    &.autosize:focus {
+      @apply outline-primary/40! border-transparent! outline-2! -outline-offset-1!;
+    }
+  }
+
+  textarea::-webkit-resizer {
+    display: none;
+  }
+  textarea::-moz-resizer {
+    display: none;
+  }
+
+  /* Transparent Autofill Background */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}

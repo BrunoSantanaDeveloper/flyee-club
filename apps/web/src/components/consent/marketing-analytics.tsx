@@ -17,7 +17,9 @@ import { datasetToEventProps, isSiteEventName, trackSiteEvent } from "@/lib/site
  *    taller than the viewport);
  *  - every click on an element that declares an event with `data-track`
  *    (`lib/site-events.ts`), reported by this ONE listener so server
- *    components declare events without client code.
+ *    components declare events without client code. A `<summary>` that adds
+ *    `data-when="opening"` reports only the click that opens its `<details>`
+ *    (the FAQ's `faq_open`: closing a question is not an event).
  *
  * Mounted ONLY in the marketing and funnel layouts. Every event is a no-op
  * once the visitor opted out (`track`).
@@ -63,6 +65,8 @@ export default function MarketingAnalytics() {
       if (!element) return;
       const name = element.dataset.track;
       if (!isSiteEventName(name)) return;
+      // The click runs before the toggle: an open <details> is being closed.
+      if (element.dataset.when === "opening" && element.closest("details")?.open) return;
       trackSiteEvent(name, datasetToEventProps(element.dataset));
     };
     // Capture phase: the event is reported before a link navigates away.

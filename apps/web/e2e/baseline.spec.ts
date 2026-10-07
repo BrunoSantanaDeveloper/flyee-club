@@ -208,7 +208,7 @@ test("the site menu leads to the store, how it works and pricing in the language
     const opener = page.getByRole("button", { name: /abrir menu|open menu/i });
     const narrow = await opener.isVisible();
     if (narrow) await opener.click();
-    const menu = narrow ? page.locator(".MuiDrawer-paper") : page.locator("header nav");
+    const menu = narrow ? page.getByRole("dialog") : page.locator("header nav");
     for (const [name, href] of Object.entries(site.menu)) {
       await expect(menu.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
     }
