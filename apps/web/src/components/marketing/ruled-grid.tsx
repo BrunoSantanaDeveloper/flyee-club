@@ -18,6 +18,8 @@ export type RuledGridItem = {
   badge?: string;
   /** Cards variant: one mono line under the body for identifiers (a version, the AIs it runs on). */
   meta?: string;
+  /** Cards variant: small badges under the body ("Novo" in the item's hue, "Usa sua conta X" neutral). */
+  flags?: { label: string; tone?: "item" | "neutral" }[];
 };
 
 /**
@@ -46,6 +48,21 @@ export function RuledCard({ item }: { item: RuledGridItem }) {
       )}
       <h3 className="font-display text-text-primary text-xl leading-6 font-normal">{item.title}</h3>
       <p className="text-text-secondary mt-2.5 text-base leading-6">{item.body}</p>
+      {item.flags && item.flags.length > 0 && (
+        <ul className="m-0 mt-3 flex list-none flex-row flex-wrap gap-2 p-0">
+          {item.flags.map((flag) => (
+            <li
+              key={flag.label}
+              className={cn(
+                "text-text-primary rounded-full px-3 py-1 text-xs font-bold",
+                flag.tone === "neutral" ? "bg-grey-50" : tone.softBg,
+              )}
+            >
+              {flag.label}
+            </li>
+          ))}
+        </ul>
+      )}
       {item.meta && <p className="text-text-secondary mt-3 font-mono text-xs leading-5">{item.meta}</p>}
       {item.link && (
         // The label keeps the text colour and only the arrow takes the

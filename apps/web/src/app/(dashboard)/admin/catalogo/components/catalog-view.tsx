@@ -27,6 +27,7 @@ import {
   type AdminTrail,
   type DeliverySettings,
   latestPublished,
+  type StoreSettings,
   textOf,
 } from "@/lib/admin/catalog";
 import { formatNumber } from "@/lib/admin/format";
@@ -36,6 +37,7 @@ import type { ConsoleState } from "@/lib/admin/session";
 export type CatalogState = ConsoleState<{
   trails: AdminTrail[];
   storeCategories: AdminStoreCategory[];
+  storeSettings: StoreSettings;
   modules: AdminModule[];
   recipes: AdminRecipe[];
   delivery: DeliverySettings;
@@ -324,7 +326,12 @@ export default function CatalogView({ state }: { state: CatalogState }) {
             ) : tab === "trails" ? (
               <TrailsTab trails={trails} modules={modules} onChanged={refresh} />
             ) : tab === "categories" ? (
-              <StoreCategoriesTab categories={ready.storeCategories} modules={modules} onChanged={refresh} />
+              <StoreCategoriesTab
+                categories={ready.storeCategories}
+                settings={ready.storeSettings}
+                modules={modules}
+                onChanged={refresh}
+              />
             ) : (
               <DeliveryTab delivery={ready.delivery} onChanged={refresh} />
             )}

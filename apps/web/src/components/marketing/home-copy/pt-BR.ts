@@ -60,6 +60,7 @@ export const homeCopyPtBR = {
     allLabel: "Todos",
     featuredLabel: "Em destaque",
     newBadge: "Novo",
+    usesAccount: "Usa sua conta {service}",
     updatedOn: "Atualizado em {date}",
     viewApp: "Ver o app",
     terminalLabel: "Comando que instala o app em destaque",

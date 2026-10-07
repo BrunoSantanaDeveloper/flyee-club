@@ -6,6 +6,7 @@ import {
   deleteStoreCategory,
   saveDelivery,
   saveStoreCategory,
+  saveStoreSettings,
   saveTrail,
   setRecipeStatus,
   type StoreCategoryInput,
@@ -31,6 +32,7 @@ import {
   type AdminStoreCategory,
   type AdminTrail,
   type DeliverySettings,
+  type StoreSettings,
   textOf,
 } from "@/lib/admin/catalog";
 import { formatNumber } from "@/lib/admin/format";
@@ -416,15 +418,18 @@ function StoreCategoryDialog({
  */
 export function StoreCategoriesTab({
   categories,
+  settings,
   modules,
   onChanged,
 }: {
   categories: AdminStoreCategory[];
+  settings: StoreSettings;
   modules: AdminModule[];
   onChanged: () => void;
 }) {
   const run = useRun(onChanged);
   const [editing, setEditing] = useState<AdminStoreCategory | "new" | null>(null);
+  const [newBadgeDays, setNewBadgeDays] = useState(settings.newBadgeDays);
   const uncategorized = modules.filter((module) => !module.storeCategory).length;
   const nextSort = (categories.at(-1)?.sort ?? 0) + 10;
   return (
@@ -440,6 +445,23 @@ export function StoreCategoriesTab({
         </Typography>
         <Button variant="contained" startIcon={<NiPlus size="medium" />} onClick={() => setEditing("new")}>
           Nova categoria
+        </Button>
+      </Box>
+      <Box className="flex flex-row flex-wrap items-end gap-3">
+        <TextInput
+          label="Dias com o selo Novo depois da primeira publicação"
+          type="number"
+          value={newBadgeDays}
+          onChange={(value) => setNewBadgeDays(Number(value))}
+          help="O selo Usa sua conta vem das credenciais obrigatórias de cada ferramenta."
+        />
+        <Button
+          variant="outlined"
+          color="grey"
+          disabled={newBadgeDays === settings.newBadgeDays}
+          onClick={() => run(() => saveStoreSettings({ newBadgeDays }), `Selo Novo: ${newBadgeDays} dias.`)}
+        >
+          Salvar
         </Button>
       </Box>
       {categories.length === 0 ? (

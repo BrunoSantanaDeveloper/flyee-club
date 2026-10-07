@@ -588,6 +588,28 @@ export async function deleteStoreCategory(slug: string): Promise<CatalogActionRe
   return { ok: true, data: null };
 }
 
+/** How many days after its first publication an app shows "Novo" in the store (platform_settings.catalog, public). */
+export async function saveStoreSettings(input: { newBadgeDays: number }): Promise<CatalogActionResult> {
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: dbMessage("", "42501") };
+  const days = Math.floor(Number(input.newBadgeDays));
+  if (!Number.isFinite(days) || days < 1 || days > 365) {
+    return { ok: false, error: "Os dias do selo Novo são um número inteiro de 1 a 365." };
+  }
+  // Public: the public store reads it.
+  const { error } = await session.supabase
+    .from("platform_settings")
+    .upsert({ key: "catalog", value: { new_badge_days: days }, is_public: true });
+  if (error) return { ok: false, error: dbMessage(error.message, error.code) };
+  await recordAudit(session.supabase, "admin.catalog.store_settings.updated", {
+    entityType: "platform_settings",
+    entityId: "catalog",
+    metadata: { new_badge_days: days },
+  });
+  refresh();
+  return { ok: true, data: null };
+}
+
 // ---------- Delivery ----------
 
 const positive = (value: number, max: number) => Number.isInteger(value) && value >= 1 && value <= max;

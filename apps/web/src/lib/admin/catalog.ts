@@ -18,6 +18,9 @@ export type AdminTrail = { slug: string; name: Localized; description: Localized
 /** A kind of work the public store filters by (migration 0029). */
 export type AdminStoreCategory = { slug: string; name: Localized; sort: number };
 
+/** platform_settings.catalog (migration 0034): how many days after its first publication an app is "Novo". */
+export type StoreSettings = { newBadgeDays: number };
+
 export type ModuleUsage = {
   downloads: number;
   downloads30d: number;
@@ -281,6 +284,12 @@ export async function loadTrails(supabase: SupabaseClient): Promise<AdminTrail[]
   }));
 }
 
+export async function loadStoreSettings(supabase: SupabaseClient): Promise<StoreSettings> {
+  const { data } = await supabase.from("platform_settings").select("value").eq("key", "catalog").maybeSingle();
+  const days = Math.floor(Number((data?.value as { new_badge_days?: unknown } | null)?.new_badge_days));
+  return { newBadgeDays: Number.isFinite(days) && days > 0 ? days : 30 };
+}
+
 export async function loadStoreCategories(supabase: SupabaseClient): Promise<AdminStoreCategory[]> {
   const { data, error } = await supabase.from("catalog_store_categories").select("slug, name, sort").order("sort");
   if (error) throw new Error("store_categories_failed");
@@ -291,6 +300,7 @@ export async function loadStoreCategories(supabase: SupabaseClient): Promise<Adm
 export async function loadCatalogAdmin(supabase: SupabaseClient): Promise<{
   trails: AdminTrail[];
   storeCategories: AdminStoreCategory[];
+  storeSettings: StoreSettings;
   modules: AdminModule[];
   recipes: AdminRecipe[];
   delivery: DeliverySettings;
@@ -298,6 +308,7 @@ export async function loadCatalogAdmin(supabase: SupabaseClient): Promise<{
   const [
     trails,
     storeCategories,
+    storeSettings,
     modulesRead,
     versionsRead,
     recipesRead,
@@ -308,6 +319,7 @@ export async function loadCatalogAdmin(supabase: SupabaseClient): Promise<{
   ] = await Promise.all([
     loadTrails(supabase),
     loadStoreCategories(supabase),
+    loadStoreSettings(supabase),
     supabase.from("catalog_modules").select(MODULE_COLUMNS).order("sort").order("created_at"),
     supabase.from("catalog_module_versions").select(VERSION_COLUMNS),
     supabase.from("catalog_recipes").select("id, slug, name, summary, icon, status, sort, published_at").order("sort"),
@@ -340,6 +352,7 @@ export async function loadCatalogAdmin(supabase: SupabaseClient): Promise<{
   return {
     trails,
     storeCategories,
+    storeSettings,
     modules: (modulesRead.data ?? []).map((row) =>
       toModule(
         row as Record<string, unknown>,

@@ -45,6 +45,7 @@ export const homeCopy: HomeCopy = {
     allLabel: "All",
     featuredLabel: "Featured",
     newBadge: "New",
+    usesAccount: "Uses your {service} account",
     updatedOn: "Updated on {date}",
     viewApp: "See the app",
     terminalLabel: "The command that installs the featured app",

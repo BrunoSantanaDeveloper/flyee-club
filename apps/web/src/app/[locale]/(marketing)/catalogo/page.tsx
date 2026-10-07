@@ -12,6 +12,7 @@ import CatalogIcon from "@/components/product/catalog-icon";
 import NiPath from "@/icons/nexture/ni-path";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
+import { accountServices, isNewApp, servicesPhrase } from "@/lib/catalog/store-badges";
 import { storeLook } from "@/lib/catalog/store-look";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { publicPageMetadata } from "@/lib/seo";
@@ -105,6 +106,20 @@ export default async function CatalogPage() {
           // The category, never a "free" badge: the free rung is not advertised (docs/PRODUCT.md, 2026-10-06).
           badge: category.name,
           meta: [version, ...ais].join(" · "),
+          // From data (migration 0034): new for the first days, and the accounts it needs.
+          flags: [
+            ...(isNewApp(app.firstPublishedAt, catalog.newBadgeDays) ? [{ label: t("catalog-badge-new") }] : []),
+            ...(accountServices(app.external_credentials).length > 0
+              ? [
+                  {
+                    label: t("catalog-badge-account", {
+                      service: servicesPhrase(accountServices(app.external_credentials), locale),
+                    }),
+                    tone: "neutral" as const,
+                  },
+                ]
+              : []),
+          ],
           link: { label: t("catalog-module-link"), href: `/catalogo/${app.slug}` },
         }}
       />

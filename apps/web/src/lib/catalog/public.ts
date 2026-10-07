@@ -2,6 +2,7 @@ import { cache } from "react";
 
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadCatalog, loadModule } from "@/lib/catalog/read";
+import { DEFAULT_NEW_BADGE_DAYS } from "@/lib/catalog/store-badges";
 import { createAnonClient } from "@/lib/public-content";
 
 /**
@@ -48,15 +49,28 @@ export type PublicCatalog = Omit<SharedCatalog, "modules"> & {
     storeCategory: string | null;
     /** The site personas the operator marked this app a good start for (migration 0032). */
     personas: string[];
+    /** When the app was first published (the "Novo" badge, migration 0034). */
+    firstPublishedAt: string | null;
   })[];
   storeCategories: PublicStoreCategory[];
+  /** How many days after its first publication an app is "Novo" (platform_settings.catalog). */
+  newBadgeDays: number;
   stats: CatalogStats;
 };
 
 export type PublicCatalogResult = { kind: "ready"; catalog: PublicCatalog } | { kind: "unavailable" };
 
 export type CatalogRows = {
-  modules: { id: string; slug: string; name: Localized; store_category?: string | null; personas?: string[] | null }[];
+  modules: {
+    id: string;
+    slug: string;
+    name: Localized;
+    store_category?: string | null;
+    personas?: string[] | null;
+    published_at?: string | null;
+  }[];
+  /** platform_settings.catalog.new_badge_days, when it could be read. */
+  newBadgeDays?: number | null;
   storeCategories: { slug: string; name: Localized; sort: number }[];
   versions: { module_id: string; published_at: string | null }[];
   recipes: { slug: string; name: Localized }[];
@@ -81,6 +95,7 @@ export function readableCatalog(catalog: SharedCatalog, rows: CatalogRows, local
 
   const categoryOf = new Map(rows.modules.map((row) => [row.slug, row.store_category ?? null]));
   const personasOf = new Map(rows.modules.map((row) => [row.slug, row.personas ?? []]));
+  const publishedOf = new Map(rows.modules.map((row) => [row.slug, row.published_at ?? null]));
   const storeCategories = [...rows.storeCategories]
     .sort((a, b) => a.sort - b.sort)
     .map((row) => ({
@@ -96,8 +111,13 @@ export function readableCatalog(catalog: SharedCatalog, rows: CatalogRows, local
         ...module,
         storeCategory: categoryOf.get(module.slug) ?? null,
         personas: personasOf.get(module.slug) ?? [],
+        firstPublishedAt: publishedOf.get(module.slug) ?? null,
       })),
     storeCategories,
+    newBadgeDays:
+      Number.isFinite(rows.newBadgeDays) && (rows.newBadgeDays ?? 0) > 0
+        ? Math.floor(rows.newBadgeDays as number)
+        : DEFAULT_NEW_BADGE_DAYS,
     recipes: catalog.recipes
       .filter((recipe) => readableRecipes.has(recipe.slug))
       .map((recipe) => ({ ...recipe, modules: recipe.modules.filter((slug) => readableSlugs.has(slug)) })),
@@ -109,17 +129,23 @@ async function readPublicCatalog(locale: CatalogLocale): Promise<PublicCatalogRe
   const client = createAnonClient();
   if (!client) return { kind: "unavailable" };
   try {
-    const [catalog, modules, versions, recipes, categories] = await Promise.all([
+    const [catalog, modules, versions, recipes, categories, settings] = await Promise.all([
       loadCatalog(client, { locale, stableOnly: false, limits: {} }),
-      client.from("catalog_modules").select("id, slug, name, store_category, personas").eq("status", "published"),
+      client
+        .from("catalog_modules")
+        .select("id, slug, name, store_category, personas, published_at")
+        .eq("status", "published"),
       client.from("catalog_module_versions").select("module_id, published_at").eq("status", "published"),
       client.from("catalog_recipes").select("slug, name").eq("status", "published"),
       client.from("catalog_store_categories").select("slug, name, sort").order("sort"),
+      client.from("platform_settings").select("value").eq("key", "catalog").maybeSingle(),
     ]);
     if (modules.error || versions.error || recipes.error || categories.error) return { kind: "unavailable" };
     const rows = {
       modules: (modules.data ?? []) as CatalogRows["modules"],
       storeCategories: (categories.data ?? []) as CatalogRows["storeCategories"],
+      // An unreadable setting falls back to the default; it never hides the catalog.
+      newBadgeDays: Number((settings.data?.value as { new_badge_days?: unknown } | null)?.new_badge_days),
       versions: (versions.data ?? []) as CatalogRows["versions"],
       recipes: (recipes.data ?? []) as CatalogRows["recipes"],
     };

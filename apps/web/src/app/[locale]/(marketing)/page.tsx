@@ -40,6 +40,7 @@ import NiServer from "@/icons/nexture/ni-server";
 import { resolveCurrency } from "@/lib/billing-currency";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
+import { accountServices, isNewApp, servicesPhrase } from "@/lib/catalog/store-badges";
 import { storeLook } from "@/lib/catalog/store-look";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
@@ -117,6 +118,23 @@ export default async function Home() {
   const number = new Intl.NumberFormat(locale);
   const date = (iso: string | null | undefined) =>
     iso ? new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long" }) : "";
+
+  // The two badges of a store card, from data (migration 0034): "Novo" for the first days
+  // after an app's first publication, and the services of its required credentials.
+  const storeFlags = (app: App): RuledGridItem["flags"] => {
+    const services = accountServices(app.external_credentials);
+    return [
+      ...(catalog && isNewApp(app.firstPublishedAt, catalog.newBadgeDays) ? [{ label: copy.store.newBadge }] : []),
+      ...(services.length > 0
+        ? [
+            {
+              label: fill(copy.store.usesAccount, { service: servicesPhrase(services, locale) }),
+              tone: "neutral" as const,
+            },
+          ]
+        : []),
+    ];
+  };
 
   // The store filters by store category (migration 0029); an app without one shows its stage.
   const look = storeLook(catalog ?? { trails: [], storeCategories: [] });
@@ -210,6 +228,7 @@ export default async function Home() {
     body: app.summary ?? trailOf(app).name,
     badge: trailOf(app).name,
     meta: app.latest ? fill(copy.store.updatedOn, { date: date(app.latest.published_at) }) : undefined,
+    flags: storeFlags(app),
     link: { label: copy.store.viewApp, href: `/catalogo/${app.slug}` },
     track: trackAttributes({ event: "app_card_click", app: app.slug }),
   });
