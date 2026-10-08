@@ -551,6 +551,7 @@ export function DeliveryTab({ delivery, onChanged }: { delivery: DeliverySetting
     minCliVersion: delivery.minCliVersion,
     latestCoreVersion: delivery.latestCoreVersion ?? "",
     deprecations: delivery.deprecations.join("\n"),
+    knownTools: delivery.knownTools.join("\n"),
   });
   const [busy, setBusy] = useState(false);
   const set = (key: keyof typeof form) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
@@ -567,6 +568,7 @@ export function DeliveryTab({ delivery, onChanged }: { delivery: DeliverySetting
           minCliVersion: form.minCliVersion.trim(),
           latestCoreVersion: form.latestCoreVersion.trim() || null,
           deprecations: form.deprecations.split("\n"),
+          knownTools: form.knownTools.split("\n"),
         }),
       "Configurações da entrega salvas.",
     );
@@ -629,6 +631,21 @@ export function DeliveryTab({ delivery, onChanged }: { delivery: DeliverySetting
           multiline
           rows={3}
           help="Até 10 avisos curtos. A CLI imprime cada um como está."
+        />
+      </Box>
+
+      <Box className="flex flex-col gap-3">
+        <Typography variant="subtitle2" component="h3">
+          IAs compatíveis pelo padrão
+        </Typography>
+        <TextInput
+          label="Ferramentas que o computador guarda, uma por linha"
+          value={form.knownTools}
+          onChange={set("knownTools")}
+          multiline
+          rows={4}
+          placeholder="copilot"
+          help="Quando a CLI não acha nenhuma das quatro IAs testadas e acha uma destas, o computador guarda o nome. Um nome fora da lista é descartado e o login segue. Use os nomes do registro do core, em minúsculas."
         />
       </Box>
 

@@ -1299,6 +1299,7 @@ export const memberDevices = pgTable("member_devices", {
 	lastUpdateAt: timestamp("last_update_at", { withTimezone: true, mode: 'string' }),
 	revokedAt: timestamp("revoked_at", { withTimezone: true, mode: 'string' }),
 	revokeReason: text("revoke_reason"),
+	aiToolDetail: text("ai_tool_detail"),
 }, (table) => [
 	index("member_devices_family_idx").using("btree", table.tokenFamilyId.asc().nullsLast().op("uuid_ops")).where(sql`(token_family_id IS NOT NULL)`),
 	index("member_devices_org_idx").using("btree", table.orgId.asc().nullsLast().op("uuid_ops")).where(sql`(revoked_at IS NULL)`),
@@ -1322,6 +1323,7 @@ export const memberDevices = pgTable("member_devices", {
 	check("member_devices_cli_version_check", sql`(cli_version IS NULL) OR semver_ok(cli_version)`),
 	check("member_devices_core_version_check", sql`(core_version IS NULL) OR semver_ok(core_version)`),
 	check("member_devices_project_kind_check", sql`(project_kind IS NULL) OR (project_kind = ANY (ARRAY['own'::text, 'client'::text]))`),
+	check("member_devices_ai_tool_detail_check", sql`(ai_tool_detail IS NULL) OR (ai_tool_detail ~ '^[a-z0-9][a-z0-9_-]{0,31}$'::text)`),
 ]);
 
 export const cliRequests = pgTable("cli_requests", {

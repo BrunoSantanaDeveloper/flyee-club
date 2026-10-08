@@ -176,16 +176,22 @@ Escopo `profile:read`. Header do computador opcional. Responde também para cont
 {
   "member": { "id": "…", "name": "Ana", "segment": "dev", "ai_tool": "claude_code", "locale": "pt-BR" },
   "workspace": { "id": "…", "name": "Ana" },
-  "access": { "active": true, "suspended": false, "tier": "kit", "limits": { "catalog_access": 1, "devices": 1 } },
+  "access": {
+    "active": true,
+    "suspended": false,
+    "tier": "kit",
+    "tier_name": "FlyeeClub",
+    "limits": { "catalog_access": 1, "devices": 1 }
+  },
   "token": { "family_id": "…", "refresh_expires_at": "2026-10-31T12:00:00Z", "days_until_revalidation": 30 },
   "device": { "device_id": "…", "name": "notebook", "registered": true, "last_update_at": "…" },
-  "cli": { "min_cli_version": "0.1.0", "latest_core_version": null, "deprecations": [] },
+  "cli": { "min_cli_version": "0.1.0", "latest_core_version": null, "deprecations": [], "links": { "module_page": "…", "module_page_en": "…" } },
   "revalidate_url": "https://flyee.club/revalidar?d=…",
   "links": { "billing": "…", "devices": "…" }
 }
 ```
 
-`tier` é `kit`, `club`, `pro` ou `null` (nada comprado).
+`tier` é `kit`, `club`, `pro` ou `null` (nada comprado): o valor que o código usa para decidir. `tier_name` é o que a CLI mostra (desde 2026-10-08): o nome do degrau no idioma do integrante, o mesmo do painel ("FlyeeClub", "FlyeeClub Pro", "Pro (antigo)" ou "Pro (legacy)"), e `null` sem degrau. `cli` é a mesma resposta de 4.9.
 
 ### 4.2 `POST /api/cli/installs`
 
@@ -207,7 +213,9 @@ Escopo `profile:read`. Chamar logo depois do login e depois de todo `update` (co
 ```
 
 - `os`: `windows`, `macos`, `linux` ou `other`. `ai_tool`: `claude_code`, `codex`, `gemini_cli`, `cursor` ou `other`. `project_kind`: `own` ou `client`.
-- Só `device_id` é obrigatório. Um campo omitido mantém o valor anterior.
+- `ai_tool_detail` (desde 2026-10-08): só com `ai_tool` `other`, o nome curto da ferramenta do nível "compatível pelo padrão" que a CLI achou (`copilot`, `opencode`, `antigravity`, `kimi`, `windsurf` ou `aider`). O computador guarda o nome só quando ele está em `platform_settings.cli.known_tools`, editada na aba Entrega de `/admin/catalogo`. Um nome fora da lista, ou que não seja um texto curto em minúsculas, é descartado, e o registro segue.
+- Só `device_id` é obrigatório. Um campo omitido mantém o valor anterior; um relato que traz `ai_tool` decide também o `ai_tool_detail`, que se apaga quando não vem junto.
+- O que só descreve o computador nunca recusa o registro: `name` acima de 80 caracteres e `os_version` acima de 40 são cortados. O resto continua recusando com 400 `invalid_request`: `device_id`, versões e `installed_modules` fora do formato, um valor fora das listas de `os`, `ai_tool` e `project_kind`, e um campo que este contrato não serve (a seção 9 descreve campos que ainda não são aceitos).
 - 201 na primeira vez (é o evento `cli.installed`), 200 depois: `{ "status": "created", "device": {…}, "limit": 3, "live_devices": 2 }`.
 - 409 `device_limit_reached` com `limit`, `live_devices` e `action_url` quando o plano não comporta mais um computador. Nada é gravado.
 - Um computador desconectado pelo integrante só volta com um login novo; com a mesma família responde `device_revoked`.
@@ -310,10 +318,20 @@ O JSON Schema do `flyee.module.json` (draft 2020-12), `$id` `https://flyee.club/
 ### 4.9 `GET /api/cli/version` (público)
 
 ```json
-{ "min_cli_version": "0.1.0", "latest_core_version": null, "deprecations": [] }
+{
+  "min_cli_version": "0.1.0",
+  "latest_core_version": null,
+  "deprecations": [],
+  "links": {
+    "module_page": "https://flyee.club/catalogo/{slug}?origem=cli",
+    "module_page_en": "https://flyee.club/en/catalog/{slug}?origem=cli"
+  }
+}
 ```
 
 Uma CLI abaixo de `min_cli_version` deve pedir atualização antes de qualquer outra chamada. `deprecations` é uma lista de até 10 avisos em texto, que a CLI imprime como estão. Os valores vêm de `platform_settings.cli`, editados na aba Entrega de `/admin/catalogo`.
+
+`links` (desde 2026-10-08) traz o endereço da página pública de um app como modelo, em português (`module_page`) e em inglês (`module_page_en`): a CLI troca `{slug}` pelo slug do app, e `origem=cli` faz a visita e um cadastro que venha dela contarem na porta do instalador. É o link que a CLI mostra a quem roda `npx flyee add <slug>` sem conexão, com a frase "este app faz parte do acesso flyee.club"; a CLI nunca monta endereço da plataforma por conta própria.
 
 ## 5. Limites
 
@@ -325,6 +343,8 @@ Configuráveis em `platform_settings.cli`:
 | chamadas por hora, por conta | 600 |
 | downloads por dia, por conta | 200 |
 | eventos por hora, por integrante | 600 |
+
+Na mesma chave fica `known_tools`, a lista dos nomes que um computador guarda ao lado de `other` (4.2). Começa com os seis do registro do core.
 
 ## 6. O manifesto `flyee.module.json` (v1)
 
@@ -370,21 +390,18 @@ Chave desconhecida é erro: um campo novo exige um `manifest_version` novo. Cami
 
 ## 9. Mudanças planejadas (fases 9, 10 e 12 do plano, ainda não servidas)
 
-Decididas em 2026-10-06 (`docs/PRODUCT.md`, "Decisões tomadas 2026-10-06"; `docs/PLANO-IMPLEMENTACAO.md`, fases 9 e 10), mais `access.tier_name` e `links.module_page_en`, de 2026-10-08 (fase 12). Nenhuma está no ar: a CLI não deve depender delas até cada item ser movido para o corpo deste contrato. Todas são compatíveis com a v1, porque só acrescentam campos e recusas que a CLI já sabe tratar.
+Decididas em 2026-10-06 (`docs/PRODUCT.md`, "Decisões tomadas 2026-10-06"; `docs/PLANO-IMPLEMENTACAO.md`, fases 9 e 10). Nenhuma está no ar: a CLI não deve depender delas até cada item ser movido para o corpo deste contrato. Todas são compatíveis com a v1, porque só acrescentam campos e recusas que a CLI já sabe tratar.
 
-Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja: primeiro `ai_tool_detail`, `links.module_page` e `access.tier_name` (12.1), depois os canais com `newest` e `entitled` por versão (12.5) e `/instalar.md` (12.6). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura.
+Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Vêm depois os canais com `newest` e `entitled` por versão (12.5) e `/instalar.md` (12.6). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura.
 
 | Onde | Mudança |
 |---|---|
 | Canais | O plano da conta define o canal: `free` (conta sem compra) e `latest` (kit, assinatura, Pro); `stable` continua reservado. `channel` em 4.3 passa a dizer o canal da conta. |
-| 4.1 `GET /api/cli/me` | Campo novo `access.tier_name`: o nome do degrau no idioma do integrante ("FlyeeClub", "FlyeeClub Pro"), `null` para a conta sem compra. `access.tier` continua com o valor interno (`kit`, `club`), que a CLI não deve mostrar a ninguém (fase 12.1). |
 | 4.3 `GET /api/cli/catalog` | `latest` passa a ser a versão mais nova **que a conta pode baixar** no seu canal. Campo novo `newest` por módulo, com a versão mais nova publicada para qualquer conta, para a CLI dizer quantas versões a conta está atrás. `entitled` continua dizendo se a conta pode baixar algo do módulo. |
 | 4.4 `GET /api/cli/modules/{slug}` | Cada versão ganha `entitled` (booleano), para a CLI imprimir com o cadeado o changelog do que a conta não tem. |
 | 4.5 download | Versão fora do canal da conta: 403 `denied_entitlement`, com `action_url` de upgrade, igual ao módulo sem direito. Uma versão marcada como grátis é baixável por qualquer conta ativa. |
-| 4.9 `GET /api/cli/version` | Campo novo `links.module_page`, um modelo de URL da página pública de um app com a origem `cli` (por exemplo `https://flyee.club/catalogo/{slug}?origem=cli`). É o link que a CLI mostra a quem roda `npx flyee add <slug>` sem conexão: "este app faz parte do acesso flyee.club", mais o link. A CLI continua sem montar URL da plataforma por conta própria. Junto vem `links.module_page_en`, o mesmo modelo no endereço em inglês (`https://flyee.club/en/catalog/{slug}?origem=cli`), para a CLI escolher pelo idioma de quem lê (fase 12.1). |
 | 4.9 `min_cli_version` | Sobe para `1.0.0` quando a CLI `flyee@1.0.0` for publicada no npm: a linha 0.x do pacote `flyee` é de outro projeto e não fala este contrato. |
 | Regra operacional | A versão grátis de um módulo é marcada no console, uma por módulo, com a primeira publicada pré-marcada. Não há bloqueio técnico de atualização para a conta sem compra: ela não recebe nada porque o canal `free` não ganha versão nova. |
-| 4.2 `POST /api/cli/installs` | Campo opcional `ai_tool_detail`: nome curto da ferramenta detectada quando `ai_tool` é `other`; aceito só se estiver em `platform_settings.cli.known_tools`, descartado fora disso, nunca recusado. Adiantado para a fase 12.1: a CLI 1.x já envia o campo (`copilot`, `opencode`, `antigravity`, `kimi`, `windsurf` ou `aider`), e a rota de hoje, que recusa campo desconhecido, responde 400 `invalid_request` a esse registro. Até 12.1 entrar, esse login não se completa. |
 | 4.5 download | Campo novo `license`: um JWT assinado pela plataforma, verificável offline pela chave pública em `/.well-known/jwks.json`, com identificador opaco da conta, `device_id`, módulo, versão e data, sem expiração. A CLI o guarda em `.flyee/licenses/<slug>.jwt` e só executa pipelines, agendamentos e ações do painel de um app cuja licença seja desta máquina (fase 10.6, confirmada em 2026-10-06). |
 | 4.7 `POST /api/cli/events` | Propriedade nova `trigger`, com `scheduled` ou `manual`, na lista fechada (fase 10.1). |
 | 6. Manifesto | `manifest_version: 2` acrescenta `automation`, `requires` e `example_prompt`; a v1 continua aceita; o JSON Schema de 4.8 publica as duas versões (fase 10.1). |

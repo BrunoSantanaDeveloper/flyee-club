@@ -303,7 +303,12 @@ test("the CLI endpoints answer on their own, never through the sign-in redirect"
   // Public by contract (docs/CLI-CONTRACT.md): no session, no redirect.
   const version = await request.get("/api/cli/version");
   expect(version.status()).toBe(200);
-  expect(await version.json()).toMatchObject({ min_cli_version: expect.any(String) });
+  const versionBody = await version.json();
+  expect(versionBody).toMatchObject({ min_cli_version: expect.any(String) });
+  // An app's page for someone who runs `npx flyee add` without a connection:
+  // the CLI swaps {slug}, so the braces must arrive unencoded (4.9).
+  expect(versionBody.links.module_page).toMatch(/\/catalogo\/\{slug\}\?origem=cli$/);
+  expect(versionBody.links.module_page_en).toMatch(/\/en\/catalog\/\{slug\}\?origem=cli$/);
 
   const schema = await request.get("/api/cli/schema/module");
   expect(schema.status()).toBe(200);

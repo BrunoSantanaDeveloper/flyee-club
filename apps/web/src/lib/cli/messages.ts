@@ -1,7 +1,10 @@
+import type { Tier } from "@flyee/billing/entitlements";
+
 /**
  * What the delivery API says when it refuses, in the member's language. The
  * CLI prints `message` as is and acts on `error` (docs/CLI-CONTRACT.md), so
- * every code needs both languages: the type refuses a missing one.
+ * every code needs both languages: the type refuses a missing one. The rung's
+ * name it prints sits here too, for the same reason.
  */
 
 export type CliLocale = "pt-BR" | "en";
@@ -93,6 +96,23 @@ const MESSAGES: Record<CliErrorCode, Record<CliLocale, string>> = {
     en: "FlyeeClub could not answer right now. Try again in a moment.",
   },
 };
+
+/**
+ * The rung's name for the CLI to print, in the member's language: the names
+ * the member screens give it (`product.tier-*`, held equal to the catalogs by
+ * lib/cli/product-conformance.test.ts). `access.tier` is the value the code
+ * keys on, never what a person reads.
+ */
+const TIER_NAMES: Record<Tier, Record<CliLocale, string>> = {
+  kit: { "pt-BR": "FlyeeClub", en: "FlyeeClub" },
+  club: { "pt-BR": "FlyeeClub Pro", en: "FlyeeClub Pro" },
+  pro: { "pt-BR": "Pro (antigo)", en: "Pro (legacy)" },
+};
+
+/** "FlyeeClub", "FlyeeClub Pro"; null for an account with no rung. */
+export function tierName(tier: Tier | null, locale: CliLocale): string | null {
+  return tier ? TIER_NAMES[tier][locale] : null;
+}
 
 /** The message for a code, with `{name}` placeholders filled in. */
 export function cliMessage(

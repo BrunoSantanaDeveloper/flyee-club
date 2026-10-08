@@ -118,6 +118,12 @@ export type DeliverySettings = {
   minCliVersion: string;
   latestCoreVersion: string | null;
   deprecations: string[];
+  /**
+   * The tools of the "compatible by the standard" tier a machine may name
+   * beside `other` (`known_tools`, migration 0036). A name outside the list is
+   * dropped by `register_member_device`, so an absent list keeps nothing.
+   */
+  knownTools: string[];
 };
 
 export const DEFAULT_DELIVERY: DeliverySettings = {
@@ -128,6 +134,7 @@ export const DEFAULT_DELIVERY: DeliverySettings = {
   minCliVersion: "0.1.0",
   latestCoreVersion: null,
   deprecations: [],
+  knownTools: [],
 };
 
 const EMPTY_USAGE: ModuleUsage = {
@@ -170,6 +177,9 @@ export function deliveryFrom(value: Record<string, unknown> | null | undefined):
     latestCoreVersion: typeof value?.latest_core_version === "string" ? value.latest_core_version : null,
     deprecations: Array.isArray(value?.deprecations)
       ? value.deprecations.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    knownTools: Array.isArray(value?.known_tools)
+      ? value.known_tools.filter((entry): entry is string => typeof entry === "string")
       : [],
   };
 }

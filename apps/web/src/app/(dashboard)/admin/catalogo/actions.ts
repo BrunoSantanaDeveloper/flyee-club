@@ -6,6 +6,7 @@ import type { Credential, DeliverySettings, Localized } from "@/lib/admin/catalo
 import { requireSuperadmin } from "@/lib/admin/session";
 import { recordAudit } from "@/lib/audit";
 import { MODULES_BUCKET } from "@/lib/catalog/upload";
+import { AI_TOOL_DETAIL_PATTERN } from "@/lib/cli/installs";
 import { PERSONA_SEGMENTS } from "@/lib/site-segment";
 import { createServiceClient } from "@flyee/auth/service";
 import { AI_TOOLS, MODULE_TYPES } from "@flyee/catalog/manifest";
@@ -634,6 +635,24 @@ export async function saveDelivery(input: DeliverySettings): Promise<CatalogActi
     .map((line) => line.trim().slice(0, 300))
     .filter(Boolean)
     .slice(0, 10);
+  // The names a machine may give beside `other` (migration 0036): short
+  // tokens, never one of the AI tools that have their own value.
+  const knownTools = [...new Set(input.knownTools.map((line) => line.trim().toLowerCase()).filter(Boolean))];
+  if (knownTools.length > 30) return { ok: false, error: "A lista de ferramentas reconhecidas vai até 30 nomes." };
+  const malformed = knownTools.find((tool) => !AI_TOOL_DETAIL_PATTERN.test(tool));
+  if (malformed) {
+    return {
+      ok: false,
+      error: `"${malformed}" não serve como nome de ferramenta: use letras minúsculas, números, hífen ou sublinhado, até 32 caracteres, como copilot ou windsurf.`,
+    };
+  }
+  const ownValue = knownTools.find((tool) => (AI_TOOLS as readonly string[]).includes(tool));
+  if (ownValue) {
+    return {
+      ok: false,
+      error: `"${ownValue}" já tem valor próprio no relato da CLI; a lista é só das IAs compatíveis pelo padrão.`,
+    };
+  }
 
   const { error } = await session.supabase.from("platform_settings").upsert({
     key: "cli",
@@ -644,13 +663,14 @@ export async function saveDelivery(input: DeliverySettings): Promise<CatalogActi
       min_cli_version: input.minCliVersion,
       latest_core_version: input.latestCoreVersion || null,
       deprecations,
+      known_tools: knownTools,
     },
   });
   if (error) return { ok: false, error: dbMessage(error.message, error.code) };
   await recordAudit(session.supabase, "admin.cli_settings.updated", {
     entityType: "platform_settings",
     entityId: "cli",
-    metadata: { minCliVersion: input.minCliVersion, deprecations: deprecations.length },
+    metadata: { minCliVersion: input.minCliVersion, deprecations: deprecations.length, knownTools },
   });
   refresh();
   return { ok: true, data: null };
