@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 
+import StatusChip from "@/components/product/status-chip";
 import { TILE_TONE, type TileTone } from "@/components/product/tile-tone";
 import NiArrowRight from "@/icons/nexture/ni-arrow-right";
 import NiCheck from "@/icons/nexture/ni-check";
@@ -14,9 +15,10 @@ import { cn } from "@/lib/utils";
 
 /**
  * The next rung of the ladder, offered because the member's own use earned it
- * (`decideUpsell`, lib/upsell.ts). Honest by construction: it says why it is
- * here, lists what the rung adds, shows the real price from `plans`, and
- * carries no countdown.
+ * (`decideOffers`, lib/upsell.ts). Honest by construction: it says why it is
+ * here, lists what the rung adds, marks "Em breve" on a line whose area has
+ * nothing published yet, shows the real price from `plans`, and carries no
+ * countdown.
  *
  * Closest template section: the quick-action card (tinted icon column, title,
  * body) widened into a feature card; nothing in the catalog presented one
@@ -30,6 +32,7 @@ export default function UpsellCard({
   title,
   reason,
   features,
+  soonLabel,
   priceLabel,
   ctaLabel,
   href,
@@ -40,8 +43,10 @@ export default function UpsellCard({
   title: string;
   /** Why this shows now, in one sentence. */
   reason: string;
-  /** What the rung adds over the current one. */
-  features: string[];
+  /** What the rung adds over the current one; `soon` when its area has nothing yet. */
+  features: { label: string; soon?: boolean }[];
+  /** The words of the "Em breve" badge, required when a line is `soon`. */
+  soonLabel?: string;
   /** "R$ 67/mês", formatted by the caller from the plan's own currency. */
   priceLabel: string | null;
   ctaLabel: string;
@@ -78,11 +83,12 @@ export default function UpsellCard({
         </Box>
         <Box component="ul" className="m-0 flex list-none flex-col gap-1.5 p-0">
           {features.map((feature) => (
-            <Box component="li" key={feature} className="flex flex-row items-start gap-2">
+            <Box component="li" key={feature.label} className="flex flex-row flex-wrap items-start gap-2">
               <NiCheck size="small" className={cn("mt-0.5 flex-none", style.text)} aria-hidden />
               <Typography variant="body2" className="leading-5">
-                {feature}
+                {feature.label}
               </Typography>
+              {feature.soon && soonLabel ? <StatusChip label={soonLabel} tone="attention" /> : null}
             </Box>
           ))}
         </Box>

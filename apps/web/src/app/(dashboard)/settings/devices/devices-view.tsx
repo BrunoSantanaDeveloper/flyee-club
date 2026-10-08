@@ -26,6 +26,7 @@ import {
 import CommandBlock from "@/components/product/command-block";
 import EmptyState from "@/components/product/empty-state";
 import PageHeader from "@/components/product/page-header";
+import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import UsageMeter from "@/components/product/usage-meter";
 import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiListCircle from "@/icons/nexture/ni-list-circle";
@@ -34,7 +35,13 @@ import type { DevicesOverview, MemberDevice } from "@/lib/member/devices";
 import { aiToolName } from "@/lib/member/labels";
 
 export type DevicesState =
-  | { kind: "ready"; overview: DevicesOverview; locale: string }
+  | {
+      kind: "ready";
+      overview: DevicesOverview;
+      locale: string;
+      /** FlyeeClub Pro would raise the ceiling: at the ceiling, "connect more" opens the upgrade prompt. */
+      canUpgrade: boolean;
+    }
   | { kind: "error" }
   | { kind: "unavailable" };
 
@@ -44,7 +51,9 @@ const OS_NAME: Record<string, string> = { windows: "Windows", macos: "macOS", li
  * Who: a member checking which machines use their account. Job: see every
  * connected machine, when each must revalidate, and cut one off. Success: the
  * list matches the machines they actually use, and they know how to bring a
- * lapsed one back. The plan's ceiling is shown as what it is, an allowance.
+ * lapsed one back. The plan's ceiling is shown as what it is, an allowance;
+ * once it is reached, connecting more is the moment FlyeeClub Pro is offered,
+ * on the click (docs/PRODUCT.md, 2026-10-08).
  */
 export default function DevicesView({ state }: { state: DevicesState }) {
   const t = useTranslations("product");
@@ -53,6 +62,7 @@ export default function DevicesView({ state }: { state: DevicesState }) {
   const [confirming, setConfirming] = useState<MemberDevice | null>(null);
   const [feedback, setFeedback] = useState<"revoked" | "failed" | "support" | null>(null);
   const [pending, startTransition] = useTransition();
+  const openUpgrade = useUpgradePrompt();
 
   const header = (
     <Grid size={12} spacing={2.5} container>
@@ -182,6 +192,13 @@ export default function DevicesView({ state }: { state: DevicesState }) {
                     },
                   ]}
                 />
+                {overview.live >= overview.limit && state.canUpgrade ? (
+                  <Box className="mt-3">
+                    <Button variant="outlined" size="small" onClick={() => openUpgrade("more_devices")}>
+                      {t("devices-more")}
+                    </Button>
+                  </Box>
+                ) : null}
               </CardContent>
             </Card>
           </Grid>

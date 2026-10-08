@@ -28,6 +28,9 @@ import {
   type Lead,
   type MetricKey,
   METRICS,
+  PRO_FEATURE_DAYS,
+  PRO_FEATURE_LABEL,
+  type ProFeatureTotal,
   type SegmentWeekRow,
 } from "@/lib/admin/metrics";
 import type { ConsoleState } from "@/lib/admin/session";
@@ -36,6 +39,8 @@ export type MetricsState = ConsoleState<{
   weekly: SegmentWeekRow[];
   doors: DoorTotal[];
   focus: FocusRuleResult;
+  /** Per feature of FlyeeClub Pro, the prompts opened, the clicks and the purchases that followed. */
+  proFeatures: ProFeatureTotal[];
   generatedAt: string;
 }>;
 
@@ -57,7 +62,9 @@ const leadLabel = (lead: Lead) =>
  * (docs/PRODUCT.md, "Métricas e trackers"). The operator comes here weekly to
  * answer one question: is any segment leading purchase, activation and weekly
  * use for four weeks in a row? The rest of the screen shows the five metrics
- * behind that answer, week by week, so a leader can be checked by eye.
+ * behind that answer, week by week, so a leader can be checked by eye, the
+ * entry doors, and which feature of FlyeeClub Pro sells it, since Pro is
+ * offered only on the click of one of them (docs/PRODUCT.md, 2026-10-08).
  */
 export default function MetricsView({ state }: { state: MetricsState }) {
   const router = useRouter();
@@ -114,7 +121,8 @@ export default function MetricsView({ state }: { state: MetricsState }) {
     );
   }
 
-  const { focus, doors } = state;
+  const { focus, doors, proFeatures } = state;
+  const anyPrompt = proFeatures.some((row) => row.viewed > 0 || row.clicked > 0);
   const definition = METRICS.find((entry) => entry.key === metric) ?? METRICS[0];
   const anyActivity = state.weekly.some(
     (row) => row.kit_buyers > 0 || row.access_cohort > 0 || row.weekly_active > 0 || row.payers_90d > 0,
@@ -330,6 +338,52 @@ export default function MetricsView({ state }: { state: MetricsState }) {
                     { primary: formatNumber(door.views) },
                     { primary: formatNumber(door.buyers) },
                     { primary: formatPercent(door.conversion, 2) },
+                  ],
+                }))}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid size={12}>
+        <Card component="section" aria-labelledby="pro-features-title">
+          <CardContent className="flex flex-col gap-4">
+            <Box className="flex flex-col gap-1">
+              <Typography id="pro-features-title" variant="h5" component="h2" className="mb-0">
+                Qual recurso vende o FlyeeClub Pro
+              </Typography>
+              <Typography variant="body2" className="text-text-secondary max-w-3xl">
+                O Pro é oferecido no clique num recurso dele. Nos últimos {PRO_FEATURE_DAYS} dias, por recurso: as
+                contas que abriram o aviso, as que clicaram para assinar o Pro e as que assinaram em até 14 dias depois
+                desse clique. Cada conta conta uma vez por coluna.
+              </Typography>
+            </Box>
+            {!anyPrompt ? (
+              <EmptyState
+                icon={<NiChartLine size="large" />}
+                title="Nenhum aviso aberto ainda"
+                description="O aviso abre quando um integrante sem o FlyeeClub Pro clica num recurso dele. Os números aparecem aqui a partir do primeiro."
+              />
+            ) : (
+              <ComparisonTable
+                caption="Avisos abertos, cliques e assinaturas do FlyeeClub Pro por recurso"
+                rowHeader="Recurso"
+                columns={[
+                  { key: "viewed", label: "Avisos abertos" },
+                  { key: "clicked", label: "Cliques para assinar" },
+                  { key: "purchased", label: "Assinaturas em 14 dias" },
+                  { key: "conversion", label: "Conversão" },
+                ]}
+                rows={proFeatures.map((row) => ({
+                  key: row.feature,
+                  label: PRO_FEATURE_LABEL[row.feature] ?? row.feature,
+                  muted: row.viewed === 0 && row.clicked === 0,
+                  cells: [
+                    { primary: formatNumber(row.viewed) },
+                    { primary: formatNumber(row.clicked) },
+                    { primary: formatNumber(row.purchased) },
+                    { primary: formatPercent(row.conversion, 1) },
                   ],
                 }))}
               />

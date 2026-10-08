@@ -7,6 +7,7 @@ import { Alert, Box, Button, Card, CardContent, Tab, Tabs, Typography } from "@m
 
 import EmptyState from "@/components/product/empty-state";
 import ProductMarkdown from "@/components/product/product-markdown";
+import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import NiBook from "@/icons/nexture/ni-book";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiLock from "@/icons/nexture/ni-lock";
@@ -34,6 +35,8 @@ export type GuideTab = {
   } | null;
   /** The video of this depth, shown inside the guide, when there is one. */
   video: GuideVideo | null;
+  /** A depth with nothing written or recorded yet: it says "Em breve". */
+  soon?: boolean;
 };
 
 /**
@@ -45,9 +48,11 @@ export type GuideTab = {
  * visto" records `lesson.completed` (record_lesson_progress).
  *
  * A depth this plan does not include shows why and the one way to unlock it,
- * never a blank frame: the advanced guide needs FlyeeClub Pro, the basic one
- * FlyeeClub (or the app is a free sample, which always opens). An app whose
- * versions carry no guide yet says so.
+ * never a blank frame: the advanced guide needs FlyeeClub Pro, and its button
+ * opens the upgrade prompt (docs/PRODUCT.md, 2026-10-08); the basic one needs
+ * FlyeeClub (or the app is a free sample, which always opens). A depth with
+ * nothing yet, and an app whose versions carry no guide at all, say
+ * "Em breve".
  *
  * Closest template section: a Card holding Tabs, as the settings panels use;
  * it replaced the video-only LessonPlayer when guides became written
@@ -73,6 +78,7 @@ export default function GuidePanel({
     () => new Set(tabs.flatMap((tab) => (tab.video?.completed ? [tab.video.id] : []))),
   );
   const [pending, startTransition] = useTransition();
+  const openUpgrade = useUpgradePrompt();
 
   if (tabs.length === 0) {
     return (
@@ -80,6 +86,7 @@ export default function GuidePanel({
         <CardContent>
           <EmptyState
             icon={<NiBook size="large" />}
+            badge={t("soon")}
             title={t("module-guide-empty-title")}
             description={t("module-guide-empty-body")}
           />
@@ -146,12 +153,23 @@ export default function GuidePanel({
           </Tabs>
         ) : null}
 
-        {locked ? (
+        {tab.soon ? (
+          <EmptyState
+            icon={<NiBook size="large" />}
+            badge={t("soon")}
+            title={t("module-guide-soon-title")}
+            description={t("module-guide-soon-body")}
+          />
+        ) : locked ? (
           <EmptyState
             icon={<NiLock size="large" />}
             title={advanced ? t("module-lesson-locked-advanced") : t("module-lesson-locked")}
             description={advanced ? t("module-lesson-locked-advanced-body") : t("module-lesson-locked-body")}
-            action={{ label: t("module-lesson-unlock"), href: upgradeHref }}
+            action={
+              advanced
+                ? { label: t("module-lesson-advanced-cta"), onClick: () => openUpgrade("advanced_guide") }
+                : { label: t("module-lesson-unlock"), href: upgradeHref }
+            }
           />
         ) : (
           <>

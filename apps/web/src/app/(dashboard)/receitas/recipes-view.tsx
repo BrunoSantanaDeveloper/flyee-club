@@ -22,17 +22,16 @@ export type RecipeSummary = {
   moduleNames: string[];
 };
 
-export type RecipesState =
-  | { kind: "ready"; recipes: RecipeSummary[]; entitled: boolean }
-  | { kind: "error" }
-  | { kind: "unavailable" };
+export type RecipesState = { kind: "ready"; recipes: RecipeSummary[] } | { kind: "error" } | { kind: "unavailable" };
 
 /**
  * Who: a member with a goal bigger than one tool ("launch an MVP"). Job: pick
  * the set of tools that gets there, with the order to use them in. Success:
- * one recipe opened and installed. Without the membership the sets are still
- * visible (each tool keeps its own access); the workflow itself is the part
- * the membership adds, and the screen says so once.
+ * one recipe opened and installed. Every account sees the sets (each tool
+ * keeps its own access); installing a whole recipe and its step by step are
+ * FlyeeClub Pro, offered on the recipe's own page when one is clicked
+ * (docs/PRODUCT.md, 2026-10-08). With nothing published the area says
+ * "Em breve".
  */
 export default function RecipesView({ state }: { state: RecipesState }) {
   const t = useTranslations("product");
@@ -71,23 +70,11 @@ export default function RecipesView({ state }: { state: RecipesState }) {
   return (
     <Box className="flex flex-col gap-6">
       {header}
-      {!state.entitled && state.recipes.length > 0 ? (
-        <Alert
-          severity="info"
-          className="neutral bg-background-paper/60!"
-          action={
-            <Button color="inherit" size="small" component={Link} href="/settings/billing?source=catalog">
-              {t("recipes-unlock")}
-            </Button>
-          }
-        >
-          {t("recipes-locked-body")}
-        </Alert>
-      ) : null}
 
       {state.recipes.length === 0 ? (
         <EmptyState
           icon={<NiListSquare size="large" />}
+          badge={t("soon")}
           title={t("recipes-empty-title")}
           description={t("recipes-empty-body")}
           action={{ label: t("recipes-empty-cta"), href: "/modulos" }}

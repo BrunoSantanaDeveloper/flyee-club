@@ -6,8 +6,9 @@ import { loadDevices } from "@/lib/member/devices";
 import { loadNews } from "@/lib/member/news";
 import { SERVICE_COPY } from "@/lib/member/offer-copy";
 import { loadOfferPlans } from "@/lib/member/offers";
+import { loadProAvailability } from "@/lib/member/pro-availability";
 import { loadUpsellFacts } from "@/lib/member/upsell-facts";
-import { decideServiceOffers, decideUpsell } from "@/lib/upsell";
+import { decideOffers, decideServiceOffers } from "@/lib/upsell";
 import { enabledFeatures, limitOf } from "@flyee/billing/entitlements";
 
 /**
@@ -21,7 +22,10 @@ export default async function HomePage() {
 
   const { entitlements, orgId } = context;
   const limits = entitlements.active ? entitlements.limits : {};
-  const [devices, news, offerPlans, upsellFacts] = await Promise.all([
+  // Below FlyeeClub Pro, its card may show: what each of its areas has
+  // published decides which lines say "Em breve".
+  const belowPro = entitlements.tier !== "club" && entitlements.tier !== "pro";
+  const [devices, news, offerPlans, upsellFacts, available] = await Promise.all([
     orgId
       ? loadDevices(context.supabase, { orgId, limit: limitOf(limits, "devices") }).catch(() => null)
       : Promise.resolve(null),
@@ -30,12 +34,13 @@ export default async function HomePage() {
     orgId
       ? loadUpsellFacts(context.supabase, { orgId, tier: entitlements.tier }).catch(() => null)
       : Promise.resolve(null),
+    belowPro ? loadProAvailability(context.supabase).catch(() => null) : Promise.resolve(null),
   ]);
-  const upsell = upsellFacts
-    ? decideUpsell(upsellFacts)
+  const offers = upsellFacts
+    ? decideOffers(upsellFacts, "home")
     : entitlements.tier
-      ? null
-      : decideUpsell({ tier: null, trailsUsed30d: 0 });
+      ? []
+      : decideOffers({ tier: null, trailsUsed30d: 0 }, "home");
 
   const state: HomeState = {
     kind: "ready",
@@ -46,7 +51,8 @@ export default async function HomePage() {
     features: entitlements.active ? enabledFeatures(limits) : [],
     devices,
     news,
-    upsell: upsell ? { ...upsell, plan: offerPlans[upsell.offer] ?? null } : null,
+    offers: offers.map((item) => ({ ...item, plan: offerPlans[item.offer] ?? null })),
+    available,
     // The contact form in the member's language, opened on the service asked for.
     services: decideServiceOffers(entitlements.tier).map((offer) => ({
       offer,

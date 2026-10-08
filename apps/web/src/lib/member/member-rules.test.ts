@@ -7,30 +7,33 @@ import { type MemberMeeting, splitMeetings } from "@/lib/member/community";
 import { daysUntil } from "@/lib/member/devices";
 import { lessonsForLocale } from "@/lib/member/lessons";
 import { mergeNews, type NewsItem } from "@/lib/member/news";
-import { decideServiceOffers, decideUpsell } from "@/lib/upsell";
+import { decideOffers, decideServiceOffers } from "@/lib/upsell";
 
-describe("decideUpsell — the next rung of the two-plan ladder", () => {
-  it("offers FlyeeClub to an account that has bought nothing", () => {
-    expect(decideUpsell({ tier: null, trailsUsed30d: 0 })).toEqual({
-      offer: "kit",
-      reason: "no_access",
-    });
+describe("decideOffers: what a screen offers on its own, without a click", () => {
+  it("shows an account that bought nothing both offers: FlyeeClub and FlyeeClub Pro", () => {
+    const expected = [
+      { offer: "kit", reason: "no_access" },
+      { offer: "club", reason: "beyond_apps" },
+    ];
+    expect(decideOffers({ tier: null, trailsUsed30d: 0 }, "home")).toEqual(expected);
+    expect(decideOffers({ tier: null, trailsUsed30d: 0 }, "revalidation")).toEqual(expected);
   });
 
-  it("offers FlyeeClub Pro to every FlyeeClub member, with the reason use earned when it did", () => {
-    expect(decideUpsell({ tier: "kit", trailsUsed30d: 2 })).toEqual({
-      offer: "club",
-      reason: "member",
-    });
-    expect(decideUpsell({ tier: "kit", trailsUsed30d: 3 })).toEqual({
-      offer: "club",
-      reason: "broad_use",
-    });
+  it("offers FlyeeClub Pro on the home only when use earned it, and always at the revalidation", () => {
+    expect(decideOffers({ tier: "kit", trailsUsed30d: 2 }, "home")).toEqual([]);
+    expect(decideOffers({ tier: "kit", trailsUsed30d: 2 }, "revalidation")).toEqual([
+      { offer: "club", reason: "member" },
+    ]);
+    for (const surface of ["home", "revalidation"] as const) {
+      expect(decideOffers({ tier: "kit", trailsUsed30d: 3 }, surface)).toEqual([
+        { offer: "club", reason: "broad_use" },
+      ]);
+    }
   });
 
   it("offers no plan above FlyeeClub Pro, the retired Pro included", () => {
-    expect(decideUpsell({ tier: "club", trailsUsed30d: 9 })).toBeNull();
-    expect(decideUpsell({ tier: "pro", trailsUsed30d: 9 })).toBeNull();
+    expect(decideOffers({ tier: "club", trailsUsed30d: 9 }, "revalidation")).toEqual([]);
+    expect(decideOffers({ tier: "pro", trailsUsed30d: 9 }, "home")).toEqual([]);
   });
 });
 

@@ -1,36 +1,44 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Alert, Box, Button, Card, CardContent, Grid, Typography } from "@mui/material";
 
 import CommandBlock from "@/components/product/command-block";
-import EmptyState from "@/components/product/empty-state";
 import ModuleTile from "@/components/product/module-tile";
 import PageHeader from "@/components/product/page-header";
 import ProductMarkdown from "@/components/product/product-markdown";
-import NiLock from "@/icons/nexture/ni-lock";
+import StatusChip from "@/components/product/status-chip";
+import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import type { loadCatalog, loadRecipe } from "@/lib/catalog/read";
 
 type Recipe = NonNullable<Awaited<ReturnType<typeof loadRecipe>>>;
 type Trails = Awaited<ReturnType<typeof loadCatalog>>["trails"];
 
 export type RecipeState =
-  | { kind: "ready"; recipe: Recipe; trails: Trails }
+  | {
+      kind: "ready";
+      recipe: Recipe;
+      trails: Trails;
+      /** A step by step is written, whether or not this account can read it. */
+      hasWorkflow: boolean;
+    }
   | { kind: "error" }
   | { kind: "unavailable" };
 
 /**
  * Who: a member who chose a recipe. Job: install its tools and follow its
  * workflow. Success: `npx flyee add receita:<slug>` run, the workflow open
- * next to the terminal. The tools list keeps each tool's own access status;
- * the workflow is the membership's part.
+ * next to the terminal. The tools list keeps each tool's own access status.
+ * Installing the whole recipe and its step by step are FlyeeClub Pro: without
+ * it, both buttons open the upgrade prompt (docs/PRODUCT.md, 2026-10-08), and
+ * a step by step not written yet says "Em breve" to everyone.
  */
 export default function RecipeView({ slug, state }: { slug: string; state: RecipeState }) {
   const t = useTranslations("product");
   const router = useRouter();
+  const openUpgrade = useUpgradePrompt();
 
   const crumbs = (name: string) => [
     { label: t("home-breadcrumb"), href: "/inicio" },
@@ -78,17 +86,16 @@ export default function RecipeView({ slug, state }: { slug: string; state: Recip
               copiedLabel={t("command-copied")}
             />
           ) : (
-            <Alert
-              severity="info"
-              className="neutral bg-background-paper/60!"
-              action={
-                <Button color="inherit" size="small" component={Link} href="/settings/billing?source=catalog">
-                  {t("recipes-unlock")}
+            <>
+              <Typography variant="body2" className="text-text-secondary">
+                {t("recipe-install-pro-body")}
+              </Typography>
+              <Box>
+                <Button variant="contained" onClick={() => openUpgrade("recipe_install")}>
+                  {t("recipe-install-pro-cta")}
                 </Button>
-              }
-            >
-              {t("recipe-install-locked")}
-            </Alert>
+              </Box>
+            </>
           )}
         </CardContent>
       </Card>
@@ -131,17 +138,24 @@ export default function RecipeView({ slug, state }: { slug: string; state: Recip
           </Typography>
           {recipe.workflow ? (
             <ProductMarkdown>{recipe.workflow}</ProductMarkdown>
-          ) : recipe.entitled ? (
-            <Typography variant="body2" className="text-text-secondary">
-              {t("recipe-workflow-empty")}
-            </Typography>
+          ) : !state.hasWorkflow ? (
+            <Box className="flex flex-row flex-wrap items-center gap-2">
+              <StatusChip label={t("soon")} tone="attention" />
+              <Typography variant="body2" className="text-text-secondary">
+                {t("recipe-workflow-empty")}
+              </Typography>
+            </Box>
           ) : (
-            <EmptyState
-              icon={<NiLock size="large" />}
-              title={t("recipe-workflow-locked")}
-              description={t("recipes-locked-body")}
-              action={{ label: t("recipes-unlock"), href: "/settings/billing?source=catalog" }}
-            />
+            <>
+              <Typography variant="body2" className="text-text-secondary">
+                {t("recipe-workflow-pro-body")}
+              </Typography>
+              <Box>
+                <Button variant="outlined" onClick={() => openUpgrade("recipe_workflow")}>
+                  {t("recipe-workflow-pro-cta")}
+                </Button>
+              </Box>
+            </>
           )}
         </CardContent>
       </Card>

@@ -16,8 +16,9 @@ import NiTerminal from "@/icons/nexture/ni-terminal";
 import NiUser from "@/icons/nexture/ni-user";
 import { resolveCurrency } from "@/lib/billing-currency";
 import { type DeviceStatus, readDeviceStatus } from "@/lib/cli/device-status";
-import { OFFER_COPY, REASON_COPY } from "@/lib/member/offer-copy";
+import { OFFER_COPY, offerLines, REASON_COPY } from "@/lib/member/offer-copy";
 import { loadOfferPlans, type OfferPlan } from "@/lib/member/offers";
+import { loadProAvailability } from "@/lib/member/pro-availability";
 import { loadUpsellFacts } from "@/lib/member/upsell-facts";
 import {
   authorizeParamsFromSearch,
@@ -26,7 +27,8 @@ import {
   validateAuthorizeRequest,
 } from "@/lib/oauth/authorize-request";
 import { type OauthScope, SCOPE_LABEL_KEYS } from "@/lib/oauth/scopes";
-import { decideUpsell, type UpsellOffer, type UpsellReason } from "@/lib/upsell";
+import type { ProAvailability } from "@/lib/upgrade";
+import { decideOffers, type UpsellOffer, type UpsellReason } from "@/lib/upsell";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
@@ -123,8 +125,10 @@ export default async function AuthorizePage({
   const deviceName = device?.name || t("oauth-device-unnamed");
 
   // The revalidation is the one moment a member who has been away is looking:
-  // when their own use earned the next rung, it is offered here too.
-  let offer: { offer: UpsellOffer; reason: UpsellReason; plan: OfferPlan | null } | null = null;
+  // the next rung is offered here (lib/upsell.ts), both rungs to an account
+  // that bought nothing, with "Em breve" on the lines of an empty Pro area.
+  let offers: { offer: UpsellOffer; reason: UpsellReason; plan: OfferPlan | null }[] = [];
+  let available: ProAvailability | null = null;
   const locale = (await getLocale()) === "en" ? "en" : "pt-BR";
   if (revalidating) {
     try {
@@ -132,13 +136,20 @@ export default async function AuthorizePage({
         orgId,
         tier: isTier(entitlements.tier) ? entitlements.tier : null,
       });
-      const decided = decideUpsell(facts);
-      if (decided) {
+      const decided = decideOffers(facts, "revalidation");
+      if (decided.length > 0) {
         const currency = resolveCurrency({ cookie: (await cookies()).get(COOKIE_KEYS.currency)?.value, locale });
-        offer = { ...decided, plan: (await loadOfferPlans(currency))[decided.offer] ?? null };
+        const [plans, areas] = await Promise.all([
+          loadOfferPlans(currency),
+          decided.some((item) => item.offer === "club")
+            ? loadProAvailability(supabase).catch(() => null)
+            : Promise.resolve(null),
+        ]);
+        offers = decided.map((item) => ({ ...item, plan: plans[item.offer] ?? null }));
+        available = areas;
       }
     } catch {
-      offer = null;
+      offers = [];
     }
   }
   const offerPrice = (plan: OfferPlan | null) => {
@@ -195,19 +206,21 @@ export default async function AuthorizePage({
         </Alert>
       ) : null}
 
-      {offer ? (
+      {offers.map((offer) => (
         <UpsellCard
+          key={offer.offer}
           offer={offer.offer}
           origin="revalidation"
           tone={OFFER_COPY[offer.offer].tone}
           title={t(OFFER_COPY[offer.offer].title)}
           reason={t(REASON_COPY[offer.reason])}
-          features={OFFER_COPY[offer.offer].features.map((key) => t(key))}
+          features={offerLines(offer.offer, t, available)}
+          soonLabel={t("soon")}
           priceLabel={offerPrice(offer.plan)}
           ctaLabel={t("home-offer-cta")}
           href={offer.plan ? `/assinatura?plan=${offer.plan.slug}` : "/settings/billing?source=revalidation"}
         />
-      ) : null}
+      ))}
 
       <Divider />
 

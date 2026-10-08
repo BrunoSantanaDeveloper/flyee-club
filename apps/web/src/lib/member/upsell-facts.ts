@@ -6,7 +6,7 @@ import type { Tier } from "@flyee/billing/entitlements";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * The facts `decideUpsell` needs, for one workspace.
+ * The facts `decideOffers` needs, for one workspace.
  *
  * Tool executions live in `product_events`, which only the platform operator
  * reads, so the count goes through the service role, scoped to the workspace

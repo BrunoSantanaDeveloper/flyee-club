@@ -20,6 +20,8 @@ export type MeetingsState =
  * Who: a member of the membership. Job: be in the next live meeting, or catch
  * up on one they missed. Success: signed up (the reminders follow by e-mail)
  * or the recording opened. Upcoming meetings lead; past ones are the archive.
+ * Before the first meeting the area says "Em breve" (docs/PRODUCT.md,
+ * 2026-10-08).
  */
 export default function MeetingsView({ state }: { state: MeetingsState }) {
   const t = useTranslations("product");
@@ -60,6 +62,7 @@ export default function MeetingsView({ state }: { state: MeetingsState }) {
         {header}
         <EmptyState
           icon={<NiCalendar size="large" />}
+          badge={t("soon")}
           title={t("meetings-empty-title")}
           description={t("meetings-empty-body")}
           action={{ label: t("meetings-empty-cta"), href: "/roadmap" }}

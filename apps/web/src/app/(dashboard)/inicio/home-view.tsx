@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { Fragment } from "react";
 
 import { Alert, Box, Button, Card, CardContent, Grid, Typography } from "@mui/material";
 
@@ -18,8 +19,9 @@ import NiTerminal from "@/icons/nexture/ni-terminal";
 import type { DevicesOverview } from "@/lib/member/devices";
 import { FEATURE_LABEL, TIER_LABEL } from "@/lib/member/labels";
 import type { NewsItem } from "@/lib/member/news";
-import { OFFER_COPY, REASON_COPY, SERVICE_COPY } from "@/lib/member/offer-copy";
+import { OFFER_COPY, offerLines, REASON_COPY, SERVICE_COPY } from "@/lib/member/offer-copy";
 import type { OfferPlan } from "@/lib/member/offers";
+import type { ProAvailability } from "@/lib/upgrade";
 import type { ServiceOffer, UpsellOffer, UpsellReason } from "@/lib/upsell";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@flyee/billing/currency";
@@ -36,11 +38,16 @@ export type HomeState =
       /** Null when the machines could not be read. */
       devices: DevicesOverview | null;
       news: NewsItem[] | null;
-      upsell: { offer: UpsellOffer; reason: UpsellReason; plan: OfferPlan | null } | null;
+      /** The rungs offered without a click (lib/upsell.ts): both for an account that bought nothing. */
+      offers: HomeOffer[];
+      /** What each area of FlyeeClub Pro has published; null when unread, and then nothing says "Em breve". */
+      available: ProAvailability | null;
       /** The services sold on demand, each with the contact link in the member's language. */
       services: { offer: ServiceOffer; href: string }[];
     }
   | { kind: "unavailable" };
+
+type HomeOffer = { offer: UpsellOffer; reason: UpsellReason; plan: OfferPlan | null };
 
 /**
  * Who: a member opening the dashboard. Job: know where they stand and what
@@ -51,7 +58,9 @@ export type HomeState =
  * alive (the install block, machines and the revalidation date), the next
  * step (the activation checklist), what changed (the latest releases), the
  * next rung when there is one, and, for a paying member, the services sold
- * on demand.
+ * on demand. An account that bought nothing sees both rungs first, side by
+ * side: FlyeeClub, which gives every app in its newest version, and
+ * FlyeeClub Pro (docs/PRODUCT.md, 2026-10-08).
  */
 export default function HomeView({ state }: { state: HomeState }) {
   const t = useTranslations("product");
@@ -74,7 +83,20 @@ export default function HomeView({ state }: { state: HomeState }) {
         ? t("home-offer-price-monthly", { price: money(plan) })
         : t("home-offer-price-once", { price: money(plan) })
       : null;
-  const offer = state.upsell;
+  const offerCard = (item: HomeOffer) => (
+    <UpsellCard
+      offer={item.offer}
+      origin="home"
+      tone={OFFER_COPY[item.offer].tone}
+      title={t(OFFER_COPY[item.offer].title)}
+      reason={t(REASON_COPY[item.reason])}
+      features={offerLines(item.offer, t, state.available)}
+      soonLabel={t("soon")}
+      priceLabel={priceLabel(item.plan)}
+      ctaLabel={t("home-offer-cta")}
+      href={item.plan ? `/assinatura?plan=${item.plan.slug}` : "/settings/billing?source=home"}
+    />
+  );
   const tierTone = TILE_TONE[state.tier === "pro" ? "accent-4" : state.tier === "club" ? "primary" : "accent-2"];
   const devices = state.devices;
   const revalidationDays = devices?.nextRevalidationAt
@@ -97,8 +119,8 @@ export default function HomeView({ state }: { state: HomeState }) {
       ) : null}
 
       <Grid container spacing={4}>
-        <Grid size={{ xs: 12, lg: 6 }}>
-          {state.tier ? (
+        {state.tier ? (
+          <Grid size={{ xs: 12, lg: 6 }}>
             <Card className="flex h-full flex-row p-1">
               <Box
                 aria-hidden
@@ -141,22 +163,15 @@ export default function HomeView({ state }: { state: HomeState }) {
                 </Box>
               </CardContent>
             </Card>
-          ) : offer ? (
-            <UpsellCard
-              offer={offer.offer}
-              origin="home"
-              tone={OFFER_COPY[offer.offer].tone}
-              title={t(OFFER_COPY[offer.offer].title)}
-              reason={t(REASON_COPY[offer.reason])}
-              features={OFFER_COPY[offer.offer].features.map((key) => t(key))}
-              priceLabel={priceLabel(offer.plan)}
-              ctaLabel={t("home-offer-cta")}
-              href={offer.plan ? `/assinatura?plan=${offer.plan.slug}` : "/settings/billing?source=home"}
-            />
-          ) : null}
-        </Grid>
-
-        <Grid size={{ xs: 12, lg: 6 }}>
+          </Grid>
+        ) : (
+          state.offers.map((item) => (
+            <Grid key={item.offer} size={{ xs: 12, lg: 6 }}>
+              {offerCard(item)}
+            </Grid>
+          ))
+        )}
+        <Grid size={{ xs: 12, lg: state.tier ? 6 : 12 }}>
           <Card id="instalar" className="h-full scroll-mt-24">
             <CardContent className="flex flex-col gap-4">
               <Box className="flex flex-row items-center gap-2">
@@ -225,19 +240,7 @@ export default function HomeView({ state }: { state: HomeState }) {
 
       <OnboardingChecklistCard title={t("home-checklist-title")} />
 
-      {offer && state.tier ? (
-        <UpsellCard
-          offer={offer.offer}
-          origin="home"
-          tone={OFFER_COPY[offer.offer].tone}
-          title={t(OFFER_COPY[offer.offer].title)}
-          reason={t(REASON_COPY[offer.reason])}
-          features={OFFER_COPY[offer.offer].features.map((key) => t(key))}
-          priceLabel={priceLabel(offer.plan)}
-          ctaLabel={t("home-offer-cta")}
-          href={offer.plan ? `/assinatura?plan=${offer.plan.slug}` : "/settings/billing?source=home"}
-        />
-      ) : null}
+      {state.tier ? state.offers.map((item) => <Fragment key={item.offer}>{offerCard(item)}</Fragment>) : null}
 
       {state.services.length > 0 ? (
         <Box component="section" aria-labelledby="home-services-title" className="flex flex-col gap-3">

@@ -24,7 +24,6 @@ export default async function RecipesPage() {
             (slug) => catalog.modules.find((module) => module.slug === slug)?.name ?? slug,
           ),
         })),
-        entitled: context.entitlements.has("recipes"),
       };
     } catch {
       state = { kind: "error" };

@@ -25,10 +25,10 @@ import {
 
 import DialogHeader from "@/components/product/dialog-header";
 import EmptyState from "@/components/product/empty-state";
-import GateNotice from "@/components/product/gate-notice";
 import { QuickActionTile } from "@/components/product/home-tiles";
 import PageHeader from "@/components/product/page-header";
 import StatusChip, { type StatusTone } from "@/components/product/status-chip";
+import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import NiFlag from "@/icons/nexture/ni-flag";
 import NiHeart from "@/icons/nexture/ni-heart";
 import NiPlus from "@/icons/nexture/ni-plus";
@@ -74,12 +74,16 @@ const MINE_STATUS: Record<RoadmapStatus, { label: string; tone: StatusTone }> = 
  * one stands. Success: a vote cast or a proposal sent, and later the shipped
  * tool, linked from the idea that asked for it. Proposing and voting are part
  * of FlyeeClub Pro; everyone with an account can read, and anyone can ask for
- * commissioned work through the contact form.
+ * commissioned work through the contact form. Without Pro the buttons stay
+ * live and open the upgrade prompt (docs/PRODUCT.md, 2026-10-08): the
+ * database still refuses the vote and the proposal itself.
  */
 export default function RoadmapView({ state }: { state: RoadmapState }) {
   const t = useTranslations("product");
   const router = useRouter();
   const [proposing, setProposing] = useState(false);
+  const openUpgrade = useUpgradePrompt();
+  const propose = () => (state.kind === "ready" && state.canVote ? setProposing(true) : openUpgrade("roadmap_propose"));
 
   const header = (
     <PageHeader
@@ -87,8 +91,8 @@ export default function RoadmapView({ state }: { state: RoadmapState }) {
       crumbs={[{ label: t("home-breadcrumb"), href: "/inicio" }, { label: t("roadmap-title") }]}
       description={t("roadmap-subtitle")}
       action={
-        state.kind === "ready" && state.canVote ? (
-          <Button variant="contained" startIcon={<NiPlus size="medium" />} onClick={() => setProposing(true)}>
+        state.kind === "ready" ? (
+          <Button variant="contained" startIcon={<NiPlus size="medium" />} onClick={propose}>
             {t("roadmap-propose")}
           </Button>
         ) : undefined
@@ -137,11 +141,7 @@ export default function RoadmapView({ state }: { state: RoadmapState }) {
           icon={<NiFlag size="large" />}
           title={t("roadmap-empty-title")}
           description={t("roadmap-empty-body")}
-          action={
-            state.canVote
-              ? { label: t("roadmap-propose"), onClick: () => setProposing(true) }
-              : { label: t("roadmap-empty-cta-contact"), href: state.contactHref }
-          }
+          action={{ label: t("roadmap-propose"), onClick: propose }}
         />
         {dialog}
       </Box>
@@ -157,19 +157,6 @@ export default function RoadmapView({ state }: { state: RoadmapState }) {
   return (
     <Box className="flex flex-col gap-6">
       {header}
-      {!state.canVote ? (
-        <Alert
-          severity="info"
-          className="neutral bg-background-paper/60!"
-          action={
-            <Button color="inherit" size="small" component={Link} href="/settings/billing?source=roadmap">
-              {t("roadmap-unlock")}
-            </Button>
-          }
-        >
-          {t("roadmap-locked")}
-        </Alert>
-      ) : null}
 
       {state.leader ? (
         <QuickActionTile
@@ -248,22 +235,13 @@ export default function RoadmapView({ state }: { state: RoadmapState }) {
             </Typography>
           </Box>
           <Box className="flex flex-row flex-wrap items-center gap-2">
-            <Button
-              variant="contained"
-              startIcon={<NiPlus size="medium" />}
-              disabled={!state.canVote}
-              aria-describedby={!state.canVote ? "roadmap-custom-gate" : undefined}
-              onClick={() => setProposing(true)}
-            >
+            <Button variant="contained" startIcon={<NiPlus size="medium" />} onClick={propose}>
               {t("roadmap-propose")}
             </Button>
             <Button variant="outlined" color="grey" component={Link} href={state.contactHref}>
               {t("roadmap-custom-contact")}
             </Button>
           </Box>
-          {!state.canVote ? (
-            <GateNotice id="roadmap-custom-gate" gate={{ state: "blocked", message: t("roadmap-gate") }} />
-          ) : null}
         </CardContent>
       </Card>
 
@@ -278,8 +256,8 @@ function RoadmapCard({ item, canVote }: { item: RoadmapItem; canVote: boolean })
   const [votes, setVotes] = useState(item.votes);
   const [error, setError] = useState(false);
   const [pending, startTransition] = useTransition();
+  const openUpgrade = useUpgradePrompt();
   const votable = item.status !== "shipped";
-  const gateId = `roadmap-gate-${item.id}`;
 
   const toggle = () => {
     setError(false);
@@ -321,18 +299,14 @@ function RoadmapCard({ item, canVote }: { item: RoadmapItem; canVote: boolean })
             <Button
               size="small"
               variant={voted ? "outlined" : "contained"}
-              disabled={!canVote || pending}
-              aria-pressed={voted}
-              aria-describedby={!canVote ? gateId : undefined}
-              onClick={toggle}
+              disabled={pending}
+              aria-pressed={canVote ? voted : undefined}
+              onClick={canVote ? toggle : () => openUpgrade("roadmap_vote")}
             >
               {voted ? t("roadmap-withdraw") : t("roadmap-vote")}
             </Button>
           ) : null}
         </Box>
-        {votable && !canVote ? (
-          <GateNotice id={gateId} gate={{ state: "blocked", message: t("roadmap-gate") }} />
-        ) : null}
         {error ? (
           <Typography variant="body2" role="status" className="text-text-secondary">
             {t("roadmap-vote-failed")}

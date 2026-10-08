@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { Box, Button, Typography } from "@mui/material";
 
+import StatusChip from "@/components/product/status-chip";
 import { cn } from "@/lib/utils";
 
 type Action = { label: string; href?: string; onClick?: () => void };
@@ -12,11 +13,14 @@ type Action = { label: string; href?: string; onClick?: () => void };
  * An empty state is NEVER a blank screen. It answers three things at a
  * glance: what this area is, why it's empty, and the ONE next action that
  * fills it (the nudge). Use it for every zero-data view (product-screen
- * skill rule) — a bare "No data" is a UX failure.
+ * skill rule) — a bare "No data" is a UX failure. An area that has nothing
+ * yet because its content is still being made carries a `badge` ("Em breve",
+ * docs/PRODUCT.md, 2026-10-08): a state, so it is a StatusChip.
  */
 export default function EmptyState({
   icon,
   title,
+  badge,
   description,
   action,
   secondaryAction,
@@ -25,6 +29,8 @@ export default function EmptyState({
   /** Meaningful icon (the concept, in a soft tinted chip). */
   icon?: React.ReactNode;
   title: string;
+  /** A named state above the title, e.g. "Em breve". */
+  badge?: string;
   description?: string;
   /** The primary nudge — what the user should do to get value here. */
   action?: Action;
@@ -54,6 +60,7 @@ export default function EmptyState({
           {icon}
         </span>
       )}
+      {badge ? <StatusChip label={badge} tone="attention" className="mt-1" /> : null}
       <Typography variant="h5" component="h2" className="text-text-primary mt-1">
         {title}
       </Typography>

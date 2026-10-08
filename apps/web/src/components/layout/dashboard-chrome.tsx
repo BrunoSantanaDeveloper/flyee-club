@@ -16,6 +16,7 @@ import ImpersonationBanner from "@/components/layout/impersonation/impersonation
 import LocaleAutoNotice from "@/components/layout/locale/locale-auto-notice";
 import LeftMenu from "@/components/layout/menu/left-menu";
 import MenuBackdrop from "@/components/layout/menu/menu-backdrop";
+import { UpgradePromptProvider } from "@/components/product/upgrade-prompt";
 import SupportWidget from "@/components/support/support-widget";
 
 LicenseInfo.setLicenseKey(process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY || "");
@@ -52,7 +53,10 @@ export default function DashboardChrome({
           */}
           <LocaleAutoNotice />
           <AnnouncementBanner />
-          <Suspense fallback={<Loading />}>{children}</Suspense>
+          {/* FlyeeClub Pro is offered where one of its features is clicked (docs/PRODUCT.md, 2026-10-08). */}
+          <UpgradePromptProvider>
+            <Suspense fallback={<Loading />}>{children}</Suspense>
+          </UpgradePromptProvider>
         </ContentWrapper>
       </Main>
       <MenuBackdrop />

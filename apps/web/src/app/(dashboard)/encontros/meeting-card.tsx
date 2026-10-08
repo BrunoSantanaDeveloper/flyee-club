@@ -8,6 +8,7 @@ import { Box, Button, Card, CardContent, Chip, Typography } from "@mui/material"
 
 import ProductMarkdown from "@/components/product/product-markdown";
 import { TILE_TONE } from "@/components/product/tile-tone";
+import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import NiCalendar from "@/icons/nexture/ni-calendar";
 import NiCheck from "@/icons/nexture/ni-check";
 import {
@@ -34,8 +35,9 @@ const ERROR_KEY: Record<string, string> = {
  * One live meeting: when, what, and the one action that fits its moment:
  * sign up while it is open, enter the room (an external link, handed over
  * from 15 minutes before the start, `meeting_join`), or watch the recording
- * once it ended. A member without the membership reads it and is told what
- * unlocks it.
+ * once it ended. A member without FlyeeClub Pro sees the same buttons, and
+ * a click opens the upgrade prompt (docs/PRODUCT.md, 2026-10-08); the
+ * database refuses the sign-up, the room and the recording themselves.
  *
  * Closest template section: the quick-action card (tinted icon column and a
  * card body); a meeting needs its date and its action in the same place.
@@ -54,6 +56,8 @@ export default function MeetingCard({
   const [registered, setRegistered] = useState(meeting.registered);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const openUpgrade = useUpgradePrompt();
+  const upgrade = () => openUpgrade("meeting_register");
   const tone = TILE_TONE[meeting.state === "ao_vivo" ? "accent-4" : "accent-2"];
 
   const when = meeting.startsAt
@@ -125,30 +129,24 @@ export default function MeetingCard({
         ) : null}
 
         <Box className="mt-1 flex flex-row flex-wrap items-center gap-2">
-          {!entitled ? (
-            <>
-              <Typography variant="body2" className="text-text-secondary">
-                {t("meetings-locked")}
-              </Typography>
-              <Button size="small" component={Link} href="/settings/billing?source=meetings">
-                {t("meetings-unlock")}
-              </Button>
-            </>
-          ) : meeting.state === "encerrado" ? (
+          {meeting.state === "encerrado" ? (
             <Button
               size="small"
               variant="outlined"
               disabled={pending}
-              onClick={() =>
-                run(
-                  () => meetingRecording(meeting.id),
-                  (result) => open(result.url),
-                )
+              onClick={
+                entitled
+                  ? () =>
+                      run(
+                        () => meetingRecording(meeting.id),
+                        (result) => open(result.url),
+                      )
+                  : upgrade
               }
             >
               {t("meetings-recording")}
             </Button>
-          ) : registered ? (
+          ) : registered && entitled ? (
             <>
               <Typography variant="body2" className="flex flex-row items-center gap-1">
                 <NiCheck size="small" className="text-success" aria-hidden />
@@ -186,11 +184,14 @@ export default function MeetingCard({
               size="small"
               variant="contained"
               disabled={pending}
-              onClick={() =>
-                run(
-                  () => registerForMeeting(meeting.id),
-                  () => setRegistered(true),
-                )
+              onClick={
+                entitled
+                  ? () =>
+                      run(
+                        () => registerForMeeting(meeting.id),
+                        () => setRegistered(true),
+                      )
+                  : upgrade
               }
             >
               {t("meetings-register")}

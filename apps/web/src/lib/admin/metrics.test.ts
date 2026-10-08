@@ -8,6 +8,7 @@ import {
   focusRule,
   focusSentence,
   leaderOf,
+  proFeatureTotals,
   segmentPopulation,
   type SegmentWeekRow,
 } from "@/lib/admin/metrics";
@@ -163,5 +164,24 @@ describe("entry doors", () => {
       { door: "direto", views: 300, buyers: 0, conversion: 0 },
       { door: "parceiro", views: 100, buyers: 2, conversion: 0.02 },
     ]);
+  });
+});
+
+describe("what sells FlyeeClub Pro", () => {
+  it("puts the feature that sold the most first, with purchases over prompts opened", () => {
+    const totals = proFeatureTotals([
+      { feature: "roadmap_propose", viewed: 0, clicked: 0, purchased: 0 },
+      { feature: "roadmap_vote", viewed: 10, clicked: 3, purchased: 1 },
+      { feature: "recipe_install", viewed: 4, clicked: 4, purchased: 2 },
+      { feature: "more_devices", viewed: 8, clicked: 3, purchased: 1 },
+    ]);
+    expect(totals.map((row) => row.feature)).toEqual([
+      "recipe_install",
+      "roadmap_vote",
+      "more_devices",
+      "roadmap_propose",
+    ]);
+    expect(totals[0].conversion).toBe(0.5);
+    expect(totals[3].conversion).toBeNull();
   });
 });

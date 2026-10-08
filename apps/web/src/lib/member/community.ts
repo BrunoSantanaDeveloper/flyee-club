@@ -155,3 +155,41 @@ export async function loadRoadmapContext(
         : null,
   };
 }
+
+/** An app the roadmap has planned or is building: "Em breve" in the member's catalog. */
+export type PlannedApp = {
+  id: string;
+  title: string;
+  description: string | null;
+  trail: string | null;
+  status: "planned" | "building";
+};
+
+/**
+ * The apps on their way, for the catalog's "Em breve na loja" (docs/PRODUCT.md,
+ * 2026-10-08): the planned and building ideas of the roadmap, building first,
+ * in the roadmap's own order. A secondary block, so a failed read leaves it
+ * out instead of failing the catalog.
+ */
+export async function loadPlannedApps(
+  supabase: SupabaseClient,
+  input: { locale: CatalogLocale },
+): Promise<PlannedApp[]> {
+  const { data, error } = await supabase
+    .from("roadmap_items")
+    .select("id, title, description, trail, status, sort, votes_count")
+    .in("status", ["planned", "building"])
+    .order("sort", { ascending: true })
+    .order("votes_count", { ascending: false });
+  if (error) return [];
+  return ((data ?? []) as Record<string, unknown>[])
+    .map((row) => ({
+      id: row.id as string,
+      title: localize(row.title as Record<string, string>, input.locale) ?? "",
+      description: localize(row.description as Record<string, string>, input.locale),
+      trail: (row.trail as string | null) ?? null,
+      status: row.status as PlannedApp["status"],
+    }))
+    .filter((app) => app.title)
+    .sort((a, b) => (a.status === b.status ? 0 : a.status === "building" ? -1 : 1));
+}

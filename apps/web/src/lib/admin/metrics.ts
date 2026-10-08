@@ -6,8 +6,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /**
  * The focus metrics (docs/PRODUCT.md, "Métricas e trackers"): one row per week
  * and segment from `admin_segment_weekly()` (migrations 0015 and 0021), the
- * entry doors from `admin_door_weekly()`, and the rule that picks the focus
- * segment.
+ * entry doors from `admin_door_weekly()`, the rule that picks the focus
+ * segment, and which feature of FlyeeClub Pro sells it (`admin_pro_features()`,
+ * migration 0039).
  *
  * Every number here is a count the database made. This module only chooses
  * which ones to put side by side and divides a part by its whole; it never
@@ -352,6 +353,45 @@ export function doorTotals(rows: DoorWeekRow[]): DoorTotal[] {
     .sort((a, b) => b.views - a.views || b.buyers - a.buyers || a.door.localeCompare(b.door));
 }
 
+// ---------- What sells FlyeeClub Pro ----------
+
+/** One row of `admin_pro_features()` (migration 0039): workspaces per column, each counted once. */
+export type ProFeatureRow = { feature: string; viewed: number; clicked: number; purchased: number };
+
+/** The days the report looks back. */
+export const PRO_FEATURE_DAYS = 90;
+
+/** The features whose click opens the upgrade prompt (lib/upgrade.ts), as the operator reads them. */
+export const PRO_FEATURE_LABEL: Record<string, string> = {
+  roadmap_propose: "Propor um app",
+  roadmap_vote: "Votar no roadmap",
+  recipe_install: "Instalar a receita inteira",
+  recipe_workflow: "Passo a passo da receita",
+  meeting_register: "Encontros ao vivo",
+  advanced_guide: "Guia abrir o capô",
+  more_devices: "Mais computadores",
+};
+
+export type ProFeatureTotal = ProFeatureRow & { conversion: number | null };
+
+/**
+ * The features that sold the most first: purchases, then clicks, then
+ * prompts opened; a tie keeps the order of the database. Conversion is
+ * purchases over prompts opened, null before the first prompt.
+ */
+export function proFeatureTotals(rows: ProFeatureRow[]): ProFeatureTotal[] {
+  return rows
+    .map((row, position) => ({ row, position }))
+    .sort(
+      (a, b) =>
+        b.row.purchased - a.row.purchased ||
+        b.row.clicked - a.row.clicked ||
+        b.row.viewed - a.row.viewed ||
+        a.position - b.position,
+    )
+    .map(({ row }) => ({ ...row, conversion: ratio(row.purchased, row.viewed) }));
+}
+
 // ---------- Reads ----------
 
 export async function loadSegmentWeekly(supabase: SupabaseClient, weeks = REPORT_WEEKS): Promise<SegmentWeekRow[]> {
@@ -370,4 +410,15 @@ export async function loadDoorWeekly(supabase: SupabaseClient, weeks = REPORT_WE
   const { data, error } = await supabase.rpc("admin_door_weekly", { target_weeks: weeks });
   if (error) throw new Error("door_weekly_failed");
   return ((data ?? []) as DoorWeekRow[]).map((row) => ({ ...row, page_views: Number(row.page_views ?? 0) }));
+}
+
+export async function loadProFeatures(supabase: SupabaseClient, days = PRO_FEATURE_DAYS): Promise<ProFeatureRow[]> {
+  const { data, error } = await supabase.rpc("admin_pro_features", { target_days: days });
+  if (error) throw new Error("pro_features_failed");
+  return ((data ?? []) as ProFeatureRow[]).map((row) => ({
+    feature: row.feature,
+    viewed: Number(row.viewed ?? 0),
+    clicked: Number(row.clicked ?? 0),
+    purchased: Number(row.purchased ?? 0),
+  }));
 }

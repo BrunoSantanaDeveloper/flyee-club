@@ -4,8 +4,19 @@ import { Box, Card, CardContent, Chip, Typography } from "@mui/material";
 
 import { TRAIL_TONE } from "@/components/marketing/tone";
 import CatalogIcon from "@/components/product/catalog-icon";
+import StatusChip, { type StatusTone } from "@/components/product/status-chip";
 import { TILE_TONE } from "@/components/product/tile-tone";
 import { cn } from "@/lib/utils";
+
+/**
+ * How each state of a tile reads: a named badge whose word stays in the text
+ * colour (a white label on the success fill measured 2.1:1).
+ */
+const STATUS_TONE: Record<"free" | "locked" | "soon", StatusTone> = {
+  free: "positive",
+  locked: "neutral",
+  soon: "attention",
+};
 
 /**
  * One tool of the catalog in the member's grid (`/modulos`): what it is, at a
@@ -15,7 +26,9 @@ import { cn } from "@/lib/utils";
  * kept verbatim for the icon, so the catalog reads as the same family as the
  * home's tiles. Nothing in the catalog carried a title, a two-line summary and
  * a status line, which is what choosing a tool needs. The trail's hue comes
- * from `TRAIL_TONE`, the same mapping the public site uses.
+ * from `TRAIL_TONE`, the same mapping the public site uses. An app the
+ * roadmap has planned is a tile too, marked "Em breve" (a state, so a
+ * StatusChip) and linked to its idea (docs/PRODUCT.md, 2026-10-08).
  */
 export default function ModuleTile({
   href,
@@ -30,16 +43,17 @@ export default function ModuleTile({
   href: string;
   icon: string | null;
   /** The trail slug: decides the hue. */
-  trail: string;
+  trail: string | null;
   name: string;
   summary: string | null;
-  trailLabel: string;
+  /** The trail's name; a planned app may have none yet. */
+  trailLabel?: string;
   /** e.g. "v1.2.0 · Claude Code, Codex". */
   meta?: string;
-  /** A free sample, or a tool outside the plan; nothing when it simply installs. */
-  status?: { kind: "free" | "locked"; label: string } | null;
+  /** A free sample, a tool outside the plan, or an app still on the roadmap; nothing when it simply installs. */
+  status?: { kind: "free" | "locked" | "soon"; label: string } | null;
 }) {
-  const tone = TILE_TONE[TRAIL_TONE[trail] ?? "primary"];
+  const tone = TILE_TONE[(trail ? TRAIL_TONE[trail] : undefined) ?? "primary"];
   return (
     <Card
       component={Link}
@@ -62,15 +76,8 @@ export default function ModuleTile({
           </Typography>
         ) : null}
         <Box className="mt-auto flex flex-row flex-wrap items-center gap-1.5 pt-1">
-          <Chip size="small" variant="outlined" label={trailLabel} />
-          {status ? (
-            <Chip
-              size="small"
-              color={status.kind === "free" ? "success" : "default"}
-              variant={status.kind === "free" ? "filled" : "outlined"}
-              label={status.label}
-            />
-          ) : null}
+          {trailLabel ? <Chip size="small" variant="outlined" label={trailLabel} /> : null}
+          {status ? <StatusChip label={status.label} tone={STATUS_TONE[status.kind]} /> : null}
           {meta ? (
             <Typography variant="body2" className="text-text-secondary text-xs leading-4">
               {meta}

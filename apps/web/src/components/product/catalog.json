@@ -15,8 +15,8 @@
     {
       "name": "EmptyState",
       "from": "@/components/product/empty-state",
-      "props": "icon, title, description?, action?, secondaryAction?, className?",
-      "use": "Every zero-data view: icon + why it is empty + the ONE next action. Never a bare 'no data'."
+      "props": "icon, title, badge?, description?, action?, secondaryAction?, className?",
+      "use": "Every zero-data view: icon + why it is empty + the ONE next action. Never a bare 'no data'. An area whose content is still being made passes badge (the translated \"Em breve\"), which renders as a StatusChip above the title."
     },
     {
       "name": "PageHeader",
@@ -57,20 +57,26 @@
     {
       "name": "ModuleTile",
       "from": "@/components/product/module-tile",
-      "props": "href, icon, trail, name, summary, trailLabel, meta?, status?{kind:'free'|'locked',label}",
-      "use": "One tool of the catalog in a grid: StatTile's tinted 72px box (hue from the trail, TRAIL_TONE) over name, two-line summary and a status line (free sample, outside the plan). Use for any grid of modules, in the catalog or inside a recipe."
+      "props": "href, icon, trail|null, name, summary, trailLabel?, meta?, status?{kind:'free'|'locked'|'soon',label}",
+      "use": "One tool of the catalog in a grid: the tinted 72px box of StatTile (hue from the trail, TRAIL_TONE) over name, two-line summary and a status line. Every status is a StatusChip: free sample (positive), outside the plan (neutral), and an app the roadmap has planned (soon, \"Em breve\", the tile linked to its idea on the roadmap). Use for any grid of modules, in the catalog or inside a recipe."
     },
     {
       "name": "UpsellCard",
       "from": "@/components/product/upsell-card",
-      "props": "offer, origin, tone?, title, reason, features[], priceLabel, ctaLabel, href",
-      "use": "The next rung of the ladder, shown only when decideUpsell (lib/upsell.ts) says the member's own use earned it. States WHY it is here, what the rung adds and the real price; never a countdown. Records upsell.viewed/upsell.clicked."
+      "props": "offer, origin, tone?, title, reason, features[{label,soon?}], soonLabel?, priceLabel, ctaLabel, href",
+      "use": "A rung of the ladder offered without a click, when decideOffers (lib/upsell.ts) says so: both rungs to an account that bought nothing, FlyeeClub Pro to a FlyeeClub member whose use earned it or who is revalidating. States WHY it is here, what the rung adds (a line whose area has nothing published says \"Em breve\", offerLines in lib/member/offer-copy.ts) and the real price; never a countdown. Records upsell.viewed/upsell.clicked."
+    },
+    {
+      "name": "UpgradePrompt",
+      "from": "@/components/product/upgrade-prompt",
+      "props": "useUpgradePrompt() -> (feature: ProFeature) => void; UpgradePromptProvider mounted once in components/layout/dashboard-chrome.tsx",
+      "use": "FlyeeClub Pro offered on the click of one of its features (docs/PRODUCT.md, 2026-10-08), never by greying a control out: the control stays enabled and, without the right, calls useUpgradePrompt()(feature) with a feature of lib/upgrade.ts (PRO_FEATURES). The dialog names the feature, lists what Pro adds to the account (proAdditions, the labels of the plans grid, \"Em breve\" on an empty area), shows the monthly and yearly price from plans and leads to /assinatura?plan=; an account that bought nothing also sees FlyeeClub as the smaller step. The server still refuses the action itself. Records upsell.viewed and upsell.clicked with the feature. A control of an area with nothing published shows \"Em breve\" instead and opens nothing."
     },
     {
       "name": "GuidePanel",
       "from": "@/components/product/guide-panel",
-      "props": "tabs[{depth, guide:{markdown|null, otherLanguage}|null, video:{id,title,durationLabel,youtubeId,completed}|null}], versionLine, newerLine, upgradeHref",
-      "use": "An app's written guide (usar / abrir o capô) in tabs, from the package of the version shown (migration 0030), with the depth's short video above it. The video loads from youtube-nocookie only on play (lesson.started); a depth the plan does not include shows why and the one way to unlock it, never an empty frame; an app without a guide says so."
+      "props": "tabs[{depth, guide:{markdown|null, otherLanguage}|null, video:{id,title,durationLabel,youtubeId,completed}|null, soon?}], versionLine, newerLine, upgradeHref",
+      "use": "An app's written guide (usar / abrir o capô) in tabs, from the package of the version shown (migration 0030), with the depth's short video above it. The video loads from youtube-nocookie only on play (lesson.started); the basic depth closed to the plan shows why and links to upgradeHref; the advanced one opens the upgrade prompt; a depth with nothing yet, and an app without any guide, say \"Em breve\"."
     },
     {
       "name": "CatalogIcon",

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
-import { Alert, Box, Button, Chip, FormControl, Grid, InputLabel, MenuItem, Select } from "@mui/material";
+import { Alert, Box, Button, Chip, FormControl, Grid, InputLabel, MenuItem, Select, Typography } from "@mui/material";
 
 import EmptyState from "@/components/product/empty-state";
 import ModuleTile from "@/components/product/module-tile";
@@ -12,23 +12,40 @@ import PageHeader from "@/components/product/page-header";
 import NiCatalog from "@/icons/nexture/ni-catalog";
 import NiFilter from "@/icons/nexture/ni-filter";
 import type { loadCatalog } from "@/lib/catalog/read";
+import type { PlannedApp } from "@/lib/member/community";
 import { aiToolName, MODULE_TYPES } from "@/lib/member/labels";
 
 type Catalog = Awaited<ReturnType<typeof loadCatalog>>;
 
 export type ModulesState =
-  | { kind: "ready"; trails: Catalog["trails"]; modules: Catalog["modules"]; hasAccess: boolean }
+  | {
+      kind: "ready";
+      trails: Catalog["trails"];
+      modules: Catalog["modules"];
+      /** The roadmap's planned and building apps, shown as "Em breve". */
+      planned: PlannedApp[];
+      hasAccess: boolean;
+    }
   | { kind: "error" }
   | { kind: "unavailable" };
 
 const AI_FILTERS = ["claude_code", "codex", "gemini_cli", "cursor"] as const;
+
+/** Where a planned app stands on the roadmap, in the roadmap's own words. */
+const PLANNED_STATUS: Record<PlannedApp["status"], string> = {
+  planned: "roadmap-status-planned",
+  building: "roadmap-status-building",
+};
 
 /**
  * Who: a member choosing what to install next. Job: find the tool for the
  * stage they are in. Success: a tool picked, with its command one tap away on
  * its page. Filters are the seven trails (the stages of a product), the AI
  * they use and the kind of tool; a free sample and a tool outside the plan
- * say so on the tile itself.
+ * say so on the tile itself. The apps on their way follow the grid, marked
+ * "Em breve" and linked to their idea on the roadmap (docs/PRODUCT.md,
+ * 2026-10-08); the stage filter narrows them too, while the AI and kind
+ * filters, which an idea does not have yet, set them aside.
  */
 export default function ModulesView({ state }: { state: ModulesState }) {
   const t = useTranslations("product");
@@ -49,6 +66,10 @@ export default function ModulesView({ state }: { state: ModulesState }) {
     [modules, trail, ai, type],
   );
   const filtered = Boolean(trail) || ai !== "all" || type !== "all";
+  const planned =
+    state.kind === "ready" && ai === "all" && type === "all"
+      ? state.planned.filter((app) => !trail || app.trail === trail)
+      : [];
 
   const header = (
     <PageHeader
@@ -79,6 +100,39 @@ export default function ModulesView({ state }: { state: ModulesState }) {
     );
   }
 
+  const comingSoon =
+    planned.length > 0 ? (
+      <Box component="section" aria-labelledby="modules-soon-title" className="flex flex-col gap-3">
+        <Box className="flex flex-col gap-1">
+          <Typography id="modules-soon-title" variant="h5" component="h2" className="mb-0">
+            {t("modules-soon-title")}
+          </Typography>
+          <Typography variant="body2" className="text-text-secondary">
+            {t("modules-soon-body")}
+          </Typography>
+        </Box>
+        <Grid container spacing={3}>
+          {planned.map((app) => {
+            const trailInfo = app.trail ? state.trails.find((item) => item.slug === app.trail) : undefined;
+            return (
+              <Grid key={app.id} size={{ xs: 12, sm: 6, lg: 4, xl: 3 }}>
+                <ModuleTile
+                  href={`/roadmap#roadmap-item-${app.id}`}
+                  icon={trailInfo?.icon ?? null}
+                  trail={app.trail}
+                  name={app.title}
+                  summary={app.description}
+                  trailLabel={trailInfo?.name ?? undefined}
+                  meta={t(PLANNED_STATUS[app.status])}
+                  status={{ kind: "soon", label: t("soon") }}
+                />
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
+    ) : null;
+
   if (modules.length === 0) {
     return (
       <Box className="flex flex-col gap-6">
@@ -89,6 +143,7 @@ export default function ModulesView({ state }: { state: ModulesState }) {
           description={t("modules-empty-body")}
           action={{ label: t("modules-empty-cta"), href: "/roadmap" }}
         />
+        {comingSoon}
       </Box>
     );
   }
@@ -215,6 +270,8 @@ export default function ModulesView({ state }: { state: ModulesState }) {
           })}
         </Grid>
       )}
+
+      {comingSoon}
     </Box>
   );
 }

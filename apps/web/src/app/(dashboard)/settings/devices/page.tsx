@@ -17,6 +17,8 @@ export default async function DevicesPage() {
         kind: "ready",
         overview: await loadDevices(context.supabase, { orgId: context.orgId, limit: limitOf(limits, "devices") }),
         locale: context.locale,
+        // FlyeeClub Pro raises the ceiling; an account already on it has nowhere to go.
+        canUpgrade: context.entitlements.tier !== "club" && context.entitlements.tier !== "pro",
       };
     } catch {
       state = { kind: "error" };

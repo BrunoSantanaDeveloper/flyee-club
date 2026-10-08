@@ -1,5 +1,6 @@
 "use client";
 
+import type { ProFeature } from "@/lib/upgrade";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
 
@@ -12,16 +13,38 @@ import { createClient } from "@flyee/auth/client";
  */
 export type BrowserEventName = "upsell.viewed" | "upsell.clicked";
 
-/** Where the offer was shown. Mirrors the `origin` allowlist of product_event_sanitize. */
-export type OfferOrigin = "home" | "revalidation" | "catalog" | "module" | "billing" | "menu" | "checkout";
+/** Where the offer was shown. Mirrors the `origin` allowlist of product_event_sanitize (migration 0039). */
+export type OfferOrigin =
+  | "home"
+  | "revalidation"
+  | "catalog"
+  | "module"
+  | "billing"
+  | "menu"
+  | "checkout"
+  | "roadmap"
+  | "recipes"
+  | "meetings"
+  | "devices";
 
-/** Which rung the offer was for. Mirrors the `offer` allowlist. */
-/** The database keeps `founders` among the offers it accepts, for events recorded before 2026-10-08. */
+/**
+ * Which rung the offer was for. Mirrors the `offer` allowlist, which also keeps
+ * `founders` for the events recorded before 2026-10-08.
+ */
 export type OfferKind = "kit" | "club" | "pro" | "mentoring" | "consulting" | "custom_app";
 
-/** An offer was shown or clicked. `offer` is omitted when the surface shows the whole ladder. */
-export function trackOffer(event: BrowserEventName, origin: OfferOrigin, offer?: OfferKind): void {
-  trackProductEvent(event, offer ? { origin, offer } : { origin });
+/**
+ * An offer was shown or clicked. `offer` is omitted when the surface shows the
+ * whole ladder; `feature` is the feature of FlyeeClub Pro whose click opened
+ * the upgrade prompt (lib/upgrade.ts), so the operators can see what sells.
+ */
+export function trackOffer(
+  event: BrowserEventName,
+  origin: OfferOrigin,
+  offer?: OfferKind,
+  feature?: ProFeature,
+): void {
+  trackProductEvent(event, { origin, ...(offer ? { offer } : {}), ...(feature ? { feature } : {}) });
 }
 
 export function trackProductEvent(event: BrowserEventName, properties: Record<string, string> = {}): void {

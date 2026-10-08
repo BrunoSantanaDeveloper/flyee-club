@@ -12,6 +12,7 @@ import CommandBlock from "@/components/product/command-block";
 import GuidePanel, { type GuideTab } from "@/components/product/guide-panel";
 import PageHeader from "@/components/product/page-header";
 import ProductMarkdown from "@/components/product/product-markdown";
+import StatusChip from "@/components/product/status-chip";
 import { TILE_TONE } from "@/components/product/tile-tone";
 import NiKey from "@/icons/nexture/ni-key";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
@@ -73,12 +74,17 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
   const date = (value: string | null) =>
     value ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value)) : "";
   // One tab per depth that has a written guide (from the package of the
-  // version shown) or a video; the video sits inside its depth's guide.
+  // version shown) or a video; the video sits inside its depth's guide. Once
+  // the app has a guide, the depth of FlyeeClub Pro is always a tab: "Em
+  // breve" until it is written (docs/PRODUCT.md, 2026-10-08).
   const guide = state.guide;
+  const hasGuide = (guide.kind === "ready" && guide.depths.length > 0) || state.lessons.length > 0;
   const guideTabs: GuideTab[] = (["usar", "abrir_o_capo"] as const).flatMap((depth) => {
     const written = guide.kind === "ready" ? guide.depths.find((entry) => entry.depth === depth) : undefined;
     const lesson = state.lessons.find((entry) => entry.depth === depth);
-    if (!written && !lesson) return [];
+    if (!written && !lesson) {
+      return depth === "abrir_o_capo" && hasGuide ? [{ depth, guide: null, video: null, soon: true }] : [];
+    }
     return [
       {
         depth,
@@ -138,9 +144,7 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
                     label={t(MODULE_TYPE_LABEL[module.type] ?? "module-type-tool")}
                   />
                   {module.latest ? <Chip size="small" variant="outlined" label={`v${module.latest.version}`} /> : null}
-                  {module.is_free_sample ? (
-                    <Chip size="small" color="success" label={t("modules-free-sample")} />
-                  ) : null}
+                  {module.is_free_sample ? <StatusChip label={t("modules-free-sample")} tone="positive" /> : null}
                 </Box>
               </Box>
 
