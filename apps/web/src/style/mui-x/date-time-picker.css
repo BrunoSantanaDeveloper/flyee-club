@@ -11,7 +11,7 @@
     }
 
     &.outlined {
-      @apply outline-primary/40 mt-1 mb-1 rounded-lg outline-2 -outline-offset-1;
+      @apply outline-primary-ink/60 mt-1 mb-1 rounded-lg outline-2 -outline-offset-1;
     }
   }
 
@@ -97,7 +97,7 @@
       &:not(.Mui-selected):not(.Mui-disabled):hover {
         @apply bg-transparent;
         .MuiTypography-root:not(.Mui-selected) {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }
@@ -110,7 +110,7 @@
       &:not(.Mui-selected):not(.Mui-disabled):hover {
         @apply bg-transparent;
         .MuiTypography-root:not(.Mui-selected) {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }
@@ -123,7 +123,7 @@
       &:not(.Mui-selected):not(.Mui-disabled):hover {
         @apply bg-transparent;
         .MuiTypography-root:not(.Mui-selected) {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }
@@ -199,7 +199,7 @@
       &:not(.Mui-selected):not(.Mui-disabled):hover {
         @apply bg-transparent;
         .MuiTypography-root:not(.Mui-selected) {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }
@@ -213,7 +213,7 @@
       &:not(.Mui-selected):not(.Mui-disabled):hover {
         @apply bg-transparent;
         .MuiTypography-root:not(.Mui-selected) {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }
@@ -228,7 +228,7 @@
       &:not(.Mui-selected):not(.Mui-disabled):hover {
         @apply bg-transparent;
         .MuiTypography-root:not(.Mui-selected) {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }
@@ -263,7 +263,7 @@
         @apply bg-transparent;
 
         .MuiTypography-root:not(.Mui-selected) {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }
@@ -333,7 +333,7 @@
         @apply bg-transparent;
 
         .MuiTypography-root:not(.Mui-selected) {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }

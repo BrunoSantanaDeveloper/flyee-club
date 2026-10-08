@@ -18,7 +18,7 @@
     }
 
     &:hover {
-      @apply bg-primary-light;
+      @apply bg-primary-light text-primary-contrast;
     }
   }
 
@@ -26,13 +26,13 @@
   &.plyr--video .plyr__control:hover,
   &.plyr--video .plyr__control[data-hocus],
   &.plyr--video .plyr__control[role="button"][aria-expanded="true"] {
-    @apply bg-primary-light;
+    @apply bg-primary-light text-primary-contrast;
   }
 
   .plyr__control.plyr__control--overlaid {
-    @apply bg-primary px-6 py-2;
+    @apply bg-primary text-primary-contrast px-6 py-2;
     &:hover {
-      @apply bg-primary-light;
+      @apply bg-primary-light text-primary-contrast;
     }
   }
 

@@ -44,7 +44,7 @@ export default function ConfirmPanel({ pending }: { pending: boolean }) {
       {status === "invalid" && (
         <SiteAlert severity="warning" neutral className="w-full">
           {t("waitlist-confirm-invalid")}{" "}
-          <Link href="/espera" className="text-primary underline">
+          <Link href="/espera" className="text-primary-ink underline">
             {t("waitlist-confirm-again")}
           </Link>
         </SiteAlert>

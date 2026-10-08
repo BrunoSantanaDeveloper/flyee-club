@@ -70,11 +70,15 @@ export const muiTheme = createTheme({
     // ---------- Text Colors ---------- //
 
     // ---------- Theme Colors ---------- //
+    // The primary is a FILL (packages/design-tokens/css/yellow.css): the label
+    // on it is the palette's own contrast token, not white. Where MUI paints a
+    // foreground with `main` (text and outlined buttons, links, checked
+    // controls, spinners), style/** overrides it with the ink.
     primary: {
       main: "hsl(var(--primary))",
       light: "hsl(var(--primary-light))",
       dark: "hsl(var(--primary-dark))",
-      contrastText: "hsl(var(--text-contrast))",
+      contrastText: "hsl(var(--primary-contrast))",
     },
     secondary: {
       main: "hsl(var(--secondary))",

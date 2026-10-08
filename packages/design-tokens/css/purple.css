@@ -7,6 +7,8 @@
     --primary: 306 58% 47%;
     --primary-light: 306 58% 57%;
     --primary-dark: 306 58% 37%;
+    --primary-contrast: 0 0% 100%;
+    --primary-ink: 306 58% 47%;
 
     --secondary: 267 66% 60%;
     --secondary-light: 267 66% 70%;
@@ -34,6 +36,8 @@
     --primary: 306 58% 47%;
     --primary-light: 306 58% 57%;
     --primary-dark: 306 58% 37%;
+    --primary-contrast: 0 0% 100%;
+    --primary-ink: 306 58% 47%;
 
     --secondary: 267 66% 60%;
     --secondary-light: 267 66% 70%;

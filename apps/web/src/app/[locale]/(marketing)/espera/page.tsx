@@ -232,7 +232,7 @@ export default async function WaitlistPage() {
 
       <Band angle={-1} decor="dots">
         <div className="flex flex-col items-center gap-6 text-center">
-          <p className="font-display text-display-lg text-text-primary [&_em]:text-primary max-w-3xl font-extrabold [&_em]:not-italic">
+          <p className="font-display text-display-lg text-text-primary site-emphasis max-w-3xl font-extrabold">
             {t.rich("waitlist-band-title", { em: (chunks) => <em>{chunks}</em> })}
           </p>
           <SiteButton plain size="large" variant="contained" href={anchor}>

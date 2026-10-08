@@ -1,0 +1,88 @@
+/* --------------------------- */
+/* Theme Yellow — the palette of the FlyeeClub logo (2026-10-08). */
+/* Primary: the logo yellow #ffcc12 · Secondary: a gold drawn from it. */
+/* Accents (pink, magenta, violet, blue) are the ones the orange theme had. */
+/*                                                                        */
+/* The yellow is a FILL, never a foreground on a light ground: it measures */
+/* 1.5:1 on white and 1.4:1 on the page ground, against the 4.5:1 of WCAG */
+/* AA (3:1 for large text and for icons). So the theme carries two tokens */
+/* beside the usual three:                                                */
+/*   --primary-contrast  the label or icon ON a primary fill: the charcoal */
+/*                       of the logo (8.7:1 on the yellow; white is 1.5:1). */
+/*   --primary-ink       the primary as a foreground on the page: text,    */
+/*                       links, icons, focus rings. The charcoal on a light */
+/*                       ground (13.2:1 on white), the yellow itself on a  */
+/*                       dark one (10.7:1), where it reads.                */
+/* The deep band (--background-deep) is dark in both modes: use --primary  */
+/* there, not the ink.                                                    */
+/* --------------------------- */
+
+@layer base {
+  .theme-yellow {
+    --primary: 47 100% 54%;
+    --primary-light: 47 100% 64%;
+    --primary-dark: 47 100% 44%;
+    --primary-contrast: 0 0% 19%;
+    --primary-ink: 0 0% 19%;
+
+    /* Dark gold: 5.6:1 on white, so it works as text and under a white label. */
+    --secondary: 42 90% 28%;
+    --secondary-light: 42 90% 38%;
+    --secondary-dark: 42 90% 20%;
+
+    --accent-1: 336 87% 52%;
+    --accent-1-light: 336 87% 62%;
+    --accent-1-dark: 336 87% 42%;
+
+    --accent-2: 306 43% 51%;
+    --accent-2-light: 306 43% 61%;
+    --accent-2-dark: 306 43% 41%;
+
+    --accent-3: 262 76% 63%;
+    --accent-3-light: 262 76% 73%;
+    --accent-3-dark: 262 76% 53%;
+
+    --accent-4: 219 89% 63%;
+    --accent-4-light: 219 89% 73%;
+    --accent-4-dark: 219 89% 53%;
+
+    color-scheme: light;
+  }
+  .theme-yellow.dark {
+    --primary: 47 100% 54%;
+    --primary-light: 47 100% 64%;
+    --primary-dark: 47 100% 44%;
+    --primary-contrast: 0 0% 19%;
+    --primary-ink: 47 100% 54%;
+
+    /* A lighter gold as a foreground on the dark ground (7.2:1); the dark
+       step stays the light theme's gold, which holds a white label. */
+    --secondary: 43 85% 48%;
+    --secondary-light: 43 85% 58%;
+    --secondary-dark: 42 90% 28%;
+
+    --accent-1: 336 87% 52%;
+    --accent-1-light: 336 87% 62%;
+    --accent-1-dark: 336 87% 42%;
+
+    --accent-2: 306 43% 51%;
+    --accent-2-light: 306 43% 61%;
+    --accent-2-dark: 306 43% 41%;
+
+    --accent-3: 262 76% 63%;
+    --accent-3-light: 262 76% 73%;
+    --accent-3-dark: 262 76% 53%;
+
+    --accent-4: 219 89% 63%;
+    --accent-4-light: 219 89% 73%;
+    --accent-4-dark: 219 89% 53%;
+
+    color-scheme: dark;
+  }
+
+  /* The deep band is dark in both modes: there the ink is the yellow, so a
+     component written with the ink stays readable when it lands on it. */
+  .theme-yellow .bg-background-deep {
+    --primary-ink: 47 100% 54%;
+  }
+}

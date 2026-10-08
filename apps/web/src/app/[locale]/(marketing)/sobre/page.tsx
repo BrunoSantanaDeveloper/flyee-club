@@ -122,7 +122,7 @@ export default async function AboutPage() {
       </Section>
 
       <Band angle={-1} decor="dots">
-        <p className="font-display text-display-lg text-text-primary [&_em]:text-primary mx-auto max-w-3xl text-center font-extrabold [&_em]:not-italic">
+        <p className="font-display text-display-lg text-text-primary site-emphasis mx-auto max-w-3xl text-center font-extrabold">
           {t.rich("about-band-title", { em: (chunks) => <em>{chunks}</em> })}
         </p>
       </Band>

@@ -76,12 +76,12 @@ export default async function HelpPage() {
                           href={`/ajuda/${article.slug}`}
                           className="group border-grey-50 flex flex-row items-center justify-between gap-2 border-b py-2.5 last:border-b-0"
                         >
-                          <span className="text-text-primary group-hover:text-primary font-medium transition-colors">
+                          <span className="text-text-primary group-hover:text-primary-ink font-medium transition-colors">
                             {article.title}
                           </span>
                           <NiChevronRightSmall
                             size="small"
-                            className="text-text-secondary group-hover:text-primary shrink-0 transition-colors"
+                            className="text-text-secondary group-hover:text-primary-ink shrink-0 transition-colors"
                           />
                         </Link>
                       </li>

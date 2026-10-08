@@ -7,6 +7,8 @@
     --primary: 191 100% 46%;
     --primary-light: 191 100% 56%;
     --primary-dark: 191 100% 36%;
+    --primary-contrast: 0 0% 100%;
+    --primary-ink: 191 100% 46%;
 
     --secondary: 207 85% 42%;
     --secondary-light: 207 85% 52%;
@@ -34,6 +36,8 @@
     --primary: 191 100% 46%;
     --primary-light: 191 100% 56%;
     --primary-dark: 191 100% 36%;
+    --primary-contrast: 0 0% 100%;
+    --primary-ink: 191 100% 46%;
 
     --secondary: 207 85% 42%;
     --secondary-light: 207 85% 52%;

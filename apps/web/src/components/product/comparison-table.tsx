@@ -113,7 +113,7 @@ export default function ComparisonTable({
         tabIndex={0}
         role="region"
         aria-label={caption}
-        className="focus-visible:outline-primary overflow-x-auto rounded-2xl focus-visible:outline-2"
+        className="focus-visible:outline-primary-ink overflow-x-auto rounded-2xl focus-visible:outline-2"
       >
         <Table size="small" className="min-w-max">
           <caption className="sr-only">{caption}</caption>

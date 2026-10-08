@@ -184,7 +184,7 @@ export default function ModuleFormDialog({
               />
               <Box
                 aria-hidden
-                className="bg-primary-light/10 text-primary mb-6 flex h-10 w-10 flex-none items-center justify-center rounded-xl"
+                className="bg-primary/20 text-primary-ink mb-6 flex h-10 w-10 flex-none items-center justify-center rounded-xl"
               >
                 <CatalogIcon name={form.icon} size="medium" />
               </Box>

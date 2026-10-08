@@ -94,7 +94,7 @@ export default function BillingProfileCard({
       <Card component="section">
         <CardContent className="flex flex-col gap-4">
           <Box className="flex flex-wrap items-center gap-2">
-            <NiCreditCard size="medium" className="text-primary dark:text-primary-light" />
+            <NiCreditCard size="medium" className="text-primary-ink" />
             <Typography variant="h5" component="h2" className="card-title mb-0">
               {t("billing-profile-title")}
             </Typography>

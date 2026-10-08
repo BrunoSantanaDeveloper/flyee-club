@@ -116,7 +116,7 @@ export default function NewsView({ state }: { state: NewsState }) {
                         href={item.verifyUrl}
                         target="_blank"
                         rel="noopener"
-                        className="text-primary text-sm underline"
+                        className="text-primary-ink text-sm underline"
                       >
                         {t("module-version-verify")}
                       </Link>

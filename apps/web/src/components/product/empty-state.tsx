@@ -50,7 +50,7 @@ export default function EmptyState({
       )}
     >
       {icon && (
-        <span className="bg-primary/10 text-primary flex h-14 w-14 items-center justify-center rounded-2xl [&_svg]:h-7 [&_svg]:w-7">
+        <span className="bg-primary/20 text-primary-ink flex h-14 w-14 items-center justify-center rounded-2xl [&_svg]:h-7 [&_svg]:w-7">
           {icon}
         </span>
       )}

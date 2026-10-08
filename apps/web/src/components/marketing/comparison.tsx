@@ -39,7 +39,7 @@ export default function Comparison({ before, after }: { before: ComparisonSide; 
       <div className="z-10 -my-3 flex items-center justify-center md:-mx-5 md:my-0">
         <span
           aria-hidden
-          className="border-background bg-background-paper text-primary shadow-darker-sm grid h-12 w-12 rotate-90 place-items-center rounded-full border-4 md:rotate-0"
+          className="border-background bg-background-paper text-primary-ink shadow-darker-sm grid h-12 w-12 rotate-90 place-items-center rounded-full border-4 md:rotate-0"
         >
           <NiArrowRight size="medium" />
         </span>
@@ -54,7 +54,7 @@ export default function Comparison({ before, after }: { before: ComparisonSide; 
               key={item}
               className="border-text-contrast/10 text-text-contrast/85 flex items-start gap-2.5 border-t py-2.5 text-base leading-6"
             >
-              <NiCheck size="small" className="text-secondary-light mt-0.5 flex-none" />
+              <NiCheck size="small" className="text-primary mt-0.5 flex-none" />
               {item}
             </li>
           ))}

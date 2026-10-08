@@ -71,7 +71,7 @@ export default async function BlogPostPage({ params }: Params) {
         <div className="mx-auto w-full max-w-prose">
           <Link
             href="/blog"
-            className="text-text-secondary hover:text-primary mb-6 inline-flex flex-row items-center gap-1 text-sm font-medium transition-colors"
+            className="text-text-secondary hover:text-primary-ink mb-6 inline-flex flex-row items-center gap-1 text-sm font-medium transition-colors"
           >
             <NiChevronLeftSmall size="small" />
             {t("blog-article-back")}

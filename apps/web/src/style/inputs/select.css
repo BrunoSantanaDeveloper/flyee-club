@@ -8,7 +8,7 @@
   .MuiSelect-icon {
     @apply text-text-secondary top-[calc(50%-0.625rem)] right-[0.625rem];
     &:hover {
-      @apply text-primary! bg-transparent!;
+      @apply text-primary-ink! bg-transparent!;
     }
   }
 

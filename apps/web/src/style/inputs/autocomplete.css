@@ -44,7 +44,7 @@
       @apply bg-background-paper;
     }
     &:hover {
-      @apply bg-background-paper outline-primary/40 border-transparent outline-2 -outline-offset-1;
+      @apply bg-background-paper outline-primary-ink/60 border-transparent outline-2 -outline-offset-1;
     }
     &.Mui-focused:hover {
       @apply bg-background-paper!;
@@ -73,7 +73,7 @@
     .MuiInputBase-root.MuiInput-root {
       @apply bg-grey-25 font-body text-text-primary placeholder:opacity-disabled h-auto min-h-0 rounded-lg px-4! py-1.5! pr-8! text-base leading-5 outline-2 -outline-offset-1 outline-transparent transition-all;
       &.Mui-focused {
-        @apply outline-primary/40! border-transparent outline-2 -outline-offset-1;
+        @apply outline-primary-ink/60! border-transparent outline-2 -outline-offset-1;
       }
       &:hover:not(.Mui-disabled) {
         @apply bg-grey-50;
@@ -107,7 +107,7 @@
       .MuiInputBase-root.MuiInput-root {
         @apply border-grey-200 font-body text-text-primary placeholder:opacity-disabled h-auto min-h-0 rounded-lg border border-solid bg-transparent px-4! py-[calc(0.375rem-1px)]! pr-8! text-base leading-5 outline-2 -outline-offset-1 outline-transparent transition-all;
         &.Mui-focused {
-          @apply outline-primary/40 border-transparent outline-2 -outline-offset-1;
+          @apply outline-primary-ink/60 border-transparent outline-2 -outline-offset-1;
         }
         &:hover:not(.Mui-disabled) {
           @apply border-grey-500 bg-transparent;
@@ -146,7 +146,7 @@
   .MuiAutocomplete-popupIndicator {
     @apply text-text-secondary p-0.5!;
     &:hover {
-      @apply text-primary! bg-transparent!;
+      @apply text-primary-ink! bg-transparent!;
     }
   }
   .MuiChip-deleteIcon {
@@ -174,7 +174,7 @@
 
   /* Outlined class  */
   .MuiAutocomplete-popper.outlined .MuiAutocomplete-paper {
-    @apply outline-primary/40 mt-1 mb-1 rounded-lg outline-2 -outline-offset-1;
+    @apply outline-primary-ink/60 mt-1 mb-1 rounded-lg outline-2 -outline-offset-1;
   }
 
   /* Autocomplete items */
@@ -187,12 +187,12 @@
 
     &:active,
     &.active {
-      @apply bg-grey-500/15 text-primary;
+      @apply bg-grey-500/15 text-primary-ink;
     }
 
     &.Mui-selected,
     &[aria-selected="true"] {
-      @apply bg-grey-500/10! text-primary;
+      @apply bg-grey-500/10! text-primary-ink;
     }
 
     &.Mui-focused,

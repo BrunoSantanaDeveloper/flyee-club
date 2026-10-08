@@ -22,7 +22,7 @@
     &.Mui-checked,
     &.MuiCheckbox-indeterminate {
       &.MuiCheckbox-colorPrimary .contained {
-        @apply text-primary;
+        @apply text-primary-ink;
       }
 
       &.MuiCheckbox-colorSecondary .contained {
@@ -123,14 +123,14 @@
       .MuiCheckbox-root.MuiCheckbox-colorPrimary.MuiCheckbox-indeterminate
     ) {
     &:hover svg {
-      @apply text-primary-light;
+      @apply text-primary-ink/80;
     }
   }
 
   .MuiCheckbox-root.MuiCheckbox-colorPrimary.Mui-checked:not(.Mui-disabled),
   .MuiCheckbox-root.MuiCheckbox-colorPrimary.Mui-indeterminate:not(.Mui-disabled) {
     &:hover svg {
-      @apply text-primary-light;
+      @apply text-primary-ink/80;
     }
   }
 

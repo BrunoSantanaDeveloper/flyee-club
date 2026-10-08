@@ -17,7 +17,7 @@
 
     &.Mui-selected,
     &.Mui-focused {
-      @apply bg-grey-25 text-primary;
+      @apply bg-grey-25 text-primary-ink;
     }
 
     .MuiCheckbox-root {
@@ -54,7 +54,7 @@
 
   .MuiSimpleTreeView-root li[aria-selected="true"] > .MuiTreeItem2-content,
   .MuiRichTreeView-root li[aria-selected="true"] > .MuiTreeItem2-content {
-    @apply bg-grey-25 text-primary;
+    @apply bg-grey-25 text-primary-ink;
   }
 
   .MuiTreeItem-labelInput {
@@ -62,6 +62,6 @@
   }
 
   div[class*="MuiTreeItemDragAndDropOverlay-root"] {
-    @apply border-primary/50 rounded-none;
+    @apply border-primary-ink/50 rounded-none;
   }
 }

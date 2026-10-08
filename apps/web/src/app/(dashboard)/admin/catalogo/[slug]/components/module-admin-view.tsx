@@ -159,7 +159,7 @@ export default function ModuleAdminView({ state, slug }: { state: ModuleAdminSta
             <Box className="flex flex-row items-center gap-3">
               <Box
                 aria-hidden
-                className="bg-primary-light/10 text-primary flex h-12 w-12 flex-none items-center justify-center rounded-2xl"
+                className="bg-primary/20 text-primary-ink flex h-12 w-12 flex-none items-center justify-center rounded-2xl"
               >
                 <CatalogIcon name={module.icon} size="medium" />
               </Box>

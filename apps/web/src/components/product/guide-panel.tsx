@@ -183,7 +183,7 @@ export default function GuidePanel({
                       color="primary"
                       aria-label={t("module-lesson-play", { title: tab.video.title })}
                     >
-                      <Box className="bg-primary text-text-contrast flex h-16 w-16 items-center justify-center rounded-full">
+                      <Box className="bg-primary text-primary-contrast flex h-16 w-16 items-center justify-center rounded-full">
                         <NiPlay size="large" />
                       </Box>
                       <Typography variant="body2" className="text-text-secondary">

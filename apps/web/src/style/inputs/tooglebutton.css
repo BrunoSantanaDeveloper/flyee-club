@@ -23,7 +23,7 @@
 
     &.Mui-selected,
     &.Mui-selected:hover {
-      @apply bg-primary text-text-contrast;
+      @apply bg-primary text-primary-contrast;
     }
 
     &.Mui-disabled {
@@ -75,7 +75,7 @@
   .MuiToggleButton-root.outlined {
     &.Mui-selected,
     &.Mui-selected:hover {
-      @apply border-primary! text-primary bg-transparent;
+      @apply border-primary-ink! text-primary-ink bg-transparent;
     }
   }
 
@@ -209,7 +209,7 @@
 .dark {
   .MuiToggleButton-root.Mui-selected,
   .MuiToggleButton-root.Mui-selected:hover {
-    @apply bg-primary-dark text-text-contrast;
+    @apply bg-primary-dark text-primary-contrast;
   }
 
   .MuiToggleButton-root.outlined.Mui-selected,

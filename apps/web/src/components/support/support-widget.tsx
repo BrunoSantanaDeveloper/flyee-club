@@ -141,7 +141,7 @@ export default function SupportWidget({ support }: { support?: SupportChannels }
       aria-hidden="true"
       className={cn(
         "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-        CHANNEL_TONE[channel.key] ?? "bg-primary/10 text-primary",
+        CHANNEL_TONE[channel.key] ?? "bg-primary/20 text-primary-ink",
       )}
     >
       {channel.icon}

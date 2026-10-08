@@ -15,7 +15,7 @@ export default function DataVizPlaceholder({ label }: { label?: string }) {
       {/* KPI row — one harmonic hue per metric family, like the real product. */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { width: 0.9, bar: "bg-primary/40" },
+          { width: 0.9, bar: "bg-primary/55" },
           { width: 0.55, bar: "bg-accent-1/40" },
           { width: 0.7, bar: "bg-secondary/40" },
         ].map((kpi, index) => (

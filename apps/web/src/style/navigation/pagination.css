@@ -44,7 +44,7 @@
       }
 
       &.Mui-selected {
-        @apply bg-grey-25 text-primary;
+        @apply bg-grey-25 text-primary-ink;
       }
 
       &.Mui-disabled {
@@ -54,11 +54,11 @@
 
     .MuiButtonBase-root.MuiPaginationItem-colorPrimary {
       &:hover {
-        @apply bg-primary/10 text-primary;
+        @apply bg-primary/20 text-primary-ink;
       }
 
       &.Mui-selected {
-        @apply bg-primary text-text-contrast;
+        @apply bg-primary text-primary-contrast;
       }
 
       &.Mui-disabled {
@@ -84,7 +84,7 @@
       .MuiButtonBase-root.MuiPaginationItem-root {
         @apply bg-background-paper shadow-darker-xs outline-line outline -outline-offset-1 backdrop-blur-xs;
         &:hover {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }
@@ -118,21 +118,21 @@
 
     &.MuiButtonBase-root.MuiPaginationItem-root.MuiPaginationItem-outlined.MuiPaginationItem-colorPrimary {
       &:hover {
-        @apply border-primary bg-primary/10;
+        @apply border-primary-ink bg-primary/20;
       }
 
       &.Mui-selected {
-        @apply border-primary bg-primary/15 text-primary-dark;
+        @apply border-primary-ink bg-primary/30 text-primary-ink;
       }
     }
 
     &.MuiButtonBase-root.MuiPaginationItem-root.MuiPaginationItem-outlined.MuiPaginationItem-colorSecondary {
       &:hover {
-        @apply border-primary bg-secondary/10;
+        @apply border-secondary bg-secondary/10;
       }
 
       &.Mui-selected {
-        @apply border-primary bg-secondary/15 text-secondary-dark;
+        @apply border-secondary bg-secondary/15 text-secondary-dark;
       }
     }
   }

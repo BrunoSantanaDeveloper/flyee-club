@@ -8,7 +8,7 @@
     @apply bg-grey-25 font-body text-text-primary placeholder:opacity-disabled h-auto min-h-0 rounded-lg px-4 py-2 text-base leading-5 outline-2 -outline-offset-1 outline-transparent transition-all;
 
     &.Mui-focused:not(.Mui-disabled):not(.Mui-readOnly) {
-      @apply outline-primary/40 border-transparent outline-2 -outline-offset-2;
+      @apply outline-primary-ink/60 border-transparent outline-2 -outline-offset-2;
     }
 
     &:hover:not(.Mui-disabled):not(.Mui-readOnly) {
@@ -46,11 +46,11 @@
       @apply bg-background-paper shadow-darker-xs outline-line font-body text-text-primary placeholder:opacity-disabled h-auto min-h-0 rounded-lg px-4 py-2 text-base leading-5 outline -outline-offset-1 backdrop-blur-xs transition-all;
 
       &.Mui-focused:not(.Mui-disabled):not(.Mui-readOnly) {
-        @apply outline-primary/40 border-transparent outline-2 -outline-offset-2;
+        @apply outline-primary-ink/60 border-transparent outline-2 -outline-offset-2;
       }
 
       &:hover:not(.Mui-disabled):not(.Mui-readOnly) {
-        @apply bg-background-paper text-primary;
+        @apply bg-background-paper text-primary-ink;
       }
 
       &.Mui-focused:hover:not(.Mui-disabled):not(.Mui-readOnly) {
@@ -82,7 +82,7 @@
       /* @apply border-grey-200 border border-solid bg-transparent px-[calc(1rem-1px)]! py-[calc(.5rem-1px)]! outline-2 -outline-offset-1 outline-transparent transition-all; */
 
       &.Mui-focused:not(.Mui-disabled):not(.Mui-readOnly) {
-        @apply outline-primary/40 border-transparent outline-2 -outline-offset-1;
+        @apply outline-primary-ink/60 border-transparent outline-2 -outline-offset-1;
       }
 
       &:hover:not(.Mui-disabled):not(.Mui-readOnly) {
@@ -139,7 +139,7 @@
 
     &.Mui-focused:not(.Mui-disabled):not(.Mui-readOnly) .MuiOutlinedInput-notchedOutline,
     &.Mui-focused:not(.Mui-disabled):not(.Mui-readOnly) .MuiPickersOutlinedInput-notchedOutline {
-      @apply border-primary/40;
+      @apply border-primary-ink/60;
     }
 
     &.MuiInputBase-sizeSmall {
@@ -196,7 +196,7 @@
     @apply bg-grey-25 placeholder:opacity-disabled h-auto min-h-0 rounded-lg p-0 outline-2 -outline-offset-1 outline-transparent transition-all;
 
     &.Mui-focused:not(.Mui-disabled):not(.Mui-readOnly) {
-      @apply bg-grey-25 outline-primary/40 border-transparent outline-2 -outline-offset-1;
+      @apply bg-grey-25 outline-primary-ink/60 border-transparent outline-2 -outline-offset-1;
     }
     &:hover:not(.Mui-disabled):not(.Mui-readOnly) {
       @apply bg-grey-50;
@@ -242,7 +242,7 @@
     }
 
     &:hover:not(.Mui-disabled) {
-      @apply bg-background-paper! outline-primary/40 border-transparent outline-2 -outline-offset-1;
+      @apply bg-background-paper! outline-primary-ink/60 border-transparent outline-2 -outline-offset-1;
     }
 
     &.Mui-focused:hover {
@@ -351,7 +351,7 @@
 
   .MuiInputAdornment-root .MuiButtonBase-root:hover {
     svg {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 
@@ -371,7 +371,7 @@
 
   .MuiInputAdornment-root .MuiButtonBase-root {
     &:hover {
-      @apply text-primary bg-transparent;
+      @apply text-primary-ink bg-transparent;
     }
   }
 

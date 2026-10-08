@@ -3,6 +3,7 @@
   "contract": [
     "Every content block sits in <Section>/<Container>/<SectionHeader> — spacing/width come from marketing tokens, never per-page values",
     "Tokens only: hsl(var(--token)) / token Tailwind classes; must look right in the active palette × light/dark",
+    "The primary is the yellow of the logo, a FILL (WCAG AA, docs/DESIGN.md): never text-primary, ring-primary or outline-primary on a light ground (1.5:1). A label on a primary fill is text-primary-contrast; the primary as text, link, icon or focus ring is text-primary-ink (charcoal in light, yellow in dark); bare text-primary only on the deep band. A tint of the primary is /20 or more. The accent phrase of a headline is <em> inside an element with the site-emphasis class",
     "Headings: font-display text-display-{2xl,xl,lg,md} (fluid clamp scale, no breakpoint font jumps). The face has two weights: font-bold (Black) on the display scale, font-normal (Regular) on any heading under 24px",
     "Copy through the marketing i18n namespace in BOTH locales (pt-BR, en)",
     "Icons only via @/icons/nexture/ni-* alias; meaningful concept icons, never decoration",
@@ -252,6 +253,13 @@
       "role": "desire",
       "props": "items: string[], accentEvery?: number",
       "use": "indexed hairline grid of categories (e.g. the seven catalog trails) with periodic deep accent cells; secondary-tone ordinals"
+    },
+    {
+      "name": "Eyebrow",
+      "file": "eyebrow.tsx",
+      "role": "layout",
+      "props": "children, className",
+      "use": "the short label above a headline: words in a text colour after a yellow bar (the yellow never colours words on a light ground). SectionHeader and Hero render it from their eyebrow prop; use it directly only where neither fits"
     },
     {
       "name": "LocaleLink",

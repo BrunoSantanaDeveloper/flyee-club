@@ -33,8 +33,8 @@
 
 /* --------- Theme (design tokens: source of truth in packages/design-tokens) --------- */
 @import "@flyee/design-tokens/css/common.css";
-/* One locked palette, provisional (2026-10-01): orange.css. The other theme files stay in the package but are not loaded. */
-@import "@flyee/design-tokens/css/orange.css";
+/* One locked palette: yellow.css, the yellow of the logo (2026-10-08). The other theme files stay in the package but are not loaded. */
+@import "@flyee/design-tokens/css/yellow.css";
 @import "@flyee/design-tokens/css/marketing.css";
 
 /* --------- Page (scrollbars, the hero entrance of the public site) --------- */

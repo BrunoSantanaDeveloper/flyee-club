@@ -54,7 +54,7 @@ export default async function RevalidatePage({
   return (
     <ConsentShell>
       <Box className="flex flex-col items-center gap-2 text-center">
-        <NiRefresh size="large" className="text-primary" />
+        <NiRefresh size="large" className="text-primary-ink" />
         <Typography variant="h1" component="h1" className="mb-0">
           {t("revalidate-page-title")}
         </Typography>

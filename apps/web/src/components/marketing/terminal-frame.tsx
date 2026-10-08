@@ -69,7 +69,7 @@ export default function TerminalFrame({
             return (
               <span key={index} className={cn("whitespace-pre-wrap", LINE[kind])}>
                 {kind === "command" && (
-                  <span aria-hidden className="text-secondary-light mr-2 select-none">
+                  <span aria-hidden className="text-primary mr-2 select-none">
                     $
                   </span>
                 )}

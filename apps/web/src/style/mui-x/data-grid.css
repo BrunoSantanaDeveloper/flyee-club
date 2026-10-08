@@ -16,7 +16,7 @@
     @apply border-transparent;
 
     &.Mui-selected {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 
@@ -104,7 +104,7 @@
 
   .MuiDataGrid-pinnedRows {
     .MuiDataGrid-footerCell {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 
@@ -243,14 +243,14 @@
   }
 
   .MuiDataGrid-resizablePanelHandle--horizontal {
-    @apply border-primary/40 -ml-2 border-0;
+    @apply border-primary-ink/60 -ml-2 border-0;
     &:hover {
       @apply border-t-0! border-b-0! border-l-2;
     }
   }
 
   .MuiDataGrid-resizablePanelHandle--vertical {
-    @apply border-primary/40 border-0;
+    @apply border-primary-ink/60 border-0;
     &:hover {
       @apply border-t-2 border-r-0! border-l-0!;
     }

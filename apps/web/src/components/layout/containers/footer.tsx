@@ -33,7 +33,7 @@ export default function Footer() {
             size="tiny"
             color="text-secondary"
             variant="text"
-            className="hover:text-primary !bg-transparent font-normal"
+            className="hover:text-primary-ink !bg-transparent font-normal"
             component={Link}
             href={link.href}
           >

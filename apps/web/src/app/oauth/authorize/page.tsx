@@ -48,10 +48,10 @@ import { isTier } from "@flyee/billing/entitlements";
  */
 
 const SCOPE_ICONS: Record<OauthScope, React.ReactNode> = {
-  "profile:read": <NiUser size="medium" className="text-primary" />,
-  "catalog:read": <NiBook size="medium" className="text-primary" />,
-  "modules:download": <NiDownloadCloud size="medium" className="text-primary" />,
-  "telemetry:write": <NiChartLine size="medium" className="text-primary" />,
+  "profile:read": <NiUser size="medium" className="text-primary-ink" />,
+  "catalog:read": <NiBook size="medium" className="text-primary-ink" />,
+  "modules:download": <NiDownloadCloud size="medium" className="text-primary-ink" />,
+  "telemetry:write": <NiChartLine size="medium" className="text-primary-ink" />,
 };
 
 export default async function AuthorizePage({
@@ -170,9 +170,9 @@ export default async function AuthorizePage({
     <ConsentShell>
       <Box className="flex flex-col items-center gap-2 text-center">
         {revalidating ? (
-          <NiRefresh size="large" className="text-primary" />
+          <NiRefresh size="large" className="text-primary-ink" />
         ) : (
-          <NiTerminal size="large" className="text-primary" />
+          <NiTerminal size="large" className="text-primary-ink" />
         )}
         <Typography variant="h1" component="h1" className="mb-0">
           {revalidating ? t("oauth-revalidate-title") : t("oauth-authorize-title")}

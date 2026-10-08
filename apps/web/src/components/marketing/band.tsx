@@ -9,7 +9,7 @@ const SPACING = {
 
 const BACKGROUND = {
   contrast: "bg-background-paper border-grey-100 border-y",
-  "primary-soft": "bg-primary/5",
+  "primary-soft": "bg-primary/10",
   paper: "bg-background-paper",
 } as const;
 

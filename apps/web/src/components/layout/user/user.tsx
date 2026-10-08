@@ -90,7 +90,7 @@ export default function User() {
           size="large"
           color="text-primary"
           className={cn(
-            "hover:bg-grey-25 icon-only hover-icon-shrink [&.active]:text-primary group mr-1 ml-1 p-0! hover:p-1.5! md:hidden",
+            "hover:bg-grey-25 icon-only hover-icon-shrink [&.active]:text-primary-ink group mr-1 ml-1 p-0! hover:p-1.5! md:hidden",
             open && "active bg-grey-25 p-1.5!",
           )}
           onClick={handleToggle}

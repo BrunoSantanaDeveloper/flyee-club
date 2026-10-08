@@ -19,7 +19,7 @@ The e-mails the platform sends to members and to contacts of the list: the Resen
 
 ## Templates
 
-`src/templates/` holds one React Email component per message, all inside `shell.tsx` (language on the document, preview line, one card, small print, signature). Inline styles only: e-mail clients ignore stylesheets, so the colours in `shell.tsx` are the light values of `packages/design-tokens` copied by hand. Keep them aligned when the palette changes. The button carries the charcoal label on the orange, not white (`docs/DESIGN.md`, palette usage).
+`src/templates/` holds one React Email component per message, all inside `shell.tsx` (language on the document, preview line, one card, small print, signature). Inline styles only: e-mail clients ignore stylesheets, so the colours in `shell.tsx` are the light values of `packages/design-tokens` copied by hand. Keep them aligned when the palette changes. The button carries the charcoal label on the yellow, not white, and the yellow is never the colour of text or of a link (`docs/DESIGN.md`, palette usage).
 
 | Sender | Message | Can the reader stop it? |
 | --- | --- | --- |

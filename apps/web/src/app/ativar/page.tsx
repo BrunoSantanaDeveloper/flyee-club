@@ -43,10 +43,10 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  */
 
 const SCOPE_ICONS: Record<OauthScope, React.ReactNode> = {
-  "profile:read": <NiUser size="medium" className="text-primary" />,
-  "catalog:read": <NiBook size="medium" className="text-primary" />,
-  "modules:download": <NiDownloadCloud size="medium" className="text-primary" />,
-  "telemetry:write": <NiChartLine size="medium" className="text-primary" />,
+  "profile:read": <NiUser size="medium" className="text-primary-ink" />,
+  "catalog:read": <NiBook size="medium" className="text-primary-ink" />,
+  "modules:download": <NiDownloadCloud size="medium" className="text-primary-ink" />,
+  "telemetry:write": <NiChartLine size="medium" className="text-primary-ink" />,
 };
 
 const ERRORS = ["invalid", "expired", "plan", "workspace", "consent", "unavailable"] as const;
@@ -140,7 +140,7 @@ export default async function ActivatePage({
     return (
       <ConsentShell>
         <Box className="flex flex-col items-center gap-2 text-center">
-          <NiTerminal size="large" className="text-primary" />
+          <NiTerminal size="large" className="text-primary-ink" />
           <Typography variant="h1" component="h1" className="mb-0">
             {t("device-title")}
           </Typography>
@@ -198,7 +198,7 @@ export default async function ActivatePage({
   return (
     <ConsentShell>
       <Box className="flex flex-col items-center gap-2 text-center">
-        <NiTerminal size="large" className="text-primary" />
+        <NiTerminal size="large" className="text-primary-ink" />
         <Typography variant="h1" component="h1" className="mb-0">
           {t("oauth-authorize-title")}
         </Typography>

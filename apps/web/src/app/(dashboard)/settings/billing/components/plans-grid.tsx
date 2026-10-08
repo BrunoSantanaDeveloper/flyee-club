@@ -408,7 +408,7 @@ export default function PlansGrid({
                             variant="body2"
                             className="text-text-secondary flex items-start gap-1.5"
                           >
-                            <NiCheck size="small" className="text-primary mt-0.5 flex-none" />
+                            <NiCheck size="small" className="text-primary-ink mt-0.5 flex-none" />
                             {t(FEATURE_LABEL[key as FeatureKey])}
                           </Typography>
                         ))}
@@ -418,7 +418,7 @@ export default function PlansGrid({
                             variant="body2"
                             className="text-text-secondary flex items-start gap-1.5"
                           >
-                            <NiCheck size="small" className="text-primary mt-0.5 flex-none" />
+                            <NiCheck size="small" className="text-primary-ink mt-0.5 flex-none" />
                             {t("billing-feature-devices", { count: devices })}
                           </Typography>
                         )}

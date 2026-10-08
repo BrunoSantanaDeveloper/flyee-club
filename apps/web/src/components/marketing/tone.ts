@@ -13,7 +13,8 @@
 export type Tone = "primary" | "secondary" | "accent-1" | "accent-2" | "accent-3" | "accent-4";
 
 export const TONE: Record<Tone, { text: string; softBg: string; cssVar: string }> = {
-  primary: { text: "text-primary", softBg: "bg-primary/10", cssVar: "--primary" },
+  // The yellow is a fill: as an icon or a word on the page it is the ink, over a tint strong enough to show.
+  primary: { text: "text-primary-ink", softBg: "bg-primary/20", cssVar: "--primary" },
   secondary: { text: "text-secondary", softBg: "bg-secondary/10", cssVar: "--secondary" },
   "accent-1": { text: "text-accent-1", softBg: "bg-accent-1/10", cssVar: "--accent-1" },
   "accent-2": { text: "text-accent-2", softBg: "bg-accent-2/10", cssVar: "--accent-2" },

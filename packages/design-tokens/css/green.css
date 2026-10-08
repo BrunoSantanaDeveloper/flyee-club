@@ -1,6 +1,6 @@
 /* --------------------------- */
 /* Theme Green — the palette inherited with the base project. Not loaded: */
-/* the site uses orange.css provisionally (apps/web/src/style/base.css). */
+/* the site uses yellow.css (apps/web/src/style/base.css).               */
 /* Primary: Teal #177c81 · Secondary: Camel #c09362 */
 /* Accents derived outside the main brand colors, for highlights/charts:  */
 /* jade, slate blue, terracotta, plum. Red stays reserved for risk/error. */
@@ -11,6 +11,8 @@
     --primary: 183 70% 30%;
     --primary-light: 183 70% 40%;
     --primary-dark: 183 70% 20%;
+    --primary-contrast: 0 0% 100%;
+    --primary-ink: 183 70% 30%;
 
     --secondary: 31 43% 57%;
     --secondary-light: 31 43% 67%;
@@ -38,6 +40,8 @@
     --primary: 183 55% 40%;
     --primary-light: 183 55% 50%;
     --primary-dark: 183 55% 30%;
+    --primary-contrast: 0 0% 100%;
+    --primary-ink: 183 55% 40%;
 
     --secondary: 31 45% 62%;
     --secondary-light: 31 45% 72%;

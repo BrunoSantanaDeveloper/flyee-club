@@ -137,6 +137,12 @@ const config: Config = {
           DEFAULT: "hsl(var(--primary))",
           light: "hsl(var(--primary-light))",
           dark: "hsl(var(--primary-dark))",
+          // The yellow is a fill, never a foreground on a light ground
+          // (packages/design-tokens/css/yellow.css). `contrast` is the label
+          // or icon ON a primary fill; `ink` is the primary as text, link,
+          // icon or focus ring on the page: charcoal in light, yellow in dark.
+          contrast: "hsl(var(--primary-contrast))",
+          ink: "hsl(var(--primary-ink))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

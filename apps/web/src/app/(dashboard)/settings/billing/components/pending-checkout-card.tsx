@@ -72,7 +72,7 @@ export default function PendingCheckoutCard({
       <Card component="section">
         <CardContent className="flex flex-col gap-4">
           <Box className="flex flex-wrap items-center gap-2">
-            <NiClock size="medium" className="text-primary dark:text-primary-light" />
+            <NiClock size="medium" className="text-primary-ink" />
             <Typography variant="h5" component="h2" className="card-title mb-0">
               {t("billing-pending-title")}
             </Typography>

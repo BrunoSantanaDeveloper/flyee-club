@@ -215,7 +215,7 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
                         ) : null}
                         <Link
                           href={version.verify_url}
-                          className="text-primary text-sm underline"
+                          className="text-primary-ink text-sm underline"
                           target="_blank"
                           rel="noopener"
                         >
@@ -244,7 +244,7 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
           <Card>
             <CardContent className="flex flex-col gap-3">
               <Box className="flex flex-row items-center gap-2">
-                <NiShieldCheck size="medium" className="text-primary" aria-hidden />
+                <NiShieldCheck size="medium" className="text-primary-ink" aria-hidden />
                 <Typography variant="subtitle1" component="h2" className="mb-0">
                   {t("module-permissions-title")}
                 </Typography>
@@ -274,7 +274,7 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
           <Card>
             <CardContent className="flex flex-col gap-3">
               <Box className="flex flex-row items-center gap-2">
-                <NiKey size="medium" className="text-primary" aria-hidden />
+                <NiKey size="medium" className="text-primary-ink" aria-hidden />
                 <Typography variant="subtitle1" component="h2" className="mb-0">
                   {t("module-credentials-title")}
                 </Typography>
@@ -298,7 +298,7 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
                       {credential.url ? (
                         <Link
                           href={credential.url}
-                          className="text-primary text-sm underline"
+                          className="text-primary-ink text-sm underline"
                           target="_blank"
                           rel="noopener"
                         >

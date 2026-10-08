@@ -17,9 +17,15 @@
       @apply text-grey-200;
     }
 
+    /* MUI's own radio icons take the colour of the root: palette.primary.main,
+       the yellow (1.5:1 on a light ground). The checked radio is the ink. */
+    &.Mui-checked.MuiRadio-colorPrimary {
+      @apply text-primary-ink;
+    }
+
     &.Mui-checked {
       &.MuiRadio-colorPrimary .contained {
-        @apply text-primary;
+        @apply text-primary-ink;
       }
 
       &.MuiRadio-colorSecondary .contained {
@@ -118,14 +124,14 @@
   .MuiFormControlLabel-root:not(.Mui-disabled):has(.MuiRadio-root.MuiRadio-colorPrimary.Mui-checked),
   .MuiFormControlLabel-root:not(.Mui-disabled):has(.MuiRadio-root.MuiRadio-colorPrimary.MuiRadio-indeterminate) {
     &:hover svg {
-      @apply text-primary-light;
+      @apply text-primary-ink/80;
     }
   }
 
   .MuiRadio-root.MuiRadio-colorPrimary.Mui-checked:not(.Mui-disabled),
   .MuiRadio-root.MuiRadio-colorPrimary.Mui-indeterminate:not(.Mui-disabled) {
     &:hover svg {
-      @apply text-primary-light;
+      @apply text-primary-ink/80;
     }
   }
 

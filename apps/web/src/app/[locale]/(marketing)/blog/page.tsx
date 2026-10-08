@@ -84,7 +84,7 @@ export default async function BlogPage() {
                     </p>
                     <h2
                       className={cn(
-                        "font-display text-text-primary group-hover:text-primary transition-colors",
+                        "font-display text-text-primary group-hover:text-primary-ink transition-colors",
                         featured ? "text-display-md font-bold" : "text-xl font-normal",
                       )}
                     >

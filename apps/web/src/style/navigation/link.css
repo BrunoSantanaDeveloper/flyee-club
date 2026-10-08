@@ -6,7 +6,7 @@
   }
 
   .link-primary {
-    @apply text-primary underline;
+    @apply text-primary-ink underline;
     &:hover {
       @apply no-underline;
     }

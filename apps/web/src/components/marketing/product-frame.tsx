@@ -58,7 +58,7 @@ function PlaceholderApp() {
     <div className="flex aspect-[16/10] w-full">
       {/* Sidebar */}
       <div className="border-grey-100 bg-grey-20 hidden w-1/5 flex-col gap-2 border-r p-4 sm:flex">
-        <span className="bg-primary/30 h-3 w-3/4 rounded-full" />
+        <span className="bg-primary/45 h-3 w-3/4 rounded-full" />
         <span className="bg-grey-100 mt-3 h-2 w-full rounded-full" />
         <span className="bg-grey-100 h-2 w-5/6 rounded-full" />
         <span className="bg-grey-100 h-2 w-full rounded-full" />
@@ -68,7 +68,7 @@ function PlaceholderApp() {
       <div className="flex flex-1 flex-col gap-3 p-4 sm:p-6">
         <span className="bg-grey-200 h-3 w-1/3 rounded-full" />
         <div className="grid grid-cols-3 gap-3">
-          <span className="bg-primary/10 h-16 rounded-xl" />
+          <span className="bg-primary/20 h-16 rounded-xl" />
           <span className="bg-accent-1/10 h-16 rounded-xl" />
           <span className="bg-accent-2/10 h-16 rounded-xl" />
         </div>

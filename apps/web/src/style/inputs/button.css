@@ -23,11 +23,11 @@
      file outside the showcase ever used.
 
      The ring is the template's shape — ring-2 with an offset — at FULL token
-     opacity rather than the template's /40. Measured against this palette,
-     `ring-primary/40` lands at 1.76:1 against paper and 1.76:1 against the
-     dark surface, well under the 3:1 a focus indicator owes (WCAG 2.4.11).
-     Full opacity gives 4.89:1 light and 4.23:1 dark. A focus ring nobody can
-     see is not a focus ring.
+     opacity rather than the template's /40, and in the INK, not the primary:
+     the yellow of this palette measures 1.5:1 on paper, well under the 3:1 a
+     focus indicator owes (WCAG 1.4.11). The ink is the charcoal on a light
+     ground (13.2:1) and the yellow on a dark one (10.7:1). A focus ring
+     nobody can see is not a focus ring.
 
      ButtonBase, not Button: IconButton, Tab, MenuItem, ListItemButton,
      ToggleButton, Checkbox, Radio and Switch all build on it and were all in
@@ -35,7 +35,7 @@
      changes for pointer users.
      ---------------------------------------------------------------------- */
   .MuiButtonBase-root:focus-visible {
-    @apply ring-primary dark:ring-primary-light rounded-lg ring-2 ring-offset-2 outline-hidden;
+    @apply ring-primary-ink rounded-lg ring-2 ring-offset-2 outline-hidden;
   }
 
   /* Root */
@@ -178,6 +178,15 @@
     &.MuiIconButton-sizeTiny {
       @apply rounded-xs px-1.5 py-1.5 text-sm leading-4;
     }
+
+    /* MUI paints it with palette.primary.main; an icon on the page takes the ink. */
+    &.MuiIconButton-colorPrimary {
+      @apply text-primary-ink;
+    }
+  }
+
+  .MuiSvgIcon-colorPrimary {
+    @apply text-primary-ink;
   }
 
   /* Contained Buttons*/
@@ -185,6 +194,11 @@
     .MuiButton-loadingIndicator {
       @apply text-text-contrast;
     }
+  }
+
+  /* On the yellow fill the spinner is the charcoal, like the label. */
+  .MuiButton-contained.MuiButton-colorPrimary .MuiButton-loadingIndicator {
+    @apply text-primary-contrast;
   }
 
   .MuiButton-containedPrimary {
@@ -198,7 +212,7 @@
     }
 
     &.Mui-disabled {
-      @apply bg-primary text-text-contrast opacity-disabled;
+      @apply bg-primary text-primary-contrast opacity-disabled;
     }
   }
 
@@ -437,20 +451,20 @@
 
   .MuiButton-outlinedPrimary {
     &:hover {
-      @apply bg-primary-light/10 text-primary-dark;
+      @apply bg-primary/20 text-primary-ink;
     }
 
     &:active,
     &.active {
-      @apply bg-primary-light/15 text-primary-dark;
+      @apply bg-primary/30 text-primary-ink;
     }
 
     &.Mui-disabled {
-      @apply border-primary text-primary opacity-disabled;
+      @apply border-primary-ink text-primary-ink opacity-disabled;
     }
 
     .MuiButton-loadingIndicator {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 
@@ -702,23 +716,42 @@
     }
   }
 
+  /* The primary as a foreground. MUI paints the label of a text or outlined
+     primary button, and the border of the outlined one, with
+     palette.primary.main: the yellow, which measures 1.5:1 on a light ground
+     (packages/design-tokens/css/yellow.css). They take the ink, on the class
+     pair MUI 9 really emits (the composed -textPrimary / -outlinedPrimary
+     names in this file no longer exist). The hover tint keeps the yellow. */
+  .MuiButton-text.MuiButton-colorPrimary,
+  .MuiButton-outlined.MuiButton-colorPrimary {
+    @apply text-primary-ink;
+
+    &:hover {
+      @apply bg-primary/20;
+    }
+  }
+
+  .MuiButton-outlined.MuiButton-colorPrimary {
+    @apply border-primary-ink/50;
+  }
+
   /* Text Buttons */
   .MuiButton-textPrimary {
     &:hover {
-      @apply bg-primary-light/10 text-primary-dark;
+      @apply bg-primary/20 text-primary-ink;
     }
 
     &:active,
     &.active {
-      @apply bg-primary-light/15 text-primary-dark;
+      @apply bg-primary/30 text-primary-ink;
     }
 
     &.Mui-disabled {
-      @apply text-primary opacity-disabled bg-transparent;
+      @apply text-primary-ink opacity-disabled bg-transparent;
     }
 
     .MuiButton-loadingIndicator {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 
@@ -976,22 +1009,22 @@
   }
 
   .MuiButton-pastel.MuiButton-colorPrimary {
-    @apply bg-primary-light/10 text-primary-dark dark:text-primary-light;
+    @apply bg-primary/20 text-primary-ink;
     &:hover {
-      @apply bg-primary-light/20;
+      @apply bg-primary/35;
     }
 
     &:active,
     &.active {
-      @apply bg-primary-light/25;
+      @apply bg-primary/40;
     }
 
     &.Mui-disabled {
-      @apply bg-primary-light/10 text-primary-dark dark:text-primary-light opacity-disabled;
+      @apply bg-primary/20 text-primary-ink opacity-disabled;
     }
 
     .MuiButton-loadingIndicator {
-      @apply text-primary-dark dark:text-primary-light;
+      @apply text-primary-ink;
     }
   }
 
@@ -1267,26 +1300,26 @@
     }
 
     .MuiButton-loadingIndicator {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
 
     &.surface-standard {
       @apply bg-background-paper shadow-darker-xs outline-line outline -outline-offset-1 backdrop-blur-xs;
       &:hover {
-        @apply text-primary;
+        @apply text-primary-ink;
       }
     }
   }
 
   .MuiButton-surface.MuiButton-colorPrimary {
-    @apply text-primary;
+    @apply text-primary-ink;
 
     &.Mui-disabled {
-      @apply text-primary opacity-disabled;
+      @apply text-primary-ink opacity-disabled;
     }
 
     .MuiButton-loadingIndicator {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 
@@ -1444,7 +1477,7 @@
   /* Focus inside form */
   form .MuiButton-containedPrimary:focus,
   .MuiButton-containedPrimary.focusable:focus {
-    @apply ring-primary/40 ring-2 ring-offset-1;
+    @apply ring-primary-ink/60 ring-2 ring-offset-1;
   }
 
   form .MuiButton-containedSecondary:focus,
@@ -1514,7 +1547,7 @@
 
   form .MuiButton-outlinedPrimary:focus,
   .MuiButton-outlinedPrimary.focusable:focus {
-    @apply ring-primary/40 ring-2 ring-offset-1;
+    @apply ring-primary-ink/60 ring-2 ring-offset-1;
   }
 
   form .MuiButton-outlinedSecondary:focus,
@@ -1584,7 +1617,7 @@
 
   form .MuiButton-textPrimary:focus,
   .MuiButton-textPrimary.focusable:focus {
-    @apply ring-primary/40 ring-2 ring-offset-1;
+    @apply ring-primary-ink/60 ring-2 ring-offset-1;
   }
 
   form .MuiButton-textSecondary:focus,
@@ -1654,7 +1687,7 @@
 
   form .MuiButton-pastel.MuiButton-colorPrimary:focus,
   .MuiButton-pastel.MuiButton-colorPrimary.focusable:focus {
-    @apply ring-primary/40 ring-2 ring-offset-1;
+    @apply ring-primary-ink/60 ring-2 ring-offset-1;
   }
 
   form .MuiButton-pastel.MuiButton-colorSecondary:focus,
@@ -1724,7 +1757,7 @@
 
   form .MuiButton-surface.MuiButton-colorPrimary:focus,
   .MuiButton-surface.MuiButton-colorPrimary.focusable:focus {
-    @apply ring-primary/40 ring-2 ring-offset-1;
+    @apply ring-primary-ink/60 ring-2 ring-offset-1;
   }
 
   form .MuiButton-surface.MuiButton-colorSecondary:focus,
@@ -1811,8 +1844,10 @@
 }
 
 .dark {
-  .MuiButton-contained.MuiButton-colorPrimary {
-    @apply bg-primary-dark text-text-contrast;
+  /* Not the disabled one: this rule is unlayered and painted a disabled
+     primary button as an enabled one in dark mode. */
+  .MuiButton-contained.MuiButton-colorPrimary:not(.Mui-disabled) {
+    @apply bg-primary-dark text-primary-contrast;
   }
 
   .MuiButton-contained.MuiButton-colorSecondary {

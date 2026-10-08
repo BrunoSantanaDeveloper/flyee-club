@@ -57,7 +57,7 @@ export function SecondaryItem({ item, indent = 0, openedAccordions, setOpenedAcc
         color="text-primary"
         className={cn(
           "full-width-button group hover:bg-grey-25 px-4",
-          isActive && "active text-primary! bg-grey-25!",
+          isActive && "active text-primary-ink! bg-grey-25!",
           className,
         )}
         component={NextLink}
@@ -91,7 +91,7 @@ export function SecondaryItem({ item, indent = 0, openedAccordions, setOpenedAcc
         color="text-primary"
         className={cn(
           "full-width-button group hover:bg-grey-25 px-4",
-          isActive && "active text-primary! bg-grey-25!",
+          isActive && "active text-primary-ink! bg-grey-25!",
           className,
         )}
         startIcon={
@@ -126,7 +126,7 @@ export function SecondaryItem({ item, indent = 0, openedAccordions, setOpenedAcc
           color="text-primary"
           className={cn(
             "full-width-button group hover:bg-grey-25 px-4",
-            isActive && "text-primary! bg-grey-25!",
+            isActive && "text-primary-ink! bg-grey-25!",
             (isExpanded || isActive) && "active",
             className,
           )}

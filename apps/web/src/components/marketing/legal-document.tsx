@@ -61,7 +61,7 @@ export default async function LegalDocument({
           <p className="text-text-primary font-semibold">{t("legal-unavailable-title")}</p>
           <p className="text-text-secondary text-base leading-6">
             {t("legal-unavailable-body")}{" "}
-            <Link href="/contato" className="text-primary underline">
+            <Link href="/contato" className="text-primary-ink underline">
               {t("nav-contact")}
             </Link>
           </p>

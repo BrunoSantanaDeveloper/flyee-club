@@ -60,7 +60,7 @@ export default function Header() {
           size="large"
           color="text-primary"
           className={cn(
-            "icon-only hover-icon-shrink [&.active]:text-primary [&.active]:bg-grey-25 hover:bg-grey-25",
+            "icon-only hover-icon-shrink [&.active]:text-primary-ink [&.active]:bg-grey-25 hover:bg-grey-25",
             showLeftMobileButton ? "flex" : "hidden",
             leftMenuWidth.primary > 0 && "active",
           )}

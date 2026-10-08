@@ -100,15 +100,15 @@ export default function PaymentChoice({
               className={cn(
                 "flex cursor-pointer flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-colors",
                 "disabled:cursor-not-allowed disabled:opacity-60",
-                selected ? "border-primary bg-primary/5" : "border-grey-200 hover:border-grey-300 bg-transparent",
+                selected ? "border-primary-ink bg-primary/10" : "border-grey-200 hover:border-grey-300 bg-transparent",
               )}
             >
               <Box className="flex w-full flex-row items-center gap-2">
-                <span className={cn("flex", selected ? "text-primary" : "text-text-secondary")}>{method.icon}</span>
+                <span className={cn("flex", selected ? "text-primary-ink" : "text-text-secondary")}>{method.icon}</span>
                 <Typography variant="subtitle1" component="span" className="mb-0 font-semibold">
                   {method.title}
                 </Typography>
-                {selected && <NiCheck size="small" className="text-primary ml-auto" />}
+                {selected && <NiCheck size="small" className="text-primary-ink ml-auto" />}
               </Box>
               <Typography variant="body2" className="text-text-secondary">
                 {method.hint}
@@ -143,7 +143,9 @@ export default function PaymentChoice({
                   className={cn(
                     "cursor-pointer rounded-xl border px-3 py-2 text-sm transition-colors",
                     "disabled:cursor-not-allowed disabled:opacity-60",
-                    selected ? "border-primary bg-primary/5 text-primary" : "border-grey-200 text-text-secondary",
+                    selected
+                      ? "border-primary-ink bg-primary/10 text-primary-ink"
+                      : "border-grey-200 text-text-secondary",
                   )}
                 >
                   {count === 1

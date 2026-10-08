@@ -302,7 +302,7 @@ export default function CheckoutForm({
           <Box component="ul" className="text-text-secondary m-0 flex list-none flex-col gap-1 p-0 text-sm">
             {oneTime && (
               <li className="flex items-center gap-1">
-                <NiCheck size="small" className="text-primary" />{" "}
+                <NiCheck size="small" className="text-primary-ink" />{" "}
                 {accessMonths
                   ? t("checkout-kit-term", {
                       term: t(termKey(accessMonths), { count: accessTermParts(accessMonths).count }),
@@ -312,16 +312,16 @@ export default function CheckoutForm({
             )}
             {renewalFrom && (
               <li className="flex items-center gap-1">
-                <NiCheck size="small" className="text-primary" />{" "}
+                <NiCheck size="small" className="text-primary-ink" />{" "}
                 {t("checkout-renewal-note", { date: new Intl.DateTimeFormat(locale).format(new Date(renewalFrom)) })}
               </li>
             )}
             <li className="flex items-center gap-1">
-              <NiCheck size="small" className="text-primary" /> {t("checkout-guarantee", { days: guaranteeDays })}
+              <NiCheck size="small" className="text-primary-ink" /> {t("checkout-guarantee", { days: guaranteeDays })}
             </li>
             {!oneTime && (
               <li className="flex items-center gap-1">
-                <NiCheck size="small" className="text-primary" /> {t("checkout-cancel-anytime")}
+                <NiCheck size="small" className="text-primary-ink" /> {t("checkout-cancel-anytime")}
               </li>
             )}
           </Box>

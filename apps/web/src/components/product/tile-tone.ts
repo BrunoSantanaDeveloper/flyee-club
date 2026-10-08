@@ -10,7 +10,7 @@
 export type TileTone = "primary" | "secondary" | "accent-1" | "accent-2" | "accent-3" | "accent-4";
 
 export const TILE_TONE: Record<TileTone, { bg: string; text: string }> = {
-  primary: { bg: "bg-primary-light/10", text: "text-primary" },
+  primary: { bg: "bg-primary/20", text: "text-primary-ink" },
   secondary: { bg: "bg-secondary-light/10", text: "text-secondary" },
   "accent-1": { bg: "bg-accent-1-light/10", text: "text-accent-1" },
   "accent-2": { bg: "bg-accent-2-light/10", text: "text-accent-2" },

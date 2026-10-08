@@ -194,7 +194,7 @@ export default function WaitlistForm() {
           }
         />
         <p id="waitlist-consent-privacy" className="text-text-secondary ml-8 text-sm leading-5">
-          <Link href="/legal/privacidade" className="text-primary underline">
+          <Link href="/legal/privacidade" className="text-primary-ink underline">
             {t("waitlist-consent-privacy")}
           </Link>
         </p>

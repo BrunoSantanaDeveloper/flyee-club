@@ -10,7 +10,7 @@
       a {
         @apply text-text-secondary;
         &:hover {
-          @apply text-primary;
+          @apply text-primary-ink;
         }
       }
     }

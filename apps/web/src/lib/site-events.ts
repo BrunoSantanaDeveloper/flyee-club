@@ -1,10 +1,14 @@
-"use client";
-
 import { COOKIE_KEYS } from "@/constants";
 import { track } from "@/lib/analytics";
 import { normalizeSegment, SEGMENT_COOKIE_MAX_AGE } from "@/lib/site-segment";
 
 /**
+ * No "use client" here, on purpose: server pages CALL `trackAttributes` to
+ * declare an event on an element, and a function exported from a client
+ * module cannot be called on the server. With the directive the home threw
+ * as soon as the catalog had one published app (the store cards declare
+ * `app_card_click`). The functions that touch the browser guard themselves.
+ *
  * The events of the public site (docs/TRACKING.md, "Site events"): the
  * vocabulary of the home brief, sent as custom events to the trackers the
  * platform already runs (GA4 and the Pixel, opt-out), never to a third one.

@@ -160,7 +160,7 @@ export default function HomeView({ state }: { state: HomeState }) {
           <Card id="instalar" className="h-full scroll-mt-24">
             <CardContent className="flex flex-col gap-4">
               <Box className="flex flex-row items-center gap-2">
-                <NiTerminal size="medium" className="text-primary" aria-hidden />
+                <NiTerminal size="medium" className="text-primary-ink" aria-hidden />
                 <Typography variant="subtitle1" component="h2" className="mb-0">
                   {t("home-install-title")}
                 </Typography>

@@ -5,7 +5,7 @@ import { ModeVariant, ThemeVariant } from "@/constants";
 export const DEFAULTS = {
   appRoot: "/inicio",
   locale: "pt-BR",
-  themeColor: "theme-orange" as ThemeVariant,
+  themeColor: "theme-yellow" as ThemeVariant,
   // Light-first (docs/DESIGN.md): light is the default; dark stays an explicit
   // user choice via the mode switcher.
   themeMode: "light" as ModeVariant,

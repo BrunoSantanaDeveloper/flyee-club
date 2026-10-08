@@ -57,14 +57,14 @@ export default function CookieConsent() {
       className="site-card site-slide-up shadow-darker-sm fixed right-3 bottom-3 left-3 z-50 flex flex-col gap-2.5 p-3 sm:right-5 sm:bottom-5 sm:left-auto sm:max-w-2xl sm:flex-row sm:items-center sm:gap-5 sm:p-5"
     >
       <div className="flex items-start gap-3">
-        <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+        <div className="bg-primary/20 text-primary-ink flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
           <NiShieldCheck size="small" />
         </div>
         <div className="flex flex-col gap-0.5">
           <h2 className="font-body m-0 text-base leading-normal font-semibold">{t("cookie-consent-title")}</h2>
           <span className="text-text-secondary block text-xs leading-snug">
             {t("cookie-consent-description")}{" "}
-            <Link href="/legal/privacidade" className="text-primary underline">
+            <Link href="/legal/privacidade" className="text-primary-ink underline">
               {t("cookie-consent-privacy")}
             </Link>
           </span>

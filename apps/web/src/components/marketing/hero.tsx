@@ -1,3 +1,4 @@
+import Eyebrow from "@/components/marketing/eyebrow";
 import Section from "@/components/marketing/section";
 import SiteButton from "@/components/site/button";
 
@@ -110,10 +111,8 @@ export default function Hero({
           className="grid grid-cols-1 items-center gap-10 md:grid-cols-[0.84fr_1.16fr] md:gap-10"
         >
           <div data-hero-copy className="flex flex-col items-start gap-6 text-left">
-            {eyebrow && <p className="text-primary text-sm font-semibold tracking-wide uppercase">{eyebrow}</p>}
-            <h1 className="font-display text-display-xl text-text-primary [&_em]:text-primary font-extrabold [&_em]:not-italic">
-              {title}
-            </h1>
+            {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+            <h1 className="font-display text-display-xl text-text-primary site-emphasis font-extrabold">{title}</h1>
             <p className="text-text-secondary text-lg leading-6 md:text-xl md:leading-7">{subtitle}</p>
             {ctas}
             {noteLine}
@@ -142,11 +141,11 @@ export default function Hero({
     <Section spacing="default" decor={decor} className="overflow-hidden" track={track}>
       <div data-hero style={entrance} className="flex flex-col items-center">
         <div data-hero-copy className="flex flex-col items-center gap-6 text-center">
-          {eyebrow && <p className="text-primary text-sm font-semibold tracking-wide uppercase">{eyebrow}</p>}
+          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
 
           {/* display-xl over a wider measure: the title takes two lines and the
               product below it starts above the fold (docs/HOME-COPY.md). */}
-          <h1 className="font-display text-display-xl text-text-primary [&_em]:text-primary max-w-5xl font-extrabold [&_em]:not-italic">
+          <h1 className="font-display text-display-xl text-text-primary site-emphasis max-w-5xl font-extrabold">
             {title}
           </h1>
 

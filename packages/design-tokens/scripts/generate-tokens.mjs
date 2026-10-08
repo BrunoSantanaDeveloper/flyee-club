@@ -16,7 +16,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const cssDir = join(root, "css");
 const outFile = join(root, "src", "tokens.generated.ts");
 
-const THEME_FILES = ["blue", "green", "orange", "purple"];
+const THEME_FILES = ["blue", "green", "orange", "purple", "yellow"];
 
 /**
  * Extracts `selector { ... }` blocks (innermost only — declaration blocks

@@ -66,7 +66,7 @@ export default function ActivationProgress({
           {Math.round(percent * 100)}%
         </span>
       </Box>
-      <Typography variant="body2" className={cn(complete ? "text-primary font-semibold" : "text-text-secondary")}>
+      <Typography variant="body2" className={cn(complete ? "text-primary-ink font-semibold" : "text-text-secondary")}>
         {label ?? `${done}/${total}`}
       </Typography>
     </Box>

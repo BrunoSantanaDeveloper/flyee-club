@@ -134,7 +134,7 @@ export default function RuledGrid({
               <span
                 className={cn(
                   "mb-5 inline-grid h-11 w-11 place-items-center rounded-xl",
-                  deep ? "bg-text-contrast/10 text-secondary-light" : cn(tone.softBg, tone.text),
+                  deep ? "bg-text-contrast/10 text-primary" : cn(tone.softBg, tone.text),
                 )}
               >
                 {item.icon}

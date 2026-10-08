@@ -122,7 +122,7 @@ export default async function PricingPage({
           <NextLink
             href={`${localizeHref("/planos", locale)}?moeda=${otherCurrency}`}
             prefetch={false}
-            className="text-primary underline"
+            className="text-primary-ink underline"
           >
             {t("pricing-currency-switch", {
               currency: t(otherCurrency === "USD" ? "pricing-currency-usd" : "pricing-currency-brl"),

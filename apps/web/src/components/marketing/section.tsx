@@ -10,7 +10,7 @@ const SPACING = {
 const BACKGROUND = {
   default: "",
   paper: "bg-background-paper",
-  "primary-soft": "bg-primary/5",
+  "primary-soft": "bg-primary/10",
   /** Elevated band: tinted surface + hairline borders — breaks long same-color scrolls. */
   contrast: "bg-background-paper border-grey-100 border-y",
   /**
@@ -107,7 +107,7 @@ const DECOR: Record<string, React.ReactNode> = {
           }}
         />
         <div className="mkt-orbit absolute inset-0">
-          <span className="bg-primary/40 absolute top-0 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full" />
+          <span className="bg-primary/55 absolute top-0 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full" />
           <span className="bg-accent-1/40 absolute top-1/2 right-0 h-1.5 w-1.5 translate-x-1/2 rounded-full" />
           <span className="bg-accent-4/40 absolute bottom-6 left-10 h-1.5 w-1.5 rounded-full" />
         </div>

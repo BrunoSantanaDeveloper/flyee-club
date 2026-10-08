@@ -329,7 +329,12 @@ test("the CLI endpoints answer on their own, never through the sign-in redirect"
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
 
-test("@a11y core entry and product routes have no critical axe violations", async ({ page }) => {
+test("@a11y core entry and product routes have no critical axe violations and pass WCAG AA contrast", async ({
+  page,
+}) => {
+  // Everything in place from the first paint: a headline scanned in the middle
+  // of its entrance is nearly transparent and fails for the wrong reason.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   for (const route of [
     "/auth/sign-in",
     "/auth/sign-up",
@@ -351,9 +356,18 @@ test("@a11y core entry and product routes have no critical axe violations", asyn
     "/settings/security",
   ]) {
     await page.goto(route);
+    // A control scanned halfway through a transition (a submit button going
+    // from disabled to enabled as the form hydrates) has the colours of neither state.
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
     const results = await new AxeBuilder({ page: page as never }).withTags(["wcag2a", "wcag2aa", "wcag22aa"]).analyze();
     const critical = results.violations.filter((violation) => violation.impact === "critical");
     expect(critical, `Critical accessibility violations at ${route}`).toEqual([]);
+    // The palette is held to WCAG AA since 2026-10-08 (docs/DESIGN.md, palette
+    // usage): the yellow is a fill, never the colour of text on a light ground.
+    const contrast = results.violations
+      .filter((violation) => violation.id === "color-contrast")
+      .flatMap((violation) => violation.nodes.map((node) => node.html.replace(/\s+/g, " ").slice(0, 140)));
+    expect(contrast, `Colour contrast below WCAG AA at ${route}`).toEqual([]);
   }
 });
 

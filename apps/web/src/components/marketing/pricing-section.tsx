@@ -135,7 +135,7 @@ export default function PricingSection({
             "mx-auto -mt-4 mb-10 flex w-fit flex-row items-center gap-2 rounded-full px-4 py-2 text-sm font-bold",
             // Never red: a coupon that no longer works is disappointing news,
             // not a risk or a failure (docs/DESIGN.md colour contract).
-            couponNotice.applied ? "bg-primary/10 text-text-primary" : "bg-grey-50 text-text-secondary",
+            couponNotice.applied ? "bg-primary/20 text-text-primary" : "bg-grey-50 text-text-secondary",
           )}
         >
           <NiTag size="small" className="flex-none" />
@@ -169,7 +169,7 @@ export default function PricingSection({
                 onClick={() => setPeriod(option)}
                 className={cn(
                   "flex flex-row items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors",
-                  selected ? "bg-primary text-text-contrast" : "text-text-secondary hover:text-text-primary",
+                  selected ? "bg-primary text-primary-contrast" : "text-text-secondary hover:text-text-primary",
                 )}
               >
                 {option === "monthly" ? periodToggle.monthly : periodToggle.yearly}
@@ -226,7 +226,7 @@ export default function PricingSection({
 
               <div className="flex flex-col gap-1">
                 {plan.priceCondition && (
-                  <p className="bg-primary/10 text-text-primary flex w-fit flex-row items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold">
+                  <p className="bg-primary/20 text-text-primary flex w-fit flex-row items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold">
                     <NiTag size="small" className="flex-none" />
                     {plan.priceCondition}
                   </p>

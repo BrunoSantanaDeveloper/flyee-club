@@ -78,7 +78,7 @@ export default function InsightsChat() {
     <Box className="flex flex-col gap-5">
       {turns.length === 0 && (
         <Box className="flex flex-col items-start gap-4 py-4">
-          <span className="bg-primary/10 text-primary flex h-12 w-12 items-center justify-center rounded-2xl [&_svg]:h-6 [&_svg]:w-6">
+          <span className="bg-primary/20 text-primary-ink flex h-12 w-12 items-center justify-center rounded-2xl [&_svg]:h-6 [&_svg]:w-6">
             <NiChartLineBar size="medium" />
           </span>
           <Box>

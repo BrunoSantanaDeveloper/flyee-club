@@ -61,7 +61,7 @@ export default function HelpSearch({
             <Link
               key={article.slug}
               href={`/ajuda/${article.slug}`}
-              className="hover:bg-primary/5 border-grey-50 flex flex-col gap-0.5 border-b px-4 py-3 last:border-b-0"
+              className="hover:bg-primary/20 border-grey-50 flex flex-col gap-0.5 border-b px-4 py-3 last:border-b-0"
             >
               <span className="text-text-primary font-medium">{article.title}</span>
               <span className="text-text-secondary text-sm">

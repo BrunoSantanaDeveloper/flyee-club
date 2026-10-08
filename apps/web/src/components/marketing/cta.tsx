@@ -43,7 +43,7 @@ export default function Cta({
       <Section background="deep" decor={decor} track={track}>
         <Reveal>
           <div className="flex flex-col items-start gap-4 py-6 md:py-10">
-            {kicker && <p className="text-secondary-light font-mono text-xs tracking-widest uppercase">{kicker}</p>}
+            {kicker && <p className="text-primary font-mono text-xs tracking-widest uppercase">{kicker}</p>}
             <h2 className="font-display text-display-lg max-w-3xl font-bold">{title}</h2>
             {subtitle && <p className="text-text-contrast/75 max-w-2xl text-lg leading-7">{subtitle}</p>}
             <div className="mt-2 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
@@ -73,7 +73,7 @@ export default function Cta({
               <ul className="border-text-contrast/15 mt-4 flex w-full max-w-3xl flex-wrap gap-x-7 gap-y-2.5 border-t pt-5">
                 {points.map((point) => (
                   <li key={point} className="text-text-contrast/70 flex items-center gap-1.5 text-sm">
-                    <NiCheck size="small" className="text-secondary-light flex-none" />
+                    <NiCheck size="small" className="text-primary flex-none" />
                     {point}
                   </li>
                 ))}
@@ -97,7 +97,7 @@ export default function Cta({
             }}
           />
           <div className="relative flex flex-col items-center gap-4">
-            {kicker && <p className="text-primary font-mono text-xs tracking-widest uppercase">{kicker}</p>}
+            {kicker && <p className="text-primary-ink font-mono text-xs tracking-widest uppercase">{kicker}</p>}
             <h2 className="font-display text-display-lg text-text-primary max-w-2xl font-bold">{title}</h2>
             {subtitle && <p className="text-text-secondary max-w-xl text-lg leading-6">{subtitle}</p>}
             <div className="mt-2 flex flex-col items-center gap-4 sm:flex-row">

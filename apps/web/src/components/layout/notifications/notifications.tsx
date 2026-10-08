@@ -50,7 +50,7 @@ const TYPE_STYLE: Record<string, { icon: React.ReactNode; className: string }> =
   team: { icon: <NiUsers size="medium" />, className: "bg-accent-2-light/10 text-accent-2" },
   billing: { icon: <NiMoney size="medium" />, className: "bg-accent-3-light/10 text-accent-3" },
 };
-const DEFAULT_STYLE = { icon: <NiBell size="medium" />, className: "bg-primary/10 text-primary" };
+const DEFAULT_STYLE = { icon: <NiBell size="medium" />, className: "bg-primary/20 text-primary-ink" };
 
 function timeAgo(iso: string, locale: string) {
   const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
@@ -169,7 +169,7 @@ export default function Notifications() {
             size="large"
             color="text-primary"
             className={cn(
-              "icon-only hover-icon-shrink [&.active]:text-primary! hover:bg-grey-25",
+              "icon-only hover-icon-shrink [&.active]:text-primary-ink! hover:bg-grey-25",
               open && "active bg-grey-25",
             )}
             onClick={handleToggle}
@@ -217,7 +217,7 @@ export default function Notifications() {
 
                   {items.length === 0 ? (
                     <Box className="flex flex-col items-center gap-2 px-6 py-10 text-center">
-                      <span className="bg-primary/10 text-primary flex h-12 w-12 items-center justify-center rounded-2xl">
+                      <span className="bg-primary/20 text-primary-ink flex h-12 w-12 items-center justify-center rounded-2xl">
                         <NiBellInactive size="medium" />
                       </span>
                       <Typography variant="subtitle2">{t("notifications-empty")}</Typography>
@@ -236,7 +236,7 @@ export default function Notifications() {
                                 event.preventDefault();
                                 handleItemClick(item, event);
                               }}
-                              classes={{ root: cn("w-full items-start", !item.readAt && "bg-primary-dark/5") }}
+                              classes={{ root: cn("w-full items-start", !item.readAt && "bg-primary/20") }}
                               LinkComponent={item.href ? Link : Box}
                               href={item.href ?? "#"}
                             >

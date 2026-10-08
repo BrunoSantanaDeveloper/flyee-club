@@ -79,10 +79,7 @@ export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
         )}
       </Box>
       {!minimal && sellable && (
-        <Typography
-          variant="body2"
-          className="text-primary dark:text-primary-light text-center text-[0.6875rem] leading-4"
-        >
+        <Typography variant="body2" className="text-primary-ink text-center text-[0.6875rem] leading-4">
           {t("menu-cta-button")}
         </Typography>
       )}

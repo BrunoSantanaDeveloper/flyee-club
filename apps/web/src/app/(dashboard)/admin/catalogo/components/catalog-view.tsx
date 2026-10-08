@@ -128,7 +128,7 @@ export default function CatalogView({ state }: { state: CatalogState }) {
           <Box className="flex min-w-0 flex-row items-center gap-3 py-1">
             <Box
               aria-hidden
-              className="bg-primary-light/10 text-primary flex h-9 w-9 flex-none items-center justify-center rounded-xl"
+              className="bg-primary/20 text-primary-ink flex h-9 w-9 flex-none items-center justify-center rounded-xl"
             >
               <CatalogIcon name={row.icon} size="medium" />
             </Box>

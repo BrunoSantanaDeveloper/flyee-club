@@ -52,7 +52,7 @@
 
   /* Colors */
   .MuiFab-primary.Mui-disabled {
-    @apply bg-primary text-text-contrast opacity-disabled;
+    @apply bg-primary text-primary-contrast opacity-disabled;
   }
 
   .MuiFab-secondary.Mui-disabled {
@@ -105,7 +105,7 @@
 
   .MuiFab-default {
     &:hover {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 

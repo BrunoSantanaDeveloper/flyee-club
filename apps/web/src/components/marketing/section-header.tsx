@@ -1,3 +1,4 @@
+import Eyebrow from "@/components/marketing/eyebrow";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,7 +33,7 @@ export default function SectionHeader({
         className,
       )}
     >
-      {eyebrow && <p className="text-primary text-sm font-semibold tracking-wide uppercase">{eyebrow}</p>}
+      {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
       <Heading className="font-display text-display-lg text-text-primary font-bold">{title}</Heading>
       {subtitle && <p className="text-text-secondary text-lg leading-6">{subtitle}</p>}
     </div>

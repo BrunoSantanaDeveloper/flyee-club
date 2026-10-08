@@ -17,6 +17,21 @@
     }
   }
 
+  /* MUI paints both with palette.primary.main, the yellow: 1.5:1 on a light
+     ground (packages/design-tokens/css/yellow.css). They take the ink; a
+     spinner inside a button follows the button's own label. */
+  .MuiCircularProgress-colorPrimary {
+    @apply text-primary-ink;
+  }
+
+  .MuiButton-root .MuiCircularProgress-root {
+    @apply text-current;
+  }
+
+  .MuiLinearProgress-colorPrimary .MuiLinearProgress-bar {
+    @apply bg-primary-ink;
+  }
+
   .MuiLinearProgress-root {
     @apply bg-grey-50;
   }

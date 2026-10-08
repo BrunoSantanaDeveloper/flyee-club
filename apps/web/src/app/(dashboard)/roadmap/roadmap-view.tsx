@@ -306,7 +306,7 @@ function RoadmapCard({ item, canVote }: { item: RoadmapItem; canVote: boolean })
           </Typography>
         ) : null}
         {item.shippedModule ? (
-          <Link href={`/modulos/${item.shippedModule.slug}`} className="text-primary text-sm underline">
+          <Link href={`/modulos/${item.shippedModule.slug}`} className="text-primary-ink text-sm underline">
             {t("roadmap-shipped-as", { name: item.shippedModule.name })}
           </Link>
         ) : null}

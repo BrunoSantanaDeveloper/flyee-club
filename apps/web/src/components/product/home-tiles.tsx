@@ -100,7 +100,7 @@ export function StatTile({
         // The pressed tile keeps the template's card and gains the ring the
         // rest of the app uses for selection. Measured: a tinted fill alone
         // sits at 1.06:1 against paper, which nobody can see.
-        pressed && "outline-primary outline-2 -outline-offset-2",
+        pressed && "outline-primary-ink outline-2 -outline-offset-2",
       )}
     >
       <Box

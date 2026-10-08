@@ -93,7 +93,7 @@
     }
 
     .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
-      @apply border-primary bg-primary border border-solid;
+      @apply border-primary-ink bg-primary-ink border border-solid;
     }
 
     .MuiSwitch-colorSecondary.MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
@@ -189,37 +189,37 @@
 
   .MuiFormControlLabel-root:not(.Mui-disabled):has(.MuiSwitch-root) {
     &:hover .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
-      @apply border-primary-light bg-primary-light;
+      @apply border-primary-ink/80 bg-primary-ink/80;
     }
   }
 
   .MuiSwitch-switchBase.Mui-checked:not(.Mui-disabled) {
     &:hover + .MuiSwitch-track {
-      @apply border-primary-light bg-primary-light;
+      @apply border-primary-ink/80 bg-primary-ink/80;
     }
   }
 
   .MuiSwitch-root.outlined .MuiSwitch-switchBase.Mui-checked:not(.Mui-disabled) {
     &:hover + .MuiSwitch-track {
-      @apply border-primary-light bg-primary-light;
+      @apply border-primary-ink/80 bg-primary-ink/80;
     }
   }
 
   .MuiFormControlLabel-root:not(.Mui-disabled):has(.MuiSwitch-root) {
     &:hover .MuiSwitch-switchBase.MuiSwitch-colorPrimary.Mui-checked + .MuiSwitch-track {
-      @apply border-primary-light bg-primary-light;
+      @apply border-primary-ink/80 bg-primary-ink/80;
     }
   }
 
   .MuiSwitch-switchBase.MuiSwitch-colorPrimary.Mui-checked:not(.Mui-disabled) {
     &:hover + .MuiSwitch-track {
-      @apply border-primary-light bg-primary-light;
+      @apply border-primary-ink/80 bg-primary-ink/80;
     }
   }
 
   .MuiSwitch-root.outlined .MuiSwitch-switchBase.MuiSwitch-colorPrimary.Mui-checked:not(.Mui-disabled) {
     &:hover + .MuiSwitch-track {
-      @apply border-primary-light bg-primary-light;
+      @apply border-primary-ink/80 bg-primary-ink/80;
     }
   }
 

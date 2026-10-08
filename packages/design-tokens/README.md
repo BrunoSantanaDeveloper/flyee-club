@@ -16,7 +16,7 @@ npm run tokens:generate   # at the monorepo root
 ## Structure
 
 - `css/common.css` — tokens shared by all themes: backgrounds (including `--background-deep`, the dark band that stays dark under any palette), greys, text, feedback, shadows, radii, in `:root` (light) and `.dark` variants.
-- `css/{blue,green,orange,purple}.css` — per-color-theme tokens (`.theme-<name>` and `.theme-<name>.dark`).
+- `css/{blue,green,orange,purple,yellow}.css` — per-color-theme tokens (`.theme-<name>` and `.theme-<name>.dark`). The web app loads `yellow.css` alone: the yellow of the FlyeeClub logo. Beside the three steps of the primary, every theme carries `--primary-contrast` (the label or icon on a primary fill) and `--primary-ink` (the primary as a foreground on the page: text, links, icons, focus rings). In `yellow.css` they are what makes the palette pass WCAG AA: the yellow measures 1.5:1 on white, so the label on it is the charcoal and the ink is the charcoal on a light ground and the yellow on a dark one.
 - `css/marketing.css` — marketing-layer tokens (fluid display type scale via `clamp()`, section rhythm, motion durations/easing). Dimensions and motion only — no colors, so no light/dark split. Exported to TS as `marketing`.
 - **`native` export** (generated) — platform-neutral values for React Native: radii/spacing in px numbers, display scale as `{min,max}` px, durations as numbers, easing as cubic-bezier control points (`Easing.bezier(...ease)`). Colors are not duplicated (use `themes`/`common` + `hsl()`); shadows are intentionally omitted (RN uses elevation/Paper surfaces).
 - Color values are bare HSL triplets (`"191 100% 46%"`), consumed on the web via `hsl(var(--token))` and in TS via the `hsl()` helper.

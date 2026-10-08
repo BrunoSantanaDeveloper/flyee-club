@@ -235,7 +235,7 @@ export default function LeftMenu() {
                   ) : (
                     <>
                       {activeItem?.label && (
-                        <Typography variant="h6" className={"text-primary mb-4 px-2.5"}>
+                        <Typography variant="h6" className={"text-primary-ink mb-4 px-2.5"}>
                           {t(activeItem?.label)}
                         </Typography>
                       )}

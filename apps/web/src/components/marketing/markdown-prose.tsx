@@ -14,7 +14,7 @@ export default function MarkdownProse({ children, className }: { children: strin
   return (
     <Prose
       className={cn(
-        "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2",
+        "[&_a]:text-primary-ink [&_a]:underline [&_a]:underline-offset-2",
         "[&_code]:bg-grey-25 [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm",
         "[&_pre]:bg-grey-25 [&_pre]:mb-4 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:p-4",
         "[&_blockquote]:border-grey-100 [&_blockquote]:text-text-secondary [&_blockquote]:mb-4 [&_blockquote]:border-l-2 [&_blockquote]:pl-4",

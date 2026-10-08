@@ -1,10 +1,13 @@
-"use client";
-
 import { COOKIE_KEYS, LOCAL_STORAGE_KEYS } from "@/constants";
 import { GA4_ID, META_PIXEL_ID } from "@/lib/tracker-snippets";
 
 /**
  * Marketing analytics — OPT-OUT model.
+ *
+ * Plain functions, no "use client": lib/site-events.ts, which server pages
+ * import, calls `track` from here, and a function exported from a client
+ * module cannot be called on the server (lib/public-shell.test.ts). Every
+ * function below does nothing outside a browser.
  *
  * The Meta Pixel + GA4 base scripts are rendered SERVER-SIDE in the marketing
  * layout (`components/consent/marketing-trackers.tsx`) and load by DEFAULT, so

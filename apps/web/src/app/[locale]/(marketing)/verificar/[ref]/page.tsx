@@ -170,7 +170,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ ref: st
 
           <div className="border-grey-100 bg-background-paper flex flex-col gap-4 rounded-3xl border p-6">
             <div className="text-text-primary flex flex-row items-center gap-2 font-semibold">
-              <NiShieldCheck size="medium" className="text-primary" aria-hidden />
+              <NiShieldCheck size="medium" className="text-primary-ink" aria-hidden />
               <h2 className="m-0 text-base font-semibold">{t("verify-permissions")}</h2>
             </div>
             {result.permissions.length === 0 ? (

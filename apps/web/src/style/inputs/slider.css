@@ -60,10 +60,10 @@
   }
 
   .MuiSlider-colorPrimary {
-    @apply text-primary;
+    @apply text-primary-ink;
 
     &.Mui-disabled {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 

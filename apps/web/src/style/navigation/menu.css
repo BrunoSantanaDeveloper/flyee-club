@@ -13,7 +13,7 @@
 
   /* Outlined class  */
   .MuiMenu-root.outlined .MuiMenu-paper {
-    @apply outline-primary/40 mt-1 mb-1 rounded-lg outline-2 -outline-offset-1;
+    @apply outline-primary-ink/60 mt-1 mb-1 rounded-lg outline-2 -outline-offset-1;
   }
 
   /* Menu  items */
@@ -26,12 +26,12 @@
 
     &:active,
     &.active {
-      @apply bg-grey-500/15 text-primary;
+      @apply bg-grey-500/15 text-primary-ink;
     }
 
     &.Mui-selected,
     &[aria-selected="true"] {
-      @apply bg-grey-500/10! text-primary;
+      @apply bg-grey-500/10! text-primary-ink;
     }
 
     &.Mui-focused,

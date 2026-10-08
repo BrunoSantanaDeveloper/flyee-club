@@ -188,3 +188,56 @@ describe("the public shell: no MUI and only its own messages on the public site"
     expect(missing).toEqual([]);
   });
 });
+
+/**
+ * A function exported from a "use client" module is a reference on the server:
+ * rendering it as a component works, CALLING it throws at request time. The
+ * home called `trackAttributes` that way from 2026-10-06 to 2026-10-08, in a
+ * branch that only runs once the catalog has a published app, so no build and
+ * no test saw it: the first published app would have taken the home down.
+ */
+describe("the server never calls a function a client module exports", () => {
+  const isClient = (file: string) => /^\s*["']use client["']/.test(fs.readFileSync(file, "utf8"));
+
+  it("in any page, layout or component under src/app and what they import", () => {
+    const seen = new Set<string>();
+    const queue = [...sourceFiles(APP)];
+    const offences: string[] = [];
+    while (queue.length > 0) {
+      const file = queue.shift()!;
+      if (seen.has(file)) continue;
+      seen.add(file);
+      // What a client file imports runs in the browser: the boundary is behind us.
+      if (isClient(file)) continue;
+      const source = ts.createSourceFile(file, fs.readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true);
+      const fromClient = new Map<string, string>();
+      for (const statement of source.statements) {
+        if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+        const target = resolve(file, statement.moduleSpecifier.text);
+        if (!target) continue;
+        queue.push(target);
+        const clause = statement.importClause;
+        if (!clause || clause.isTypeOnly || !isClient(target)) continue;
+        if (clause.name) fromClient.set(clause.name.text, relative(target));
+        if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+          for (const element of clause.namedBindings.elements) {
+            if (!element.isTypeOnly) fromClient.set(element.name.text, relative(target));
+          }
+        }
+      }
+      if (fromClient.size === 0) continue;
+      const visit = (node: ts.Node) => {
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && fromClient.has(node.expression.text)) {
+          const { line } = source.getLineAndCharacterOfPosition(node.getStart());
+          offences.push(
+            `${relative(file)}:${line + 1} calls ${node.expression.text}() from ${fromClient.get(node.expression.text)}`,
+          );
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(source);
+    }
+    expect(seen.size).toBeGreaterThan(300);
+    expect(offences).toEqual([]);
+  });
+});

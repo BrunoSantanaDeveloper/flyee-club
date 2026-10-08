@@ -71,7 +71,7 @@ export default async function HelpArticlePage({ params }: Params) {
         <div className="mx-auto w-full max-w-prose">
           <Link
             href="/ajuda"
-            className="text-text-secondary hover:text-primary mb-6 inline-flex flex-row items-center gap-1 text-sm font-medium transition-colors"
+            className="text-text-secondary hover:text-primary-ink mb-6 inline-flex flex-row items-center gap-1 text-sm font-medium transition-colors"
           >
             <NiChevronLeftSmall size="small" />
             {t("help-article-back")}
@@ -100,14 +100,14 @@ export default async function HelpArticlePage({ params }: Params) {
                 className="group border-grey-100 bg-background-paper flex flex-row items-center justify-between gap-3 rounded-2xl border p-5"
               >
                 <span className="flex flex-col gap-1">
-                  <span className="text-text-primary group-hover:text-primary font-medium transition-colors">
+                  <span className="text-text-primary group-hover:text-primary-ink font-medium transition-colors">
                     {related.title}
                   </span>
                   {related.excerpt && <span className="text-text-secondary text-sm">{related.excerpt}</span>}
                 </span>
                 <NiChevronRightSmall
                   size="small"
-                  className="text-text-secondary group-hover:text-primary shrink-0 transition-colors"
+                  className="text-text-secondary group-hover:text-primary-ink shrink-0 transition-colors"
                 />
               </Link>
             ))}

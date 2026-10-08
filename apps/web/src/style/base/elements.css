@@ -17,8 +17,9 @@
     @apply border-grey-100 bg-grey-20 rounded-[0.5rem] border border-solid px-1.5 py-0.25;
   }
 
+  /* Selected text is highlighter: the yellow with the charcoal label on it, in both modes. */
   *::selection {
-    @apply bg-primary/50;
+    @apply bg-primary text-primary-contrast;
   }
 
   /* Text area */
@@ -26,7 +27,7 @@
     @apply placeholder:opacity-disabled placeholder:text-text-primary font-body leading-5;
 
     &.autosize:focus {
-      @apply outline-primary/40! border-transparent! outline-2! -outline-offset-1!;
+      @apply outline-primary-ink/60! border-transparent! outline-2! -outline-offset-1!;
     }
   }
 

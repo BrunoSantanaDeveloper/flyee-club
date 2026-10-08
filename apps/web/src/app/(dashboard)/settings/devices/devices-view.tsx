@@ -203,7 +203,7 @@ export default function DevicesView({ state }: { state: DevicesState }) {
                 <CardContent className="flex flex-col gap-3">
                   <Box className="flex flex-row flex-wrap items-center justify-between gap-2">
                     <Box className="flex flex-row items-center gap-2">
-                      <NiLaptop size="medium" className="text-primary" aria-hidden />
+                      <NiLaptop size="medium" className="text-primary-ink" aria-hidden />
                       <Typography variant="h6" component="h2" className="mb-0">
                         {device.name || t("oauth-device-unnamed")}
                       </Typography>

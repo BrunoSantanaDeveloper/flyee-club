@@ -20,11 +20,13 @@ import type { EmailLocale } from "../locale";
 /**
  * Colours of the e-mails. Inline styles only: e-mail clients ignore
  * stylesheets, so the design tokens cannot be consumed here. These are the
- * light values of packages/design-tokens (common.css and orange.css) copied by
- * hand: keep them aligned when the palette changes.
+ * light values of packages/design-tokens (common.css and yellow.css) copied by
+ * hand: keep them aligned when the palette changes. The primary is the yellow
+ * of the logo, as the SVG writes it.
  *
- * The button carries the charcoal label, not white: white on this orange
- * measures 2.04:1, the charcoal 6.4:1 (docs/DESIGN.md, palette usage).
+ * The button carries the charcoal label, not white: white on this yellow
+ * measures 1.5:1, the charcoal 8.7:1 (docs/DESIGN.md, palette usage). The
+ * yellow is never the colour of text or of a link here.
  */
 export const COLOR = {
   ground: "#f9f8f6",
@@ -32,7 +34,7 @@ export const COLOR = {
   text: "#48433d",
   muted: "#716c65",
   rule: "#e8e6e3",
-  primary: "#f8a32a",
+  primary: "#ffcc12",
   onPrimary: "#303030",
   deep: "#303030",
   onDeep: "#f9f8f6",

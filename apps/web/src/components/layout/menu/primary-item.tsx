@@ -61,7 +61,7 @@ export const PrimaryItem = memo(function PrimaryItem({ item, onSelect, isActive,
             strokeWidth={1}
             className={cn(
               "transition-transform group-hover:scale-[0.85]",
-              (selected || isActive) && "text-primary scale-[0.85]",
+              (selected || isActive) && "text-primary-ink scale-[0.85]",
             )}
           />
         )}
@@ -71,8 +71,8 @@ export const PrimaryItem = memo(function PrimaryItem({ item, onSelect, isActive,
           component="span"
           className={cn(
             "text-text-primary line-clamp-2 w-full text-center font-semibold transition-all",
-            (selected || isActive) && "text-primary-dark dark:text-primary-light mt-0 mb-0",
-            selected && "text-primary-dark dark:text-primary-light",
+            (selected || isActive) && "text-primary-ink mt-0 mb-0",
+            selected && "text-primary-ink",
           )}
         >
           {t(item.label)}
@@ -91,7 +91,7 @@ export const PrimaryItem = memo(function PrimaryItem({ item, onSelect, isActive,
         title={t(item.label)}
         placement="right"
         arrow
-        slotProps={{ tooltip: { className: cn("large", selected && "text-primary") } }}
+        slotProps={{ tooltip: { className: cn("large", selected && "text-primary-ink") } }}
       >
         <Button
           id={item.id}
@@ -101,7 +101,7 @@ export const PrimaryItem = memo(function PrimaryItem({ item, onSelect, isActive,
           className={cn(
             "icon-only hover:bg-grey-25 text-text-primary h-10 w-10",
             selected &&
-              `bg-grey-25 active ${item.color ? `text-${item.color.replace("text-", "")}!` : "text-primary!"}`,
+              `bg-grey-25 active ${item.color ? `text-${item.color.replace("text-", "")}!` : "text-primary-ink!"}`,
             isActive && "active",
           )}
           startIcon={

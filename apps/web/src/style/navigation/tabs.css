@@ -38,7 +38,7 @@
     }
 
     &.Mui-selected.MuiTab-textColorPrimary {
-      @apply border-primary text-primary;
+      @apply border-primary-ink text-primary-ink;
     }
 
     &.Mui-selected.MuiTab-textColorSecondary {
@@ -74,7 +74,7 @@
 
   .MuiTabScrollButton-root.MuiTabScrollButton-horizontal:not(.Mui-disabled) {
     &:hover {
-      @apply text-primary;
+      @apply text-primary-ink;
     }
   }
 

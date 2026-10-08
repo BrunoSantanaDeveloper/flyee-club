@@ -76,8 +76,9 @@
     &.MuiChip-clickable:hover {
       @apply bg-primary-light;
     }
+    /* On the yellow fill: a charcoal disc with the yellow mark, in both modes. */
     .MuiChip-deleteIcon {
-      @apply bg-text-contrast! text-primary!;
+      @apply bg-primary-contrast! text-primary!;
       &:hover {
         @apply text-primary-light!;
       }
@@ -254,9 +255,9 @@
   }
 
   .MuiChip-outlined.MuiChip-colorPrimary {
-    @apply outline-primary;
+    @apply outline-primary-ink text-primary-ink;
     .MuiChip-deleteIcon {
-      @apply bg-primary!;
+      @apply bg-primary! text-primary-contrast!;
 
       &:hover {
         @apply bg-primary-dark! dark:bg-primary-light!;
@@ -264,7 +265,7 @@
     }
 
     &.MuiChip-clickable:hover {
-      @apply bg-primary-light/10;
+      @apply bg-primary/20;
     }
   }
 
@@ -477,7 +478,7 @@
 
 .dark {
   .MuiChip-filled.MuiChip-colorPrimary {
-    @apply bg-primary-dark text-text-contrast;
+    @apply bg-primary-dark text-primary-contrast;
 
     &.MuiChip-clickable:hover {
       @apply bg-primary-dark;
