@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
  * How each state of a tile reads: a named badge whose word stays in the text
  * colour (a white label on the success fill measured 2.1:1).
  */
-const STATUS_TONE: Record<"free" | "locked" | "soon", StatusTone> = {
-  free: "positive",
+const STATUS_TONE: Record<"entry" | "locked" | "soon", StatusTone> = {
+  entry: "positive",
   locked: "neutral",
   soon: "attention",
 };
@@ -50,8 +50,12 @@ export default function ModuleTile({
   trailLabel?: string;
   /** e.g. "v1.2.0 · Claude Code, Codex". */
   meta?: string;
-  /** A free sample, a tool outside the plan, or an app still on the roadmap; nothing when it simply installs. */
-  status?: { kind: "free" | "locked" | "soon"; label: string } | null;
+  /**
+   * The entry version an account with no purchase installs (migration 0040), a
+   * tool outside the plan, or an app still on the roadmap; nothing when it
+   * simply installs.
+   */
+  status?: { kind: "entry" | "locked" | "soon"; label: string } | null;
 }) {
   const tone = TILE_TONE[(trail ? TRAIL_TONE[trail] : undefined) ?? "primary"];
   return (

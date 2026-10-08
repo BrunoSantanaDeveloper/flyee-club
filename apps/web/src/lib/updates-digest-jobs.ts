@@ -5,8 +5,15 @@ import { bellCopyFor } from "@/lib/messages/bell-copy";
 import { isoWeekKey, localizedText, memberUrl, unsubscribeUrl } from "@/lib/messages/format";
 import { readRecipientMap, type Recipient } from "@/lib/messages/recipients";
 import { notifyUser } from "@/lib/notifications";
-import { deviceKey, type DigestDevice, type LatestVersion, pendingUpdates } from "@/lib/updates-digest";
+import {
+  deviceKey,
+  type DigestDevice,
+  keepUpdatingAccounts,
+  type LatestVersion,
+  pendingUpdates,
+} from "@/lib/updates-digest";
 import { createServiceClient } from "@flyee/auth/service";
+import { type Channel, channelOf } from "@flyee/catalog/channels";
 import { latestVersion } from "@flyee/catalog/semver";
 import { BATCH_LIMIT, sendUpdatesDigestBatch, type UpdatesDigestEmailProps } from "@flyee/email";
 import { inngest } from "@flyee/jobs";
@@ -85,10 +92,15 @@ export async function sendUpdatesDigest(
   if (!anyNew) return { ...outcome, reason: "nothing-new" };
 
   // 2. The machines, and which of them can still update.
-  const devices = await fetchAllPages<{ user_id: string; device_id: string; installed_modules: unknown }>((from, to) =>
+  const devices = await fetchAllPages<{
+    user_id: string;
+    org_id: string;
+    device_id: string;
+    installed_modules: unknown;
+  }>((from, to) =>
     service
       .from("member_devices")
-      .select("user_id, device_id, installed_modules")
+      .select("user_id, org_id, device_id, installed_modules")
       .is("revoked_at", null)
       .order("id")
       .range(from, to),
@@ -106,7 +118,7 @@ export async function sendUpdatesDigest(
   );
   if (tokens.error) throw new Error(`oauth_tokens read failed: ${tokens.error}`);
 
-  const pending = pendingUpdates({
+  const behind = pendingUpdates({
     devices: devices.data.map(
       (row): DigestDevice => ({ userId: row.user_id, deviceId: row.device_id, installed: row.installed_modules }),
     ),
@@ -114,10 +126,21 @@ export async function sendUpdatesDigest(
     latestBySlug,
     since,
   });
+
+  // 3. Only an account whose channel brings new versions: the account with no
+  // purchase keeps the entry version of each app (migration 0040).
+  const orgOf = new Map(devices.data.map((row) => [row.user_id, row.org_id]));
+  const channels = new Map<string, Channel | null>();
+  for (const orgId of new Set([...behind.keys()].flatMap((userId) => orgOf.get(userId) ?? []))) {
+    const { data, error } = await service.rpc("org_entitlements", { target_org: orgId });
+    const rights = error ? null : (data as { active?: boolean; limits?: Record<string, unknown> } | null);
+    channels.set(orgId, rights?.active ? channelOf(rights.limits) : null);
+  }
+  const pending = keepUpdatingAccounts(behind, (userId) => channels.get(orgOf.get(userId) ?? "") ?? null);
   outcome.members = pending.size;
   if (pending.size === 0) return { ...outcome, reason: "nobody-behind" };
 
-  // 3. The bell for everyone, then the e-mail for whoever just got a NEW notice.
+  // 4. The bell for everyone, then the e-mail for whoever just got a NEW notice.
   const readers = await readRecipientMap(service, [...pending.keys()]);
   const mail: { to: string; props: UpdatesDigestEmailProps }[] = [];
   for (const [userId, updates] of pending) {

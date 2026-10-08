@@ -58,7 +58,7 @@
       "name": "ModuleTile",
       "from": "@/components/product/module-tile",
       "props": "href, icon, trail|null, name, summary, trailLabel?, meta?, status?{kind:'free'|'locked'|'soon',label}",
-      "use": "One tool of the catalog in a grid: the tinted 72px box of StatTile (hue from the trail, TRAIL_TONE) over name, two-line summary and a status line. Every status is a StatusChip: free sample (positive), outside the plan (neutral), and an app the roadmap has planned (soon, \"Em breve\", the tile linked to its idea on the roadmap). Use for any grid of modules, in the catalog or inside a recipe."
+      "use": "One tool of the catalog in a grid: the tinted 72px box of StatTile (hue from the trail, TRAIL_TONE) over name, two-line summary and a status line. Every status is a StatusChip: the entry version an account with no purchase installs (entry, positive, with the newest version in meta), outside the plan (neutral), and an app the roadmap has planned (soon, \"Em breve\", the tile linked to its idea on the roadmap). Use for any grid of modules, in the catalog or inside a recipe."
     },
     {
       "name": "UpsellCard",

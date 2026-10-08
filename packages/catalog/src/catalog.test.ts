@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { channelOf, resolveChannel, versionAllowed } from "./channels.ts";
 import { guideAvailability, guideOf, guidePath } from "./guides.ts";
 import { isSafePackagePath, manifestJsonSchema, MANIFEST_SCHEMA_ID, parseManifest } from "./manifest.ts";
 import { compareSemver, isSemver, latestVersion, minimumOfRange } from "./semver.ts";
@@ -158,5 +159,55 @@ describe("guides: a path convention inside the package", () => {
       { "pt-BR": ["usar", "abrir_o_capo"], en: ["usar"] },
     );
     assert.deepEqual(guideAvailability([]), {});
+  });
+});
+
+describe("channels", () => {
+  // The product of 2026-10-08: the entry 1.0.0 and the complete 1.1.0, published the same day.
+  const entry = { version: "1.0.0", published_at: "2026-10-08T10:00:00Z", is_stable: false, is_entry: true };
+  const complete = { version: "1.1.0", published_at: "2026-10-08T10:05:00Z", is_stable: true, is_entry: false };
+  const draft = { version: "1.2.0", published_at: null, status: "draft", is_stable: false, is_entry: false };
+
+  it("reads the channel of the limits, and none from limits without one", () => {
+    assert.equal(channelOf({ update_channel: "free" }), "free");
+    assert.equal(channelOf({ update_channel: "latest" }), "latest");
+    assert.equal(channelOf({ update_channel: "beta" }), null);
+    assert.equal(channelOf({}), null);
+    assert.equal(channelOf(null), null);
+  });
+
+  it("opens the entry version to every active account, and the rest to the key on its channel", () => {
+    assert.equal(versionAllowed(entry, "free", false), true);
+    assert.equal(versionAllowed(complete, "free", false), false);
+    assert.equal(versionAllowed(complete, "latest", true), true);
+    assert.equal(versionAllowed(complete, "latest", false), false);
+    assert.equal(versionAllowed({ is_stable: false, is_entry: false }, "stable", true), false);
+    assert.equal(versionAllowed(entry, null, true), false);
+  });
+
+  it("gives the account with no purchase the entry version, and shows it the newest", () => {
+    const answer = resolveChannel([entry, complete, draft], { channel: "free", hasKey: false });
+    assert.equal(answer.latest?.version, "1.0.0");
+    assert.equal(answer.newest?.version, "1.1.0");
+    assert.equal(answer.entitled, true);
+  });
+
+  it("gives FlyeeClub the newest, the same as the newest for everyone", () => {
+    const answer = resolveChannel([entry, complete], { channel: "latest", hasKey: true });
+    assert.equal(answer.latest?.version, "1.1.0");
+    assert.equal(answer.newest?.version, "1.1.0");
+    assert.equal(answer.entitled, true);
+  });
+
+  it("still names a version for an app the account cannot download", () => {
+    const answer = resolveChannel([{ ...entry, is_entry: false }, complete], { channel: "free", hasKey: false });
+    assert.equal(answer.entitled, false);
+    assert.equal(answer.latest?.version, "1.1.0");
+  });
+
+  it("narrows latest to stable versions when asked, and never counts a draft", () => {
+    const answer = resolveChannel([entry, complete, draft], { channel: "latest", hasKey: true, stableOnly: true });
+    assert.equal(answer.latest?.version, "1.1.0");
+    assert.equal(resolveChannel([draft], { channel: "latest", hasKey: true }).newest, null);
   });
 });

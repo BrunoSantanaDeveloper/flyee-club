@@ -1,6 +1,7 @@
-import { isModuleEntitled } from "@/lib/catalog/read";
+import { grantsModuleKey } from "@/lib/catalog/read";
 import { cliLinks, runCliRequest } from "@/lib/cli/gates";
 import { trackServerEvent } from "@/lib/product-events-server";
+import { channelOf, versionAllowed } from "@flyee/catalog/channels";
 import { isSemver } from "@flyee/catalog/semver";
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,59}$/;
@@ -13,9 +14,11 @@ const SIGNED_URL_TTL_S = 300;
  * installing and the manifest it installs from.
  *
  * Refused for an unpublished or unknown version (404), a withdrawn one (410,
- * with the reason), a module the plan does not include (403 with the upgrade
- * link, recorded as `update.denied_entitlement`) and past the daily download
- * ceiling (429). Every package handed out is a `module_downloads` row.
+ * with the reason), a version this account may not download (403 with the
+ * upgrade link, recorded as `update.denied_entitlement`): a module the plan does
+ * not include, or a version outside the account's channel, since the account
+ * with no purchase gets only the entry version of each app (0040). Past the
+ * daily download ceiling, 429. Every package handed out is a `module_downloads` row.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string; version: string }> }) {
   const { slug, version } = await params;
@@ -27,7 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 
       const { data: module, error: moduleError } = await service
         .from("catalog_modules")
-        .select("id, slug, is_free_sample, entitlement_key")
+        .select("id, slug, entitlement_key")
         .eq("slug", slug)
         .eq("status", "published")
         .maybeSingle();
@@ -36,7 +39,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 
       const { data: row, error: versionError } = await service
         .from("catalog_module_versions")
-        .select("id, version, status, storage_path, sha256, size_bytes, manifest, yank_reason")
+        .select("id, version, status, is_stable, is_entry, storage_path, sha256, size_bytes, manifest, yank_reason")
         .eq("module_id", module.id)
         .eq("version", version)
         .maybeSingle();
@@ -55,7 +58,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
         };
       }
 
-      if (!isModuleEntitled(module as { is_free_sample: boolean; entitlement_key: string }, entitlements.limits)) {
+      const allowed = versionAllowed(
+        { is_stable: Boolean(row.is_stable), is_entry: Boolean(row.is_entry) },
+        channelOf(entitlements.limits),
+        grantsModuleKey(module as { entitlement_key: string }, entitlements.limits),
+      );
+      if (!allowed) {
         await trackServerEvent({
           actorId: auth.userId,
           orgId: auth.orgId,

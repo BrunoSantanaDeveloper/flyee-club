@@ -8,8 +8,10 @@ import { requireSuperadmin } from "@/lib/catalog/upload";
  * the catalog console makes. The database enforces the rules
  * (`guard_module_version`, migration 0008): draft → published → yanked and
  * nothing else; a released version's bytes, checksum, manifest and
- * permissions never change; a withdrawn version is nobody's stable version.
- * These actions only add the session check and the audit trail.
+ * permissions never change; a withdrawn version is nobody's stable version;
+ * each app has one entry version at most, always published, and it is never
+ * yanked while marked (migration 0040). These actions only add the session
+ * check and the audit trail.
  */
 
 export type VersionActionResult = { ok: true } | { ok: false; error: string };
@@ -35,7 +37,11 @@ async function changeVersion(
   if (error)
     return {
       ok: false,
-      error: error.message.includes("invalid_version_transition") ? "invalid_transition" : error.message,
+      error: error.message.includes("invalid_version_transition")
+        ? "invalid_transition"
+        : error.message.includes("entry_version_yank")
+          ? "entry_yank"
+          : error.message,
     };
   if (!data) return { ok: false, error: "not_found" };
 
@@ -68,4 +74,37 @@ export async function yankVersion(versionId: string, reason: string): Promise<Ve
   return changeVersion(versionId, { status: "yanked", yank_reason: clean }, "catalog.version_yanked", {
     reason: clean,
   });
+}
+
+/**
+ * Moves the entry version of an app to one of its published versions, or
+ * clears it (`versionId` null): the one version an account with no purchase
+ * installs (`catalog_set_entry_version`, migration 0040). The database swaps
+ * the mark in one transaction and refuses a draft or another app's version.
+ */
+export async function setEntryVersion(
+  moduleId: string,
+  versionId: string | null,
+  reason: string,
+): Promise<VersionActionResult> {
+  if (!UUID.test(moduleId) || (versionId !== null && !UUID.test(versionId))) {
+    return { ok: false, error: "invalid_version" };
+  }
+  const session = await requireSuperadmin();
+  if (!session) return { ok: false, error: "forbidden" };
+
+  const { error } = await session.supabase.rpc("catalog_set_entry_version", {
+    target_module: moduleId,
+    target_version: versionId,
+  });
+  if (error) {
+    return { ok: false, error: error.message.includes("entry_version_invalid") ? "invalid_entry" : error.message };
+  }
+
+  await recordAudit(session.supabase, versionId ? "catalog.entry_version_marked" : "catalog.entry_version_cleared", {
+    entityType: versionId ? "catalog_module_version" : "catalog_module",
+    entityId: versionId ?? moduleId,
+    metadata: { module_id: moduleId, reason: reason.trim().slice(0, 300) },
+  });
+  return { ok: true };
 }

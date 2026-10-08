@@ -14,7 +14,7 @@ import NiUploadCloud from "@/icons/nexture/ni-upload-cloud";
 import { type AdminVersion, textOf } from "@/lib/admin/catalog";
 import { formatBytes, formatDate, formatNumber } from "@/lib/admin/format";
 import { AI_TOOL_LABEL, labelOf, PERMISSION_KIND_LABEL, VERSION_STATUS_LABEL } from "@/lib/admin/labels";
-import { publishVersion, setVersionStable, yankVersion } from "@/lib/catalog/version-actions";
+import { publishVersion, setEntryVersion, setVersionStable, yankVersion } from "@/lib/catalog/version-actions";
 
 const STATUS_TONE = { draft: "attention", published: "positive", yanked: "neutral" } as const;
 
@@ -23,6 +23,8 @@ const ACTION_ERROR: Record<string, string> = {
   invalid_transition: "Essa mudança de estado não é permitida para esta versão.",
   reason_required: "Diga por que a versão está sendo retirada.",
   not_found: "Esta versão não existe mais. Recarregue a página.",
+  entry_yank: "Esta é a versão de entrada. Marque outra versão de entrada, ou tire a marca, antes de retirá-la.",
+  invalid_entry: "Só uma versão publicada desta ferramenta pode ser a versão de entrada.",
 };
 
 const reasonText = (reason: AdminVersion["permissions"][number]["reason"]) =>
@@ -45,7 +47,10 @@ function guidesLine(guides: AdminVersion["guides"]): string {
  * The versions of one module, newest first. A version is a package members
  * verify by its checksum, so once released it never changes: the actions are
  * the lifecycle the database allows (publish a draft, mark stable, yank with a
- * reason members will read, discard a draft).
+ * reason members will read, discard a draft). One published version is the
+ * entry version, the one an account with no purchase installs (migration
+ * 0040): the first release takes the mark, the operator moves or clears it,
+ * and a marked version is not yanked until the mark leaves it.
  */
 export default function VersionsList({
   slug,
@@ -60,6 +65,9 @@ export default function VersionsList({
   const [busy, setBusy] = useState<string | null>(null);
   const [yanking, setYanking] = useState<AdminVersion | null>(null);
   const [publishing, setPublishing] = useState<AdminVersion | null>(null);
+  const [entering, setEntering] = useState<AdminVersion | null>(null);
+  const entryVersion = versions.find((version) => version.isEntry) ?? null;
+  const released = versions.some((version) => version.status !== "draft");
 
   const run = async (versionId: string, action: () => Promise<{ ok: boolean; error?: string }>, success: string) => {
     setBusy(versionId);
@@ -99,6 +107,7 @@ export default function VersionsList({
                 </Typography>
                 <StatusChip label={labelOf(VERSION_STATUS_LABEL, version.status)} tone={STATUS_TONE[version.status]} />
                 {version.isStable ? <StatusChip label="estável" tone="info" /> : null}
+                {version.isEntry ? <StatusChip label="versão de entrada" tone="positive" /> : null}
                 <Typography variant="body2" className="text-text-secondary sm:ml-auto">
                   {version.status === "draft"
                     ? `enviada em ${formatDate(version.createdAt)}`
@@ -117,7 +126,7 @@ export default function VersionsList({
                   {version.files !== null
                     ? ` · ${formatNumber(version.files)} ${version.files === 1 ? "arquivo" : "arquivos"}`
                     : ""}
-                  {version.entry ? ` · entrada ${version.entry}` : ""}
+                  {version.entry ? ` · arquivo inicial ${version.entry}` : ""}
                   {version.license === "commercial" ? " · licença comercial" : ""}
                 </Typography>
                 <Typography variant="body2" className="text-text-secondary">
@@ -217,10 +226,19 @@ export default function VersionsList({
                       {version.isStable ? "Desmarcar estável" : "Marcar como estável"}
                     </Button>
                     <Button
+                      variant="outlined"
+                      color="grey"
+                      size="small"
+                      disabled={busy === version.id}
+                      onClick={() => setEntering(version)}
+                    >
+                      {version.isEntry ? "Tirar a marca de entrada" : "Marcar como versão de entrada"}
+                    </Button>
+                    <Button
                       variant="text"
                       color="error"
                       size="small"
-                      disabled={busy === version.id}
+                      disabled={busy === version.id || version.isEntry}
                       onClick={() => setYanking(version)}
                     >
                       Retirar
@@ -240,6 +258,11 @@ export default function VersionsList({
                   </Button>
                 ) : null}
               </Box>
+              {version.status === "published" && version.isEntry ? (
+                <Typography variant="body2" className="text-text-secondary">
+                  Para retirar a versão de entrada, marque outra ou tire a marca antes.
+                </Typography>
+              ) : null}
             </CardContent>
           </Card>
         );
@@ -252,6 +275,11 @@ export default function VersionsList({
           intro="A partir daqui, o pacote é o que os integrantes baixam e conferem pelo checksum."
           consequences={[
             "Quem tem acesso a esta ferramenta passa a receber esta versão no próximo npx flyee update.",
+            ...(released
+              ? []
+              : [
+                  "Por ser a primeira versão publicada, ela vira a versão de entrada: a conta sem compra instala esta e nenhuma outra, até você marcar outra.",
+                ]),
             "O pacote, o checksum, o manifesto e as permissões ficam congelados: corrigir é publicar uma versão nova.",
             "A página de verificação passa a responder por esta versão.",
           ]}
@@ -273,6 +301,51 @@ export default function VersionsList({
             return error ? (ACTION_ERROR[error] ?? error) : null;
           }}
           onClose={() => setPublishing(null)}
+        />
+      ) : null}
+
+      {entering ? (
+        <ConfirmActionDialog
+          key={`entry-${entering.id}`}
+          title={
+            entering.isEntry
+              ? `Tirar a marca de entrada da v${entering.version}?`
+              : `Marcar a v${entering.version} como versão de entrada?`
+          }
+          intro="A versão de entrada é a única que a conta sem compra instala deste app. Ela nunca é atualizada: a próxima vem com o FlyeeClub."
+          consequences={
+            entering.isEntry
+              ? [
+                  "A conta sem compra fica sem este app até você marcar outra versão de entrada.",
+                  "O guia de uso e o vídeo básico deste app deixam de abrir para ela.",
+                ]
+              : [
+                  "A conta sem compra passa a instalar esta versão, e nenhuma outra deste app.",
+                  ...(entryVersion && entryVersion.id !== entering.id
+                    ? [`A v${entryVersion.version} deixa de ser a versão de entrada.`]
+                    : []),
+                ]
+          }
+          stays={[
+            "Quem já instalou continua com a versão que tem: nada muda na máquina de ninguém.",
+            "Quem tem o FlyeeClub continua recebendo a versão mais nova.",
+          ]}
+          reasonLabel="Por que esta mudança, para a trilha de auditoria"
+          reasonPlaceholder="A 1.1.0 traz a fatia completa; a entrada fica na 1.0.0"
+          reasonMinLength={4}
+          confirmLabel={entering.isEntry ? "Tirar a marca" : "Marcar como versão de entrada"}
+          onConfirm={async (reason) => {
+            const error = await run(
+              entering.id,
+              () => setEntryVersion(entering.moduleId, entering.isEntry ? null : entering.id, reason),
+              entering.isEntry
+                ? `A v${entering.version} deixou de ser a versão de entrada.`
+                : `A v${entering.version} é a versão de entrada.`,
+            );
+            if (!error) setEntering(null);
+            return error ? (ACTION_ERROR[error] ?? error) : null;
+          }}
+          onClose={() => setEntering(null)}
         />
       ) : null}
 

@@ -12,6 +12,8 @@ import ProductMarkdown from "@/components/product/product-markdown";
 import StatusChip from "@/components/product/status-chip";
 import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import type { loadCatalog, loadRecipe } from "@/lib/catalog/read";
+import { moduleAccess, newerThanInstalls } from "@/lib/member/module-access";
+import type { Channel } from "@flyee/catalog/channels";
 
 type Recipe = NonNullable<Awaited<ReturnType<typeof loadRecipe>>>;
 type Trails = Awaited<ReturnType<typeof loadCatalog>>["trails"];
@@ -23,6 +25,8 @@ export type RecipeState =
       trails: Trails;
       /** A step by step is written, whether or not this account can read it. */
       hasWorkflow: boolean;
+      /** The account's channel: "free" installs the entry version of each app (0040). */
+      channel: Channel | null;
     }
   | { kind: "error" }
   | { kind: "unavailable" };
@@ -107,6 +111,8 @@ export default function RecipeView({ slug, state }: { slug: string; state: Recip
         <Grid container spacing={3}>
           {recipe.modules.map((module) => {
             const trail = state.trails.find((item) => item.slug === module.trail);
+            const access = moduleAccess(module, state.channel);
+            const newer = newerThanInstalls(access);
             return (
               <Grid key={module.slug} size={{ xs: 12, sm: 6, lg: 4 }}>
                 <ModuleTile
@@ -116,13 +122,20 @@ export default function RecipeView({ slug, state }: { slug: string; state: Recip
                   name={module.name ?? module.slug}
                   summary={module.summary}
                   trailLabel={trail?.name ?? module.trail}
-                  meta={module.latest ? `v${module.latest.version}` : undefined}
+                  meta={
+                    [
+                      access.installs ? `v${access.installs}` : module.latest ? `v${module.latest.version}` : null,
+                      newer ? t("modules-newest", { version: newer }) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || undefined
+                  }
                   status={
-                    module.is_free_sample
-                      ? { kind: "free", label: t("modules-free-sample") }
-                      : module.entitled
-                        ? null
-                        : { kind: "locked", label: t("modules-locked") }
+                    access.kind === "entry"
+                      ? { kind: "entry", label: t("modules-entry-version") }
+                      : access.kind === "locked"
+                        ? { kind: "locked", label: t("modules-locked") }
+                        : null
                   }
                 />
               </Grid>

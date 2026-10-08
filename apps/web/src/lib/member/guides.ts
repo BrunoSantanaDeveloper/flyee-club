@@ -10,7 +10,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * version carries its own guide, so the page shows the guide of the version
  * the member has INSTALLED (the newest one across their connected machines),
  * and says when a newer version, with a newer guide, is out. Without an
- * installed version, it shows the newest released one.
+ * installed version, it shows the newest released one, or the version the
+ * account would install: the entry version, for an account with no purchase
+ * (migration 0040), whose basic guide is the one it may read.
  *
  * Which guides a version carries is public metadata; the text comes through
  * `catalog_guides`, which only returns what `can_read_guide` allows. So a
@@ -48,6 +50,8 @@ export function installedVersionOf(devices: { installed_modules: unknown }[], sl
 /**
  * The version whose guide the page shows. Pure.
  *  - the installed version, when it carries a guide;
+ *  - otherwise `preferred`, when it carries one (the version the account
+ *    would install, for an account that installed nothing);
  *  - otherwise the newest version that carries one (an installed version
  *    from before guides existed reads the newest guide, and says so);
  *  - null when no version carries a guide.
@@ -56,13 +60,15 @@ export function installedVersionOf(devices: { installed_modules: unknown }[], sl
 export function pickGuideVersion(
   versions: GuideVersionRow[],
   installed: string | null,
+  preferred: string | null = null,
 ): { version: GuideVersionRow; installed: boolean; newer: string | null } | null {
   const ordered = newestFirst(versions);
   const withGuides = ordered.filter(carriesGuides);
   if (withGuides.length === 0) return null;
 
   const exact = installed ? withGuides.find((row) => row.version === installed) : undefined;
-  const chosen = exact ?? withGuides.find((row) => row.status === "published") ?? withGuides[0];
+  const fallback = !exact && preferred ? withGuides.find((row) => row.version === preferred) : undefined;
+  const chosen = exact ?? fallback ?? withGuides.find((row) => row.status === "published") ?? withGuides[0];
   const latestReleased = ordered.find((row) => row.status === "published");
   const newer =
     latestReleased && compareSemver(latestReleased.version, chosen.version) > 0 ? latestReleased.version : null;
@@ -104,7 +110,14 @@ export type MemberGuide =
 
 export async function loadGuide(
   supabase: SupabaseClient,
-  input: { moduleId: string; slug: string; orgId: string | null; locale: CatalogLocale },
+  input: {
+    moduleId: string;
+    slug: string;
+    orgId: string | null;
+    locale: CatalogLocale;
+    /** The version the account would install when it installed none (its channel's latest). */
+    preferVersion?: string | null;
+  },
 ): Promise<MemberGuide> {
   const [{ data: versions, error }, { data: devices }] = await Promise.all([
     supabase
@@ -121,6 +134,7 @@ export async function loadGuide(
   const picked = pickGuideVersion(
     (versions ?? []) as GuideVersionRow[],
     installedVersionOf((devices ?? []) as { installed_modules: unknown }[], input.slug),
+    input.preferVersion ?? null,
   );
   if (!picked) return { kind: "none" };
 

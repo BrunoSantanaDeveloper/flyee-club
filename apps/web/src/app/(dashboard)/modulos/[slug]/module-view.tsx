@@ -20,12 +20,22 @@ import type { loadModule } from "@/lib/catalog/read";
 import type { MemberGuide } from "@/lib/member/guides";
 import { aiToolName, MODULE_TYPE_LABEL, PERMISSION_LABEL, pickLocalized } from "@/lib/member/labels";
 import type { MemberLesson } from "@/lib/member/lessons";
+import { moduleAccess, newerThanInstalls } from "@/lib/member/module-access";
 import { cn } from "@/lib/utils";
+import type { Channel } from "@flyee/catalog/channels";
 
 type ModuleDetail = NonNullable<Awaited<ReturnType<typeof loadModule>>>;
 
 export type ModuleState =
-  | { kind: "ready"; module: ModuleDetail; lessons: MemberLesson[]; guide: MemberGuide; locale: string }
+  | {
+      kind: "ready";
+      module: ModuleDetail;
+      lessons: MemberLesson[];
+      guide: MemberGuide;
+      locale: string;
+      /** The account's channel: "free" installs the entry version of each app (0040). */
+      channel: Channel | null;
+    }
   | { kind: "error" }
   | { kind: "unavailable" };
 
@@ -36,7 +46,10 @@ const UPGRADE = "/settings/billing?source=module";
  * what it does, see that it is safe, and install it. Success: the command
  * copied into their terminal. Everything a careful member checks before
  * running something is here: the permissions it declares with their reasons,
- * the keys it needs from them, and each release with its checksum page.
+ * the keys it needs from them, and each release with its checksum page. An
+ * account with no purchase installs the entry version (migration 0040): the
+ * page says which one, how far the newest is, and marks each release it does
+ * not get.
  */
 export default function ModuleView({ slug, state }: { slug: string; state: ModuleState }) {
   const t = useTranslations("product");
@@ -70,6 +83,8 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
   }
 
   const { module, locale } = state;
+  const access = moduleAccess(module, state.channel);
+  const newer = newerThanInstalls(access);
   const tone = TILE_TONE[TRAIL_TONE[module.trail] ?? "primary"];
   const date = (value: string | null) =>
     value ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value)) : "";
@@ -103,12 +118,16 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
       },
     ];
   });
-  const guideVersionLine =
-    guide.kind === "ready"
-      ? t(guide.installed ? "module-guide-version-installed" : "module-guide-version", { version: guide.version })
-      : null;
-  const guideNewerLine =
-    guide.kind === "ready" && guide.newer ? t("module-guide-newer", { version: guide.newer }) : null;
+  const guideVersionKey =
+    guide.kind === "ready" && guide.installed
+      ? "module-guide-version-installed"
+      : guide.kind === "ready" && access.kind === "entry" && guide.version === access.installs
+        ? "module-guide-version-entry"
+        : "module-guide-version";
+  const guideVersionLine = guide.kind === "ready" ? t(guideVersionKey, { version: guide.version }) : null;
+  // The entry version is never updated: the newer guide comes with FlyeeClub, not with an update.
+  const newerGuideKey = access.kind === "entry" ? "module-guide-newer-entry" : "module-guide-newer";
+  const guideNewerLine = guide.kind === "ready" && guide.newer ? t(newerGuideKey, { version: guide.newer }) : null;
   const credentials = (module.external_credentials ?? []) as {
     name?: string;
     env?: string;
@@ -143,8 +162,10 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
                     variant="outlined"
                     label={t(MODULE_TYPE_LABEL[module.type] ?? "module-type-tool")}
                   />
-                  {module.latest ? <Chip size="small" variant="outlined" label={`v${module.latest.version}`} /> : null}
-                  {module.is_free_sample ? <StatusChip label={t("modules-free-sample")} tone="positive" /> : null}
+                  {module.latest ? (
+                    <Chip size="small" variant="outlined" label={`v${access.installs ?? module.latest.version}`} />
+                  ) : null}
+                  {access.kind === "entry" ? <StatusChip label={t("modules-entry-version")} tone="positive" /> : null}
                 </Box>
               </Box>
 
@@ -161,6 +182,18 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
                   <Typography variant="body2" className="text-text-secondary">
                     {t("module-install-note")}
                   </Typography>
+                  {access.kind === "entry" ? (
+                    <Box className="flex flex-row flex-wrap items-center gap-2">
+                      <Typography variant="body2">
+                        {newer
+                          ? t("module-entry-note-newer", { version: access.installs ?? "", newest: newer })
+                          : t("module-entry-note", { version: access.installs ?? "" })}
+                      </Typography>
+                      <Button size="small" variant="outlined" component={Link} href="/assinatura">
+                        {t("modules-get-kit")}
+                      </Button>
+                    </Box>
+                  ) : null}
                 </Box>
               ) : (
                 <Alert
@@ -216,6 +249,10 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
                         </Typography>
                         {version.status === "yanked" ? (
                           <Chip size="small" color="error" variant="outlined" label={t("module-version-yanked")} />
+                        ) : access.kind === "entry" && version.version === access.installs ? (
+                          <StatusChip label={t("modules-entry-version")} tone="positive" />
+                        ) : access.kind === "entry" && !version.entitled ? (
+                          <StatusChip label={t("module-version-with-kit")} tone="neutral" />
                         ) : null}
                         <Link
                           href={version.verify_url}

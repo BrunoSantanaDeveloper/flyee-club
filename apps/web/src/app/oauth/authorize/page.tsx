@@ -111,8 +111,8 @@ export default async function AuthorizePage({
   const orgRel = membership?.organizations as { name?: string } | { name?: string }[] | null;
   const orgName = (Array.isArray(orgRel) ? orgRel[0]?.name : orgRel?.name) ?? "";
 
-  // An active workspace, a free account included: free samples install
-  // without a purchase. What each tool needs is checked per download.
+  // An active workspace, an account with no purchase included: it installs the
+  // entry version of each app (0040). What each tool needs is checked per download.
   const { data: entitlements } = await supabase.rpc("org_entitlements", { target_org: orgId });
   if (!entitlements?.active) return errorCard(t("oauth-error-plan"));
 
@@ -202,7 +202,11 @@ export default async function AuthorizePage({
 
       {revalidating && device ? (
         <Alert severity="info" className="neutral bg-background-paper/60!">
-          {device.behind > 0 ? t("oauth-revalidate-behind", { count: device.behind }) : t("oauth-revalidate-current")}
+          {device.behind > 0
+            ? t("oauth-revalidate-behind", { count: device.behind })
+            : device.beyondChannel > 0
+              ? t("oauth-revalidate-beyond", { count: device.beyondChannel })
+              : t("oauth-revalidate-current")}
         </Alert>
       ) : null}
 

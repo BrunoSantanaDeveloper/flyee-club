@@ -14,6 +14,8 @@ import NiFilter from "@/icons/nexture/ni-filter";
 import type { loadCatalog } from "@/lib/catalog/read";
 import type { PlannedApp } from "@/lib/member/community";
 import { aiToolName, MODULE_TYPES } from "@/lib/member/labels";
+import { moduleAccess, newerThanInstalls } from "@/lib/member/module-access";
+import type { Channel } from "@flyee/catalog/channels";
 
 type Catalog = Awaited<ReturnType<typeof loadCatalog>>;
 
@@ -24,6 +26,8 @@ export type ModulesState =
       modules: Catalog["modules"];
       /** The roadmap's planned and building apps, shown as "Em breve". */
       planned: PlannedApp[];
+      /** The account's channel: "free" installs the entry version of each app (0040). */
+      channel: Channel | null;
       hasAccess: boolean;
     }
   | { kind: "error" }
@@ -41,8 +45,9 @@ const PLANNED_STATUS: Record<PlannedApp["status"], string> = {
  * Who: a member choosing what to install next. Job: find the tool for the
  * stage they are in. Success: a tool picked, with its command one tap away on
  * its page. Filters are the seven trails (the stages of a product), the AI
- * they use and the kind of tool; a free sample and a tool outside the plan
- * say so on the tile itself. The apps on their way follow the grid, marked
+ * they use and the kind of tool; the entry version an account with no
+ * purchase installs, with the newest version beside it, and a tool outside
+ * the plan say so on the tile itself. The apps on their way follow the grid, marked
  * "Em breve" and linked to their idea on the roadmap (docs/PRODUCT.md,
  * 2026-10-08); the stage filter narrows them too, while the AI and kind
  * filters, which an idea does not have yet, set them aside.
@@ -247,6 +252,8 @@ export default function ModulesView({ state }: { state: ModulesState }) {
           {visible.map((module) => {
             const trailInfo = state.trails.find((item) => item.slug === module.trail);
             const ais = module.compatible_ais.map((tool) => aiToolName(tool, t("ai-tool-other"))).join(", ");
+            const access = moduleAccess(module, state.channel);
+            const newer = newerThanInstalls(access);
             return (
               <Grid key={module.slug} size={{ xs: 12, sm: 6, lg: 4, xl: 3 }}>
                 <ModuleTile
@@ -256,13 +263,19 @@ export default function ModulesView({ state }: { state: ModulesState }) {
                   name={module.name ?? module.slug}
                   summary={module.summary}
                   trailLabel={trailInfo?.name ?? module.trail}
-                  meta={[module.latest ? `v${module.latest.version}` : null, ais || null].filter(Boolean).join(" · ")}
+                  meta={[
+                    access.installs ? `v${access.installs}` : module.latest ? `v${module.latest.version}` : null,
+                    newer ? t("modules-newest", { version: newer }) : null,
+                    ais || null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                   status={
-                    module.is_free_sample
-                      ? { kind: "free", label: t("modules-free-sample") }
-                      : module.entitled
-                        ? null
-                        : { kind: "locked", label: t("modules-locked") }
+                    access.kind === "entry"
+                      ? { kind: "entry", label: t("modules-entry-version") }
+                      : access.kind === "locked"
+                        ? { kind: "locked", label: t("modules-locked") }
+                        : null
                   }
                 />
               </Grid>

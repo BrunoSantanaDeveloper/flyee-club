@@ -912,56 +912,6 @@ export const blogComments = pgTable("blog_comments", {
 	check("blog_comments_body_check", sql`(char_length(body) >= 1) AND (char_length(body) <= 4000)`),
 ]);
 
-export const catalogModuleVersions = pgTable("catalog_module_versions", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	moduleId: uuid("module_id").notNull(),
-	version: text().notNull(),
-	isStable: boolean("is_stable").default(false).notNull(),
-	status: text().default('draft').notNull(),
-	storagePath: text("storage_path").notNull(),
-	sha256: text().notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
-	manifest: jsonb().default({}).notNull(),
-	changelog: jsonb().default({}).notNull(),
-	minCoreVersion: text("min_core_version"),
-	compatibleAis: aiTool("compatible_ais").array().default(sql`'{}'`).notNull(),
-	permissions: jsonb().default([]).notNull(),
-	publishedAt: timestamp("published_at", { withTimezone: true, mode: 'string' }),
-	yankedAt: timestamp("yanked_at", { withTimezone: true, mode: 'string' }),
-	yankReason: text("yank_reason"),
-	createdBy: uuid("created_by"),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	guides: jsonb().default({}).notNull(),
-}, (table) => [
-	index("catalog_module_versions_module_idx").using("btree", table.moduleId.asc().nullsLast().op("uuid_ops"), table.publishedAt.desc().nullsFirst().op("uuid_ops")).where(sql`(status = 'published'::text)`),
-	foreignKey({
-			columns: [table.moduleId],
-			foreignColumns: [catalogModules.id],
-			name: "catalog_module_versions_module_id_fkey"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.createdBy],
-			foreignColumns: [profiles.id],
-			name: "catalog_module_versions_created_by_fkey"
-		}).onDelete("set null"),
-	unique("catalog_module_versions_module_id_version_key").on(table.moduleId, table.version),
-	pgPolicy("catalog_module_versions_select_released", { as: "permissive", for: "select", to: ["anon", "authenticated"], using: sql`((status = ANY (ARRAY['published'::text, 'yanked'::text])) AND (EXISTS ( SELECT 1
-   FROM catalog_modules m
-  WHERE ((m.id = catalog_module_versions.module_id) AND (m.status = 'published'::text)))))` }),
-	pgPolicy("catalog_module_versions_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"] }),
-	check("catalog_module_versions_version_check", sql`CHECK (semver_ok(version`),
-	check("catalog_module_versions_status_check", sql`status = ANY (ARRAY['draft'::text, 'published'::text, 'yanked'::text])`),
-	check("catalog_module_versions_sha256_check", sql`sha256 ~ '^[0-9a-f]{64}$'::text`),
-	check("catalog_module_versions_size_bytes_check", sql`size_bytes > 0`),
-	check("catalog_module_versions_manifest_check", sql`jsonb_typeof(manifest) = 'object'::text`),
-	check("catalog_module_versions_changelog_check", sql`CHECK (i18n_ok(changelog`),
-	check("catalog_module_versions_min_core_version_check", sql`(min_core_version IS NULL) OR semver_ok(min_core_version)`),
-	check("catalog_module_versions_permissions_check", sql`jsonb_typeof(permissions) = 'array'::text`),
-	check("catalog_module_versions_yank_reason", sql`(status <> 'yanked'::text) OR (NULLIF(btrim(yank_reason), ''::text) IS NOT NULL)`),
-	check("catalog_module_versions_guides_check", sql`jsonb_typeof(guides) = 'object'::text`),
-]);
-
 export const catalogModules = pgTable("catalog_modules", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	slug: text().notNull(),
@@ -974,7 +924,6 @@ export const catalogModules = pgTable("catalog_modules", {
 	compatibleAis: aiTool("compatible_ais").array().default(sql`'{}'`).notNull(),
 	externalCredentials: jsonb("external_credentials").default([]).notNull(),
 	status: text().default('draft').notNull(),
-	isFreeSample: boolean("is_free_sample").default(false).notNull(),
 	entitlementKey: text("entitlement_key").default('catalog_access').notNull(),
 	sort: integer().default(0).notNull(),
 	publishedAt: timestamp("published_at", { withTimezone: true, mode: 'string' }),
@@ -1014,6 +963,59 @@ export const catalogModules = pgTable("catalog_modules", {
 	check("catalog_modules_status_check", sql`status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])`),
 	check("catalog_modules_entitlement_key_check", sql`entitlement_key ~ '^[a-z][a-z0-9_]{1,39}$'::text`),
 	check("catalog_modules_personas_check", sql`(NOT ('outro'::member_segment = ANY (personas))) AND (cardinality(personas) <= 4)`),
+]);
+
+export const catalogModuleVersions = pgTable("catalog_module_versions", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	moduleId: uuid("module_id").notNull(),
+	version: text().notNull(),
+	isStable: boolean("is_stable").default(false).notNull(),
+	status: text().default('draft').notNull(),
+	storagePath: text("storage_path").notNull(),
+	sha256: text().notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+	manifest: jsonb().default({}).notNull(),
+	changelog: jsonb().default({}).notNull(),
+	minCoreVersion: text("min_core_version"),
+	compatibleAis: aiTool("compatible_ais").array().default(sql`'{}'`).notNull(),
+	permissions: jsonb().default([]).notNull(),
+	publishedAt: timestamp("published_at", { withTimezone: true, mode: 'string' }),
+	yankedAt: timestamp("yanked_at", { withTimezone: true, mode: 'string' }),
+	yankReason: text("yank_reason"),
+	createdBy: uuid("created_by"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	guides: jsonb().default({}).notNull(),
+	isEntry: boolean("is_entry").default(false).notNull(),
+}, (table) => [
+	index("catalog_module_versions_module_idx").using("btree", table.moduleId.asc().nullsLast().op("uuid_ops"), table.publishedAt.desc().nullsFirst().op("timestamptz_ops")).where(sql`(status = 'published'::text)`),
+	uniqueIndex("catalog_module_versions_one_entry").using("btree", table.moduleId.asc().nullsLast().op("uuid_ops")).where(sql`is_entry`),
+	foreignKey({
+			columns: [table.moduleId],
+			foreignColumns: [catalogModules.id],
+			name: "catalog_module_versions_module_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [profiles.id],
+			name: "catalog_module_versions_created_by_fkey"
+		}).onDelete("set null"),
+	unique("catalog_module_versions_module_id_version_key").on(table.moduleId, table.version),
+	pgPolicy("catalog_module_versions_select_released", { as: "permissive", for: "select", to: ["anon", "authenticated"], using: sql`((status = ANY (ARRAY['published'::text, 'yanked'::text])) AND (EXISTS ( SELECT 1
+   FROM catalog_modules m
+  WHERE ((m.id = catalog_module_versions.module_id) AND (m.status = 'published'::text)))))` }),
+	pgPolicy("catalog_module_versions_all_superadmin", { as: "permissive", for: "all", to: ["authenticated"] }),
+	check("catalog_module_versions_version_check", sql`CHECK (semver_ok(version`),
+	check("catalog_module_versions_status_check", sql`status = ANY (ARRAY['draft'::text, 'published'::text, 'yanked'::text])`),
+	check("catalog_module_versions_sha256_check", sql`sha256 ~ '^[0-9a-f]{64}$'::text`),
+	check("catalog_module_versions_size_bytes_check", sql`size_bytes > 0`),
+	check("catalog_module_versions_manifest_check", sql`jsonb_typeof(manifest) = 'object'::text`),
+	check("catalog_module_versions_changelog_check", sql`CHECK (i18n_ok(changelog`),
+	check("catalog_module_versions_min_core_version_check", sql`(min_core_version IS NULL) OR semver_ok(min_core_version)`),
+	check("catalog_module_versions_permissions_check", sql`jsonb_typeof(permissions) = 'array'::text`),
+	check("catalog_module_versions_yank_reason", sql`(status <> 'yanked'::text) OR (NULLIF(btrim(yank_reason), ''::text) IS NOT NULL)`),
+	check("catalog_module_versions_guides_check", sql`jsonb_typeof(guides) = 'object'::text`),
+	check("catalog_module_versions_entry_published", sql`(NOT is_entry) OR (status = 'published'::text)`),
 ]);
 
 export const catalogLessons = pgTable("catalog_lessons", {

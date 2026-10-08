@@ -15,7 +15,7 @@ Desenho vigente da cobrança do FlyeeClub, escrito na fase 4 de `docs/PLANO-IMPL
 
 | Degrau | Planos | Cobrança | Dispositivos | O que libera |
 |---|---|---|---|---|
-| Gratuito | `gratuito` | nenhuma | 1 | amostras grátis do catálogo |
+| Gratuito | `gratuito` | nenhuma | 1 | a versão de entrada de cada app (canal `free`, migração `0040`) |
 | FlyeeClub (`kit`) | `kit`, `kit-usd` | pagamento único, válido por `plans.access_months` (12) a partir da fatura paga | 1 | catálogo e atualizações (`catalog_access`), uso em projetos de clientes (`commercial_license`) |
 | FlyeeClub Pro (`club`) | `club-mensal`, `club-anual` e as versões `-usd` | recorrente | 3 | o FlyeeClub, mais `advanced_lessons`, `recipes`, `roadmap_vote`, `meetings` e `open_the_hood` |
 | Pro (fora da vitrine) | `pro-mensal`, `pro-anual` e as versões `-usd` | nenhuma: inativo desde `0025` | 5 | nada é vendido nem concedido; as linhas ficam pelo histórico |

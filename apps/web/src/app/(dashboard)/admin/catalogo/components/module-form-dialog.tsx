@@ -39,7 +39,6 @@ function initialForm(module: AdminModule | null, trails: AdminTrail[]): ModuleIn
     descriptionMd: module?.descriptionMd ?? {},
     compatibleAis: module?.compatibleAis ?? ["claude_code"],
     externalCredentials: module?.externalCredentials ?? [],
-    isFreeSample: module?.isFreeSample ?? false,
     entitlementKey: module?.entitlementKey ?? "catalog_access",
     sort: module?.sort ?? 0,
   };
@@ -203,13 +202,6 @@ export default function ModuleFormDialog({
               help="catalog_access libera para quem tem o kit. Mude só para uma ferramenta exclusiva de um degrau."
             />
           </Box>
-
-          <CheckInput
-            label="Amostra grátis"
-            checked={form.isFreeSample}
-            onChange={(value) => set("isFreeSample", value)}
-            help="Qualquer conta instala o app e lê o guia de uso, sem compra."
-          />
 
           <Box className="flex flex-col gap-3">
             <Box className="flex flex-row items-center justify-between gap-3">

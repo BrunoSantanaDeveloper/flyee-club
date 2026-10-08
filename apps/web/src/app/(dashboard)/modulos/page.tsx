@@ -3,6 +3,7 @@ import ModulesView, { type ModulesState } from "./modules-view";
 import { loadCatalog } from "@/lib/catalog/read";
 import { loadPlannedApps } from "@/lib/member/community";
 import { getMemberContext } from "@/lib/member/context";
+import { channelOf } from "@flyee/catalog/channels";
 
 /**
  * /modulos: the member's catalog. Read on the server with the member's
@@ -17,12 +18,9 @@ export default async function ModulesPage() {
     state = { kind: "unavailable" };
   } else {
     try {
+      const limits = context.entitlements.active ? context.entitlements.limits : {};
       const [catalog, planned] = await Promise.all([
-        loadCatalog(context.supabase, {
-          locale: context.locale,
-          stableOnly: false,
-          limits: context.entitlements.active ? context.entitlements.limits : {},
-        }),
+        loadCatalog(context.supabase, { locale: context.locale, stableOnly: false, limits }),
         loadPlannedApps(context.supabase, { locale: context.locale }),
       ]);
       state = {
@@ -30,6 +28,7 @@ export default async function ModulesPage() {
         trails: catalog.trails,
         modules: catalog.modules,
         planned,
+        channel: channelOf(limits),
         hasAccess: Boolean(context.entitlements.tier),
       };
     } catch {

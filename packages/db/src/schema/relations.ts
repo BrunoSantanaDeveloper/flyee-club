@@ -1,7 +1,7 @@
 // GENERATED from packages/db/migrations by `npm run db:schema:pull`.
 // Regenerate after every migration instead of editing by hand.
 import { relations } from "drizzle-orm/relations";
-import { usersInAuth, profiles, organizations, memberships, auditEvents, consentTerms, consentAcceptances, accessEvents, platformSettings, notifications, announcements, onboardingState, subscriptions, plans, coupons, billingOperations, subscriptionModules, modules, invoices, entitlementGrants, metaAttribution, signupAttribution, purchaseAttributions, productEvents, helpCategories, helpArticles, blogPosts, blogComments, catalogModules, catalogModuleVersions, catalogTrails, catalogStoreCategories, catalogLessons, catalogLessonVideos, roadmapItems, catalogRecipes, catalogRecipeWorkflows, oauthClients, oauthGrants, oauthTokens, oauthDeviceCodes, memberDevices, cliRequests, leads, moduleDownloads, impersonationSessions, meetings, meetingLinks, meetingRegistrations, newsletterSends, aiSpend, announcementDismissals, catalogRecipeModules, newsletterDeliveries, roadmapVotes, lessonProgress, catalogGuides } from "./schema";
+import { usersInAuth, profiles, organizations, memberships, auditEvents, consentTerms, consentAcceptances, accessEvents, platformSettings, notifications, announcements, onboardingState, subscriptions, plans, coupons, billingOperations, subscriptionModules, modules, invoices, entitlementGrants, metaAttribution, signupAttribution, purchaseAttributions, productEvents, helpCategories, helpArticles, blogPosts, blogComments, catalogTrails, catalogModules, catalogStoreCategories, catalogModuleVersions, catalogLessons, catalogLessonVideos, roadmapItems, catalogRecipes, catalogRecipeWorkflows, oauthClients, oauthGrants, oauthTokens, oauthDeviceCodes, memberDevices, cliRequests, leads, moduleDownloads, impersonationSessions, meetings, meetingLinks, meetingRegistrations, newsletterSends, aiSpend, announcementDismissals, catalogRecipeModules, newsletterDeliveries, roadmapVotes, lessonProgress, catalogGuides } from "./schema";
 
 export const profilesRelations = relations(profiles, ({one, many}) => ({
 	usersInAuth: one(usersInAuth, {
@@ -26,8 +26,8 @@ export const profilesRelations = relations(profiles, ({one, many}) => ({
 	billingOperations: many(billingOperations),
 	productEvents: many(productEvents),
 	blogComments: many(blogComments),
-	catalogModuleVersions: many(catalogModuleVersions),
 	catalogModules: many(catalogModules),
+	catalogModuleVersions: many(catalogModuleVersions),
 	roadmapItems_createdBy: many(roadmapItems, {
 		relationName: "roadmapItems_createdBy_profiles_id"
 	}),
@@ -338,21 +338,7 @@ export const blogPostsRelations = relations(blogPosts, ({many}) => ({
 	blogComments: many(blogComments),
 }));
 
-export const catalogModuleVersionsRelations = relations(catalogModuleVersions, ({one, many}) => ({
-	catalogModule: one(catalogModules, {
-		fields: [catalogModuleVersions.moduleId],
-		references: [catalogModules.id]
-	}),
-	profile: one(profiles, {
-		fields: [catalogModuleVersions.createdBy],
-		references: [profiles.id]
-	}),
-	moduleDownloads: many(moduleDownloads),
-	catalogGuides: many(catalogGuides),
-}));
-
 export const catalogModulesRelations = relations(catalogModules, ({one, many}) => ({
-	catalogModuleVersions: many(catalogModuleVersions),
 	catalogTrail: one(catalogTrails, {
 		fields: [catalogModules.trail],
 		references: [catalogTrails.slug]
@@ -365,6 +351,7 @@ export const catalogModulesRelations = relations(catalogModules, ({one, many}) =
 		fields: [catalogModules.storeCategory],
 		references: [catalogStoreCategories.slug]
 	}),
+	catalogModuleVersions: many(catalogModuleVersions),
 	catalogLessons: many(catalogLessons),
 	roadmapItems: many(roadmapItems),
 	moduleDownloads: many(moduleDownloads),
@@ -378,6 +365,19 @@ export const catalogTrailsRelations = relations(catalogTrails, ({many}) => ({
 
 export const catalogStoreCategoriesRelations = relations(catalogStoreCategories, ({many}) => ({
 	catalogModules: many(catalogModules),
+}));
+
+export const catalogModuleVersionsRelations = relations(catalogModuleVersions, ({one, many}) => ({
+	catalogModule: one(catalogModules, {
+		fields: [catalogModuleVersions.moduleId],
+		references: [catalogModules.id]
+	}),
+	profile: one(profiles, {
+		fields: [catalogModuleVersions.createdBy],
+		references: [profiles.id]
+	}),
+	moduleDownloads: many(moduleDownloads),
+	catalogGuides: many(catalogGuides),
 }));
 
 export const catalogLessonsRelations = relations(catalogLessons, ({one, many}) => ({

@@ -50,7 +50,7 @@ export type GuideTab = {
  * A depth this plan does not include shows why and the one way to unlock it,
  * never a blank frame: the advanced guide needs FlyeeClub Pro, and its button
  * opens the upgrade prompt (docs/PRODUCT.md, 2026-10-08); the basic one needs
- * FlyeeClub (or the app is a free sample, which always opens). A depth with
+ * FlyeeClub, or it is the entry version, which every account reads (0040). A depth with
  * nothing yet, and an app whose versions carry no guide at all, say
  * "Em breve".
  *

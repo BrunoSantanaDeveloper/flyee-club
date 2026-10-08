@@ -225,7 +225,7 @@ Tetos por degrau, hoje: Gratuito 1, kit 1, assinatura 3, Pro 5 (`plans.limits.de
 
 ### 4.3 `GET /api/cli/catalog?locale=&stable=`
 
-Escopo `catalog:read`, computador obrigatório. `locale` é `pt-BR` ou `en` (padrão: o do integrante). `stable=1` restringe a última versão às marcadas como estáveis (reservado; um canal só na v1).
+Escopo `catalog:read`, computador obrigatório. `locale` é `pt-BR` ou `en` (padrão: o do integrante). O canal vem do plano da conta e volta em `channel`: `free` para a conta sem compra, `latest` para o FlyeeClub e o FlyeeClub Pro. `stable=1` restringe `latest` às versões marcadas como estáveis (reservado).
 
 ```json
 {
@@ -254,6 +254,7 @@ Escopo `catalog:read`, computador obrigatório. `locale` é `pt-BR` ou `en` (pad
         "min_core_version": "0.3.0",
         "permissions": [{ "kind": "fs:read", "scope": "./", "reason": { "pt-BR": "…" } }]
       },
+      "newest": { "version": "1.2.0", "…": "…" },
       "lessons": [{ "depth": "usar", "locale": "pt-BR", "title": "…", "duration_seconds": 240, "is_advanced": false }]
     }
   ],
@@ -261,11 +262,11 @@ Escopo `catalog:read`, computador obrigatório. `locale` é `pt-BR` ou `en` (pad
 }
 ```
 
-`entitled` diz se esta conta pode baixar o módulo. O vídeo das aulas nunca vem na API: fica no painel.
+`latest` é a versão mais nova que esta conta pode baixar no seu canal: para a conta sem compra, a versão de entrada do app, que nunca muda por atualização. Sem nenhuma versão liberada para a conta, `latest` é a mais nova publicada e `entitled` vem `false`, como sempre: a CLI distingue "sem acesso" de "não existe" por `entitled`. `newest` é a versão mais nova publicada, a mesma para todas as contas: a distância entre `latest` e `newest` é o que a conta não tem. `entitled` diz se a conta pode baixar alguma versão do módulo. `is_free_sample` vem sempre `false` desde 2026-10-08 (12.5): o app inteiro de entrada saiu da plataforma, e o campo fica porque a CLI 1.x o declara. O vídeo das aulas nunca vem na API: fica no painel.
 
 ### 4.4 `GET /api/cli/modules/{slug}`
 
-Escopo `catalog:read`. O módulo, com `description` e todas as versões lançadas, da mais nova para a mais antiga. Cada versão traz `status` (`published` ou `yanked`), `yanked_at`, `yank_reason`, `changelog` no idioma, `compatible_ais`, `permissions` e `verify_url`.
+Escopo `catalog:read`. O módulo, com `description` e todas as versões lançadas, da mais nova para a mais antiga. Cada versão traz `status` (`published` ou `yanked`), `yanked_at`, `yank_reason`, `changelog` no idioma, `compatible_ais`, `permissions`, `verify_url` e `entitled`: se esta conta pode baixá-la. Uma versão retirada nunca é. O changelog de uma versão com `entitled: false` é o que a conta ganharia com o FlyeeClub.
 
 ### 4.5 `GET /api/cli/modules/{slug}/versions/{version}/download`
 
@@ -286,7 +287,7 @@ Escopo `modules:download`, computador obrigatório.
 
 - A URL vale 5 minutos e não leva token: baixar sem o header `Authorization`.
 - **Antes de extrair**, conferir o tamanho e o SHA-256 dos bytes baixados. Diferente: descartar e não instalar.
-- Recusas: 404 versão inexistente ou em rascunho, 410 `version_yanked`, 403 `denied_entitlement` (com o link de upgrade), 429 `download_limit`.
+- Recusas: 404 versão inexistente ou em rascunho, 410 `version_yanked`, 403 `denied_entitlement` (com o link de upgrade), 429 `download_limit`. `denied_entitlement` vale para um módulo que o plano não inclui e para uma versão fora do canal da conta: para a conta sem compra, qualquer versão que não seja a de entrada. A CLI nunca precisa pedir essa versão, porque baixa o `latest` do catálogo.
 - Cada download vira uma linha de `module_downloads`. A CLI reporta a instalação em si como evento (4.7).
 
 ### 4.6 `GET /api/cli/recipes/{slug}`
@@ -382,7 +383,7 @@ Chave desconhecida é erro: um campo novo exige um `manifest_version` novo. Cami
 
 1. `POST /api/admin/catalog/uploads` devolve `{ staging_path, signed_url, token, max_bytes }`. O console envia o ZIP direto para o armazenamento (sem o limite de 4,5 MB de uma função).
 2. `POST /api/admin/catalog/versions` com `{ "module": "<slug>", "staging_path": "…" }` inspeciona o pacote e grava a versão como rascunho. Responde 422 com todos os problemas encontrados, 409 se a versão já existe e 201 com o checksum. Um pacote pequeno também pode ir direto em multipart (`module` + `file`).
-3. Publicar, marcar como estável e retirar são ações do console (`lib/catalog/version-actions.ts`), todas auditadas.
+3. Publicar, marcar como estável, marcar a versão de entrada e retirar são ações do console (`lib/catalog/version-actions.ts`), todas auditadas. A primeira versão publicada de um app vira a versão de entrada; o operador move a marca para outra versão publicada ou a tira, e a versão marcada não é retirada enquanto tiver a marca (migração `0040`).
 
 ## 8. Verificação pública
 
@@ -392,16 +393,11 @@ Chave desconhecida é erro: um campo novo exige um `manifest_version` novo. Cami
 
 Decididas em 2026-10-06 (`docs/PRODUCT.md`, "Decisões tomadas 2026-10-06"; `docs/PLANO-IMPLEMENTACAO.md`, fases 9 e 10). Nenhuma está no ar: a CLI não deve depender delas até cada item ser movido para o corpo deste contrato. Todas são compatíveis com a v1, porque só acrescentam campos e recusas que a CLI já sabe tratar.
 
-Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Vêm depois os canais com `newest` e `entitled` por versão (12.5) e `/instalar.md` (12.6). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura.
+Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Os canais, com `newest` e `entitled` por versão, entraram no corpo no mesmo dia (12.5: seções 4.3, 4.4 e 4.5). Vem depois `/instalar.md` (12.6). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura.
 
 | Onde | Mudança |
 |---|---|
-| Canais | O plano da conta define o canal: `free` (conta sem compra) e `latest` (kit, assinatura, Pro); `stable` continua reservado. `channel` em 4.3 passa a dizer o canal da conta. |
-| 4.3 `GET /api/cli/catalog` | `latest` passa a ser a versão mais nova **que a conta pode baixar** no seu canal. Campo novo `newest` por módulo, com a versão mais nova publicada para qualquer conta, para a CLI dizer quantas versões a conta está atrás. `entitled` continua dizendo se a conta pode baixar algo do módulo. |
-| 4.4 `GET /api/cli/modules/{slug}` | Cada versão ganha `entitled` (booleano), para a CLI imprimir com o cadeado o changelog do que a conta não tem. |
-| 4.5 download | Versão fora do canal da conta: 403 `denied_entitlement`, com `action_url` de upgrade, igual ao módulo sem direito. Uma versão marcada como grátis é baixável por qualquer conta ativa. |
 | 4.9 `min_cli_version` | Sobe para `1.0.0` quando a CLI `flyee@1.0.0` for publicada no npm: a linha 0.x do pacote `flyee` é de outro projeto e não fala este contrato. |
-| Regra operacional | A versão grátis de um módulo é marcada no console, uma por módulo, com a primeira publicada pré-marcada. Não há bloqueio técnico de atualização para a conta sem compra: ela não recebe nada porque o canal `free` não ganha versão nova. |
 | 4.5 download | Campo novo `license`: um JWT assinado pela plataforma, verificável offline pela chave pública em `/.well-known/jwks.json`, com identificador opaco da conta, `device_id`, módulo, versão e data, sem expiração. A CLI o guarda em `.flyee/licenses/<slug>.jwt` e só executa pipelines, agendamentos e ações do painel de um app cuja licença seja desta máquina (fase 10.6, confirmada em 2026-10-06). |
 | 4.7 `POST /api/cli/events` | Propriedade nova `trigger`, com `scheduled` ou `manual`, na lista fechada (fase 10.1). |
 | 6. Manifesto | `manifest_version: 2` acrescenta `automation`, `requires` e `example_prompt`; a v1 continua aceita; o JSON Schema de 4.8 publica as duas versões (fase 10.1). |

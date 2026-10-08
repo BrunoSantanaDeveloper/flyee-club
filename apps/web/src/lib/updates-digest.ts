@@ -1,3 +1,4 @@
+import type { Channel } from "@flyee/catalog/channels";
 import { compareSemver, isSemver } from "@flyee/catalog/semver";
 
 /**
@@ -5,13 +6,14 @@ import { compareSemver, isSemver } from "@flyee/catalog/semver";
  * installed got a new version this week. Pure, so the rule is tested without a
  * database (updates-digest.test.ts); the reads are in updates-digest-jobs.ts.
  *
- * Three decisions live here:
+ * Four decisions live here:
  * - only a machine that can still update counts (a live connection): a
  *   revoked or lapsed one would be told to run a command that is refused;
  * - only a version published inside the window counts, so a member who chose
  *   not to update is told once, not every week about the same version;
  * - one line per app, from the OLDEST version the member still has on any
- *   machine: that is the distance the update covers.
+ *   machine: that is the distance the update covers;
+ * - only an account whose channel brings new versions is told (keepUpdatingAccounts).
  */
 
 export type DigestDevice = {
@@ -65,5 +67,24 @@ export function pendingUpdates(input: {
       userId,
       [...pending.values()].sort((left, right) => left.slug.localeCompare(right.slug)),
     ]),
+  );
+}
+
+/**
+ * Only an account whose channel brings new versions is told about them. The
+ * account with no purchase keeps the entry version of each app (migration
+ * 0040): a summary of versions it does not get would tell it to run a command
+ * that brings nothing. An account whose rights could not be read is left out
+ * too, the cautious side of a weekly notice.
+ */
+export function keepUpdatingAccounts<T>(
+  pending: ReadonlyMap<string, T>,
+  channelOfUser: (userId: string) => Channel | null,
+): Map<string, T> {
+  return new Map(
+    [...pending].filter(([userId]) => {
+      const channel = channelOfUser(userId);
+      return channel === "latest" || channel === "stable";
+    }),
   );
 }

@@ -6,6 +6,7 @@ vi.mock("server-only", () => ({}));
 import { type MemberMeeting, splitMeetings } from "@/lib/member/community";
 import { daysUntil } from "@/lib/member/devices";
 import { lessonsForLocale } from "@/lib/member/lessons";
+import { moduleAccess, newerThanInstalls } from "@/lib/member/module-access";
 import { mergeNews, type NewsItem } from "@/lib/member/news";
 import { decideOffers, decideServiceOffers } from "@/lib/upsell";
 
@@ -125,5 +126,30 @@ describe("revalidation countdown", () => {
     expect(daysUntil("2026-10-02T00:00:00Z", now)).toBe(1);
     expect(daysUntil("2026-09-01T00:00:00Z", now)).toBe(0);
     expect(daysUntil(null, now)).toBeNull();
+  });
+});
+
+describe("moduleAccess: how a tool reads for one account", () => {
+  const app = (entitled: boolean, latest: string, newest: string) => ({
+    entitled,
+    latest: { version: latest },
+    newest: { version: newest },
+  });
+
+  it("shows the account with no purchase the entry version it installs, and the newer one it does not get", () => {
+    const access = moduleAccess(app(true, "1.0.0", "1.1.0"), "free");
+    expect(access).toEqual({ kind: "entry", installs: "1.0.0", newest: "1.1.0" });
+    expect(newerThanInstalls(access)).toBe("1.1.0");
+    expect(newerThanInstalls(moduleAccess(app(true, "1.0.0", "1.0.0"), "free"))).toBeNull();
+  });
+
+  it("opens the newest to FlyeeClub, and locks an app with no version for the account", () => {
+    expect(moduleAccess(app(true, "1.1.0", "1.1.0"), "latest")).toEqual({
+      kind: "open",
+      installs: "1.1.0",
+      newest: "1.1.0",
+    });
+    expect(moduleAccess(app(false, "1.1.0", "1.1.0"), "free").kind).toBe("locked");
+    expect(newerThanInstalls(moduleAccess(app(true, "1.0.0", "1.1.0"), "latest"))).toBeNull();
   });
 });

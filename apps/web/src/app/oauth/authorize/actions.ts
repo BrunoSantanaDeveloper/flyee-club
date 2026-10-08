@@ -58,9 +58,9 @@ export async function approveAuthorization(formData: FormData): Promise<void> {
   const orgId = (membership?.org_id as string | undefined) ?? null;
   if (!orgId) redirect(DEFAULTS.appRoot);
 
-  // Same gate the page showed: an active workspace (a free account included:
-  // free samples install without a purchase). What each module needs is
-  // checked per call by the delivery API.
+  // Same gate the page showed: an active workspace (an account with no purchase
+  // included: it installs the entry version of each app). What each module
+  // needs is checked per call by the delivery API.
   const { data: entitlements } = await supabase.rpc("org_entitlements", { target_org: orgId });
   if (!entitlements?.active) {
     redirect(DEFAULTS.appRoot);

@@ -138,7 +138,6 @@ export default function CatalogView({ state }: { state: CatalogState }) {
               </Typography>
               <Typography variant="body2" className="text-text-secondary truncate">
                 {row.slug}
-                {row.isFreeSample ? " · amostra grátis" : ""}
               </Typography>
             </Box>
           </Box>
@@ -158,19 +157,25 @@ export default function CatalogView({ state }: { state: CatalogState }) {
       {
         field: "version",
         headerName: "Versão publicada",
-        width: 150,
+        width: 190,
         valueGetter: (_, row) => latestPublished(row.versions)?.version ?? "",
         renderCell: ({ row }) => {
           const latest = latestPublished(row.versions);
+          const entry = row.versions.find((version) => version.isEntry);
           const drafts = row.versions.filter((version) => version.status === "draft").length;
+          // The entry version is what an account with no purchase installs (0040).
+          const notes = [
+            latest ? (entry ? `entrada v${entry.version}` : "sem versão de entrada") : null,
+            drafts > 0 ? (drafts === 1 ? "1 rascunho" : `${formatNumber(drafts)} rascunhos`) : null,
+          ].filter(Boolean);
           return (
             <Box className="flex flex-col justify-center py-1">
               <Typography variant="body1" component="span">
                 {latest ? `v${latest.version}` : "nenhuma"}
               </Typography>
-              {drafts > 0 ? (
+              {notes.length > 0 ? (
                 <Typography variant="body2" className="text-text-secondary">
-                  {drafts === 1 ? "1 rascunho" : `${formatNumber(drafts)} rascunhos`}
+                  {notes.join(" · ")}
                 </Typography>
               ) : null}
             </Box>

@@ -1,4 +1,10 @@
-import { deviceKey, type DigestDevice, type LatestVersion, pendingUpdates } from "./updates-digest";
+import {
+  deviceKey,
+  type DigestDevice,
+  keepUpdatingAccounts,
+  type LatestVersion,
+  pendingUpdates,
+} from "./updates-digest";
 import { describe, expect, it } from "vitest";
 
 const NOW = Date.parse("2026-10-06T13:00:00Z");
@@ -126,5 +132,17 @@ describe("what the weekly summary tells a member", () => {
       since,
     });
     expect(pending.size).toBe(0);
+  });
+});
+
+describe("who is told about new versions", () => {
+  it("keeps the accounts whose channel brings them, and leaves out the rest", () => {
+    const pending = new Map([
+      ["kit", 1],
+      ["free", 1],
+      ["unreadable", 1],
+    ]);
+    const channels: Record<string, "latest" | "free" | null> = { kit: "latest", free: "free", unreadable: null };
+    expect([...keepUpdatingAccounts(pending, (userId) => channels[userId] ?? null).keys()]).toEqual(["kit"]);
   });
 });

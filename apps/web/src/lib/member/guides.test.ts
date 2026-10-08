@@ -49,6 +49,16 @@ describe("the guide a member reads: the one of the version installed", () => {
     expect(pickGuideVersion(versions, null)?.version.version).toBe("1.0.0");
   });
 
+  it("reads the guide of the version the account would install when it installed none", () => {
+    // The account with no purchase installs the entry version (migration 0040).
+    const versions = [v("1.0.0", { "pt-BR": ["usar"] }), v("1.1.0", { "pt-BR": ["usar"] })];
+    const picked = pickGuideVersion(versions, null, "1.0.0");
+    expect(picked?.version.version).toBe("1.0.0");
+    expect(picked?.installed).toBe(false);
+    expect(picked?.newer).toBe("1.1.0");
+    expect(pickGuideVersion(versions, "1.1.0", "1.0.0")?.version.version).toBe("1.1.0");
+  });
+
   it("has nothing to show when no version carries a guide", () => {
     expect(pickGuideVersion([v("1.0.0", {})], "1.0.0")).toBeNull();
   });

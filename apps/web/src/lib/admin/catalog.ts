@@ -36,6 +36,8 @@ export type AdminVersion = {
   moduleId: string;
   version: string;
   isStable: boolean;
+  /** The entry version: the one an account with no purchase installs (migration 0040). */
+  isEntry: boolean;
   status: "draft" | "published" | "yanked";
   sha256: string;
   sizeBytes: number;
@@ -51,7 +53,7 @@ export type AdminVersion = {
   downloads30d: number;
   /** Which written guides the package carries (migration 0030), by language. */
   guides: Partial<Record<"pt-BR" | "en", ("usar" | "abrir_o_capo")[]>>;
-  /** What the package declares, read by `admin_catalog_stats`. */
+  /** What the package declares, read by `admin_catalog_stats`: `entry` is the file the app starts from. */
   files: number | null;
   entry: string | null;
   license: string | null;
@@ -73,7 +75,6 @@ export type AdminModule = {
   compatibleAis: string[];
   externalCredentials: Credential[];
   status: "draft" | "published" | "archived";
-  isFreeSample: boolean;
   entitlementKey: string;
   sort: number;
   publishedAt: string | null;
@@ -189,6 +190,7 @@ type VersionRow = {
   module_id: string;
   version: string;
   is_stable: boolean;
+  is_entry: boolean;
   status: AdminVersion["status"];
   sha256: string;
   size_bytes: number;
@@ -216,10 +218,10 @@ type Stats = {
 };
 
 const VERSION_COLUMNS =
-  "id, module_id, version, is_stable, status, sha256, size_bytes, changelog, min_core_version, compatible_ais, permissions, published_at, yanked_at, yank_reason, created_at, guides";
+  "id, module_id, version, is_stable, is_entry, status, sha256, size_bytes, changelog, min_core_version, compatible_ais, permissions, published_at, yanked_at, yank_reason, created_at, guides";
 
 const MODULE_COLUMNS =
-  "id, slug, trail, store_category, personas, type, icon, name, summary, description_md, compatible_ais, external_credentials, status, is_free_sample, entitlement_key, sort, published_at, created_at, updated_at";
+  "id, slug, trail, store_category, personas, type, icon, name, summary, description_md, compatible_ais, external_credentials, status, entitlement_key, sort, published_at, created_at, updated_at";
 
 function toVersion(row: VersionRow, stats: Stats["versions"][number] | undefined): AdminVersion {
   return {
@@ -227,6 +229,7 @@ function toVersion(row: VersionRow, stats: Stats["versions"][number] | undefined
     moduleId: row.module_id,
     version: row.version,
     isStable: row.is_stable,
+    isEntry: Boolean(row.is_entry),
     status: row.status,
     sha256: row.sha256,
     sizeBytes: Number(row.size_bytes),
@@ -262,7 +265,6 @@ function toModule(row: Record<string, unknown>, usage: ModuleUsage | undefined, 
     compatibleAis: (row.compatible_ais as string[]) ?? [],
     externalCredentials: (row.external_credentials as Credential[]) ?? [],
     status: row.status as AdminModule["status"],
-    isFreeSample: Boolean(row.is_free_sample),
     entitlementKey: (row.entitlement_key as string) ?? "catalog_access",
     sort: Number(row.sort ?? 0),
     publishedAt: (row.published_at as string | null) ?? null,

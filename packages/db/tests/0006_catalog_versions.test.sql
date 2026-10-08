@@ -59,6 +59,9 @@ select throws_ok(
 update public.catalog_module_versions set status = 'published'
 where id in ('b6000000-0000-4000-8000-000000000011', 'b6000000-0000-4000-8000-000000000012');
 update public.catalog_modules set status = 'published' where id = 'b6000000-0000-4000-8000-000000000001';
+-- This app has no entry version (0040): the account with no purchase gets
+-- nothing of it, which is what the lessons below check.
+update public.catalog_module_versions set is_entry = false where module_id = 'b6000000-0000-4000-8000-000000000001';
 
 select ok(
   (select published_at is not null from public.catalog_modules where slug = 'deploy-guard')
@@ -158,7 +161,7 @@ reset role;
 
 select set_config('request.jwt.claims', '{"sub":"a6000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 set local role authenticated;
-select is((select count(*)::int from public.catalog_lesson_videos), 0, 'an account without access sees no video');
+select is((select count(*)::int from public.catalog_lesson_videos), 0, 'an account without access sees no video of an app without an entry version');
 select is(
   (public.record_lesson_progress('b6000000-0000-4000-8000-000000000021') ->> 'code'),
   'not_entitled',

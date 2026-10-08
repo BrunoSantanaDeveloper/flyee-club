@@ -600,10 +600,21 @@ describe("the weekly summary of new versions", () => {
   });
   const machines = {
     member_devices: () => ({
-      data: [{ user_id: "ana", device_id: "laptop", installed_modules: [{ slug: "deploy-check", version: "1.1.0" }] }],
+      data: [
+        {
+          user_id: "ana",
+          org_id: "org-ana",
+          device_id: "laptop",
+          installed_modules: [{ slug: "deploy-check", version: "1.1.0" }],
+        },
+      ],
     }),
     oauth_tokens: () => ({ data: [{ user_id: "ana", device_id: "laptop" }] }),
   };
+  // FlyeeClub: the channel that brings new versions (migration 0040).
+  const rights = (channel: string) => ({
+    org_entitlements: () => ({ data: { active: true, limits: { update_channel: channel } } }),
+  });
 
   it("reads no machine in a week with no release", async () => {
     const { service, queries } = fakeService({ tables: store(20, machines) });
@@ -615,7 +626,7 @@ describe("the weekly summary of new versions", () => {
   it("rings the bell and e-mails a member whose app got a new version", async () => {
     const { service } = fakeService({
       tables: store(2, machines),
-      rpc: { member_recipients: recipients(recipient("ana", { locale: "en" })) },
+      rpc: { ...rights("latest"), member_recipients: recipients(recipient("ana", { locale: "en" })) },
     });
     const outcome = await sendUpdatesDigest(service, NOW);
 
@@ -634,7 +645,7 @@ describe("the weekly summary of new versions", () => {
   it("keeps the bell and skips the e-mail for a member who turned the news off", async () => {
     const { service } = fakeService({
       tables: store(2, machines),
-      rpc: { member_recipients: recipients(recipient("ana", { marketing_email_opt_out: true })) },
+      rpc: { ...rights("latest"), member_recipients: recipients(recipient("ana", { marketing_email_opt_out: true })) },
     });
     const outcome = await sendUpdatesDigest(service, NOW);
     expect(outcome).toMatchObject({ members: 1, notified: 1, emailed: 0 });
@@ -645,7 +656,7 @@ describe("the weekly summary of new versions", () => {
     mocks.notifyUser.mockResolvedValue({ sent: true, created: 0, createdFor: [] });
     const { service } = fakeService({
       tables: store(2, machines),
-      rpc: { member_recipients: recipients(recipient("ana")) },
+      rpc: { ...rights("latest"), member_recipients: recipients(recipient("ana")) },
     });
     const outcome = await sendUpdatesDigest(service, NOW);
     expect(outcome).toMatchObject({ members: 1, notified: 0, emailed: 0 });
@@ -657,6 +668,13 @@ describe("the weekly summary of new versions", () => {
       tables: store(2, { ...machines, oauth_tokens: () => ({ data: [] }) }),
     });
     expect(await sendUpdatesDigest(service, NOW)).toMatchObject({ members: 0, reason: "nobody-behind" });
+  });
+
+  it("tells nothing to an account with no purchase: no new version enters its channel", async () => {
+    const { service, rpcCalls } = fakeService({ tables: store(2, machines), rpc: rights("free") });
+    expect(await sendUpdatesDigest(service, NOW)).toMatchObject({ members: 0, reason: "nobody-behind" });
+    expect(rpcCalls).toEqual([{ fn: "org_entitlements", args: { target_org: "org-ana" } }]);
+    expect(mocks.notifyUser).not.toHaveBeenCalled();
   });
 });
 

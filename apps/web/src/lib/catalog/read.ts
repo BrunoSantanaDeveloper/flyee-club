@@ -1,7 +1,8 @@
 import "server-only";
 
 import { type CatalogLocale, verifyUrl } from "@/lib/catalog/links";
-import { compareSemver, latestVersion } from "@flyee/catalog/semver";
+import { channelOf, resolveChannel, versionAllowed } from "@flyee/catalog/channels";
+import { compareSemver } from "@flyee/catalog/semver";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -13,6 +14,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *
  * Texts are stored per language (`{"pt-BR": ..., "en": ...}`) and answered in
  * the requested one, falling back to Portuguese, which every row must have.
+ *
+ * Which versions an account may download follows its channel
+ * (`@flyee/catalog/channels`, migration 0040): `latest` is the newest one it
+ * may download, `newest` the newest for everyone, and every version of an
+ * app's history says whether it is `entitled`.
  */
 
 type Localized = Record<string, string> | null | undefined;
@@ -22,12 +28,8 @@ export function localize(value: Localized, locale: CatalogLocale): string | null
   return value[locale]?.trim() || value["pt-BR"]?.trim() || null;
 }
 
-/** May this workspace install the module? Free samples need nothing; the rest need their limit key. */
-export function isModuleEntitled(
-  module: { is_free_sample: boolean; entitlement_key: string },
-  limits: Record<string, unknown>,
-): boolean {
-  if (module.is_free_sample) return true;
+/** Do these limits grant the module's key (catalog_access, for most)? The entry version needs none. */
+export function grantsModuleKey(module: { entitlement_key: string }, limits: Record<string, unknown>): boolean {
   const value = Number(limits[module.entitlement_key]);
   return Number.isFinite(value) && value > 0;
 }
@@ -43,7 +45,6 @@ type ModuleRow = {
   description_md?: Localized;
   compatible_ais: string[] | null;
   external_credentials: unknown[] | null;
-  is_free_sample: boolean;
   entitlement_key: string;
   sort: number;
 };
@@ -54,6 +55,7 @@ type VersionRow = {
   version: string;
   status: string;
   is_stable: boolean;
+  is_entry: boolean;
   sha256: string;
   size_bytes: number;
   published_at: string | null;
@@ -76,9 +78,9 @@ type LessonRow = {
 };
 
 const MODULE_COLUMNS =
-  "id, slug, trail, type, icon, name, summary, compatible_ais, external_credentials, is_free_sample, entitlement_key, sort";
+  "id, slug, trail, type, icon, name, summary, compatible_ais, external_credentials, entitlement_key, sort";
 const VERSION_COLUMNS =
-  "id, module_id, version, status, is_stable, sha256, size_bytes, published_at, yanked_at, yank_reason, changelog, min_core_version, compatible_ais, permissions";
+  "id, module_id, version, status, is_stable, is_entry, sha256, size_bytes, published_at, yanked_at, yank_reason, changelog, min_core_version, compatible_ais, permissions";
 
 function versionSummary(version: VersionRow) {
   return {
@@ -106,9 +108,15 @@ function moduleSummary(
   module: ModuleRow,
   locale: CatalogLocale,
   limits: Record<string, unknown>,
-  latest: VersionRow | null,
+  versions: VersionRow[],
   lessons: LessonRow[],
+  stableOnly = false,
 ) {
+  const { latest, newest, entitled } = resolveChannel(versions, {
+    channel: channelOf(limits),
+    hasKey: grantsModuleKey(module, limits),
+    stableOnly,
+  });
   return {
     slug: module.slug,
     type: module.type,
@@ -118,10 +126,13 @@ function moduleSummary(
     summary: localize(module.summary, locale),
     compatible_ais: module.compatible_ais ?? [],
     external_credentials: module.external_credentials ?? [],
-    is_free_sample: module.is_free_sample,
+    // One rule since 0040, the entry version: always false, kept because the
+    // CLI 1.x declares the field (docs/CLI-CONTRACT.md, 4.3).
+    is_free_sample: false,
     entitlement_key: module.entitlement_key,
-    entitled: isModuleEntitled(module, limits),
+    entitled,
     latest: latest ? versionSummary(latest) : null,
+    newest: newest ? versionSummary(newest) : null,
     lessons: lessons.sort((a, b) => a.sort - b.sort).map(lessonSummary),
   };
 }
@@ -136,18 +147,7 @@ function groupBy<T>(rows: readonly T[], key: (row: T) => string): Map<string, T[
   return groups;
 }
 
-/** The newest published version of each module (stable only, when asked). */
-function latestByModule(versions: VersionRow[], stableOnly: boolean): Map<string, VersionRow> {
-  const latest = new Map<string, VersionRow>();
-  for (const [moduleId, rows] of groupBy(versions, (row) => row.module_id)) {
-    const candidates = rows.filter((row) => row.status === "published" && (!stableOnly || row.is_stable));
-    const best = latestVersion(candidates);
-    if (best) latest.set(moduleId, best);
-  }
-  return latest;
-}
-
-/** GET /api/cli/catalog: trails, modules with their latest version and lessons, recipes. */
+/** GET /api/cli/catalog: trails, modules with the versions this account gets and their lessons, recipes. */
 export async function loadCatalog(
   service: SupabaseClient,
   input: { locale: CatalogLocale; stableOnly: boolean; limits: Record<string, unknown> },
@@ -202,7 +202,8 @@ export async function loadCatalog(
   ]);
   if (versionsError || lessonsError || linksError) throw new Error("catalog_read_failed");
 
-  const latest = latestByModule((versions ?? []) as VersionRow[], input.stableOnly);
+  const versionsByModule = groupBy((versions ?? []) as VersionRow[], (row) => row.module_id);
+  const channel = channelOf(input.limits);
   const lessonsByModule = groupBy((lessons ?? []) as LessonRow[], (lesson) => lesson.module_id);
   const slugById = new Map(moduleRows.map((module) => [module.id, module.slug]));
   const linksByRecipe = groupBy(
@@ -212,7 +213,8 @@ export async function loadCatalog(
 
   return {
     locale: input.locale,
-    channel: input.stableOnly ? "stable" : "latest",
+    // The account's channel; `stable=1` narrows latest to stable versions.
+    channel: input.stableOnly && channel !== "free" ? "stable" : (channel ?? "latest"),
     trails: ((trails ?? []) as { slug: string; name: Localized; description: Localized; icon: string | null }[]).map(
       (trail) => ({
         slug: trail.slug,
@@ -226,8 +228,9 @@ export async function loadCatalog(
         module,
         input.locale,
         input.limits,
-        latest.get(module.id) ?? null,
+        versionsByModule.get(module.id) ?? [],
         lessonsByModule.get(module.id) ?? [],
+        input.stableOnly,
       ),
     ),
     recipes: recipeRows.map((recipe) => ({
@@ -275,11 +278,12 @@ export async function loadModule(
     (a, b) =>
       compareSemver(b.version, a.version) || Date.parse(b.published_at ?? "") - Date.parse(a.published_at ?? ""),
   );
-  const latest = latestByModule(versionRows, false).get(row.id) ?? null;
+  const channel = channelOf(input.limits);
+  const hasKey = grantsModuleKey(row, input.limits);
 
   return {
     id: row.id,
-    ...moduleSummary(row, input.locale, input.limits, latest, (lessons ?? []) as LessonRow[]),
+    ...moduleSummary(row, input.locale, input.limits, versionRows, (lessons ?? []) as LessonRow[]),
     description: localize(row.description_md, input.locale),
     versions: versionRows.map((version) => ({
       ...versionSummary(version),
@@ -288,6 +292,8 @@ export async function loadModule(
       yank_reason: version.yank_reason,
       changelog: localize(version.changelog, input.locale),
       compatible_ais: version.compatible_ais ?? [],
+      // Whether this account may download it: a yanked version is nobody's.
+      entitled: version.status === "published" && versionAllowed(version, channel, hasKey),
       verify_url: verifyUrl(row.slug, version.version, input.locale),
     })),
   };
@@ -331,7 +337,7 @@ export async function loadRecipe(
   ]);
   if (modulesError || versionsError) throw new Error("catalog_read_failed");
 
-  const latest = latestByModule((versions ?? []) as VersionRow[], false);
+  const versionsByModule = groupBy((versions ?? []) as VersionRow[], (row) => row.module_id);
   const entitledToWorkflow = Number(input.limits.recipes ?? 0) > 0;
   let workflow: string | null = null;
   if (entitledToWorkflow) {
@@ -352,6 +358,6 @@ export async function loadRecipe(
     workflow,
     modules: ((modules ?? []) as ModuleRow[])
       .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
-      .map((module) => moduleSummary(module, input.locale, input.limits, latest.get(module.id) ?? null, [])),
+      .map((module) => moduleSummary(module, input.locale, input.limits, versionsByModule.get(module.id) ?? [], [])),
   };
 }

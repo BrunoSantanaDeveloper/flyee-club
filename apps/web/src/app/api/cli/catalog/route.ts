@@ -3,10 +3,12 @@ import { runCliRequest } from "@/lib/cli/gates";
 import { requestedLocale } from "@/lib/cli/settings";
 
 /**
- * GET /api/cli/catalog?locale=&stable=: every published trail, module (with
- * its latest version, declared permissions, lessons and whether this
- * workspace may install it) and recipe. `stable=1` restricts the latest
- * version to versions marked stable (reserved; one channel in v1).
+ * GET /api/cli/catalog?locale=&stable=: every published trail, module and
+ * recipe. Each module names `latest`, the newest version this account may
+ * download on its channel (the entry version, for an account with no
+ * purchase), `newest`, the newest for everyone, and `entitled`, whether it
+ * may download any (0040). `stable=1` narrows latest to stable versions
+ * (reserved).
  */
 export async function GET(request: Request) {
   return runCliRequest(

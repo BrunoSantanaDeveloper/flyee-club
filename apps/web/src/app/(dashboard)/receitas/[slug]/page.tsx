@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { loadCatalog, loadRecipe } from "@/lib/catalog/read";
 import { getMemberContext } from "@/lib/member/context";
+import { channelOf } from "@flyee/catalog/channels";
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,59}$/;
 
@@ -35,7 +36,7 @@ export default async function RecipePage({ params }: { params: Promise<{ slug: s
               .rpc("catalog_recipe_has_workflow", { target_recipe: slug })
               .then(({ data, error }) => (error ? true : data === true)),
       ]);
-      state = { kind: "ready", recipe, trails: catalog.trails, hasWorkflow: written };
+      state = { kind: "ready", recipe, trails: catalog.trails, hasWorkflow: written, channel: channelOf(limits) };
     }
   } catch {
     state = { kind: "error" };

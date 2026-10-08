@@ -79,7 +79,6 @@ export type ModuleInput = {
   descriptionMd: Localized;
   compatibleAis: string[];
   externalCredentials: Credential[];
-  isFreeSample: boolean;
   entitlementKey: string;
   sort: number;
 };
@@ -134,7 +133,6 @@ export async function saveModule(input: ModuleInput): Promise<CatalogActionResul
     description_md: localized(input.descriptionMd, 8000, false) ?? {},
     compatible_ais: compatibleAis,
     external_credentials: credentials,
-    is_free_sample: Boolean(input.isFreeSample),
     entitlement_key: entitlementKey,
     sort: Number.isFinite(input.sort) ? Math.round(input.sort) : 0,
   };

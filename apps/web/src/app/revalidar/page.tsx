@@ -69,7 +69,11 @@ export default async function RevalidatePage({
             device: device.name || t("oauth-device-unnamed"),
             days: device.daysSinceUpdate,
           })}{" "}
-          {device.behind > 0 ? t("oauth-revalidate-behind", { count: device.behind }) : t("oauth-revalidate-current")}
+          {device.behind > 0
+            ? t("oauth-revalidate-behind", { count: device.behind })
+            : device.beyondChannel > 0
+              ? t("oauth-revalidate-beyond", { count: device.beyondChannel })
+              : t("oauth-revalidate-current")}
         </Alert>
       ) : null}
 

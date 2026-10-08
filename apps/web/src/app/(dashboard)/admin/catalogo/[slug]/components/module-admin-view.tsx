@@ -169,7 +169,6 @@ export default function ModuleAdminView({ state, slug }: { state: ModuleAdminSta
                 </Typography>
                 <Box className="flex flex-row flex-wrap items-center gap-2">
                   <StatusChip label={labelOf(MODULE_STATUS_LABEL, module.status)} tone={STATUS_TONE[module.status]} />
-                  {module.isFreeSample ? <StatusChip label="amostra grátis" tone="info" /> : null}
                 </Box>
               </Box>
             </Box>
