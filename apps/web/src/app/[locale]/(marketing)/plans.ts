@@ -11,11 +11,19 @@ const termKey = (months: number) =>
   accessTermParts(months).unit === "years" ? "access-term-years" : "access-term-months";
 import type { LaunchStage } from "@/lib/launch";
 import { type BillingCurrency, formatPrice } from "@flyee/billing/currency";
-import { enabledFeatures, type EntitlementKey, isTier, limitOf, type Tier } from "@flyee/billing/entitlements";
+import {
+  enabledFeatures,
+  type EntitlementKey,
+  hasEntitlement,
+  isTier,
+  limitOf,
+  type Tier,
+} from "@flyee/billing/entitlements";
 import { listPublicPlans } from "@flyee/billing/public";
 import { applyDiscount, type CheckoutCoupon } from "@flyee/billing/types";
 
-const PLACEHOLDER_SLUGS = ["plan-1", "plan-2"] as const;
+/** The site sells one plan (docs/PRODUCT.md, 2026-10-08), so a clone without a database shows one. */
+const PLACEHOLDER_SLUGS = ["plan-1"] as const;
 
 /** One hue per rung, the same everywhere on the site (docs/DESIGN.md). */
 const TIER_TONE: Record<Tier, Tone> = { kit: "accent-2", club: "primary", pro: "accent-4" };
@@ -60,9 +68,14 @@ export type DisplayPricing = {
  * placeholder plans when the database is not configured (a fresh clone stays
  * browsable).
  *
- * Each card says what it unlocks from its entitlement keys (`plans.limits`),
- * never from hand-written copy, so a plan edited in /admin/billing reads
- * right on the site. Until the site opens (launch stage `waitlist`) every
+ * The site lists only the plans marked `listed_on_site` (migration 0037):
+ * FlyeeClub, the one-time access, because FlyeeClub Pro is offered inside the
+ * member area (docs/PRODUCT.md, 2026-10-08). A card says what it unlocks from
+ * its entitlement keys (`plans.limits`), never from hand-written copy, so a
+ * plan edited in /admin/billing reads right on the site: the one-time access
+ * in the labelled rows of the home brief, each row present only when the
+ * plan grants it, and any other plan the operator lists in its feature list.
+ * The only plan on the page is the highlighted one. Until the site opens (launch stage `waitlist`) every
  * button leads to the waitlist; afterwards each leads to sign-up and then to
  * that plan's own checkout.
  *
@@ -83,7 +96,7 @@ export async function getDisplayPlans({
   const [t, locale, rows, maxInstallments] = await Promise.all([
     getTranslations("marketing"),
     getLocale(),
-    listPublicPlans({ currency }),
+    listPublicPlans({ surface: "site", currency }),
     // Card installments exist only in reais (Asaas); the ceiling is data.
     currency === "BRL" ? getMaxInstallments() : Promise.resolve(1),
   ]);
@@ -97,8 +110,8 @@ export async function getDisplayPlans({
         price: t(`${slug}-price`),
         period: t(`${slug}-period`),
         features: [t(`${slug}-feature-1`), t(`${slug}-feature-2`), t(`${slug}-feature-3`)],
-        highlighted: slug === "plan-2",
-        ctaId: slug === "plan-1" ? "plan_access" : "plan_full",
+        highlighted: true,
+        ctaId: "plan_access",
       })),
     };
   }
@@ -115,6 +128,29 @@ export async function getDisplayPlans({
     const payableCents = applyDiscount(plan.priceCents, planCoupon);
     const discounted = payableCents !== plan.priceCents;
     const isKit = plan.kind === "access";
+    // The rows of the one-time access, as the home brief lays them out.
+    const rows = isKit
+      ? [
+          ...(hasEntitlement(plan.limits, "catalog_access")
+            ? [
+                { label: t("pricing-row-apps"), value: t("pricing-row-apps-value") },
+                { label: t("pricing-row-updates"), value: t("pricing-row-updates-value") },
+                { label: t("pricing-row-guides"), value: t("pricing-row-guides-value") },
+              ]
+            : []),
+          ...(hasEntitlement(plan.limits, "commercial_license")
+            ? [{ label: t("pricing-row-projects"), value: t("pricing-row-projects-value") }]
+            : []),
+          ...(limitOf(plan.limits, "devices") > 0
+            ? [
+                {
+                  label: t("pricing-row-devices"),
+                  value: t("pricing-row-devices-value", { count: limitOf(plan.limits, "devices") }),
+                },
+              ]
+            : []),
+        ]
+      : undefined;
     return {
       slug: plan.slug,
       name: plan.name,
@@ -129,13 +165,16 @@ export async function getDisplayPlans({
           : t("pricing-one-time")
         : t(`pricing-period-${plan.period}`),
       features,
-      // The subscription is the anchor of the ladder.
+      rows,
+      priceLabel: isKit ? t("pricing-row-price") : undefined,
+      // With more than one plan listed, the subscription anchors the ladder.
       highlighted: tier === "club",
       tone: tier ? TIER_TONE[tier] : undefined,
       cycle: plan.period === "monthly" || plan.period === "yearly" ? plan.period : undefined,
       href: stage === "open" ? `/auth/sign-up?next=${encodeURIComponent(`/assinatura?plan=${plan.slug}`)}` : "/espera",
       // Each purchase button names its plan; before the opening, the section's waitlist label.
-      ctaLabel: stage === "open" ? (isKit ? t("pricing-cta-kit") : t("pricing-cta-pro")) : undefined,
+      ctaLabel:
+        stage === "open" ? (isKit ? t("pricing-cta-kit") : t("pricing-cta-plan", { plan: plan.name })) : undefined,
       // The split the checkout offers on the one-time access, at the price this card shows.
       installmentsLabel:
         isKit && maxInstallments > 1
@@ -152,6 +191,9 @@ export async function getDisplayPlans({
       priceCurrency: plan.currency,
     };
   });
+
+  // The only plan on the page is the offer: its card carries the page's emphasis.
+  if (display.length === 1) display[0] = { ...display[0], highlighted: true };
 
   const hasCycles = display.some((plan) => plan.cycle === "monthly") && display.some((plan) => plan.cycle === "yearly");
   if (!hasCycles) return { plans: display };

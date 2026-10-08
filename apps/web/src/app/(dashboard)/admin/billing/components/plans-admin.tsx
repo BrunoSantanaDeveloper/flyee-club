@@ -45,6 +45,7 @@ type PlanForm = {
   is_free: boolean;
   is_active: boolean;
   is_public: boolean;
+  listed_on_site: boolean;
   limits: string;
   sort: number;
 };
@@ -61,6 +62,7 @@ type PlanRow = {
   isFree: boolean;
   isActive: boolean;
   isPublic: boolean;
+  onSite: boolean;
   raw: Record<string, unknown>;
 };
 
@@ -78,13 +80,20 @@ const EMPTY: PlanForm = {
   is_free: false,
   is_active: true,
   is_public: true,
+  // A new plan starts off the public site (migration 0037).
+  listed_on_site: false,
   limits: "{}",
   sort: 0,
 };
 
 /** The catalog flags a row carries, as searchable text (the chips render them). */
 const flagsOf = (row: PlanRow) =>
-  [row.isFree ? "grátis padrão" : null, row.isActive ? null : "inativo", row.isPublic ? null : "não listado"]
+  [
+    row.isFree ? "grátis padrão" : null,
+    row.isActive ? null : "inativo",
+    row.isPublic ? null : "não listado",
+    row.onSite ? "no site" : null,
+  ]
     .filter(Boolean)
     .join(" ");
 
@@ -133,6 +142,7 @@ export default function PlansAdmin() {
       is_free: row.is_free as boolean,
       is_active: row.is_active as boolean,
       is_public: row.is_public !== false,
+      listed_on_site: row.listed_on_site === true,
       limits: JSON.stringify(row.limits ?? {}, null, 2),
       sort: row.sort as number,
     });
@@ -165,6 +175,8 @@ export default function PlansAdmin() {
       is_free: form.is_free,
       is_active: form.is_active,
       is_public: form.is_public,
+      // The site lists only what the grids list.
+      listed_on_site: form.is_public && form.listed_on_site,
       limits,
       sort: Number(form.sort) || 0,
     };
@@ -176,7 +188,7 @@ export default function PlansAdmin() {
     recordAudit(supabase, form.id ? "admin.billing.plan.updated" : "admin.billing.plan.created", {
       entityType: "plan",
       entityId: form.id ?? undefined,
-      metadata: { slug: payload.slug },
+      metadata: { slug: payload.slug, listedOnSite: payload.listed_on_site },
     });
     setForm(null);
     refresh();
@@ -195,6 +207,7 @@ export default function PlansAdmin() {
         isFree: Boolean(row.is_free),
         isActive: Boolean(row.is_active),
         isPublic: row.is_public !== false,
+        onSite: row.listed_on_site === true,
         raw: row,
       })),
     [rows],
@@ -245,6 +258,7 @@ export default function PlansAdmin() {
             {params.row.isFree && <Chip label="grátis padrão" size="small" color="success" variant="outlined" />}
             {!params.row.isActive && <Chip label="inativo" size="small" variant="outlined" />}
             {!params.row.isPublic && <Chip label="não listado" size="small" color="primary" variant="outlined" />}
+            {params.row.onSite && <Chip label="no site" size="small" variant="outlined" />}
             {params.value === "" && (
               <Typography variant="body2" className="text-text-secondary">
                 —
@@ -420,7 +434,27 @@ export default function PlansAdmin() {
                 }
                 label="Listado nas tabelas de preço"
               />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={form.is_public && form.listed_on_site}
+                    disabled={!form.is_public}
+                    onChange={(e) => setForm({ ...form, listed_on_site: e.target.checked })}
+                  />
+                }
+                label="Aparece no site público"
+              />
             </Box>
+            {/* The site sells one plan (docs/PRODUCT.md, 2026-10-08): saying what
+                "off the site" means keeps the operator from listing the Pro there
+                by accident. */}
+            {form.is_public && !form.listed_on_site && form.is_active && (
+              <Alert severity="info" className="neutral bg-background-paper/60! mt-2">
+                Fora do site: aparece só na tabela de planos do painel. É como o FlyeeClub Pro fica, oferecido dentro da
+                plataforma; o site vende só o FlyeeClub.
+              </Alert>
+            )}
             {/* The distinction the console has to make explicit: unchecking
                 "Active" is how an offer becomes UNBUYABLE, which is the wrong
                 tool for taking it off the catalog. */}

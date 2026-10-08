@@ -3,13 +3,12 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Cta from "@/components/marketing/cta";
-import RuledGrid, { RuledCard } from "@/components/marketing/ruled-grid";
+import { RuledCard } from "@/components/marketing/ruled-grid";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import StoreGrid from "@/components/marketing/store-grid";
 import TerminalFrame from "@/components/marketing/terminal-frame";
 import CatalogIcon from "@/components/product/catalog-icon";
-import NiPath from "@/icons/nexture/ni-path";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
 import { accountServices, isNewApp, servicesPhrase } from "@/lib/catalog/store-badges";
@@ -171,36 +170,13 @@ export default async function CatalogPage() {
         />
         {empty.length > 0 ? (
           <p className="text-text-secondary mt-10 mb-0 text-center text-base leading-7">
-            {t("catalog-empty-categories", { categories: empty.map((category) => category.name).join(", ") })}{" "}
-            {t("catalog-roadmap-note")}
+            {t("catalog-empty-categories", { categories: empty.map((category) => category.name).join(", ") })}
           </p>
         ) : null}
       </Section>
 
-      {catalog.recipes.length > 0 ? (
-        <Section decor="grid">
-          <SectionHeader
-            align="start"
-            className="mx-0"
-            eyebrow={t("catalog-recipes-eyebrow")}
-            title={t("catalog-recipes-title")}
-            subtitle={t("catalog-recipes-subtitle")}
-          />
-          <RuledGrid
-            variant="cards"
-            columns={3}
-            items={catalog.recipes.map((recipe) => ({
-              icon: <NiPath size="medium" />,
-              tone: "accent-4",
-              title: recipe.name ?? recipe.slug,
-              body: recipe.summary ?? "",
-              badge: t("catalog-recipes-badge"),
-              meta: recipe.modules.join(" + "),
-            }))}
-          />
-        </Section>
-      ) : null}
-
+      {/* Recipes, proposing and voting are FlyeeClub Pro's, offered inside the
+          member area and never on the site (docs/PRODUCT.md, 2026-10-08). */}
       <Cta
         decor="orbit"
         title={t("catalog-cta-title")}

@@ -191,12 +191,13 @@ Tomadas pelo dono do produto depois da análise do repositório do produto (`C:\
 | Em breve | Uma área do Pro sem conteúdo publicado (nenhuma receita, nenhum encontro marcado, nenhum guia avançado) aparece com o selo "Em breve", na própria área e na lista do que o FlyeeClub Pro soma. O mesmo selo marca os apps previstos e ainda não desenvolvidos. Responde à proposta do plano, que era esconder a área vazia. Em 2026-10-08 o produto não tem nenhuma receita nem guia avançado. |
 | A oferta de fundador sai | Fundador era um conceito do MedChina e não existe no FlyeeClub. Saem a página `/fundadores`, o contador de vagas, o prazo, a aba do console, a leitura `founders_offer()`, a configuração `founders` e os textos. O plano `club-fundador-anual` fica inativo e fora das grades, sem apagar, como todo plano. A regra "vagas e prazo só em `/fundadores`" passa a ser: nenhuma página mostra contador de vagas nem prazo. |
 | Versão de entrada antes da abertura | O canal por versão (fase 9.1 a 9.3) é construído antes de a loja abrir. O produto já tem o `motion-carousel` com a 1.0.0 de entrada e a 1.1.0 completa; sem o canal, a conta sem compra recebe o app inteiro ou nada, e o vídeo de lançamento depende da versão de entrada. |
+| Quais planos o site lista | Opção 1 (2026-10-08, migração `0037`): é dado, não regra no código. Cada plano diz se aparece no site (`listed_on_site`) e se aparece nas tabelas do painel (`is_public`), as duas chaves editáveis em `/admin/billing`. O FlyeeClub aparece nos dois; o FlyeeClub Pro, só no painel; um plano novo começa fora do site. Com um plano só, o cartão dele é o destaque da página e mostra as linhas do brief: preço, apps, atualizações, guias, projetos de clientes e computadores, cada uma só quando o plano a concede. |
+| Do botão ao pagamento | Pedido do dono do produto (2026-10-08): quem clica no botão de compra da home sem ter conta faz o cadastro e vai direto ao checkout, sem passar pelo onboarding nem pelo painel; quem já está logado vai direto ao checkout. Vale para todo botão de compra do site. O checkout é uma página só, sem menu, sem rodapé e sem link de saída além dos termos, que abrem em outra aba. As perguntas do onboarding ficam para depois da compra. |
 
 **Propostas do plano, a confirmar pelo dono do produto**
 
 | Tema | Proposta |
 | --- | --- |
-| Quais planos o site lista | Dado, não constante: cada plano diz se aparece no site e se aparece no painel, editável em `/admin/billing`. O FlyeeClub aparece nos dois; o FlyeeClub Pro, só no painel. |
 | Medição | `upsell.viewed` e `upsell.clicked` passam a levar o recurso clicado, e `/admin/metricas` mostra qual recurso vende o Pro. |
 
 ## Mercado: onde está o vão

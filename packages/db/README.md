@@ -45,6 +45,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0034_store_badges` | `platform_settings.catalog` (public): how many days after its first publication an app shows "Novo" in the store (30 to start); "Usa sua conta" comes from each app's required external credentials. |
 | `0035_legal_copy_rules` | The copy rules (no dash, exclamation mark, emoji or banned word) in the legal texts: version 5 of the English terms of use and version 2 of the English CLI connection term, each built from the text in force by one checked replacement ("unlocks" out). The Portuguese texts keep their versions. pgTAP `0033_copy_rules` keeps every seeded text in force inside the rules. |
 | `0036_ai_tool_detail` | The tool the CLI found when no tested AI is there: `member_devices.ai_tool_detail`, kept by `register_member_device` (new last argument) only beside `ai_tool = 'other'` and only when `platform_settings.cli.known_tools` lists the name (seeded with the core's six "compatible by the standard" tools); anything else is dropped, never refused. The finished CLI already sends it, and the strict report refused the login. |
+| `0037_plans_on_site` | `plans.listed_on_site`: whether the public site lists a plan, read together with `is_public` (the member area's grids). FlyeeClub (`kit`, `kit-usd`) is on both, FlyeeClub Pro on the member area only, and a new plan starts off the site (docs/PRODUCT.md, 2026-10-08). |
 
 ## Conventions every migration follows
 

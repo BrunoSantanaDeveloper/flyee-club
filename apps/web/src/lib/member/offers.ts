@@ -19,7 +19,8 @@ export type OfferPlan = {
 };
 
 export async function loadOfferPlans(currency: BillingCurrency): Promise<Partial<Record<UpsellOffer, OfferPlan>>> {
-  const plans = (await listPublicPlans({ currency })) ?? [];
+  // The member area's grid: FlyeeClub Pro is offered here, never on the site.
+  const plans = (await listPublicPlans({ surface: "member", currency })) ?? [];
   const pick = (tier: UpsellOffer) =>
     plans
       .filter((plan) => plan.tier === tier && (tier === "kit" ? plan.kind === "access" : plan.period === "monthly"))

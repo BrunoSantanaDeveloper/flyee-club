@@ -41,7 +41,7 @@ Money page first. Terms are used naturally, never stuffed.
 
 | Page | pt-BR term / intent | English term / intent | Funnel role |
 |---|---|---|---|
-| `/planos` · `/en/pricing` | "flyee.club preço", "assinatura skills Claude Code" — commercial | "flyee.club pricing", "Claude Code skills subscription" — commercial | **money page**: the ladder and checkout entry |
+| `/planos` · `/en/pricing` | "flyee.club preço", "apps para Claude Code" — commercial | "flyee.club pricing", "Claude Code apps" — commercial | **money page**: the price of FlyeeClub, the one plan the site sells (2026-10-08), and the checkout entry |
 | `/` · `/en` | "skills para Claude Code", "harness para Claude Code e Codex" + brand; title `flyee.club \| Skills e workflows para Claude Code e Codex` | "Claude Code skills", "AI coding harness" + brand; title `flyee.club \| Skills and workflows for Claude Code and Codex` | brand + top of funnel |
 | `/como-funciona` · `/en/how-it-works` | "como instalar skills no Claude Code", "atualizar skills" — informational → commercial | "install Claude Code skills", "update Claude Code skills" | education → plans |
 | `/catalogo` · `/en/catalog` | "catálogo de skills para Claude Code", "workflows para Codex" — commercial investigation | "Claude Code skills catalog", "Codex workflows" | catalog → plans |

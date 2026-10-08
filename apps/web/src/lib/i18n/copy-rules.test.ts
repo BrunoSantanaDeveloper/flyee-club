@@ -261,3 +261,75 @@ describe("the free rung is never offered: no free plan, account or sample in wha
     },
   );
 });
+
+/**
+ * "O FlyeeClub Pro só é oferecido por dentro" (docs/PRODUCT.md, decided
+ * 2026-10-08): the public site sells FlyeeClub alone. No text of a public page
+ * names FlyeeClub Pro, or the "flyeeClub completo" of the home brief; the
+ * member area offers it on the click of one of its features. The legal texts
+ * (consent_terms, in the database) still describe both plans: they are the
+ * contract, not an advertisement.
+ */
+const PRO: Rule = {
+  name: "FlyeeClub Pro",
+  test: (text) => /\bPro\b/.test(text) || /flyee\s?club\s+complet/i.test(text),
+};
+
+/** The founders offer names it until 12.3 takes the offer out with its page. */
+const proAllowedUntil123 = (key: string) => key.startsWith("founders-") || key.startsWith("pricing-founders-");
+const FOUNDERS_PAGE = /[\\/]\(funil\)[\\/]fundadores[\\/]/;
+
+const PUBLIC_SITE_CODE = [
+  "apps/web/src/app/[locale]",
+  "apps/web/src/components/marketing",
+  "apps/web/src/components/site",
+];
+const HOME_COPY = COPY_SOURCES.filter((file) => /home-copy/.test(file));
+
+describe("the public site never names FlyeeClub Pro", () => {
+  it("knows the names, and leaves the words that only look like them", () => {
+    for (const text of ["Assinar FlyeeClub Pro", "No FlyeeClub Pro", "o flyeeClub completo", "flyeeClub complete"]) {
+      expect(PRO.test(text), text).toBe(true);
+    }
+    for (const text of ["Assinar {plan}", "Produto digital", "Proposta e voto", "a pro tip", "FlyeeClub"]) {
+      expect(PRO.test(text), text).toBe(false);
+    }
+  });
+
+  it("in the marketing catalogs of either language, the founders offer aside until 12.3", () => {
+    const found: string[] = [];
+    let allowed = 0;
+    for (const [locale, catalog] of Object.entries({ "pt-BR": ptBR, en })) {
+      for (const [key, text] of catalogStrings(catalog.marketing)) {
+        if (!PRO.test(text)) continue;
+        if (proAllowedUntil123(key)) allowed += 1;
+        else found.push(`${locale} marketing.${key}: ${text}`);
+      }
+    }
+    expect(found).toEqual([]);
+    // When 12.3 removes the offer, this fails until the allowance goes with it.
+    expect(allowed).toBeGreaterThan(0);
+  });
+
+  it("in the home's copy and in any string of the public site's code", { timeout: 60_000 }, () => {
+    const found: string[] = [];
+    for (const file of HOME_COPY) {
+      for (const literal of literalsOf(file)) {
+        if (PRO.test(literal.text)) found.push(`${where(file, literal.line)}: ${literal.text.trim()}`);
+      }
+    }
+    let files = 0;
+    for (const dir of PUBLIC_SITE_CODE) {
+      for (const file of codeFiles(fromRoot(dir))) {
+        if (FOUNDERS_PAGE.test(file)) continue;
+        files += 1;
+        for (const literal of literalsOf(file)) {
+          if (PRO.test(literal.text)) found.push(`${where(file, literal.line)}: ${literal.text.trim()}`);
+        }
+      }
+    }
+    expect(HOME_COPY).toHaveLength(2);
+    expect(files).toBeGreaterThan(40);
+    expect(found).toEqual([]);
+  });
+});

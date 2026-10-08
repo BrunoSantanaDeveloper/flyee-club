@@ -15,7 +15,8 @@
     "Structured data via <JsonLd> only; Organization/FAQPage/Product already emitted by layout/Faq/PricingSection",
     "Motion is CSS first: the hero entrance (built into <Hero>), <Float>, <Reveal> (a transition started by watchEntry in motion.ts), <CountUp>; transform + opacity; reduced-motion safe. No scripted timeline, no ScrollTrigger: GSAP is loaded by <Parallax> alone, on demand",
     "Layer scale: compositions are relative isolate with z-0 (back) / z-10 (frame) / z-20 (front); z-30 is reserved for site chrome",
-    "Ambient motion is seasoning and it ends: max 4 <Float> + 2 <Parallax> per page, always reduced-motion safe; one orbiting decor at most; never an animation that runs forever (an idle page must do no work)"
+    "Ambient motion is seasoning and it ends: max 4 <Float> + 2 <Parallax> per page, always reduced-motion safe; one orbiting decor at most; never an animation that runs forever (an idle page must do no work)",
+    "The site sells FlyeeClub alone (docs/PRODUCT.md, 2026-10-08): no public page names FlyeeClub Pro, shows its price or describes a feature only it has, with or without a lock; pricing lists the plans marked listed_on_site (/admin/billing) and a purchase button leads to the sign-up and on to the checkout (primaryCtaFor). lib/i18n/copy-rules.test.ts fails on the name"
   ],
   "tones": {
     "source": "tone.ts — TONE map + toneAt(index) rotation",
@@ -175,7 +176,7 @@
       "file": "pricing-section.tsx",
       "funnel": "action",
       "props": "plans (from getDisplayPlans()), ctaLabel, ctaHref, headingAs: h1|h2, decor, id, tiers?: string[] (automation ladder above the grid), footnote? (differentiation line under it)",
-      "use": "real plans, one highlighted anchor, tone per tier; emits Product JsonLd; CTA repeats the page's primary action verbatim; decor=\"glow\" when it leads the page; 1–2 plans auto-center instead of stranding in a 3-up grid"
+      "use": "real plans (getDisplayPlans: only the plans the site lists, FlyeeClub today), one highlighted anchor (the only plan is always it), tone per tier; the one-time access reads in the labelled rows of the home brief (priceLabel + rows: Apps, Atualizações, Guias, Projetos, Computadores, each only when the plan grants it), any other plan in its feature list; emits Product JsonLd; CTA repeats the page's primary action verbatim; decor=\"glow\" when it leads the page; 1–2 plans auto-center instead of stranding in a 3-up grid"
     },
     {
       "name": "Faq",

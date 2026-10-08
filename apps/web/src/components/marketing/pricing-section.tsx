@@ -26,7 +26,14 @@ export type PublicPlanDisplay = {
    */
   priceCondition?: string;
   period?: string;
+  /** The small caption above the price ("Preço"), on a card laid out in rows. */
+  priceLabel?: string;
   features: string[];
+  /**
+   * What the plan gives, as labelled rows ("Apps", "Atualizações"): the layout
+   * of the home brief's access card. When present it replaces `features`.
+   */
+  rows?: { label: string; value: string }[];
   highlighted?: boolean;
   /** Harmonic hue identifying this tier (name mark + feature checks). Defaults to a rotation. */
   tone?: Tone;
@@ -193,9 +200,10 @@ export default function PricingSection({
         className={cn(
           "mx-auto grid w-full grid-cols-1 items-stretch gap-6",
           // Track the real plan count: one or two plans stay CENTERED instead
-          // of stranding in the first column of a 3-up grid (a project may
-          // ship a single public plan while billing is being set up).
-          visiblePlans.length === 1 && "md:max-w-sm",
+          // of stranding in the first column of a 3-up grid. One plan is the
+          // site's case (FlyeeClub, docs/PRODUCT.md 2026-10-08), and its card
+          // is wide enough for labelled rows.
+          visiblePlans.length === 1 && "md:max-w-md",
           visiblePlans.length === 2 && "md:max-w-2xl md:grid-cols-2",
           visiblePlans.length >= 3 && "max-w-4xl md:grid-cols-3",
         )}
@@ -225,6 +233,7 @@ export default function PricingSection({
               </div>
 
               <div className="flex flex-col gap-1">
+                {plan.priceLabel && <p className="text-text-secondary text-sm font-semibold">{plan.priceLabel}</p>}
                 {plan.priceCondition && (
                   <p className="bg-primary/20 text-text-primary flex w-fit flex-row items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold">
                     <NiTag size="small" className="flex-none" />
@@ -238,14 +247,33 @@ export default function PricingSection({
                 {plan.installmentsLabel && <p className="text-text-secondary text-sm">{plan.installmentsLabel}</p>}
               </div>
 
-              <ul className="flex flex-1 flex-col gap-2">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="text-text-secondary flex flex-row items-start gap-2 text-base leading-6">
-                    <NiCheck size="small" className={cn("mt-1 flex-none", tone.text)} />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+              {plan.rows ? (
+                <dl className="m-0 flex flex-1 flex-col">
+                  {plan.rows.map((row) => (
+                    <div
+                      key={row.label}
+                      className="border-grey-100 flex flex-col gap-0.5 border-t py-3 first:border-t-0 first:pt-0 sm:flex-row sm:gap-4"
+                    >
+                      <dt className="text-text-secondary flex-none text-sm leading-6 font-semibold sm:w-28">
+                        {row.label}
+                      </dt>
+                      <dd className="text-text-primary m-0 text-base leading-6">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <ul className="flex flex-1 flex-col gap-2">
+                  {plan.features.map((feature) => (
+                    <li
+                      key={feature}
+                      className="text-text-secondary flex flex-row items-start gap-2 text-base leading-6"
+                    >
+                      <NiCheck size="small" className={cn("mt-1 flex-none", tone.text)} />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               <SiteButton
                 variant={plan.highlighted ? "contained" : "pastel"}

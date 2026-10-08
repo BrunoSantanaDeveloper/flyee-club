@@ -31,7 +31,7 @@ function catalogDigest(cwd) {
     );
     if (!lines.length) return "";
     return [
-      "7. COMPONENT CATALOG (compose these — never invent per-page layout):",
+      "8. COMPONENT CATALOG (compose these — never invent per-page layout):",
       ...lines,
       `   Tones: ${catalog.tones?.rule ?? ""}`,
     ].join("\n");
@@ -68,6 +68,7 @@ process.stdin.on("end", () => {
     '4. SEO is part of the page (see the skill\'s SEO section + `docs/SEO.md`): exactly one <h1> (the page title — `SectionHeader as="h1"` / `PricingSection headingAs="h1"` when the lead is not a <Hero>), a localized title + distinct description via `generateMetadata` (with `publicPageMetadata` from `lib/seo.ts` for canonical + hreflang), the page declared in `src/i18n/routing.ts` (its pt-BR and English addresses) + `sitemap.ts`, internal links through `LocaleLink`, and structured data via <JsonLd> for schema-eligible blocks (Organization/FAQPage/Product are already emitted — don\'t duplicate).',
     '5. The public shell (docs/PLANO-IMPLEMENTACAO.md, "Casca pública"): nothing a public page reaches imports MUI, Emotion, notistack, Formik or Yup (the marketing lint blocks it, lib/public-shell.test.ts walks the imports). Buttons, fields and notices are the components/site primitives in the catalog below; a disclosure is <details className="site-disclosure">, a menu a native <dialog className="site-drawer">. A client component reads only the marketing keys listed in src/i18n/public-client-messages.ts.',
     "6. Colour (docs/DESIGN.md, palette usage; WCAG 2.2 AA): the primary is the yellow of the logo, a FILL. Never text-primary, ring-primary or outline-primary on a light ground (1.5:1): a label on a primary fill is text-primary-contrast, the primary as text, link, icon or focus ring is text-primary-ink, and bare text-primary belongs only on the deep band. An eyebrow is <Eyebrow>; the accent phrase of a headline is <em> under the site-emphasis class; a tint of the primary is /20 or more. lib/palette-contrast.test.ts fails otherwise.",
+    "7. What the site sells (docs/PRODUCT.md, 2026-10-08): FlyeeClub alone. No public page names FlyeeClub Pro, shows its price or describes a feature only it has (recipes, meetings, proposing and voting, advanced guides, more computers), with or without a lock: the member area offers it. Pricing lists only the plans marked `listed_on_site` in /admin/billing, and a purchase button leads to the sign-up and on to the checkout (primaryCtaFor in lib/launch.ts). lib/i18n/copy-rules.test.ts and the e2e text check fail on the name.",
     catalogDigest(input?.cwd ?? process.cwd()),
   ]
     .filter(Boolean)

@@ -25,9 +25,17 @@ export type PublicPlan = {
 };
 
 /**
- * Lists active plans for the public pricing page. Server-only: the `plans`
- * table is readable by authenticated users only (RLS), so this goes through
- * the service-role client — read-only, safe fields only.
+ * Where a listing is shown (migration 0037): the public site lists only the
+ * plans marked `listed_on_site` (FlyeeClub; FlyeeClub Pro is offered inside
+ * the member area, docs/PRODUCT.md 2026-10-08), the member area every plan on
+ * its grids (`is_public`). Required, so no caller picks a surface by default.
+ */
+export type PlanSurface = "site" | "member";
+
+/**
+ * Lists active plans for a pricing surface. Server-only: the `plans` table is
+ * readable by authenticated users only (RLS), so this goes through the
+ * service-role client — read-only, safe fields only.
  *
  * `currency` narrows the list to the plans sold in it (each offer exists once
  * per currency: `kit` in BRL, `kit-usd` in USD).
@@ -35,7 +43,10 @@ export type PublicPlan = {
  * Returns `null` when Supabase is not configured (fresh clone), so callers
  * MUST fall back to placeholder content and keep the page browsable.
  */
-export async function listPublicPlans(options: { currency?: string } = {}): Promise<PublicPlan[] | null> {
+export async function listPublicPlans(options: {
+  surface: PlanSurface;
+  currency?: string;
+}): Promise<PublicPlan[] | null> {
   let supabase: ReturnType<typeof createServiceClient>;
   try {
     supabase = createServiceClient();
@@ -56,6 +67,7 @@ export async function listPublicPlans(options: { currency?: string } = {}): Prom
     // by the link the operator sends — publishing its price next to the table
     // price would read as overcharging everybody else (0085).
     .eq("is_public", true);
+  if (options.surface === "site") query = query.eq("listed_on_site", true);
   if (options.currency) query = query.eq("currency", options.currency.toUpperCase());
   const { data, error } = await query.order("sort", { ascending: true });
 

@@ -96,12 +96,12 @@ screen.
 | Event | Props | Where it fires today |
 |---|---|---|
 | `section_view` | `section` | the home's sections: `hero`, `store`, `howItWorks`, `whyStore`, `pricing`, `requirements`, `faq`, `finalCta` |
-| `cta_click` | `cta_id`: `nav`, `hero`, `plan_access`, `plan_full`, `final`, `footer` | the header, the hero, each pricing card, the final CTA, the footer |
+| `cta_click` | `cta_id`: `nav`, `hero`, `plan_access`, `plan_full`, `final`, `footer` | the header, the hero, each pricing card, the final CTA, the footer. Since 2026-10-08 the site lists FlyeeClub alone, so `plan_full` appears only if the operator lists a subscription on the site |
 | `quiz_click` | `location` | the hero's secondary button ("O FlyeeClub é pra mim?") |
 | `segment_click` | `segment`, `location` | the waitlist's segment select (`waitlist`); the hero links and the "Para quem é" cards when the home carries them |
 | `store_filter` | `category` (`all` when cleared) | the store grid's category chips |
 | `app_card_click` | `app` | an app card's link on the home |
-| `locked_click` | `item` | the locked "Pedir um app" card (`request`) |
+| `locked_click` | `item` | unused since 2026-10-08: the locked "Pedir um app" card (`request`) sold FlyeeClub Pro and left the site; the name stays for the history of the reports |
 | `see_all_apps_click` | — | the "Ver todos os apps" links of the home |
 | `faq_open` | `question_id` (the item's id, else its position) | opening a question in any `Faq` |
 | `contact_click` | `location` | the footer's contact link |

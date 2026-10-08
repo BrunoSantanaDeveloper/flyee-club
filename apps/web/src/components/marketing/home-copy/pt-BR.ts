@@ -66,12 +66,6 @@ export const homeCopyPtBR = {
     terminalLabel: "Comando que instala o app em destaque",
     installed: "{app} {version} instalado",
     verified: "Checksum sha256 conferido",
-    request: {
-      title: "Pedir um app",
-      body: "Não achou? No FlyeeClub Pro, você propõe e vota no próximo app que entra na loja.",
-      badge: "FlyeeClub Pro",
-      link: "Ver o que o FlyeeClub Pro inclui",
-    },
     footnote: "Nada de módulo para assistir. Você instala o app e usa; cada um tem um guia curto.",
     allApps: "Ver todos os apps",
     emptyTitle: "Os primeiros apps estão chegando",
@@ -130,9 +124,9 @@ export const homeCopyPtBR = {
 
   access: {
     eyebrow: "Acesso",
-    title: "Escolha como entrar.",
+    title: "Garanta seu acesso.",
     subtitle:
-      "O FlyeeClub é um pagamento único, válido por 1 ano, e libera todos os apps da loja, com as atualizações. O FlyeeClub Pro soma guias avançados, receitas, encontros ao vivo, voto no que entra na loja, a camada abrir o capô e mais computadores.",
+      "O FlyeeClub é um pagamento único, válido por 1 ano, e libera todos os apps da loja, com as atualizações.",
     requirementsTitle: "O que você precisa ter",
     requirements: [
       {
@@ -161,8 +155,7 @@ export const homeCopyPtBR = {
       },
       {
         question: "Em quantos computadores posso usar?",
-        answer:
-          "No FlyeeClub, em um: um usuário, em uma máquina. O FlyeeClub Pro libera mais computadores conectados ao mesmo tempo.",
+        answer: "Em um. Cada acesso é de um usuário, em uma máquina.",
       },
       {
         question: "Preciso saber programar?",

@@ -361,6 +361,7 @@ export const plans = pgTable("plans", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	accessMonths: integer("access_months"),
+	listedOnSite: boolean("listed_on_site").default(false).notNull(),
 }, (table) => [
 	uniqueIndex("plans_one_public_access_idx").using("btree", table.family.asc().nullsLast().op("text_ops"), table.currency.asc().nullsLast().op("text_ops")).where(sql`(is_public AND is_active AND (NOT is_addon) AND (period IS NULL))`),
 	uniqueIndex("plans_one_public_recurring_idx").using("btree", table.family.asc().nullsLast().op("text_ops"), table.period.asc().nullsLast().op("enum_ops"), table.currency.asc().nullsLast().op("text_ops")).where(sql`(is_public AND is_active AND (NOT is_addon) AND (period IS NOT NULL))`),

@@ -444,5 +444,10 @@ test("the text people read has no dash, exclamation mark or emoji, in either lan
       text.slice(Math.max(0, match.index - 30), match.index + 10).replace(/\s+/g, " "),
     );
     expect(found, `text the copy rules forbid at ${route}`).toEqual([]);
+    // The site sells FlyeeClub alone (docs/PRODUCT.md, 2026-10-08). The legal
+    // texts are the contract and name both plans; the founders page goes in 12.3.
+    if (!/fundadores|founders|legal/.test(route)) {
+      expect(text, `FlyeeClub Pro named at ${route}`).not.toMatch(/FlyeeClub Pro|flyeeClub complet/i);
+    }
   }
 });

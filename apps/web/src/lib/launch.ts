@@ -27,8 +27,19 @@ export const getLaunchStage = cache(async (): Promise<LaunchStage> => {
 /** The page's primary action in a stage: the label key (marketing namespace) and where it leads. */
 export type PrimaryCta = { labelKey: "cta-primary" | "cta-waitlist"; href: string };
 
+/**
+ * Where a purchase button sends someone once the store is open: the sign-up,
+ * and from it straight to the checkout of FlyeeClub, never to the onboarding
+ * or the member area first (decided 2026-10-08, docs/PRODUCT.md). Without a
+ * plan, `/assinatura` sells the one-time access in the visitor's currency; a
+ * visitor already signed in skips the sign-up (the middleware follows `next`).
+ */
+export const CHECKOUT_AFTER_SIGN_UP = `/auth/sign-up?next=${encodeURIComponent("/assinatura")}`;
+
 export const primaryCtaFor = (stage: LaunchStage): PrimaryCta =>
-  stage === "open" ? { labelKey: "cta-primary", href: "/auth/sign-up" } : { labelKey: "cta-waitlist", href: "/espera" };
+  stage === "open"
+    ? { labelKey: "cta-primary", href: CHECKOUT_AFTER_SIGN_UP }
+    : { labelKey: "cta-waitlist", href: "/espera" };
 
 /**
  * The header's button in a stage (decided 2026-10-06, docs/PRODUCT.md). Once

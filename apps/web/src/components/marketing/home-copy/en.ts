@@ -51,12 +51,6 @@ export const homeCopy: HomeCopy = {
     terminalLabel: "The command that installs the featured app",
     installed: "{app} {version} installed",
     verified: "sha256 checksum verified",
-    request: {
-      title: "Request an app",
-      body: "Can't find it? On FlyeeClub Pro, you propose and vote on the next app that joins the store.",
-      badge: "FlyeeClub Pro",
-      link: "See what FlyeeClub Pro includes",
-    },
     footnote: "No modules to watch. You install the app and use it; each one comes with a short guide.",
     allApps: "See all apps",
     emptyTitle: "The first apps are on their way",
@@ -116,9 +110,8 @@ export const homeCopy: HomeCopy = {
 
   access: {
     eyebrow: "Access",
-    title: "Choose how to get in.",
-    subtitle:
-      "FlyeeClub is a one-time payment, valid for 1 year, that gives you every app in the store, with updates. FlyeeClub Pro adds advanced guides, recipes, live sessions, a vote on what joins the store, the under-the-hood layer and more computers.",
+    title: "Get your access.",
+    subtitle: "FlyeeClub is a one-time payment, valid for 1 year, that gives you every app in the store, with updates.",
     requirementsTitle: "What you need",
     requirements: [
       {
@@ -147,8 +140,7 @@ export const homeCopy: HomeCopy = {
       },
       {
         question: "On how many computers can I use it?",
-        answer:
-          "With FlyeeClub, on one: one user, on one machine. FlyeeClub Pro allows more computers connected at the same time.",
+        answer: "One. Each access is for one person, on one machine.",
       },
       {
         question: "Do I need to know how to code?",

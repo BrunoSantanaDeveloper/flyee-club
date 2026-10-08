@@ -33,7 +33,6 @@ import NiFlask from "@/icons/nexture/ni-flask";
 import NiHealth from "@/icons/nexture/ni-health";
 import NiKey from "@/icons/nexture/ni-key";
 import NiLaptop from "@/icons/nexture/ni-laptop";
-import NiLock from "@/icons/nexture/ni-lock";
 import NiRefresh from "@/icons/nexture/ni-refresh";
 import NiServer from "@/icons/nexture/ni-server";
 import { resolveCurrency } from "@/lib/billing-currency";
@@ -309,30 +308,13 @@ export default async function Home() {
                 label={copy.store.categoriesLabel}
                 allLabel={copy.store.allLabel}
                 categories={storeCategories}
-                items={[
-                  ...storeApps.map((app) => ({
-                    key: app.slug,
-                    category: app.storeCategory,
-                    card: <RuledCard item={appCard(app)} />,
-                  })),
-                  {
-                    key: "request",
-                    category: null,
-                    card: (
-                      <RuledCard
-                        item={{
-                          icon: <NiLock size="medium" />,
-                          tone: "secondary",
-                          title: copy.store.request.title,
-                          body: copy.store.request.body,
-                          badge: copy.store.request.badge,
-                          link: { label: copy.store.request.link, href: "/planos" },
-                          track: trackAttributes({ event: "locked_click", item: "request" }),
-                        }}
-                      />
-                    ),
-                  },
-                ]}
+                // Only the apps: asking for a custom app is FlyeeClub Pro's, and the
+                // site never advertises it (docs/PRODUCT.md, 2026-10-08).
+                items={storeApps.map((app) => ({
+                  key: app.slug,
+                  category: app.storeCategory,
+                  card: <RuledCard item={appCard(app)} />,
+                }))}
               />
               <p className="text-text-secondary m-0 text-center text-base leading-7">
                 {copy.store.footnote}{" "}
