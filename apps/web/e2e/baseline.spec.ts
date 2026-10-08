@@ -253,21 +253,14 @@ test("how it works, the app store and about render in both languages without rem
   for (const path of ["/como-funciona", "/en/how-it-works", "/catalogo", "/en/catalog", "/sobre", "/en/about"]) {
     expect(sitemap, path).toContain(`${path}<`);
   }
-  // The funnel pages stay out of the index.
-  expect(sitemap).not.toContain("/fundadores");
-  expect(sitemap).not.toContain("/en/founders");
 });
 
-test("the founders page stays out of search and explains a closed offer", async ({ page }) => {
+test("the founders offer is gone: its addresses are no page of the site", async ({ request }) => {
+  // FlyeeClub has no founders price (docs/PRODUCT.md, 2026-10-08). The page is
+  // no longer a public address, so it answers like any unknown one.
   for (const route of ["/fundadores", "/en/founders"]) {
-    await page.goto(route);
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-    // No database in this run: the offer reads as not open, never as open with made-up seats.
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      /a oferta de fundador não está aberta|the founders offer is not open/i,
-    );
-    // A funnel page carries no site menu.
-    await expect(page.locator("header nav")).toHaveCount(0);
+    const response = await request.get(route, { maxRedirects: 0 });
+    expect(response.status(), route).not.toBe(200);
   }
 });
 
@@ -353,7 +346,6 @@ test("@a11y core entry and product routes have no critical axe violations and pa
     "/en/how-it-works",
     "/catalogo",
     "/sobre",
-    "/fundadores",
     "/descadastro",
     "/legal/termos",
     "/inicio",
@@ -427,8 +419,6 @@ test("the text people read has no dash, exclamation mark or emoji, in either lan
     "/en/contact",
     "/espera",
     "/en/waitlist",
-    "/fundadores",
-    "/en/founders",
     "/ajuda",
     "/en/help",
     "/blog",
@@ -445,8 +435,8 @@ test("the text people read has no dash, exclamation mark or emoji, in either lan
     );
     expect(found, `text the copy rules forbid at ${route}`).toEqual([]);
     // The site sells FlyeeClub alone (docs/PRODUCT.md, 2026-10-08). The legal
-    // texts are the contract and name both plans; the founders page goes in 12.3.
-    if (!/fundadores|founders|legal/.test(route)) {
+    // texts are the contract and name both plans.
+    if (!route.includes("legal")) {
       expect(text, `FlyeeClub Pro named at ${route}`).not.toMatch(/FlyeeClub Pro|flyeeClub complet/i);
     }
   }

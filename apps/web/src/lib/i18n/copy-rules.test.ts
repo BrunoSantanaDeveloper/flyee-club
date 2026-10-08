@@ -275,10 +275,6 @@ const PRO: Rule = {
   test: (text) => /\bPro\b/.test(text) || /flyee\s?club\s+complet/i.test(text),
 };
 
-/** The founders offer names it until 12.3 takes the offer out with its page. */
-const proAllowedUntil123 = (key: string) => key.startsWith("founders-") || key.startsWith("pricing-founders-");
-const FOUNDERS_PAGE = /[\\/]\(funil\)[\\/]fundadores[\\/]/;
-
 const PUBLIC_SITE_CODE = [
   "apps/web/src/app/[locale]",
   "apps/web/src/components/marketing",
@@ -296,19 +292,14 @@ describe("the public site never names FlyeeClub Pro", () => {
     }
   });
 
-  it("in the marketing catalogs of either language, the founders offer aside until 12.3", () => {
+  it("in the marketing catalogs of either language", () => {
     const found: string[] = [];
-    let allowed = 0;
     for (const [locale, catalog] of Object.entries({ "pt-BR": ptBR, en })) {
       for (const [key, text] of catalogStrings(catalog.marketing)) {
-        if (!PRO.test(text)) continue;
-        if (proAllowedUntil123(key)) allowed += 1;
-        else found.push(`${locale} marketing.${key}: ${text}`);
+        if (PRO.test(text)) found.push(`${locale} marketing.${key}: ${text}`);
       }
     }
     expect(found).toEqual([]);
-    // When 12.3 removes the offer, this fails until the allowance goes with it.
-    expect(allowed).toBeGreaterThan(0);
   });
 
   it("in the home's copy and in any string of the public site's code", { timeout: 60_000 }, () => {
@@ -321,7 +312,6 @@ describe("the public site never names FlyeeClub Pro", () => {
     let files = 0;
     for (const dir of PUBLIC_SITE_CODE) {
       for (const file of codeFiles(fromRoot(dir))) {
-        if (FOUNDERS_PAGE.test(file)) continue;
         files += 1;
         for (const literal of literalsOf(file)) {
           if (PRO.test(literal.text)) found.push(`${where(file, literal.line)}: ${literal.text.trim()}`);

@@ -77,7 +77,7 @@ commit and bumping `CONSENT_VERSION`.
 | Event | Where it fires |
 |---|---|
 | `PageView` | every public page (SSR snippet + `MarketingAnalytics`) and every member page outside `/admin` (`DashboardTrackers`) |
-| `ViewContent` | `/planos` (`content_category: "pricing"`) and the open founders offer `/fundadores` (`content_category: "offer"`), through `TrackEvent` |
+| `ViewContent` | `/planos` (`content_category: "pricing"`), through `TrackEvent`. The founders page that sent `content_category: "offer"` left on 2026-10-08 |
 
 **Site events (GA4 custom events + Meta custom events, opt-out)**
 

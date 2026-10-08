@@ -11,9 +11,9 @@ import type { PublicPlan } from "@flyee/billing/public";
  * "Preço e vagas" (docs/PRODUCT.md, decided 2026-10-07), from the home brief's
  * honesty rule: no price is struck through and no "from/to" pair is shown, on
  * the public site, in the checkout or in the member area. A coupon is named
- * beside the price it gives. The seats left and the deadline of the founders
- * offer appear only on /fundadores, the page of the offer, read from the
- * database (founders_offer()).
+ * beside the price it gives. And no page shows a seats counter or a deadline:
+ * the founders offer that had them left the platform on 2026-10-08
+ * (docs/PRODUCT.md, migration 0038).
  */
 
 // These tests read hundreds of source files: on a busy machine that outlasts the default limit.
@@ -72,7 +72,7 @@ function* shippedFiles(dir: string): Generator<string> {
 
 const relative = (file: string) => path.relative(WEB_SRC, file).replaceAll("\\", "/");
 
-describe("honest pricing: no struck price, and the seats only on the founders page", () => {
+describe("honest pricing: no struck price, no seats counter, no deadline", () => {
   it("names the coupon beside the price it gives, and never strikes the list price through", async () => {
     rows.value = [KIT];
     const { plans } = await getDisplayPlans({
@@ -122,13 +122,13 @@ describe("honest pricing: no struck price, and the seats only on the founders pa
     expect(found).toEqual([]);
   });
 
-  it("reads the seats left and the deadline of the offer only on the founders page", () => {
+  it("shows a seats counter or an offer deadline on no page", () => {
     const found = ["app", "components"]
       .flatMap((dir) => [...shippedFiles(path.join(WEB_SRC, dir))])
       .filter((file) =>
         /\bseats(?:Left|Total|Taken)\b|\b(?:offer|open|founders)\??\.deadline\b/.test(fs.readFileSync(file, "utf8")),
       )
       .map(relative);
-    expect(found).toEqual(["app/[locale]/(funil)/fundadores/page.tsx"]);
+    expect(found).toEqual([]);
   });
 });

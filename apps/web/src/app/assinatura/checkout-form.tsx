@@ -37,7 +37,6 @@ const ERROR_KEY: Record<string, string> = {
   phone_invalid: "checkout-error-phone",
   profile_save_failed: "checkout-error-profile",
   billing_profile_required: "checkout-error-profile-required",
-  offer_closed: "checkout-error-offer-closed",
   coupon_invalid: "checkout-error-coupon",
   suspended: "checkout-error-suspended",
   pix_unavailable: "checkout-error-pix",

@@ -6,7 +6,6 @@ import {
   failBillingClaim,
   loadPayer,
   logBillingFailure,
-  offerBlock,
   orgOwnerId,
   providerFailureCode,
   purchaseBlockedReason,
@@ -203,15 +202,6 @@ export async function startCheckout(input: {
     if (provider === "asaas" && !payer.document) {
       logBillingFailure("missing_billing_document", { orgId: input.orgId });
       return { error: "billing_profile_required" };
-    }
-
-    // A limited offer has to stop selling when it runs out. The counter on the
-    // landing page and this guard read the SAME function, so the page can never
-    // advertise a seat the checkout would refuse — nor the reverse.
-    const blockedOffer = await offerBlock(supabase, planRow.slug);
-    if (blockedOffer) {
-      logBillingFailure("offer_closed", { orgId: input.orgId, plan: planRow.slug, reason: blockedOffer });
-      return { error: "offer_closed" };
     }
 
     // A code that no longer works STOPS the checkout. Dropping it silently and

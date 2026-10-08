@@ -21,7 +21,7 @@ Desenho vigente da cobrança do FlyeeClub, escrito na fase 4 de `docs/PLANO-IMPL
 | Pro (fora da vitrine) | `pro-mensal`, `pro-anual` e as versões `-usd` | nenhuma: inativo desde `0025` | 5 | nada é vendido nem concedido; as linhas ficam pelo histórico |
 
 - Cada plano existe uma vez por moeda: uma linha de `plans` em BRL e outra em USD, com o mesmo `family` e `tier`.
-- `club-fundador-anual` é a oferta de fundador: BRL, fora da vitrine (`is_public = false`), alcançada só pelo link da oferta (`platform_settings.founders`).
+- `club-fundador-anual` era a oferta de fundador, um conceito herdado do MedChina que o FlyeeClub não tem. Desde a migração `0038` (2026-10-08) o plano fica só como histórico: inativo, fora das tabelas e do site, sem `founders_offer()` nem `platform_settings.founders`.
 - Os direitos são chaves numéricas de `plans.limits` (0 = desligado; `devices` é um teto). A lista fica em `packages/billing/src/entitlements.ts`. Desde a migração `0024`, `commercial_license` está ligada em todo plano pago: o uso em projetos de clientes não distingue degrau nenhum.
 - **Renovação do kit**: comprar o kit de novo é renovar. A nova concessão começa quando a atual termina (`grant_entitlement_on_invoice` encadeia pelo maior `expires_at` vivo), então renovar cedo não joga dias fora. `org_entitlements` só conta a concessão em curso; a página de cobrança lê `entitlement_grants` para mostrar até quando o acesso vai, renovações incluídas.
 - Os preços do seed são hipóteses de lançamento. Eles mudam em `/admin/billing`, nunca no código.
@@ -203,7 +203,6 @@ Os tokens da CLI só valem enquanto a conta tem `catalog_access`. Eles são revo
 | `platform_settings` | `dunning` | dias de carência |
 | `platform_settings` | `billing` | teto de parcelas |
 | `platform_settings` | `guarantee` | prazo de garantia exibido |
-| `platform_settings` | `founders` | oferta de fundador: plano, vagas, prazo (a chave `compare_plan_slug`, a âncora riscada de antes, não é mais lida desde 2026-10-07) |
 | `platform_settings` | `pix_provisional_access` | acesso provisório do Pix |
 | env | `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `ASAAS_BASE_URL` | Asaas (BRL) |
 | env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe (USD) |
@@ -213,7 +212,7 @@ Jobs no Inngest: liquidação de cancelamentos a cada 15 minutos, manutenção d
 
 ## Consoles
 
-- **`/admin/billing`**: abas Planos (moeda, família, degrau, tipo), Módulos, Cupons (moeda e famílias), Assinaturas (preço vendido, renovação, motivo de cancelamento, suspensão que revoga os tokens), Kits e cortesias (conceder e revogar) e Ofertas (fundador, com a prévia do que o visitante vê).
+- **`/admin/billing`**: abas Planos (moeda, família, degrau, tipo), Módulos, Cupons (moeda e famílias), Assinaturas (preço vendido, renovação, motivo de cancelamento, suspensão que revoga os tokens), Kits e cortesias (conceder e revogar). A aba Ofertas, da oferta de fundador, saiu em 2026-10-08.
 - **`/settings/billing`**: a escada na moeda do integrante, o degrau atual, cancelar e desfazer, faturas, dados de cobrança, checkout pendente e recuperação de pagamento. A versão orientada a objetivo vem na fase 5.
 
 ## Adiado e em aberto

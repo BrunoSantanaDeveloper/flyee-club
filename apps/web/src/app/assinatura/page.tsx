@@ -107,8 +107,8 @@ export default async function AssinaturaPage({
   const orgRel = membership?.organizations as Record<string, unknown> | Record<string, unknown>[] | null;
   const org = (Array.isArray(orgRel) ? orgRel[0] : orgRel) ?? {};
 
-  // `is_active`, never `is_public`: a limited offer (the founders plan) is
-  // deliberately unlisted and reached only by the link it is sent with.
+  // `is_active`, never `is_public`: an unlisted plan (a partner offer) is
+  // deliberately off the grids and reached only by the link it is sent with.
   const planQuery = supabase
     .from("plans")
     .select("id, slug, name, kind, family, tier, period, price_cents, currency, is_free, access_months")

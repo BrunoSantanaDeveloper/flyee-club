@@ -18,8 +18,8 @@ import { ANALYTICS_ENABLED, getStoredConsent, optOutOfAnalytics, storeConsent } 
  * Not a modal on purpose: it must not trap focus or block the page.
  *
  * **Its footprint is a conversion decision, not a styling one.** As a tall
- * card with stacked buttons it covered the price and the primary CTA of
- * `/fundadores` on a 375px screen, and the CTA on a 1440px one, and a first
+ * card with stacked buttons it covered the price and the primary CTA of a
+ * campaign page on a 375px screen, and the CTA on a 1440px one, and a first
  * visit is exactly what every campaign link produces. So it is a slim bar: one
  * sentence, buttons inline beside the text from `sm` up, pinned to the bottom
  * edge. Both actions are real `<button>` elements; the acknowledge action used

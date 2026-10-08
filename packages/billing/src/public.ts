@@ -63,9 +63,9 @@ export async function listPublicPlans(options: {
     // Add-ons are not tiers: on a public pricing page they
     // would read as another plan to choose between.
     .eq("is_addon", false)
-    // A limited offer (founders) is active and fully purchasable, but reached
-    // by the link the operator sends — publishing its price next to the table
-    // price would read as overcharging everybody else (0085).
+    // An unlisted plan (a partner offer) is active and fully purchasable, but
+    // reached by the link the operator sends: publishing its price next to the
+    // table price would read as overcharging everybody else.
     .eq("is_public", true);
   if (options.surface === "site") query = query.eq("listed_on_site", true);
   if (options.currency) query = query.eq("currency", options.currency.toUpperCase());
@@ -89,56 +89,6 @@ export async function listPublicPlans(options: {
     sort: row.sort,
     accessMonths: row.access_months ?? null,
   }));
-}
-
-/**
- * One plan by slug, INCLUDING unlisted ones (0085).
- *
- * `listPublicPlans` deliberately hides them, which is right for a catalog and
- * wrong for the offer page itself: a founders page has to print the price of
- * the very plan the catalog is not allowed to show. Named explicitly rather
- * than adding a flag to the listing, so nothing can accidentally leak an
- * unlisted plan into a grid.
- *
- * Still refuses an INACTIVE plan — that one is retired, not merely unlisted.
- */
-export async function getPlanBySlug(slug: string): Promise<PublicPlan | null> {
-  if (!slug.trim()) return null;
-
-  let supabase: ReturnType<typeof createServiceClient>;
-  try {
-    supabase = createServiceClient();
-  } catch {
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from("plans")
-    .select(
-      "slug, name, description, kind, family, tier, period, price_cents, currency, trial_days, is_free, limits, sort, access_months",
-    )
-    .eq("slug", slug.trim())
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  return {
-    slug: data.slug,
-    name: data.name,
-    description: data.description,
-    kind: data.kind,
-    period: data.period,
-    priceCents: data.price_cents,
-    currency: data.currency,
-    family: data.family,
-    tier: data.tier,
-    trialDays: data.trial_days,
-    isFree: data.is_free,
-    limits: (data.limits ?? {}) as Record<string, number>,
-    sort: data.sort,
-    accessMonths: data.access_months ?? null,
-  };
 }
 
 /**

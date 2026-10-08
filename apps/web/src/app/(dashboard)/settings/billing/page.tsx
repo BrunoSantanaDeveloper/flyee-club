@@ -28,8 +28,8 @@ export default function BillingSettings() {
   const searchParams = useSearchParams();
   const checkout = searchParams.get("checkout");
   const feature = searchParams.get("feature");
-  // The offer she was sent by link (`?plan=club-fundador-anual`): the grid
-  // surfaces it even when it is unlisted, and says so when the offer ended.
+  // The plan she was sent by link (`?plan=<slug>`, a partner offer): the grid
+  // surfaces it even when it is unlisted, and says so when it is no longer sold.
   const offerSlug = searchParams.get("plan");
   const [openDrawer, setOpenDrawer] = useState(false);
   // Her own pick (the cookie) wins; otherwise the language decides. Resolved

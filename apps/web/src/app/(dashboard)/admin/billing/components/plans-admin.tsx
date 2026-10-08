@@ -245,7 +245,7 @@ export default function PlansAdmin() {
         valueFormatter: (value: number) => `${value ?? 0}d`,
       },
       {
-        // "Unlisted" is sellable but off the catalog — a founders/partner offer
+        // "Unlisted" is sellable but off the catalog — a partner offer
         // reached by /settings/billing?plan=<slug>. Not the same as inactive,
         // which is not sellable at all.
         field: "flags",

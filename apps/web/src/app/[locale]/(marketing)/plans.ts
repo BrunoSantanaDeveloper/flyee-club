@@ -44,8 +44,8 @@ const FEATURE_LABEL: Record<FeatureKey, string> = {
 
 /**
  * What a plan unlocks, as message keys: each on/off right of `plans.limits`,
- * then the computer count. Shared by the pricing cards and the founders offer,
- * so a plan edited in /admin/billing reads the same everywhere.
+ * then the computer count: what a plan the operator lists on the site beside
+ * FlyeeClub shows, so a plan edited in /admin/billing reads the same everywhere.
  */
 export function planFeatureKeys(limits: Record<string, number>): { key: string; values?: { count: number } }[] {
   const keys: { key: string; values?: { count: number } }[] = enabledFeatures(limits).map((key) => ({

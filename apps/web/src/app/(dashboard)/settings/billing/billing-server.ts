@@ -147,27 +147,6 @@ export async function purchaseBlockedReason(supabase: SessionClient, orgId: stri
   return data?.admin_suspended ? "suspended" : null;
 }
 
-/**
- * Refuses a plan whose founders offer is no longer open.
- *
- * The landing page reads the same `founders_offer()`, so a page can never
- * advertise a seat the checkout would refuse, nor the reverse. Only applies to
- * the plan the offer NAMES; a failure to READ the state deliberately does not
- * block an ordinary checkout.
- */
-export async function offerBlock(supabase: SessionClient, planSlug: string): Promise<string | null> {
-  try {
-    const founders = await supabase.rpc("founders_offer");
-    if (!founders.error && founders.data) {
-      const offer = founders.data as { plan_slug?: string | null; closed?: boolean; reason?: string };
-      if (offer.plan_slug && offer.plan_slug === planSlug && offer.closed) return offer.reason ?? "closed";
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 /** The user the workspace's server events are attributed to: its owner (one person per account). */
 export async function orgOwnerId(
   service: ReturnType<typeof createServiceClient>,

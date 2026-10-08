@@ -62,8 +62,8 @@ describe("middleware: locale routing of the public site", () => {
   });
 
   it("keeps the query string through the redirect", async () => {
-    const response = await middleware(request("/pricing?cupom=FUNDADOR"));
-    expect(response.headers.get("location")).toMatch(/\/en\/pricing\?cupom=FUNDADOR$/);
+    const response = await middleware(request("/pricing?cupom=LANCAMENTO"));
+    expect(response.headers.get("location")).toMatch(/\/en\/pricing\?cupom=LANCAMENTO$/);
   });
 
   it("lets an anonymous visitor read the public site but not the app", async () => {

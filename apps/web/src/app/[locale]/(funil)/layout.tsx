@@ -18,7 +18,7 @@ const LEGAL_LINKS = [
 ] as const;
 
 /**
- * Chrome for campaign and offer pages (`/fundadores`), a sibling of
+ * Chrome for campaign and offer pages, a sibling of
  * `(marketing)` for one reason: a nested layout cannot REMOVE what its parent
  * mounts, and an offer page must not carry the site menu. An offer has one job,
  * and every menu item is an exit from it.

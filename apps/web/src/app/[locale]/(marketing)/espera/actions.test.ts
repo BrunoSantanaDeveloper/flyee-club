@@ -56,7 +56,7 @@ describe("joinWaitlist", () => {
       COOKIE_KEYS.attribution,
       encodeURIComponent(JSON.stringify({ origem: "ads", utm_campaign: "launch" })),
     );
-    state.cookies.set(COOKIE_KEYS.offerCoupon, "fundador");
+    state.cookies.set(COOKIE_KEYS.offerCoupon, "lancamento");
     state.rpc.mockResolvedValue({ data: { ok: true, code: "created", send_confirmation: true, locale: "pt-BR" } });
     state.send.mockResolvedValue({ sent: true });
 
@@ -70,7 +70,7 @@ describe("joinWaitlist", () => {
       locale: "pt-BR",
       source: "waitlist",
       segment: "dev",
-      cupom: "FUNDADOR",
+      cupom: "LANCAMENTO",
       origem: "ads",
       utm_campaign: "launch",
     });

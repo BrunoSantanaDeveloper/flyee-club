@@ -12,7 +12,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0001_audit` | audit trail, row versioning, consent terms per language and `accept_terms()`, sign-in log, `set_user_superadmin()`, `update_member_profile()` |
 | `0002_platform` | platform settings (`is_public` decides who reads a key), notifications, announcements, onboarding state, avatars, backups |
 | `0003_billing` | plans (`recurring` or one-time `access`, BRL or USD), coupons, subscriptions with price snapshots, invoices, entitlement grants, idempotent checkout and webhook functions |
-| `0004_entitlements` | `org_entitlements()`, the single answer to what a workspace may use; `org_has_entitlement()`; the founders offer; comp paths |
+| `0004_entitlements` | `org_entitlements()`, the single answer to what a workspace may use; `org_has_entitlement()`; the founders offer, dropped by `0038`; comp paths |
 | `0005_attribution` | first-touch and purchase attribution, public page views per day and entry door |
 | `0006_product_events` | usage telemetry: one vocabulary, one property allowlist, a browser writer and a server writer, daily rollup and retention |
 | `0007_content` | help center and blog (`kind`, `audience`, translation groups) |
@@ -46,6 +46,7 @@ The flyee.club database: hand-written SQL migrations with Row Level Security on 
 | `0035_legal_copy_rules` | The copy rules (no dash, exclamation mark, emoji or banned word) in the legal texts: version 5 of the English terms of use and version 2 of the English CLI connection term, each built from the text in force by one checked replacement ("unlocks" out). The Portuguese texts keep their versions. pgTAP `0033_copy_rules` keeps every seeded text in force inside the rules. |
 | `0036_ai_tool_detail` | The tool the CLI found when no tested AI is there: `member_devices.ai_tool_detail`, kept by `register_member_device` (new last argument) only beside `ai_tool = 'other'` and only when `platform_settings.cli.known_tools` lists the name (seeded with the core's six "compatible by the standard" tools); anything else is dropped, never refused. The finished CLI already sends it, and the strict report refused the login. |
 | `0037_plans_on_site` | `plans.listed_on_site`: whether the public site lists a plan, read together with `is_public` (the member area's grids). FlyeeClub (`kit`, `kit-usd`) is on both, FlyeeClub Pro on the member area only, and a new plan starts off the site (docs/PRODUCT.md, 2026-10-08). |
+| `0038_no_founders` | The founders offer leaves the platform, a concept of the MedChina codebase that FlyeeClub does not have: `founders_offer()` is dropped (anon now calls four functions), the `founders` setting deleted, and `club-fundador-anual` kept for history, inactive and off every grid and the site. `founders` stays among the offers the event allowlist accepts. |
 
 ## Conventions every migration follows
 

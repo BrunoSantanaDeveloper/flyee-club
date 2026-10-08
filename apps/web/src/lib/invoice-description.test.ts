@@ -26,10 +26,10 @@ describe("invoiceDescription", () => {
   });
 
   it("falls back to the name when the plan has no description", () => {
-    expect(invoiceDescription({ name: "PRO FUNDADOR", description: null })).toBe("PRO FUNDADOR");
-    expect(invoiceDescription({ name: "PRO FUNDADOR", description: "" })).toBe("PRO FUNDADOR");
-    expect(invoiceDescription({ name: "PRO FUNDADOR", description: "   \n  " })).toBe("PRO FUNDADOR");
-    expect(invoiceDescription({ name: "PRO FUNDADOR" })).toBe("PRO FUNDADOR");
+    expect(invoiceDescription({ name: "FLYEECLUB PRO", description: null })).toBe("FLYEECLUB PRO");
+    expect(invoiceDescription({ name: "FLYEECLUB PRO", description: "" })).toBe("FLYEECLUB PRO");
+    expect(invoiceDescription({ name: "FLYEECLUB PRO", description: "   \n  " })).toBe("FLYEECLUB PRO");
+    expect(invoiceDescription({ name: "FLYEECLUB PRO" })).toBe("FLYEECLUB PRO");
   });
 
   it("collapses the line breaks an admin textarea produces", () => {
