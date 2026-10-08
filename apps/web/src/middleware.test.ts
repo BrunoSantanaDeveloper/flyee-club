@@ -213,4 +213,29 @@ describe("middleware: visits of the entry doors table", () => {
     await visit("/planos");
     expect(views).toEqual([]);
   });
+
+  it("does not count /instalar.md: an AI reads it on the way to an install", async () => {
+    // Some AIs ask for a page the way a browser would, and a person may open the link too.
+    await visit("/instalar.md", { accept: "text/markdown, text/html, */*", "user-agent": "Claude-User/1.0" });
+    await visit("/en/install.md");
+    expect(views).toEqual([]);
+  });
+});
+
+describe("middleware: the page a member's AI reads to install flyee", () => {
+  const AI = { accept: "text/markdown, text/html, */*", "user-agent": "Claude-User/1.0" };
+
+  it("serves it without a session, in both languages", async () => {
+    const portuguese = await middleware(request("/instalar.md", AI));
+    expect(pathOf(portuguese.headers.get("x-middleware-rewrite"))).toBe("/pt-BR/instalar.md");
+    expect(portuguese.headers.get("location")).toBeNull();
+    const english = await middleware(request("/en/install.md", { accept: "*/*" }));
+    expect(pathOf(english.headers.get("x-middleware-rewrite"))).toBe("/en/instalar.md");
+    expect(english.headers.get("location")).toBeNull();
+  });
+
+  it("sends the English address typed without its prefix to the canonical one", async () => {
+    expect(pathOf((await middleware(request("/install.md", AI))).headers.get("location"))).toBe("/en/install.md");
+    expect(pathOf((await middleware(request("/en/instalar.md", AI))).headers.get("location"))).toBe("/en/install.md");
+  });
 });

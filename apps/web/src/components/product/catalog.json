@@ -115,10 +115,10 @@
       "use": "A few rows compared across a few columns where every cell is a figure (a metric per segment and week, the leader of each metric per week, results per segment). A real <table> with a sticky first column and a keyboard-reachable horizontal scroll. A `muted` row is set in the secondary text colour, never faded with opacity. Not for managing many rows: that is DataTable."
     },
     {
-      "name": "CommandBlock",
-      "from": "@/components/product/command-block",
-      "props": "command, copyLabel, copiedLabel, className?",
-      "use": "A terminal command the member runs (npx flyee login, npx flyee add <slug>), with a copy button. Same deep-band mono body (--background-deep) as the marketing TerminalFrame. Never a bare <code> chip for a command the member must type."
+      "name": "AskAiBlock",
+      "from": "@/components/product/ask-ai-block",
+      "props": "label, prompt, copyLabel, copiedLabel, referenceLabel?, command?, className?",
+      "use": "The sentence a member gives their AI (install flyee, add an app, update, reconnect), on the primary tint with a copy button, and the command the AI will run below it as a reference. The member never uses the terminal (docs/PRODUCT.md, 2026-10-08): never show a command as a task, never a terminal block to copy from. The commands live in lib/install-links.ts (REFERENCE_COMMAND) and every sentence (the ask-ai-* keys) ends with installGuideUrl(locale), the address of /instalar.md in the member's language, so the AI finds the commands whether or not flyee is already in the project."
     },
     {
       "name": "DataTable",

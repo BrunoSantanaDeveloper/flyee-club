@@ -39,7 +39,12 @@ const shapeOf = (html: string): string => (html.match(/<(p|a|h[1-6]|li|ul|ol|hr)
 function every(locale: EmailLocale): Record<string, ReactElement> {
   const kinds: MeetingEmailKind[] = ["confirmation", "day", "hour", "recording"];
   return {
-    "member-welcome": createElement(MemberWelcomeEmail, { locale, name: "Ana", appUrl: APP }),
+    "member-welcome": createElement(MemberWelcomeEmail, {
+      locale,
+      name: "Ana",
+      appUrl: APP,
+      installUrl: locale === "en" ? "https://flyee.club/en/install.md" : "https://flyee.club/instalar.md",
+    }),
     "kit-receipt": createElement(KitReceiptEmail, {
       locale,
       name: "Ana",
@@ -131,6 +136,21 @@ describe("e-mail templates", () => {
       expect(shapeOf(ptHtml).length, name).toBeGreaterThan(0);
       expect(shapeOf(enHtml), name).toBe(shapeOf(ptHtml));
     }
+  });
+
+  it("never send the reader to a terminal: the AI runs the commands", async () => {
+    // docs/PRODUCT.md, 2026-10-08. A command may be shown, as what the AI runs.
+    for (const locale of LOCALES) {
+      for (const [name, element] of Object.entries(every(locale))) {
+        const text = await textOf(element);
+        expect(text, `${name} (${locale})`).not.toMatch(/\bterminal\b|\brode\b|\brun this command\b/i);
+      }
+    }
+    const [pt, en] = await Promise.all(LOCALES.map((locale) => textOf(every(locale)["member-welcome"])));
+    expect(pt).toContain("Cole na conversa com a sua IA: Instale o flyee seguindo https://flyee.club/instalar.md");
+    expect(en).toContain(
+      "Paste into the conversation with your AI: Install flyee by following https://flyee.club/en/install.md",
+    );
   });
 
   it("only the messages a reader may stop carry an unsubscribe link", async () => {

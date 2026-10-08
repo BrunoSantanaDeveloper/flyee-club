@@ -5,7 +5,7 @@ export const homeCopy: HomeCopy = {
   meta: {
     title: "FlyeeClub: apps that automate your business in your AI",
     description:
-      "Apps that automate sales, content, video and product work inside Claude Code, Codex or your favorite AI. Install with one command and update when AI changes.",
+      "Apps that automate sales, content, video and product work inside Claude Code, Codex or your favorite AI. Your AI installs each app and updates it when you ask.",
   },
 
   hero: {
@@ -25,7 +25,7 @@ export const homeCopy: HomeCopy = {
     },
     terminal: {
       title: "~/my-project",
-      label: "A terminal updating the FlyeeClub apps installed in a project",
+      label: "What your AI runs when it updates the FlyeeClub apps of a project",
       checking: "Checking 3 installed apps…",
       updated: "product-scope updated: 1.4.0 → 1.6.0",
       changelog: "Changelog: follows the new Claude Code skills format",
@@ -40,7 +40,7 @@ export const homeCopy: HomeCopy = {
   store: {
     eyebrow: "App store",
     title: "Need it? There's an app for it in FlyeeClub.",
-    subtitle: "Each app automates one task. Open it, see what it does and install it in your Claude with one command.",
+    subtitle: "Each app automates one task. Open it, see what it does and ask your AI to install it.",
     categoriesLabel: "Store categories",
     allLabel: "All",
     featuredLabel: "Featured",
@@ -48,7 +48,7 @@ export const homeCopy: HomeCopy = {
     usesAccount: "Uses your {service} account",
     updatedOn: "Updated on {date}",
     viewApp: "See the app",
-    terminalLabel: "The command that installs the featured app",
+    terminalLabel: "What your AI runs to install the featured app",
     installed: "{app} {version} installed",
     verified: "sha256 checksum verified",
     footnote: "No modules to watch. You install the app and use it; each one comes with a short guide.",
@@ -72,12 +72,12 @@ export const homeCopy: HomeCopy = {
       {
         kicker: "login",
         title: "Install it in your Claude",
-        body: "In the terminal, run npx flyee login and approve in the browser. The dashboard shows every command ready to copy.",
+        body: "Ask your AI: install flyee by following flyee.club/en/install.md. It runs the installer and you only approve the connection in the browser.",
       },
       {
         kicker: "add",
         title: "Install the apps you need",
-        body: "Pick one in the store and run npx flyee add with the app's name. To get new versions, npx flyee update.",
+        body: "Pick one in the store and ask your AI for the app, by name. To get new versions, ask it to update.",
       },
     ],
   },
@@ -96,7 +96,7 @@ export const homeCopy: HomeCopy = {
       },
       {
         title: "Updated when AI changes",
-        body: "AI changes every week. When it does, we update the app and you run one command.",
+        body: "AI changes every week. When it does, we update the app and your AI installs the new version when you ask.",
       },
     ],
   },
@@ -145,7 +145,7 @@ export const homeCopy: HomeCopy = {
       {
         question: "Do I need to know how to code?",
         answer:
-          "Not to use it. To install, you copy and paste a few commands in the terminal, and the dashboard shows each one ready to copy.",
+          "No. Your AI installs and updates for you: you ask in the conversation, confirm what it is about to do and approve the connection in the browser.",
       },
       {
         question: "Does it work in the Claude or ChatGPT app, without a terminal?",

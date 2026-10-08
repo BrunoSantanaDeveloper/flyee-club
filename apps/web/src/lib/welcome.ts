@@ -1,5 +1,6 @@
 import "server-only";
 
+import { installGuideUrl } from "@/lib/install-links";
 import { memberUrl } from "@/lib/messages/format";
 import { readRecipients } from "@/lib/messages/recipients";
 import { notifyLocalized } from "@/lib/notifications";
@@ -43,6 +44,7 @@ export async function welcomeOnce(userId: string): Promise<void> {
       locale: reader.locale,
       name: reader.name,
       appUrl: memberUrl(HOME),
+      installUrl: installGuideUrl(reader.locale),
     });
   } catch (error) {
     console.error("welcome_failed", { userId, message: error instanceof Error ? error.message : String(error) });

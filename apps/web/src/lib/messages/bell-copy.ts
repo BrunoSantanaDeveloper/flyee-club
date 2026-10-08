@@ -83,14 +83,14 @@ const ptBR = {
         ? "A conexão do seu computador vence em até 24 horas"
         : `A conexão do seu computador vence em ${days} dias`,
     body: device
-      ? `Rode npx flyee update no terminal do computador "${device}" para renovar o prazo por mais 30 dias.`
-      : "Rode npx flyee update no terminal para renovar o prazo por mais 30 dias.",
+      ? `No computador "${device}", peça à sua IA para atualizar os apps do flyee e o prazo se renova por mais 30 dias.`
+      : "Peça à sua IA para atualizar os apps do flyee e o prazo se renova por mais 30 dias.",
   }),
 
   /** Installed apps have a newer version. */
   updatesAvailable: (count: number): BellText => ({
     title: count === 1 ? "1 app seu tem versão nova" : `${count} apps seus têm versão nova`,
-    body: "Rode npx flyee update no terminal para atualizar todos de uma vez.",
+    body: "Peça à sua IA para atualizar os apps do flyee: ela atualiza todos de uma vez.",
   }),
 
   /**
@@ -174,13 +174,13 @@ const en: BellCopy = {
         ? "Your computer's connection expires within 24 hours"
         : `Your computer's connection expires in ${days} days`,
     body: device
-      ? `Run npx flyee update in the terminal of your computer "${device}" to renew it for another 30 days.`
-      : "Run npx flyee update in the terminal to renew it for another 30 days.",
+      ? `On your computer "${device}", ask your AI to update the flyee apps and the term renews for another 30 days.`
+      : "Ask your AI to update the flyee apps and the term renews for another 30 days.",
   }),
 
   updatesAvailable: (count) => ({
     title: count === 1 ? "1 of your apps has a new version" : `${count} of your apps have a new version`,
-    body: "Run npx flyee update in the terminal to update them all at once.",
+    body: "Ask your AI to update the flyee apps: it updates them all at once.",
   }),
 
   meetingDay: (title, when) => ({

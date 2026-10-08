@@ -86,7 +86,7 @@ grant_type=urn:ietf:params:oauth:grant-type:device_code&client_id=flyee-cli&devi
 | `expired_token` | o código expirou (10 minutos); recomeçar |
 | `invalid_grant` | código desconhecido ou já usado; recomeçar |
 
-A página `/ativar` mostra o mesmo código para o integrante conferir com o terminal antes de aprovar.
+A página `/ativar` mostra o mesmo código para o integrante conferir antes de aprovar, com o que a IA dele mostrou na conversa ou com o terminal, se foi ele quem rodou o comando.
 
 ### 2.3 Tokens e a regra dos 30 dias
 
@@ -108,7 +108,7 @@ Resposta de sucesso do endpoint de token:
 - Refresh expirado ou revogado responde `invalid_grant` com `error_uri` apontando para `/revalidar?d=<device_id>`. A CLI mostra o link e recomeça o login (2.1), que abre a tela de revalidação.
 - Reapresentar um refresh já girado revoga a família inteira daquele computador (reuso de token roubado). Duas renovações simultâneas com o mesmo refresh caem nesse caso: a CLI deve serializar a renovação.
 - `GET /api/cli/me` devolve `token.days_until_revalidation`. A partir de 5 dias, a CLI avisa que é hora de atualizar.
-- A plataforma avisa por conta própria, porque um computador parado não roda a CLI: cerca de 5 dias antes de a conexão vencer, o integrante recebe um aviso no sino do painel e um e-mail com o comando `npx flyee update`, uma vez por vencimento (`lib/token-jobs.ts`). Renovar a conexão zera a contagem, e o aviso volta a valer para o vencimento seguinte.
+- A plataforma avisa por conta própria, porque um computador parado não roda a CLI: cerca de 5 dias antes de a conexão vencer, o integrante recebe um aviso no sino do painel e um e-mail que pedem para a IA dele atualizar os apps, com o comando `npx flyee update` como referência, uma vez por vencimento (`lib/token-jobs.ts`). Renovar a conexão zera a contagem, e o aviso volta a valer para o vencimento seguinte.
 - Um novo login no mesmo computador revoga a família anterior dele.
 
 ### 2.4 Logout
@@ -385,15 +385,43 @@ Chave desconhecida é erro: um campo novo exige um `manifest_version` novo. Cami
 2. `POST /api/admin/catalog/versions` com `{ "module": "<slug>", "staging_path": "…" }` inspeciona o pacote e grava a versão como rascunho. Responde 422 com todos os problemas encontrados, 409 se a versão já existe e 201 com o checksum. Um pacote pequeno também pode ir direto em multipart (`module` + `file`).
 3. Publicar, marcar como estável, marcar a versão de entrada e retirar são ações do console (`lib/catalog/version-actions.ts`), todas auditadas. A primeira versão publicada de um app vira a versão de entrada; o operador move a marca para outra versão publicada ou a tira, e a versão marcada não é retirada enquanto tiver a marca (migração `0040`).
 
-## 8. Verificação pública
+## 8. Páginas públicas da CLI
 
-`/verificar/<slug>@<versão>` (inglês: `/en/verify/…`) mostra para qualquer pessoa o SHA-256, o tamanho, as IAs compatíveis, as permissões declaradas e se a versão foi retirada. É o `verify_url` das respostas. Fora do índice dos buscadores.
+Duas páginas fora da API, sem sessão e fora do índice dos buscadores.
+
+### 8.1 Verificação (`/verificar/<slug>@<versão>`)
+
+`/verificar/<slug>@<versão>` (inglês: `/en/verify/…`) mostra para qualquer pessoa o SHA-256, o tamanho, as IAs compatíveis, as permissões declaradas e se a versão foi retirada. É o `verify_url` das respostas.
+
+### 8.2 Instalação pela IA (`/instalar.md`)
+
+`/instalar.md` (inglês: `/en/install.md`) é a porta de entrada da CLI desde 2026-10-08 (12.6 do plano). O integrante não usa o terminal: ele cola na conversa com a IA dele uma frase que termina com o endereço da página ("Instale o flyee seguindo https://flyee.club/instalar.md"), e a IA lê a página e roda os comandos. O painel e o e-mail de boas-vindas dão essa frase pronta para copiar, e a página de cada app, a de cada receita e a de computadores dão as frases de instalar um app e de conectar de novo, todas com o mesmo endereço.
+
+- Resposta: `200`, `Content-Type: text/markdown; charset=utf-8`, `Content-Language` com o idioma do endereço, `X-Robots-Tag: noindex` e cache público de 5 minutos. `/install.md`, sem o prefixo, redireciona para `/en/install.md`. Ler a página não conta como visita do site.
+- O texto vive no código (`apps/web/src/lib/install-guide.ts`), nos dois idiomas, e muda com um deploy. Os testes das regras de texto o leem.
+- A página pede a confirmação do integrante antes de qualquer comando, dizendo a pasta, e confere o Node.js, que a CLI 1.x exige na versão 20 ou mais nova. Sem nenhum Node.js, a IA instala a versão LTS com o sim do integrante; um Node.js mais antigo ela só atualiza depois de dizer que outro projeto pode depender dele e de ouvir o sim.
+- Ela só nomeia comandos que a CLI 1.x tem, escritos como uma IA precisa rodá-los. Mudar um deles na CLI pede mudar a página. Todo comando é `npx --yes flyee@latest …`: o `--yes` é do npx, que num terminal pergunta antes de baixar um pacote, e algumas IAs rodam os comandos num terminal; `flyee@latest` em todos evita que a IA rode duas cópias do instalador. A página manda rodá-los como ela os escreve, mesmo quando uma mensagem da CLI escreve `npx flyee login`. A exceção é o PowerShell do Windows com a execução de scripts desativada, em que a IA escreve `npx.cmd` em vez de mudar a configuração. `npx flyee` sem comando só imprime a ajuda.
+
+| Comando na página | O que a página manda, e por quê |
+|---|---|
+| `doctor --json` | Antes de tudo, sem mudar nada. Dos campos do resultado saem três caminhos: `connected` e todos os `adapters` em `true`, o flyee já está no projeto e a IA faz só o que foi pedido; `connected` em `true` e um `adapters` em `false`, o computador está conectado e o projeto é novo, e um pedido de app vai direto ao `add`, que escreve os arquivos; `connected` em `false`, a IA segue para o login. Depois do login a página confere de novo, com `platform.reachable`. Depois de instalar um app, `programs` e `credentials` dizem, pelo `slug`, o programa (`present`) e a chave (`set`) que ainda faltam àquele app. |
+| `login`, com tempo limite de 5 minutos | A IA avisa ANTES que o navegador vai abrir e roda sem esperar resposta: um comando em primeiro plano prende a vez dela, e o aviso depois chegaria tarde. O tempo limite é o que a CLI 1.x espera pela aprovação (2.1): 5 minutos. É o login que escreve os arquivos do flyee no projeto. Sem `--json`, porque ele mostra o endereço enquanto espera. |
+| `login --device`, lendo a saída enquanto espera, por até 10 minutos | Para o computador sem navegador ou com a pessoa longe da tela (SSH, servidor, contêiner); na dúvida, a IA pergunta. O código vale 10 minutos (2.2). A IA passa o endereço e o código e segue lendo até o comando terminar. |
+| `add <app> --dry-run --json`, depois `add <app> --yes --json`, com tempo limite de 10 minutos | Sem um terminal, a CLI responde "não" à própria pergunta de confirmação e não instala nada. A IA lê o que o app declara (permissões, chaves e, em `programs`, o que já está no computador), diz ao integrante quais programas serão instalados, espera o sim e só então confirma com `--yes`, que instala também os programas que faltam. O nome vai como o integrante deu: um prefixo com dois pontos faz parte dele. Depois vêm o `doctor` e o pedido de uma conversa nova. |
+| `key set <NOME> --browser --json`, depois `key list --json` | A chave de um serviço externo é colada numa página que a CLI abre no navegador. Com `--browser` ela nunca é pedida no terminal, que é onde a IA lê; o comando volta na hora e a página vale 15 minutos. Uma chave de cada vez, só as do app pedido. A IA nunca pede a chave na conversa e não usa uma que o integrante cole ali: manda trocá-la e colar a nova na página. |
+| `need <programa> --yes --json`, com tempo limite de 10 minutos | Para um programa que continua faltando depois da instalação, com o sim do integrante. `needs_member` no resultado traz o único passo que cabe a ele. |
+| `update --json`, com tempo limite de 10 minutos, e `status --json` | Atualizar e ver o estado. No `status`, `connected` diz se a plataforma ainda aceita a conexão; no `doctor`, só se o computador guarda uma. |
+
+- Conectar de novo é o mesmo login, feito quando o integrante pede, mesmo com `connected` em `true`: o login novo revoga a família anterior do computador (2.3). A IA confere com o `status`.
+- Erros: um resultado com `ok: false` cuja mensagem pede um novo login (`relogin`, `not_logged`) leva a IA a fazer o login e repetir o que fazia, sem mostrar o `action_url`; qualquer outro, a mostrar `message` e `action_url` como vieram, que é a forma de erro da seção 3, e parar. O login que não termina é repetido uma vez só, depois de a IA perguntar se o navegador abriu, e outro comando que passa do tempo limite também. A IA nunca escreve à mão os arquivos que o flyee escreve.
+- Fica fora da página o que só o FlyeeClub Pro tem (ela é pública) e a conta sem compra, de que as mensagens da própria CLI falam. Na frase da receita, o painel dá o nome que o comando usa (`receita:<slug>`).
+- A página foi dada a IAs sem outro contexto, uma em cada idioma, em 2026-10-08. A primeira leitura acertou os fluxos principais e apontou o que a página deixava para o palpite: o aviso do login pedido para depois do comando, o projeto novo num computador já conectado, chaves e programas soltos em volta do `add`, as duas grafias do comando. A segunda, sobre a página reescrita, apontou a atualização do Node.js, os dois caminhos para instalar um programa e a chave colada na conversa. A terceira, com treze situações, respondeu sem palpite 10 delas num idioma e 11 no outro, todas as dos fluxos centrais, e apontou o que restava: a instalação do Node.js, que a página não tem como escrever para cada sistema, e o `npx` recusado pelo PowerShell. O que as leituras apontaram sobre a CLI foi conferido no código dela antes de entrar na página; o que diz respeito ao Node.js e ao PowerShell vem do comportamento conhecido desses sistemas, sem teste aqui. Nenhuma dessas leituras rodou um comando: a página seguida com a CLI de verdade é do ensaio da abertura.
 
 ## 9. Mudanças planejadas (fases 9, 10 e 12 do plano, ainda não servidas)
 
 Decididas em 2026-10-06 (`docs/PRODUCT.md`, "Decisões tomadas 2026-10-06"; `docs/PLANO-IMPLEMENTACAO.md`, fases 9 e 10). Nenhuma está no ar: a CLI não deve depender delas até cada item ser movido para o corpo deste contrato. Todas são compatíveis com a v1, porque só acrescentam campos e recusas que a CLI já sabe tratar.
 
-Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Os canais, com `newest` e `entitled` por versão, entraram no corpo no mesmo dia (12.5: seções 4.3, 4.4 e 4.5). Vem depois `/instalar.md` (12.6). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura.
+Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Os canais, com `newest` e `entitled` por versão, entraram no corpo no mesmo dia (12.5: seções 4.3, 4.4 e 4.5), e `/instalar.md` também (12.6: seção 8.2). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura.
 
 | Onde | Mudança |
 |---|---|
@@ -402,5 +430,4 @@ Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `a
 | 4.7 `POST /api/cli/events` | Propriedade nova `trigger`, com `scheduled` ou `manual`, na lista fechada (fase 10.1). |
 | 6. Manifesto | `manifest_version: 2` acrescenta `automation`, `requires` e `example_prompt`; a v1 continua aceita; o JSON Schema de 4.8 publica as duas versões (fase 10.1). |
 | Porta MCP | Servidor MCP remoto em `/api/mcp`, só leitura, atrás do mesmo servidor OAuth e das mesmas barreiras: catálogo, guia de um app, novidades, estado da conta e instruções de instalação (fase 10.5). O servidor MCP local da CLI fica fora deste contrato. |
-| `/instalar.md` | Página pública em markdown para uma IA ler e instalar a CLI com confirmação do usuário (fase 10.3, na ordem da fase 12.6). Fora da API, citada aqui por ser a porta de entrada da CLI. Ela usa os comandos que a CLI tem: `npx flyee@latest login` e `npx flyee doctor --json`; `npx flyee` sem comando só imprime a ajuda. |
 | 7. Guias no pacote | Sem mudança no contrato, registrado aqui porque os pacotes de 2026-10-08 não o seguem: a página do app lê só os quatro caminhos da seção 7 (`guides/pt-BR/usar.md`, `guides/pt-BR/abrir-o-capo.md`, `guides/en/usar.md` e `guides/en/abrir-o-capo.md`). Um pacote que traga só `README.md` é aceito e fica sem guia na página. |

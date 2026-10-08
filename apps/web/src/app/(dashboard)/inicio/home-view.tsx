@@ -6,7 +6,7 @@ import { Fragment } from "react";
 
 import { Alert, Box, Button, Card, CardContent, Grid, Typography } from "@mui/material";
 
-import CommandBlock from "@/components/product/command-block";
+import AskAiBlock from "@/components/product/ask-ai-block";
 import OnboardingChecklistCard from "@/components/product/onboarding-checklist-card";
 import PageHeader from "@/components/product/page-header";
 import { TILE_TONE } from "@/components/product/tile-tone";
@@ -15,7 +15,8 @@ import UsageMeter from "@/components/product/usage-meter";
 import NiArrowRight from "@/icons/nexture/ni-arrow-right";
 import NiBadge from "@/icons/nexture/ni-badge";
 import NiCheck from "@/icons/nexture/ni-check";
-import NiTerminal from "@/icons/nexture/ni-terminal";
+import NiLaptop from "@/icons/nexture/ni-laptop";
+import { installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import type { DevicesOverview } from "@/lib/member/devices";
 import { FEATURE_LABEL, TIER_LABEL } from "@/lib/member/labels";
 import type { NewsItem } from "@/lib/member/news";
@@ -55,7 +56,8 @@ type HomeOffer = { offer: UpsellOffer; reason: UpsellReason; plan: OfferPlan | n
  * connecting a machine, updating, or reading what changed.
  *
  * Order follows that job: where you stand (your rung), what keeps your tools
- * alive (the install block, machines and the revalidation date), the next
+ * alive (the sentence that has your AI install flyee, never a command to type,
+ * docs/PRODUCT.md 2026-10-08; machines and the revalidation date), the next
  * step (the activation checklist), what changed (the latest releases), the
  * next rung when there is one, and, for a paying member, the services sold
  * on demand. An account that bought nothing sees both rungs first, side by
@@ -175,7 +177,7 @@ export default function HomeView({ state }: { state: HomeState }) {
           <Card id="instalar" className="h-full scroll-mt-24">
             <CardContent className="flex flex-col gap-4">
               <Box className="flex flex-row items-center gap-2">
-                <NiTerminal size="medium" className="text-primary-ink" aria-hidden />
+                <NiLaptop size="medium" className="text-primary-ink" aria-hidden />
                 <Typography variant="subtitle1" component="h2" className="mb-0">
                   {t("home-install-title")}
                 </Typography>
@@ -183,7 +185,14 @@ export default function HomeView({ state }: { state: HomeState }) {
               <Typography variant="body2" className="text-text-secondary">
                 {t("home-install-body")}
               </Typography>
-              <CommandBlock command="npx flyee login" copyLabel={t("command-copy")} copiedLabel={t("command-copied")} />
+              <AskAiBlock
+                label={t("ask-ai-label")}
+                prompt={t("ask-ai-install", { url: installGuideUrl(state.locale) })}
+                copyLabel={t("ask-ai-copy")}
+                copiedLabel={t("ask-ai-copied")}
+                referenceLabel={t("ask-ai-reference")}
+                command={REFERENCE_COMMAND.install}
+              />
               {devices === null ? (
                 <Typography variant="body2" className="text-text-secondary">
                   {t("home-devices-error")}

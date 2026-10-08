@@ -25,10 +25,11 @@ export const emailCopy = {
     greeting: (name: string | null) =>
       name ? `${name}, a sua conta no FlyeeClub está pronta.` : "A sua conta no FlyeeClub está pronta.",
     body: "O FlyeeClub é uma loja de apps que rodam na IA que você já usa, como o Claude Code e o Codex. Para começar:",
-    steps: [
+    /** `installUrl` is /instalar.md in the reader's language: the page their AI follows. */
+    steps: (installUrl: string) => [
       "Escolha o seu acesso em Cobrança, no painel.",
-      "No terminal, rode npx flyee login e aprove a conexão no navegador.",
-      "Instale o primeiro app com npx flyee add e o nome do app.",
+      `Cole na conversa com a sua IA: Instale o flyee seguindo ${installUrl}`,
+      "Aprove a conexão no navegador e peça à sua IA o primeiro app, pelo nome.",
     ],
     button: "Abrir o painel",
     reason: "Você recebe esta mensagem porque criou uma conta no FlyeeClub.",
@@ -47,8 +48,8 @@ export const emailCopy = {
         : "Todos os apps da loja e as atualizações estão liberados na sua conta, sem prazo para acabar.",
     next: "Para começar:",
     steps: [
-      "Abra o painel e conecte o seu terminal com npx flyee login.",
-      "Instale o primeiro app na IA que você usa.",
+      "Abra o painel e copie a frase que faz a sua IA instalar o flyee.",
+      "Peça à sua IA o primeiro app, pelo nome.",
     ],
     button: "Abrir o painel",
     fiscal: "A nota fiscal é emitida pelo Asaas e chega em outro e-mail.",
@@ -139,7 +140,7 @@ export const emailCopy = {
         ? `A conexão ${machine} com o FlyeeClub vence em até 24 horas.`
         : `A conexão ${machine} com o FlyeeClub vence em ${days} dias.`;
     },
-    how: "Rode este comando no terminal para renovar o prazo por mais 30 dias:",
+    how: "Peça à sua IA para atualizar os apps do flyee e o prazo se renova por mais 30 dias. O comando que ela roda é:",
     command: "npx flyee update",
     after:
       "Se o prazo vencer, nada é desinstalado: os apps continuam funcionando, e o instalador pede que você confirme o acesso no painel antes de baixar versões novas.",
@@ -149,12 +150,12 @@ export const emailCopy = {
 
   updatesDigest: {
     subject: (count: number) => (count === 1 ? "1 app seu tem versão nova" : `${count} apps seus têm versão nova`),
-    preview: "Um comando atualiza todos",
+    preview: "A sua IA atualiza todos de uma vez",
     heading: "Versões novas dos seus apps",
     intro: "Saíram versões novas de apps que você tem instalados:",
     /** One line per app: its name and the versions it moves between. */
     item: (app: string, from: string, to: string) => `${app}: ${from} para ${to}`,
-    how: "Para atualizar todos de uma vez, rode no terminal:",
+    how: "Para atualizar todos de uma vez, peça à sua IA. O comando que ela roda é:",
     command: "npx flyee update",
     button: "Ver o que mudou",
     reason: "Você recebe este resumo semanal porque tem apps instalados.",

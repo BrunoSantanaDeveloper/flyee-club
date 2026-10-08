@@ -22,7 +22,7 @@ import NiBook from "@/icons/nexture/ni-book";
 import NiChartLine from "@/icons/nexture/ni-chart-line";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
-import NiTerminal from "@/icons/nexture/ni-terminal";
+import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiUser from "@/icons/nexture/ni-user";
 import { formatUserCode, normalizeUserCode } from "@/lib/oauth/device-code";
 import { type OauthScope, resolveRequestedScopes, SCOPE_LABEL_KEYS } from "@/lib/oauth/scopes";
@@ -92,7 +92,7 @@ export default async function ActivatePage({
           {approved ? (
             <NiCheck size="large" className="text-success" />
           ) : (
-            <NiTerminal size="large" className="text-text-secondary" />
+            <NiLaptop size="large" className="text-text-secondary" />
           )}
           <Typography variant="h1" component="h1" className="mb-0">
             {approved ? t("device-approved-title") : t("device-denied-title")}
@@ -140,7 +140,7 @@ export default async function ActivatePage({
     return (
       <ConsentShell>
         <Box className="flex flex-col items-center gap-2 text-center">
-          <NiTerminal size="large" className="text-primary-ink" />
+          <NiLaptop size="large" className="text-primary-ink" />
           <Typography variant="h1" component="h1" className="mb-0">
             {t("device-title")}
           </Typography>
@@ -198,7 +198,7 @@ export default async function ActivatePage({
   return (
     <ConsentShell>
       <Box className="flex flex-col items-center gap-2 text-center">
-        <NiTerminal size="large" className="text-primary-ink" />
+        <NiLaptop size="large" className="text-primary-ink" />
         <Typography variant="h1" component="h1" className="mb-0">
           {t("oauth-authorize-title")}
         </Typography>

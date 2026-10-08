@@ -20,7 +20,7 @@ export const homeCopyPtBR = {
   meta: {
     title: "FlyeeClub: apps que automatizam sua empresa na sua IA",
     description:
-      "Apps que automatizam vendas, conteúdo, vídeo e produto no Claude Code, no Codex ou na sua IA favorita. Instale com um comando e atualize quando a IA mudar.",
+      "Apps que automatizam vendas, conteúdo, vídeo e produto no Claude Code, no Codex ou na sua IA favorita. A sua IA instala cada app e atualiza quando você pede.",
   },
 
   hero: {
@@ -40,7 +40,7 @@ export const homeCopyPtBR = {
     },
     terminal: {
       title: "~/meu-projeto",
-      label: "Terminal atualizando os apps do FlyeeClub instalados num projeto",
+      label: "O que a sua IA roda ao atualizar os apps do FlyeeClub de um projeto",
       checking: "Conferindo 3 apps instalados…",
       updated: "product-scope atualizado: 1.4.0 → 1.6.0",
       changelog: "Changelog: segue o novo formato de skills do Claude Code",
@@ -55,7 +55,7 @@ export const homeCopyPtBR = {
   store: {
     eyebrow: "Loja de apps",
     title: "Precisou? Tem app no FlyeeClub.",
-    subtitle: "Cada app automatiza uma tarefa. Abra, veja o que ele faz e instale no seu Claude com um comando.",
+    subtitle: "Cada app automatiza uma tarefa. Abra, veja o que ele faz e peça à sua IA para instalar.",
     categoriesLabel: "Categorias da loja",
     allLabel: "Todos",
     featuredLabel: "Em destaque",
@@ -63,7 +63,7 @@ export const homeCopyPtBR = {
     usesAccount: "Usa sua conta {service}",
     updatedOn: "Atualizado em {date}",
     viewApp: "Ver o app",
-    terminalLabel: "Comando que instala o app em destaque",
+    terminalLabel: "O que a sua IA roda para instalar o app em destaque",
     installed: "{app} {version} instalado",
     verified: "Checksum sha256 conferido",
     footnote: "Nada de módulo para assistir. Você instala o app e usa; cada um tem um guia curto.",
@@ -86,12 +86,12 @@ export const homeCopyPtBR = {
       {
         kicker: "login",
         title: "Instale no seu Claude",
-        body: "No terminal, rode npx flyee login e aprove no navegador. O painel mostra cada comando pronto para copiar.",
+        body: "Peça à sua IA: instale o flyee seguindo flyee.club/instalar.md. Ela roda o instalador e você só aprova a conexão no navegador.",
       },
       {
         kicker: "add",
         title: "Instale os apps que precisar",
-        body: "Escolha na loja e rode npx flyee add com o nome do app. Para receber as versões novas, npx flyee update.",
+        body: "Escolha na loja e peça o app à sua IA, pelo nome. Para receber as versões novas, peça para ela atualizar.",
       },
     ],
   },
@@ -110,7 +110,7 @@ export const homeCopyPtBR = {
       },
       {
         title: "Atualizado quando a IA muda",
-        body: "A IA muda toda semana. Quando muda, a gente atualiza o app e você roda um comando.",
+        body: "A IA muda toda semana. Quando muda, a gente atualiza o app e a sua IA instala a versão nova quando você pede.",
       },
     ],
   },
@@ -160,7 +160,7 @@ export const homeCopyPtBR = {
       {
         question: "Preciso saber programar?",
         answer:
-          "Não para usar. Para instalar, você copia e cola alguns comandos no terminal, e o painel mostra cada um pronto para copiar.",
+          "Não. A sua IA instala e atualiza por você: você pede na conversa, confirma o que ela vai fazer e aprova a conexão no navegador.",
       },
       {
         question: "Funciona no app do Claude ou do ChatGPT, sem terminal?",

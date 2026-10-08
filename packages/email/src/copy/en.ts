@@ -12,10 +12,10 @@ export const emailCopy: EmailCopy = {
     heading: "Your account is ready",
     greeting: (name) => (name ? `${name}, your FlyeeClub account is ready.` : "Your FlyeeClub account is ready."),
     body: "FlyeeClub is a store of apps that run in the AI you already use, such as Claude Code and Codex. To get started:",
-    steps: [
+    steps: (installUrl) => [
       "Choose your access under Billing, in the dashboard.",
-      "In the terminal, run npx flyee login and approve the connection in the browser.",
-      "Install your first app with npx flyee add and the name of the app.",
+      `Paste into the conversation with your AI: Install flyee by following ${installUrl}`,
+      "Approve the connection in the browser and ask your AI for your first app, by name.",
     ],
     button: "Open the dashboard",
     reason: "You are receiving this message because you created a FlyeeClub account.",
@@ -33,8 +33,8 @@ export const emailCopy: EmailCopy = {
         : "Every app in the store and its updates are on your account, with no expiry date.",
     next: "To get started:",
     steps: [
-      "Open the dashboard and connect your terminal with npx flyee login.",
-      "Install your first app in the AI you use.",
+      "Open the dashboard and copy the sentence that has your AI install flyee.",
+      "Ask your AI for your first app, by name.",
     ],
     button: "Open the dashboard",
     fiscal: "The tax invoice is issued by Asaas and arrives in a separate email.",
@@ -122,7 +122,7 @@ export const emailCopy: EmailCopy = {
         ? `${machine} to FlyeeClub expires within 24 hours.`
         : `${machine} to FlyeeClub expires in ${days} days.`;
     },
-    how: "Run this command in the terminal to renew it for another 30 days:",
+    how: "Ask your AI to update the flyee apps and the term renews for another 30 days. The command it runs is:",
     command: "npx flyee update",
     after:
       "If it expires, nothing is uninstalled: the apps keep working, and the installer asks you to confirm your access in the dashboard before it downloads new versions.",
@@ -132,11 +132,11 @@ export const emailCopy: EmailCopy = {
 
   updatesDigest: {
     subject: (count) => (count === 1 ? "1 of your apps has a new version" : `${count} of your apps have a new version`),
-    preview: "One command updates them all",
+    preview: "Your AI updates them all at once",
     heading: "New versions of your apps",
     intro: "New versions are out for apps you have installed:",
     item: (app, from, to) => `${app}: ${from} to ${to}`,
-    how: "To update them all at once, run in the terminal:",
+    how: "To update them all at once, ask your AI. The command it runs is:",
     command: "npx flyee update",
     button: "See what changed",
     reason: "You receive this weekly summary because you have apps installed.",

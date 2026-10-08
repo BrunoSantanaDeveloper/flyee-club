@@ -1,17 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Alert, Box, Button, Card, CardContent, Grid, Typography } from "@mui/material";
 
-import CommandBlock from "@/components/product/command-block";
+import AskAiBlock from "@/components/product/ask-ai-block";
 import ModuleTile from "@/components/product/module-tile";
 import PageHeader from "@/components/product/page-header";
 import ProductMarkdown from "@/components/product/product-markdown";
 import StatusChip from "@/components/product/status-chip";
 import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import type { loadCatalog, loadRecipe } from "@/lib/catalog/read";
+import { installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import { moduleAccess, newerThanInstalls } from "@/lib/member/module-access";
 import type { Channel } from "@flyee/catalog/channels";
 
@@ -33,14 +34,15 @@ export type RecipeState =
 
 /**
  * Who: a member who chose a recipe. Job: install its tools and follow its
- * workflow. Success: `npx flyee add receita:<slug>` run, the workflow open
- * next to the terminal. The tools list keeps each tool's own access status.
+ * workflow. Success: their AI asked to install the recipe, the workflow open
+ * beside the conversation. The tools list keeps each tool's own access status.
  * Installing the whole recipe and its step by step are FlyeeClub Pro: without
  * it, both buttons open the upgrade prompt (docs/PRODUCT.md, 2026-10-08), and
  * a step by step not written yet says "Em breve" to everyone.
  */
 export default function RecipeView({ slug, state }: { slug: string; state: RecipeState }) {
   const t = useTranslations("product");
+  const locale = useLocale();
   const router = useRouter();
   const openUpgrade = useUpgradePrompt();
 
@@ -84,10 +86,13 @@ export default function RecipeView({ slug, state }: { slug: string; state: Recip
             {t("recipe-install-title")}
           </Typography>
           {recipe.entitled ? (
-            <CommandBlock
-              command={`npx flyee add receita:${recipe.slug}`}
-              copyLabel={t("command-copy")}
-              copiedLabel={t("command-copied")}
+            <AskAiBlock
+              label={t("ask-ai-label")}
+              prompt={t("ask-ai-add-recipe", { recipe: recipe.slug, url: installGuideUrl(locale) })}
+              copyLabel={t("ask-ai-copy")}
+              copiedLabel={t("ask-ai-copied")}
+              referenceLabel={t("ask-ai-reference")}
+              command={REFERENCE_COMMAND.addRecipe(recipe.slug)}
             />
           ) : (
             <>

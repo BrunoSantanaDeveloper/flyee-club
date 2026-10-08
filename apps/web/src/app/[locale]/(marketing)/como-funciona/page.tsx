@@ -19,6 +19,7 @@ import SiteButton from "@/components/site/button";
 import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
 import NiKey from "@/icons/nexture/ni-key";
 import NiTerminal from "@/icons/nexture/ni-terminal";
+import { REFERENCE_COMMAND } from "@/lib/install-links";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { publicPageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -42,11 +43,27 @@ const EXAMPLE_FILE = "product-scope-1.6.0.zip";
 const STEP_TONES = ["accent-2", "accent-1", "accent-4", "accent-3"] as const;
 
 /**
+ * What the member's AI runs at each step, shown as a reference; the first step
+ * happens on the site. A command is no translation and never goes through a
+ * message: `<app>` in one reads as a rich-text tag, and the page printed the
+ * key in its place.
+ */
+const STEP_COMMANDS = [
+  null,
+  REFERENCE_COMMAND.install,
+  REFERENCE_COMMAND.add("<app>"),
+  REFERENCE_COMMAND.update,
+] as const;
+
+/**
  * /como-funciona (EN /how-it-works): how a member goes from an account to a
  * tool running in their AI, and the mechanisms behind it — the 30-day token,
  * the package check, the AI running on the member's own plan — then the limits
  * of version 1, stated plainly. The signature update moment of docs/DESIGN.md
- * opens the page; nothing here claims more than the platform does.
+ * opens the page; nothing here claims more than the platform does. The member
+ * asks and their AI runs the commands (docs/PRODUCT.md, 2026-10-08): the
+ * terminals show what the AI runs, the ones /instalar.md gives it
+ * (`REFERENCE_COMMAND`), never a task for the visitor.
  */
 export default async function HowItWorksPage() {
   const [t, stage] = await Promise.all([getTranslations("marketing"), getLaunchStage()]);
@@ -74,10 +91,10 @@ export default async function HowItWorksPage() {
                 title={t("how-terminal-title")}
                 label={t("how-terminal-label")}
                 lines={[
-                  { kind: "command", text: "npx flyee login" },
+                  { kind: "command", text: REFERENCE_COMMAND.install },
                   { kind: "muted", text: t("how-terminal-opening") },
                   { kind: "success", text: t("how-terminal-connected") },
-                  { kind: "command", text: `npx flyee add ${EXAMPLE_MODULE}` },
+                  { kind: "command", text: REFERENCE_COMMAND.add(EXAMPLE_MODULE) },
                   { kind: "success", text: t("how-terminal-installed", { module: EXAMPLE_MODULE, version: "1.6.0" }) },
                   { kind: "muted", text: t("how-terminal-available") },
                 ]}
@@ -108,14 +125,17 @@ export default async function HowItWorksPage() {
         variant="mono"
         eyebrow={t("how-steps-eyebrow")}
         title={t("how-steps-title")}
-        steps={[1, 2, 3, 4].map((index) => ({
-          kicker: t(`how-step-${index}-kicker`),
-          title: t(`how-step-${index}-title`),
-          body: t(`how-step-${index}-body`),
-          deliverableLabel: t(index === 1 ? "how-step-where" : "how-step-command"),
-          deliverableValue: t(`how-step-${index}-value`),
-          tone: STEP_TONES[index - 1],
-        }))}
+        steps={[1, 2, 3, 4].map((index) => {
+          const command = STEP_COMMANDS[index - 1];
+          return {
+            kicker: t(`how-step-${index}-kicker`),
+            title: t(`how-step-${index}-title`),
+            body: t(`how-step-${index}-body`),
+            deliverableLabel: t(command ? "how-step-command" : "how-step-where"),
+            deliverableValue: command ?? t("how-step-1-value"),
+            tone: STEP_TONES[index - 1],
+          };
+        })}
       />
 
       <FeatureRows
@@ -135,7 +155,7 @@ export default async function HowItWorksPage() {
                 title={t("how-terminal-title")}
                 label={t("how-token-terminal-label")}
                 lines={[
-                  { kind: "command", text: "npx flyee update" },
+                  { kind: "command", text: REFERENCE_COMMAND.update },
                   { kind: "output", text: t("how-token-terminal-expired") },
                   { kind: "output", text: t("how-token-terminal-revalidate") },
                   { kind: "muted", text: t("how-token-terminal-keeps") },

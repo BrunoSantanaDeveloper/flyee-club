@@ -18,7 +18,7 @@ import SiteButton from "@/components/site/button";
 import NiCheckSquare from "@/icons/nexture/ni-check-square";
 import NiEmail from "@/icons/nexture/ni-email";
 import NiEmailOpen from "@/icons/nexture/ni-email-open";
-import NiTerminal from "@/icons/nexture/ni-terminal";
+import NiMessage from "@/icons/nexture/ni-message";
 import { listCatalogTrails } from "@/lib/public-content";
 import { publicPageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -221,7 +221,7 @@ export default async function WaitlistPage() {
             tone: "accent-4",
           },
           {
-            icon: <NiTerminal size="medium" />,
+            icon: <NiMessage size="medium" />,
             kicker: t("waitlist-step-4-kicker"),
             title: t("waitlist-step-4-title"),
             body: t("waitlist-step-4-body"),

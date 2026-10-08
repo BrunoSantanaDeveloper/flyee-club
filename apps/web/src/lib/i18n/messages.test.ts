@@ -1,3 +1,4 @@
+import { createTranslator, IntlErrorCode } from "next-intl";
 import { describe, expect, it } from "vitest";
 
 import en from "@flyee/content/messages/en.json";
@@ -43,6 +44,41 @@ describe("message catalogs", () => {
         expect({ locale, namespace, blank }).toEqual({ locale, namespace, blank: [] });
       }
     }
+  });
+
+  it("holds only messages that parse", () => {
+    // A message that does not parse prints its key path on the page. The case
+    // that shipped: a command with `<app>` in it reads as a rich-text tag that
+    // never closes, and /como-funciona showed "marketing.how-step-3-value"
+    // where the command should be. Values are not given here on purpose: a
+    // missing value is another error, raised only after the message parsed.
+    for (const [locale, catalog] of Object.entries(CATALOGS)) {
+      const broken: string[] = [];
+      const translate = createTranslator({
+        locale,
+        messages: catalog,
+        onError: (error) => {
+          if (error.code === IntlErrorCode.INVALID_MESSAGE) broken.push(error.originalMessage ?? error.message);
+        },
+        getMessageFallback: ({ namespace, key }) => `${namespace}.${key}`,
+      });
+      for (const namespace of NAMESPACES) {
+        for (const key of Object.keys(catalog[namespace] ?? {})) translate(`${namespace}.${key}` as never);
+      }
+      expect({ locale, broken }).toEqual({ locale, broken: [] });
+    }
+  });
+
+  it("knows a message that does not parse when it sees one", () => {
+    const codes: string[] = [];
+    const translate = createTranslator({
+      locale: "pt-BR",
+      messages: { marketing: { command: "npx flyee add <app>", count: "{count} apps", rich: "Um <em>app</em>" } },
+      onError: (error) => codes.push(error.code),
+      getMessageFallback: ({ key }) => key,
+    });
+    for (const key of ["command", "count", "rich"]) translate(`marketing.${key}` as never);
+    expect(codes.filter((code) => code === IntlErrorCode.INVALID_MESSAGE)).toHaveLength(1);
   });
 
   it("keeps the same ICU placeholders in every locale", () => {

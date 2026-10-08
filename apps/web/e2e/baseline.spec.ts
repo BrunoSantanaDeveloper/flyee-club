@@ -327,6 +327,44 @@ test("the CLI endpoints answer on their own, never through the sign-in redirect"
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
 
+test("the page an AI reads to install flyee is plain Markdown at a public address, in both languages", async ({
+  request,
+}) => {
+  // The member pastes one sentence into the conversation and their AI fetches
+  // this page (docs/CLI-CONTRACT.md, 8.2): no session, no redirect, no HTML.
+  for (const [route, lang, sentence] of [
+    ["/instalar.md", "pt-BR", "Instale o flyee seguindo "],
+    ["/en/install.md", "en", "Install flyee by following "],
+  ] as const) {
+    const response = await request.get(route, { maxRedirects: 0 });
+    expect(response.status(), route).toBe(200);
+    expect(response.headers()["content-type"], route).toContain("text/markdown");
+    expect(response.headers()["content-language"], route).toBe(lang);
+    expect(response.headers()["x-robots-tag"], route).toContain("noindex");
+
+    const text = await response.text();
+    expect(text, route).toMatch(/^# /);
+    expect(text, route).not.toMatch(/<html|<!doctype/i);
+    // The sentence to paste names the page by the address being read.
+    const pasted = text.split("\n").find((line) => line.includes(sentence)) ?? "";
+    expect(pasted.endsWith(route), route).toBe(true);
+    expect(text, route).toContain("npx --yes flyee@latest login");
+    // The copy rules hold for it, and the site never names FlyeeClub Pro.
+    expect(text.match(/[–—!]|(?![©→])\p{Extended_Pictographic}/gu) ?? [], route).toEqual([]);
+    expect(text, route).not.toMatch(/FlyeeClub Pro|flyeeClub complet/i);
+  }
+
+  // Typed without its prefix, the English address goes to the canonical one.
+  const bare = await request.get("/install.md", { maxRedirects: 0 });
+  expect(bare.status()).toBeGreaterThanOrEqual(300);
+  expect(bare.status()).toBeLessThan(400);
+  expect(new URL(bare.headers().location, "http://localhost").pathname).toBe("/en/install.md");
+
+  // An instruction for an AI that was handed the link is no page to find by searching.
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).not.toMatch(/instal(?:ar|l)\.md/);
+});
+
 test("@a11y core entry and product routes have no critical axe violations and pass WCAG AA contrast", async ({
   page,
 }) => {

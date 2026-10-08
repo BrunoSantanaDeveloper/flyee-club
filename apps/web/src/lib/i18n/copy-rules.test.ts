@@ -94,6 +94,8 @@ const COPY_SOURCES = [
   "packages/email/src/copy/en.ts",
   "apps/web/src/lib/messages/bell-copy.ts",
   "apps/web/src/lib/cli/messages.ts",
+  // /instalar.md, the page a member's AI reads (public, so the Pro rule below reads it too).
+  "apps/web/src/lib/install-guide.ts",
 ].map((file) => fromRoot(file));
 
 const SHIPPED_CODE = ["apps/web/src", "packages/email/src", "packages/billing/src", "packages/content/src"];
@@ -280,7 +282,8 @@ const PUBLIC_SITE_CODE = [
   "apps/web/src/components/marketing",
   "apps/web/src/components/site",
 ];
-const HOME_COPY = COPY_SOURCES.filter((file) => /home-copy/.test(file));
+/** The copy of the public site that lives outside its folders: the home and the install page. */
+const PUBLIC_COPY = COPY_SOURCES.filter((file) => /home-copy|install-guide/.test(file));
 
 describe("the public site never names FlyeeClub Pro", () => {
   it("knows the names, and leaves the words that only look like them", () => {
@@ -302,9 +305,9 @@ describe("the public site never names FlyeeClub Pro", () => {
     expect(found).toEqual([]);
   });
 
-  it("in the home's copy and in any string of the public site's code", { timeout: 60_000 }, () => {
+  it("in the home's copy, the install page and any string of the public site's code", { timeout: 60_000 }, () => {
     const found: string[] = [];
-    for (const file of HOME_COPY) {
+    for (const file of PUBLIC_COPY) {
       for (const literal of literalsOf(file)) {
         if (PRO.test(literal.text)) found.push(`${where(file, literal.line)}: ${literal.text.trim()}`);
       }
@@ -318,7 +321,7 @@ describe("the public site never names FlyeeClub Pro", () => {
         }
       }
     }
-    expect(HOME_COPY).toHaveLength(2);
+    expect(PUBLIC_COPY).toHaveLength(3);
     expect(files).toBeGreaterThan(40);
     expect(found).toEqual([]);
   });

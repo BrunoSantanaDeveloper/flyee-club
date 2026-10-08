@@ -12,6 +12,7 @@ import {
 } from "@/lib/attribution";
 import { CURRENCY_COOKIE_MAX_AGE, CURRENCY_PARAM, normalizeCurrency } from "@/lib/billing-currency";
 import { encodeCampaignCookie, hasCampaign, LAST_CAMPAIGN_MAX_AGE, pickCampaignParams } from "@/lib/campaign-params";
+import { INSTALL_GUIDE_PATH } from "@/lib/install-links";
 import { detectLocale, isCrawler, LOCALE_COOKIE_MAX_AGE } from "@/lib/locale-detection";
 import { COUPON_COOKIE_MAX_AGE, COUPON_PARAM, normalizeCouponCode } from "@/lib/offer-link";
 import { sanitizeInternalNext } from "@/lib/safe-next";
@@ -328,10 +329,13 @@ export async function middleware(request: NextRequest, event?: NextFetchEvent) {
 
     // One visit of the entry doors table (/admin/metricas): a page load by a
     // person who is not signed in. A redirect is not a view (its target is),
-    // and neither is a crawler or a browser prefetching ahead of a click.
-    // Counted after the response, so the page never waits on it.
+    // and neither is a crawler or a browser prefetching ahead of a click, nor
+    // /instalar.md: a member's AI reads it on the way to an install, and some
+    // AIs ask for it the way a browser would. The person came in through a
+    // door already. Counted after the response, so the page never waits on it.
     const counts =
       readsPublicPage &&
+      publicPage.internal !== INSTALL_GUIDE_PATH &&
       !user &&
       !intlResponse.headers.get("location") &&
       !isCrawler(request.headers.get("user-agent")) &&

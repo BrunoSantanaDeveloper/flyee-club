@@ -174,8 +174,9 @@ pre-fills the onboarding's first step; the member can change it in either.
 ### Visits per page and door (first-party, no cookie)
 
 The middleware counts one view per document load of a public page by a person
-who is not signed in (never a crawler, a prefetch, a redirect or a client-side
-navigation) through `count_site_view` (migration 0005), after the response, so
+who is not signed in (never a crawler, a prefetch, a redirect, a client-side
+navigation or a read of `/instalar.md`, which a member's AI fetches on the way
+to an install) through `count_site_view` (migration 0005), after the response, so
 the page never waits. The door is the link's `?origem=`, else the first-touch
 door, else "direto". These counts are the visits of the entry doors table in
 `/admin/metricas`; they set no cookie and are aggregated by day, page, door and

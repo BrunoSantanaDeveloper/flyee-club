@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { Alert, Box, Button, Typography } from "@mui/material";
 
 import { ConsentShell } from "@/components/cli/consent-shell";
-import CommandBlock from "@/components/product/command-block";
+import AskAiBlock from "@/components/product/ask-ai-block";
 import NiRefresh from "@/icons/nexture/ni-refresh";
 import { type DeviceStatus, readDeviceStatus } from "@/lib/cli/device-status";
+import { installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import { isDeviceId } from "@/lib/oauth/server";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/server";
@@ -21,14 +22,15 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  * `error_uri`) when a machine's connection lapsed after 30 days without an
  * update. The CLI already reopened the approval in the browser; this page is
  * the explanation and the way back for whoever opens the link later: why it
- * happened, how long this machine has been away, and the one command to run.
+ * happened, how long this machine has been away, and the sentence that has
+ * their AI connect it again.
  */
 export default async function RevalidatePage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const t = await getTranslations("product");
+  const [t, locale] = await Promise.all([getTranslations("product"), getLocale()]);
   const query = await searchParams;
   const deviceParam = Array.isArray(query.d) ? query.d[0] : query.d;
   const deviceId = isDeviceId(deviceParam) ? deviceParam : null;
@@ -81,7 +83,14 @@ export default async function RevalidatePage({
         <Typography variant="h6" component="h2" className="mb-0">
           {t("revalidate-page-steps")}
         </Typography>
-        <CommandBlock command="npx flyee login" copyLabel={t("command-copy")} copiedLabel={t("command-copied")} />
+        <AskAiBlock
+          label={t("ask-ai-label")}
+          prompt={t("ask-ai-reconnect", { url: installGuideUrl(locale) })}
+          copyLabel={t("ask-ai-copy")}
+          copiedLabel={t("ask-ai-copied")}
+          referenceLabel={t("ask-ai-reference")}
+          command={REFERENCE_COMMAND.reconnect}
+        />
         <Typography variant="body2" className="text-text-secondary">
           {t("revalidate-page-note")}
         </Typography>

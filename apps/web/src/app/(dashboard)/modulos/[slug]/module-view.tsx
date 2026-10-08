@@ -7,8 +7,8 @@ import { useTranslations } from "next-intl";
 import { Alert, Box, Button, Card, CardContent, Chip, Divider, Grid, Typography } from "@mui/material";
 
 import { TRAIL_TONE } from "@/components/marketing/tone";
+import AskAiBlock from "@/components/product/ask-ai-block";
 import CatalogIcon from "@/components/product/catalog-icon";
-import CommandBlock from "@/components/product/command-block";
 import GuidePanel, { type GuideTab } from "@/components/product/guide-panel";
 import PageHeader from "@/components/product/page-header";
 import ProductMarkdown from "@/components/product/product-markdown";
@@ -17,6 +17,7 @@ import { TILE_TONE } from "@/components/product/tile-tone";
 import NiKey from "@/icons/nexture/ni-key";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import type { loadModule } from "@/lib/catalog/read";
+import { installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import type { MemberGuide } from "@/lib/member/guides";
 import { aiToolName, MODULE_TYPE_LABEL, PERMISSION_LABEL, pickLocalized } from "@/lib/member/labels";
 import type { MemberLesson } from "@/lib/member/lessons";
@@ -43,8 +44,9 @@ const UPGRADE = "/settings/billing?source=module";
 
 /**
  * Who: a member deciding whether, and how, to use one tool. Job: understand
- * what it does, see that it is safe, and install it. Success: the command
- * copied into their terminal. Everything a careful member checks before
+ * what it does, see that it is safe, and install it. Success: the sentence
+ * copied into the conversation with their AI, which runs the installer
+ * (docs/PRODUCT.md, 2026-10-08). Everything a careful member checks before
  * running something is here: the permissions it declares with their reasons,
  * the keys it needs from them, and each release with its checksum page. An
  * account with no purchase installs the entry version (migration 0040): the
@@ -174,10 +176,13 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
                   <Typography variant="subtitle2" component="h2" className="mb-0">
                     {t("module-install-title")}
                   </Typography>
-                  <CommandBlock
-                    command={`npx flyee add ${module.slug}`}
-                    copyLabel={t("command-copy")}
-                    copiedLabel={t("command-copied")}
+                  <AskAiBlock
+                    label={t("ask-ai-label")}
+                    prompt={t("ask-ai-add", { app: module.slug, url: installGuideUrl(locale) })}
+                    copyLabel={t("ask-ai-copy")}
+                    copiedLabel={t("ask-ai-copied")}
+                    referenceLabel={t("ask-ai-reference")}
+                    command={REFERENCE_COMMAND.add(module.slug)}
                   />
                   <Typography variant="body2" className="text-text-secondary">
                     {t("module-install-note")}

@@ -309,7 +309,7 @@
       "file": "terminal-frame.tsx",
       "role": "evidence",
       "props": "lines: {text, kind: command|output|success|muted}[], title?, label (figcaption), glow",
-      "use": "the signature update moment of docs/DESIGN.md: npx flyee update, a version moving forward, one changelog line; frame of a ProductComposition hero; same chrome family as ProductFrame"
+      "use": "the signature update moment of docs/DESIGN.md: npx flyee update, a version moving forward, one changelog line; frame of a ProductComposition hero; same chrome family as ProductFrame. It shows what the member's AI runs, never a task for the visitor (docs/PRODUCT.md, 2026-10-08): the label says so (\"O que a sua IA roda…\") and the commands come from REFERENCE_COMMAND in lib/install-links.ts"
     }
   ]
 }

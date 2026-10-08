@@ -17,10 +17,11 @@ import {
   Typography,
 } from "@mui/material";
 
-import CommandBlock from "@/components/product/command-block";
+import AskAiBlock from "@/components/product/ask-ai-block";
 import SetupWizard from "@/components/product/setup-wizard";
 import { DEFAULTS } from "@/config";
 import { setClientLocale } from "@/i18n/locale";
+import { installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import { updateProfile } from "@/lib/member/actions";
 import { AI_TOOL_OPTIONS, aiToolName, SEGMENT_OPTIONS } from "@/lib/member/labels";
 
@@ -28,9 +29,10 @@ type Answers = { segment: string; aiTool: string; locale: "pt-BR" | "en" };
 
 /**
  * Who: someone who just created an account. Job: get from "account created"
- * to "the CLI is installing tools on my machine". Success: `npx flyee login`
- * copied, with the club already knowing what they build and which AI they use
- * (the catalog and the lessons follow those two answers).
+ * to "my AI is installing flyee on my machine". Success: the sentence that has
+ * their AI install it, copied (never a command to type, docs/PRODUCT.md,
+ * 2026-10-08), with the club already knowing what they build and which AI
+ * they use (the catalog and the lessons follow those two answers).
  *
  * One decision per screen. Each step saves its own answer when the member
  * moves on, so leaving halfway loses nothing and the wizard reopens on the
@@ -166,10 +168,13 @@ export default function OnboardingWizard({
             hint: t("onboarding-install-hint"),
             content: (
               <Box className="flex flex-col gap-3">
-                <CommandBlock
-                  command="npx flyee login"
-                  copyLabel={t("command-copy")}
-                  copiedLabel={t("command-copied")}
+                <AskAiBlock
+                  label={t("ask-ai-label")}
+                  prompt={t("ask-ai-install", { url: installGuideUrl(answers.locale) })}
+                  copyLabel={t("ask-ai-copy")}
+                  copiedLabel={t("ask-ai-copied")}
+                  referenceLabel={t("ask-ai-reference")}
+                  command={REFERENCE_COMMAND.install}
                 />
                 <Typography variant="body2" className="text-text-secondary">
                   {hasAccess ? t("onboarding-install-note-access") : t("onboarding-install-note-free")}

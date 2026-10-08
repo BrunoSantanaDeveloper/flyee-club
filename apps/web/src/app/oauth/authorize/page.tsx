@@ -11,8 +11,8 @@ import { COOKIE_KEYS } from "@/constants";
 import NiBook from "@/icons/nexture/ni-book";
 import NiChartLine from "@/icons/nexture/ni-chart-line";
 import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
+import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiRefresh from "@/icons/nexture/ni-refresh";
-import NiTerminal from "@/icons/nexture/ni-terminal";
 import NiUser from "@/icons/nexture/ni-user";
 import { resolveCurrency } from "@/lib/billing-currency";
 import { type DeviceStatus, readDeviceStatus } from "@/lib/cli/device-status";
@@ -183,7 +183,7 @@ export default async function AuthorizePage({
         {revalidating ? (
           <NiRefresh size="large" className="text-primary-ink" />
         ) : (
-          <NiTerminal size="large" className="text-primary-ink" />
+          <NiLaptop size="large" className="text-primary-ink" />
         )}
         <Typography variant="h1" component="h1" className="mb-0">
           {revalidating ? t("oauth-revalidate-title") : t("oauth-authorize-title")}

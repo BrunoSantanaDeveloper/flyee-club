@@ -48,6 +48,8 @@ export const routing = defineRouting({
     "/espera/confirmar": { "pt-BR": "/espera/confirmar", en: "/waitlist/confirm" },
     "/verificar/[ref]": { "pt-BR": "/verificar/[ref]", en: "/verify/[ref]" },
     "/descadastro": { "pt-BR": "/descadastro", en: "/unsubscribe" },
+    // Plain Markdown for a member's AI to read (app/[locale]/instalar.md/route.ts), not a page.
+    "/instalar.md": { "pt-BR": "/instalar.md", en: "/install.md" },
   },
 });
 

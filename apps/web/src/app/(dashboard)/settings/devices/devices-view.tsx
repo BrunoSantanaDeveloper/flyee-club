@@ -23,13 +23,14 @@ import {
   Typography,
 } from "@mui/material";
 
-import CommandBlock from "@/components/product/command-block";
+import AskAiBlock from "@/components/product/ask-ai-block";
 import EmptyState from "@/components/product/empty-state";
 import PageHeader from "@/components/product/page-header";
 import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import UsageMeter from "@/components/product/usage-meter";
 import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiListCircle from "@/icons/nexture/ni-list-circle";
+import { installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import { revokeDevice } from "@/lib/member/actions";
 import type { DevicesOverview, MemberDevice } from "@/lib/member/devices";
 import { aiToolName } from "@/lib/member/labels";
@@ -212,7 +213,7 @@ export default function DevicesView({ state }: { state: DevicesState }) {
             const details = [
               device.os ? (OS_NAME[device.os] ?? t("devices-os-other")) : null,
               device.aiTool ? aiToolName(device.aiTool, t("ai-tool-other")) : null,
-              device.cliVersion ? `CLI v${device.cliVersion}` : null,
+              device.cliVersion ? `flyee v${device.cliVersion}` : null,
               t("devices-installed", { count: device.installedModules }),
             ].filter(Boolean);
             return (
@@ -262,7 +263,14 @@ export default function DevicesView({ state }: { state: DevicesState }) {
               <Typography variant="body2" className="text-text-secondary">
                 {t("devices-reconnect-body")}
               </Typography>
-              <CommandBlock command="npx flyee login" copyLabel={t("command-copy")} copiedLabel={t("command-copied")} />
+              <AskAiBlock
+                label={t("ask-ai-label")}
+                prompt={t("ask-ai-reconnect", { url: installGuideUrl(locale) })}
+                copyLabel={t("ask-ai-copy")}
+                copiedLabel={t("ask-ai-copied")}
+                referenceLabel={t("ask-ai-reference")}
+                command={REFERENCE_COMMAND.reconnect}
+              />
             </CardContent>
           </Card>
         </Grid>
