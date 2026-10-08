@@ -175,3 +175,89 @@ describe("copy rules: no dash, exclamation mark, emoji or banned word in what pe
     expect(found).toEqual([]);
   });
 });
+
+/**
+ * "O plano gratuito nunca é oferecido" (docs/PRODUCT.md, decided 2026-10-06;
+ * the wording fixed on 2026-10-08): nothing a visitor or a member reads sells,
+ * announces or names a free plan, a free account or a free sample. The account
+ * with no purchase is reached through content and described by what it is
+ * ("sem acesso à loja", "app de entrada"), never as a plan with a name. The
+ * operator console is out: there the flag is called what it is.
+ */
+const FREE: Rule = {
+  name: "free",
+  test: (text) =>
+    // "sem custo extra" stays: the brief says it of the apps that join an access already paid for.
+    /(?<![\p{L}\p{N}])(?:gr[aá]tis|gratuit|free(?![\p{L}\p{N}])|sem custo(?! extra)|no cost|at no charge)/iu.test(text),
+};
+
+/** The one place the word is true and allowed: the waiting list itself costs nothing. */
+const FREE_ALLOWED = new Set(["marketing.waitlist-faq-1-answer"]);
+
+describe("the free rung is never offered: no free plan, account or sample in what people read", () => {
+  it("knows the words, and leaves the ones that only look like them", () => {
+    for (const text of [
+      "Criar conta gratuita",
+      "Crie a conta grátis",
+      "Amostra grátis",
+      "volta ao plano Gratuito",
+      "Create your free account",
+      "Risk-free purchase",
+      "Uma conta sem custo",
+    ]) {
+      expect(FREE.test(text), text).toBe(true);
+    }
+    for (const text of [
+      "Criar conta",
+      "App de entrada",
+      "Sem acesso",
+      "Use it freely",
+      "Acesso na hora, sem cartão.",
+      "Entram no seu acesso sem custo extra.",
+      "They join your access at no extra cost.",
+    ]) {
+      expect(FREE.test(text), text).toBe(false);
+    }
+  });
+
+  it("the message catalogs offer none, in either language, the waitlist answer aside", () => {
+    const found: string[] = [];
+    for (const [locale, catalog] of Object.entries({ "pt-BR": ptBR, en })) {
+      for (const [key, text] of catalogStrings(catalog)) {
+        if (!FREE_ALLOWED.has(key) && FREE.test(text)) found.push(`${locale} ${key}: ${text}`);
+      }
+    }
+    expect(found).toEqual([]);
+    // The allowed answer still exists and still says it: an entry that outlived its text is a hole.
+    for (const catalog of [ptBR, en]) {
+      const answer = (catalog.marketing as Record<string, string>)["waitlist-faq-1-answer"];
+      expect(FREE.test(answer)).toBe(true);
+    }
+  });
+
+  it(
+    "neither do the home's copy, the e-mails, the bell, the CLI's messages or the text written in a screen",
+    {
+      timeout: 60_000,
+    },
+    () => {
+      const found: string[] = [];
+      for (const file of COPY_SOURCES) {
+        for (const literal of literalsOf(file)) {
+          if (FREE.test(literal.text)) found.push(`${where(file, literal.line)}: ${literal.text.trim()}`);
+        }
+      }
+      // Outside the copy sources a string is a key, a slug or a class ("is_free_sample",
+      // kind "free"): only the text written between tags is read by a person.
+      for (const dir of SHIPPED_CODE) {
+        for (const file of codeFiles(fromRoot(dir))) {
+          for (const literal of literalsOf(file)) {
+            if (literal.jsx && FREE.test(literal.text))
+              found.push(`${where(file, literal.line)}: ${literal.text.trim()}`);
+          }
+        }
+      }
+      expect(found).toEqual([]);
+    },
+  );
+});

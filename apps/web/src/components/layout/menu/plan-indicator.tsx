@@ -52,8 +52,11 @@ export default function PlanIndicator({ menuType }: { menuType: MenuType }) {
 
   if (loading || !entitlements) return null;
 
-  const planLabel = entitlements.active && entitlements.tier ? t(TIER_LABEL[entitlements.tier]) : t("menu-plan-free");
-  const title = t("menu-plan-current", { plan: planLabel });
+  // The account with no purchase is named by what it has, never as a plan
+  // (docs/PRODUCT.md, "O plano gratuito nunca é oferecido").
+  const hasPlan = entitlements.active && Boolean(entitlements.tier);
+  const planLabel = hasPlan ? t(TIER_LABEL[entitlements.tier!]) : t("menu-plan-free");
+  const title = hasPlan ? t("menu-plan-current", { plan: planLabel }) : t("menu-plan-none-title");
   const minimal = menuType === MenuType.Minimal;
 
   return (

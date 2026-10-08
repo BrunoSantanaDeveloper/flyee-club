@@ -129,6 +129,15 @@ export default function CurrentSubscription({
             <Typography variant="body1" className="text-text-secondary">
               {t("billing-no-subscription")}
             </Typography>
+          ) : subscription.isFree ? (
+            // Every account carries a row of the free plan: it is the floor, never a
+            // plan with a name (docs/PRODUCT.md, "O plano gratuito nunca é oferecido").
+            // The screen says what the account has: the FlyeeClub above, or no access.
+            !entitlements.hasKit && (
+              <Typography variant="body1" className="text-text-secondary">
+                {t("billing-no-access")}
+              </Typography>
+            )
           ) : (
             <Box className="flex flex-col gap-4">
               <Box className="flex flex-wrap items-center gap-3">
@@ -143,7 +152,7 @@ export default function CurrentSubscription({
                 />
               </Box>
 
-              {subscription.currentPeriodEnd && !subscription.cancelAtPeriodEnd && !subscription.isFree && (
+              {subscription.currentPeriodEnd && !subscription.cancelAtPeriodEnd && (
                 <Typography variant="body2" className="text-text-secondary">
                   {t("billing-renews-on", { date: formatDate(subscription.currentPeriodEnd) })}
                 </Typography>
@@ -166,11 +175,15 @@ export default function CurrentSubscription({
                       ) : undefined
                     }
                   >
-                    {t("billing-cancel-scheduled", { date: formatDate(subscription.currentPeriodEnd) })}
+                    {/* What is left after the plan ends depends on the account: the
+                        FlyeeClub access when it has one, no store access otherwise. */}
+                    {t(entitlements.hasKit ? "billing-cancel-scheduled-kit" : "billing-cancel-scheduled", {
+                      date: formatDate(subscription.currentPeriodEnd),
+                    })}
                   </Alert>
                 ))}
 
-              {canManage && !subscription.isFree && !subscription.cancelAtPeriodEnd && (
+              {canManage && !subscription.cancelAtPeriodEnd && (
                 <Box>
                   <Button variant="outlined" color="error" onClick={() => setConfirmOpen(true)}>
                     {t("billing-cancel")}
