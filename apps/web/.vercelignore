@@ -1,0 +1,8 @@
+# The Vercel CLI reads the .vercelignore of the directory it is run from. The
+# deploy is run from the repository root, where the same two rules live. This
+# copy covers a `vercel deploy` typed from inside apps/web: without it, that
+# upload would carry apps/web/.env (see the root .vercelignore for why that
+# file must never leave this machine).
+# scripts/preflight-env.test.mjs fails if these two lines go.
+.env
+.env.*

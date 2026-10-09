@@ -78,6 +78,23 @@ conflito de contas — todo deploy entra pela CLI do pipeline.
    (`experimental.cpus: 1` + `webpackMemoryOptimizations`). Se o build voltar a
    dar OOM ao crescer, o passo seguinte é aumentar o build machine (plano Pro).
 
+#### `.vercelignore`: o que nunca sobe
+
+A CLI da Vercel não lê o `.gitignore`. Ela pula uma lista fixa (nela estão
+`.env.local` e `.env.*.local`, mas não o `.env`) e o que estiver no
+`.vercelignore` da pasta de onde o comando roda. Por isso há um `.vercelignore`
+na raiz e outro em `apps/web`, os dois com `.env` e `.env.*`: um `vercel deploy`
+digitado na sua máquina subiria o `apps/web/.env`, o build o leria, e toda
+variável que faltasse no projeto da Vercel tomaria o valor desse arquivo.
+Enquanto ele for a cópia herdada do MedChina, são credenciais de produção de
+outro produto.
+
+O deploy continua saindo só pelo pipeline, onde esse arquivo nem existe. As duas
+linhas valem para o dia em que alguém esquecer disso, e
+`scripts/preflight-env.test.mjs` reprova se elas saírem de um dos dois arquivos.
+Conferido em 2026-10-08 no código das versões 54.6.1 e 63.1.0 da CLI, e com a
+mesma biblioteca que ela usa para decidir o que sobe.
+
 ### 3. Variáveis de ambiente (Settings → Environment Variables)
 
 Cadastre em **Production** (e repita em **Preview** as que quiser testar em
@@ -91,6 +108,10 @@ PRs — no mínimo as de Supabase e a licença MUI). Referência completa:
 > segue a mesma ordem). Ponha os valores dos projetos do flyee.club no
 > `.env.local`, ou troque o `.env` e apague o `.env.local`. Nunca rode
 > `db:*:remote` antes disso.
+
+Antes de cadastrar qualquer valor, rode `npm run preflight` ("Roteiro da
+abertura", abaixo). Ele diz o que falta para cada estágio e acusa, pelo nome, um
+valor que ainda venha do `.env` herdado.
 
 Obrigatórias para produção:
 
@@ -139,57 +160,300 @@ barra final).
   (aplica + testa) — ver `scripts/remote-db-gate.mjs`.
 - **Storage/RLS/seeds**: idem — tudo entra pelas migrações.
 
-## Pós-deploy (primeira vez)
+## Roteiro da abertura
 
-- **Inngest**: no dashboard do Inngest, sincronizar o app apontando para
-  `https://<domínio>/api/inngest` (depois de setar as duas chaves).
-- **Webhooks de billing**: apontar Stripe para
-  `https://<domínio>/api/webhooks/stripe` e Asaas para
-  `https://<domínio>/api/webhooks/asaas`.
-- **Supabase Auth**: em Authentication → URL Configuration, definir o Site URL
-  para o domínio de produção e adicionar as redirect URLs de auth.
-- Smoke test: home pública, `/auth/sign-in`, criar workspace, `/inicio`.
+Do repositório como está até a loja vendendo, em dois marcos. No **marco A** o
+site sobe com a lista de espera: nada está à venda, e o que se prova é o caminho
+inteiro de um deploy (banco, variáveis, e-mail, jobs, login). No **marco B** a
+loja abre: cobrança, apps publicados, o ensaio com a CLI de verdade e a virada
+do estágio. A ordem importa, porque cada passo usa o que o anterior deixou
+pronto.
 
-## Primeiro deploy: a lista de espera
+Este roteiro substitui o antigo "Primeiro deploy". O andamento está em
+`docs/PLANO-IMPLEMENTACAO.md`, item 12.7.
 
-O primeiro deploy põe no ar o portão da fase 0 do `docs/PRODUCT.md`: a lista de
-espera bilíngue (`/espera` e `/en/waitlist`), com confirmação por e-mail e as
-páginas legais lidas de `consent_terms`. O site sobe no estágio **lista de
-espera** (`platform_settings.launch`, migração `0019`): todos os botões
-principais levam para `/espera`, porque ainda não há nada à venda. Login e
-cadastro continuam acessíveis, só não aparecem nos botões.
+### O que só você pode trazer
 
-1. **Banco.** Com o `apps/web/.env.local` apontando para o projeto Supabase novo
-   do flyee.club, rode `npm run db:plan:remote` (dry-run) e depois
-   `npm run db:gate:remote`, que aplica todas as migrações (`0000`–`0023`) num
-   projeto vazio e roda o pgTAP. O gate recusa um banco que ele não construiu.
-2. **Variáveis na Vercel**: as obrigatórias acima, mais `RESEND_API_KEY` e
-   `EMAIL_FROM` com o domínio verificado no Resend, `PUBLIC_FORMS_IP_SALT` e as
-   duas chaves do Inngest. O job diário `flyee-purge-expired-leads` apaga em 7
-   dias os endereços não confirmados, prazo que a página e o e-mail prometem.
-3. **Deploy** pelo workflow, e então o Supabase Auth (Site URL e redirect URLs)
-   e a sincronização do Inngest (o job acima deve aparecer na lista).
-4. **Sua conta de operador.** Crie a conta em `/auth/sign-up` e promova-a no SQL
-   Editor do Supabase (a sessão do editor não tem JWT, e a trava de
-   superadmin permite):
+| O quê | Para quê | Marco |
+| --- | --- | --- |
+| Projeto novo no Supabase | banco, login e arquivos | A |
+| Licença do MUI X Premium | `NEXT_PUBLIC_MUI_X_LICENSE_KEY`; sem ela o painel mostra a marca d'água | A |
+| Projeto na Vercel e um token | o deploy pelo pipeline ("Setup único", passos 1, 2 e 4) | A |
+| O domínio `flyee.club` no registrador | site, remetente dos e-mails, endereços de login | A |
+| Conta no Resend com o domínio verificado | todo e-mail, inclusive os de login | A |
+| App no Inngest | tudo que é agendado | A |
+| Razão social, CNPJ, cidade e UF | os termos identificam a operadora pelo rodapé | A |
+| A CLI 1.0.0 publicada no npm, do lado do produto | o site já manda a IA rodar `npx --yes flyee@latest` (passo 4, abaixo) | A |
+| Conta Asaas aprovada para produção | vender em real | B |
+| Conta Stripe | vender em dólar; sem ela o site em inglês não vende | B |
+| Os cinco pacotes `.zip` | vêm do repositório do produto | B |
+| Preços conferidos | os de `plans` são hipóteses | B |
+| Um segundo projeto no Supabase, o sandbox do Asaas e o modo de teste do Stripe | o ensaio das compras sem dinheiro de verdade (passo 17, abaixo) | B |
+
+### Onde você está: a conferência do ambiente
+
+`npm run preflight` lê as variáveis e diz, uma por uma, o que falta para um
+estágio. Não usa rede, banco nem conta, e nunca imprime um valor que possa ser
+credencial: só nomes e o que há de errado com cada um.
+
+```bash
+npm run preflight -- --stage waitlist     # marco A
+npm run preflight -- --stage open         # marco B
+```
+
+Sem `--file`, ele lê o que o Next e o gate do banco leem nesta máquina:
+`apps/web/.env.local` por cima de `apps/web/.env`, em que o primeiro arquivo
+que define uma chave decide, mesmo com valor vazio. `✘` impede o estágio, `!`
+pede o seu julgamento e `·` é só informação. O comando sai com código 1 quando
+há `✘`. O `?` só aparece num arquivo puxado da Vercel: a variável está
+cadastrada e o valor não foi lido (abaixo).
+
+O que ele confere além de "está preenchida":
+
+- **A chave do Supabase pelo que ela é**, não pela variável em que está. Uma
+  chave de serviço numa variável `NEXT_PUBLIC_` vai para todo navegador.
+- **O endereço do banco**: o do pool, na porta 6543, do mesmo projeto das
+  chaves e com a senha preenchida. O painel do Supabase entrega o texto com
+  `[YOUR-PASSWORD]` no lugar dela.
+- **O Asaas**: endereço de produção e chave de produção juntos. O endereço
+  vazio é o sandbox, e ali ninguém paga.
+- **Chave de teste do Stripe com a loja aberta**, e chave de produção num
+  preview, onde uma compra de teste cobraria de verdade.
+- **O remetente**: sem `EMAIL_FROM`, as mensagens saem de
+  `onboarding@resend.dev`, que só entrega ao dono da conta do Resend.
+- **Um `$` antes de um nome.** Num arquivo que o Next lê, `$nome` é trocado
+  pelo valor de outra variável, e por nada quando ela não existe, com ou sem
+  aspas. A chave do Asaas escrita `$aact_…` chega vazia à aplicação, e uma
+  senha com `$` no endereço do banco chega cortada. Nos arquivos locais é erro.
+- **Sobras**: variável que nenhum código lê.
+- **Valores herdados do MedChina.** Enquanto o `apps/web/.env` for a cópia (o
+  script a reconhece pelas variáveis que só o MedChina lia), nenhum valor dele
+  pode estar em vigor. Uma chave que o `.env.local` esqueceu de definir é erro,
+  pelo nome. Um valor copiado do `.env` para o `.env.local` também, sob
+  qualquer nome: é o que sobra quando se começa copiando o arquivo inteiro. A
+  licença do MUI e o endereço do formulário de contato podem ser os mesmos nos
+  dois produtos, e aparecem só como informação.
+
+Para conferir o que está cadastrado na Vercel, puxe as variáveis para um
+arquivo e passe o arquivo ao script:
+
+```bash
+npx vercel@latest env pull .vercel/.env.production.local --environment=production
+npm run preflight -- --stage open --file .vercel/.env.production.local
+```
+
+Três coisas a saber sobre esse arquivo:
+
+- **Um segredo não volta.** A Vercel guarda cada variável como _Config_ ou como
+  _Secret_, e o valor de uma _Secret_ só pode ser escrito, nunca lido. No
+  arquivo, a CLI põe `[SENSITIVE]` no lugar. O script marca essas com `?`: o
+  nome está cadastrado, o conteúdo não foi conferido. Para elas vale a
+  conferência do arquivo local de onde você copiou os valores. Por isso,
+  cadastre como _Config_ o que não é segredo (os endereços, o remetente, os IDs
+  dos rastreadores) e como _Secret_ as chaves: o que é _Config_ o script confere
+  de volta. O nome que não está cadastrado continua aparecendo como `✘`.
+- **Use `vercel@latest`.** As versões antigas da CLI (a 54, por exemplo)
+  escrevem a _Secret_ com o valor vazio, e não há como separar isso de uma
+  variável salva sem valor. O script avisa quando acontece.
+- **Apague o arquivo antes de puxar de novo.** A CLI nova mantém no arquivo o
+  que já estava nele, e uma variável apagada na Vercel continuaria aparecendo.
+  Nunca puxe para o `apps/web/.env.local`: é ele que anula a cópia herdada.
+
+`.vercel/` não vai para o git nem para a Vercel. Para o ambiente de ensaio,
+`--target preview` inverte o que se espera das chaves de cobrança.
+
+O que o script não tem como ver, porque pede uma conta: o DNS, os webhooks, os
+endereços do Supabase Auth, a sincronização do Inngest e o próprio banco. Cada
+um é um passo abaixo.
+
+### Marco A: a lista de espera no ar
+
+1. **Variáveis locais.** Preencha o `apps/web/.env.local` com os valores do
+   projeto novo, a partir do `apps/web/.env.example`. Toda chave que o
+   `apps/web/.env` herdado define precisa aparecer no `.env.local`, vazia se
+   não for usada. Nesse arquivo um `$` se escreve `\$` (a chave do Asaas fica
+   `\$aact_…`) e, dentro de um endereço, `%24`; na Vercel o valor vai como ele
+   é. Rode `npm run preflight -- --stage waitlist` até não sobrar `✘`. O
+   `NEXT_PUBLIC_SITE_URL` fica para a Vercel (passo 3): nesta máquina ele é o
+   endereço local, e o script só o anota.
+2. **Banco.** Com o `DATABASE_URL` do `.env.local` apontando para o projeto
+   novo:
+
+   ```bash
+   npm run db:plan:remote     # só lê: lista o que falta aplicar
+   npm run db:gate:remote     # aplica e roda o pgTAP
+   ```
+
+   Num projeto vazio, o plano responde `Remote migrations: 0 applied, 41
+   pending.` e lista de `0000_init.sql` a `0040_entry_version.sql`. O gate
+   termina com `Remote pgTAP: 432 assertions passed.` Ele recusa um banco que
+   não construiu: se o plano falar em arquivos desconhecidos ou em esquema sem
+   histórico, pare e não aplique.
+3. **Vercel.** Crie o projeto e os secrets do GitHub ("Setup único"). Cadastre
+   em **Production** as variáveis do `.env.local`, mais
+   `NEXT_PUBLIC_SITE_URL=https://flyee.club`: as chaves como _Secret_, o resto
+   como _Config_. Confira com o `vercel env pull` e o `preflight --file` da
+   seção acima. Não pode sobrar `✘`, e cada `?` tem de ser uma chave que você já
+   conferiu no arquivo local.
+4. **A CLI no npm, antes do domínio.** A home e `/como-funciona` dizem para
+   pedir à IA a instalação por `flyee.club/instalar.md`, e essa página manda
+   rodar `npx --yes flyee@latest`. Em 2026-10-08 o `latest` do pacote `flyee`
+   no npm era a 0.7.9, de outro projeto: uma IA que seguisse a página rodaria
+   esse código. A CLI 1.0.0 vai para o npm do lado do produto, e
+   `npm view flyee dist-tags` tem de mostrar a 1.0.0 como `latest` antes de o
+   domínio apontar para o site. Com a loja fechada e o catálogo vazio, quem
+   rodar a CLI só conecta uma conta.
+5. **Domínio.** `flyee.club` na Vercel e no registrador ("Domínio"), e o mesmo
+   domínio verificado no Resend antes de definir `EMAIL_FROM`.
+6. **Deploy.** Rode o workflow `Deploy` ou faça o push na `main`. As variáveis
+   `NEXT_PUBLIC_` entram no build: mudou uma, faça outro deploy.
+7. **Login.** No Supabase, em Authentication: o Site URL e as Redirect URLs
+   (`https://flyee.club/auth/callback` e `https://flyee.club/**`), o SMTP do
+   Resend, "Confirm email" ligado e os três modelos de e-mail ("E-mails de
+   autenticação", abaixo).
+8. **Jobs.** No Inngest, sincronize o app em `https://flyee.club/api/inngest`.
+   As funções da tabela de "Jobs" devem aparecer.
+9. **Sua conta de operador.** Crie a conta em `/auth/sign-up` e promova-a no SQL
+   Editor do Supabase. A sessão do editor não tem JWT, e a trava de superadmin
+   permite:
 
    ```sql
    update public.profiles set is_superadmin = true
    where id = (select id from auth.users where email = 'seu@email');
    ```
 
-5. **Empresa no rodapé.** Em `/admin/support`, preencha "Empresa responsável"
-   (razão social, CNPJ, cidade). Os termos de uso e a política de privacidade
-   identificam a operadora pelo rodapé, então isso precisa estar no ar antes de
-   divulgar a página. Deixe "Lançamento do site" em "Lista de espera".
-6. **Smoke test.** Inscreva o seu e-mail em `/espera`, abra o link do e-mail,
-   confirme no botão e veja "Pronto, você está na lista"; repita em
-   `/en/waitlist`; confira `/legal/termos` com "Versão 1", a empresa no rodapé, e
-   `/sitemap.xml` com `/espera` e `/en/waitlist`. A inscrição aparece em
-   `/admin/leads`.
+10. **Empresa, estágio e versão mínima.** Em `/admin/support`, preencha "Razão
+    social", "CNPJ" e "Cidade e UF". Os termos de uso e a política de
+    privacidade identificam a operadora pelo rodapé, então isso precisa estar
+    no ar antes de divulgar qualquer página. Deixe "Lançamento do site" em
+    "Lista de espera". Em `/admin/catalogo`, aba "Entrega", "Versão mínima da
+    CLI atendida" passa de `0.1.0` a `1.0.0`: a linha 0.x do pacote `flyee` é
+    de outro projeto e não fala este contrato.
+11. **Prova.** Inscreva o seu e-mail em `/espera`, abra o link que chega,
+    confirme no botão e veja "Pronto, você está na lista". Repita em
+    `/en/waitlist`. Confira `/legal/termos` com a versão e a data, a empresa no
+    rodapé, e `/sitemap.xml` com `/espera` e `/en/waitlist`. A inscrição aparece
+    em `/admin/leads`. Busque `https://flyee.club/instalar.md`: a frase do
+    primeiro parágrafo tem de terminar com esse mesmo endereço.
 
-Quando o checkout do kit estiver testado (fase 4), volte a `/admin/support` e
-mude "Lançamento do site" para "Aberto".
+### Marco B: a loja aberta
+
+12. **Cobrança em real.** Na conta Asaas de **produção**:
+    - gere a chave de produção, que começa com `$aact_prod_`;
+    - cadastre `flyee.club` em _Minha Conta → Informações_. Sem um site
+      cadastrado, quem paga não é devolvido ao painel;
+    - crie o webhook em `https://flyee.club/api/webhooks/asaas`, com um token
+      que você inventa e os nove eventos: `PAYMENT_CONFIRMED`,
+      `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`,
+      `PAYMENT_CREDIT_CARD_CAPTURE_REFUSED`, `PAYMENT_REFUNDED`,
+      `PAYMENT_PARTIALLY_REFUNDED`, `PAYMENT_CHARGEBACK_REQUESTED`,
+      `PAYMENT_CHARGEBACK_DISPUTE` e `SUBSCRIPTION_DELETED`.
+
+    Na Vercel, as três juntas, no mesmo deploy: `ASAAS_API_KEY`,
+    `ASAAS_WEBHOOK_TOKEN` e `ASAAS_BASE_URL=https://api.asaas.com/v3`. Com a
+    chave de produção e o endereço vazio, toda cobrança é recusada. O
+    `docs/ASAAS-GO-LIVE.md` guarda o que cada um desses itens custou quando
+    faltou; os nomes e valores dele são do MedChina.
+13. **Cobrança em dólar**, se for vender em inglês. No Stripe, o webhook em
+    `https://flyee.club/api/webhooks/stripe` com `checkout.session.completed`,
+    `customer.subscription.created`, `customer.subscription.updated`,
+    `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`,
+    `charge.refunded` e `charge.dispute.created`. Na Vercel,
+    `STRIPE_SECRET_KEY` (a de produção, `sk_live_`) e `STRIPE_WEBHOOK_SECRET`.
+    Sem o Stripe, os planos em dólar não ficam à venda e `/en` não vende nada:
+    é uma decisão, não um erro.
+14. **Preços.** Em `/admin/billing`, aba "Planos", confira o preço do FlyeeClub
+    em real e em dólar, o prazo de acesso e que só ele tem "Aparece no site
+    público". O teto de parcelas é dado de `platform_settings.billing`. Os
+    valores do seed são hipóteses.
+15. **Conferência.** `npm run preflight -- --stage open` sem `✘`, no arquivo
+    local e no que a Vercel devolve.
+16. **Catálogo.** Em `/admin/catalogo`:
+    - aba "Categorias da loja": as cinco do brief já vêm do banco (Vender,
+      Divulgar, Vídeo, Pesquisa, Construir);
+    - aba "Ferramentas": cadastre os quatro apps. Em cada um, o slug (é o nome
+      no `npx flyee add`), a trilha, o tipo, a categoria da loja, nome e resumo
+      nos dois idiomas, "Funciona com" e "Bom começo para". Um app sem nome em
+      inglês fica fora das páginas em inglês;
+    - na página de cada app, "Enviar uma versão": escolha o `.zip` e "Enviar e
+      conferir". O pacote entra como rascunho. "Publicar" na versão, depois
+      "Publicar no catálogo" no app;
+    - **a versão de entrada é uma decisão por app.** A primeira versão publicada
+      de um app recebe a marca sozinha, e a conta sem compra instala a versão
+      marcada. No `motion-carousel`, publique a 1.0.0 antes da 1.1.0: a 1.0.0
+      fica como a de entrada e a 1.1.0 como a completa. Nos três apps que só têm
+      a 1.0.0, a marca entrega o app inteiro a quem não comprou. Se não é isso
+      que você quer, use "Tirar a marca de entrada" neles. Vale desde a
+      publicação, mesmo com o site na lista de espera: quem seguir
+      `/instalar.md` cria a conta e instala a versão marcada.
+
+    Confira `/catalogo` e `/en/catalog` deslogado, e `/modulos` logado.
+17. **Ensaio.** Antes de abrir, sem dinheiro de verdade, em duas partes.
+
+    **A CLI e a IA, na produção.** O site continua na lista de espera, e nada
+    leva ninguém às contas de teste. Crie três contas suas e, em
+    `/admin/billing`, aba "Kits e cortesias", dê a duas delas uma cortesia
+    ("Plano da cortesia", "Conceder cortesia"): uma fica sem compra, outra com
+    o FlyeeClub, outra com o FlyeeClub Pro. Em cada uma:
+    - `node scripts/cli-flow.mjs --base https://flyee.club`, que percorre o
+      contrato inteiro e pede a aprovação de um código em `/ativar`;
+    - a frase do painel colada numa IA de verdade, que segue
+      `flyee.club/instalar.md` do login ao primeiro app. Pelo menos no Claude
+      Code e numa IA que roda os comandos num terminal (Gemini CLI ou Cursor);
+    - o que cada degrau vê: a conta sem compra instala a versão de entrada e
+      vê a distância até a mais nova; a do FlyeeClub instala a mais nova e
+      recebe o aviso do Pro no clique de um recurso dele; a do Pro abre esses
+      recursos, com "Em breve" onde ainda não há nada publicado.
+
+    No fim, "Excluir conta e todos os dados", em `/admin/membros`, apaga cada
+    conta de teste com a sua cortesia. Os eventos de uso ficam, sem a conta,
+    como em toda exclusão.
+
+    **As compras, num preview.** Um segundo projeto no Supabase, as variáveis
+    de **Preview** da Vercel apontando para ele, o Asaas de sandbox e a chave
+    de teste do Stripe:
+
+    ```bash
+    FLYEE_ENV_FILE=apps/web/.env.ensaio npm run db:gate:remote
+    npm run preflight -- --stage open --target preview --file apps/web/.env.ensaio
+    ```
+
+    No PowerShell, a primeira linha é
+    `$env:FLYEE_ENV_FILE = "apps/web/.env.ensaio"; npm run db:gate:remote`. O git
+    ignora todo arquivo `.env.*`, menos o `.env.example`, e a Vercel também não
+    os recebe. Antes do deploy do preview, que o workflow faz a cada pull
+    request:
+    - escolha um endereço fixo, como `https://ensaio.flyee.club`, e use-o no
+      `NEXT_PUBLIC_SITE_URL` do Preview, no Site URL e nas Redirect URLs do
+      Supabase Auth do projeto de ensaio e nos dois webhooks. Depois do deploy,
+      `npx vercel alias set <endereço que o workflow mostrou> ensaio.flyee.club`,
+      com o registro `ensaio` do DNS apontando para a Vercel;
+    - os previews nascem protegidos pela Vercel Authentication, e um webhook,
+      que não tem login na Vercel, é barrado. Em _Settings → Deployment
+      Protection_, crie um segredo em "Protection Bypass for Automation" e ponha
+      `?x-vercel-protection-bypass=<segredo>` no fim dos dois endereços de
+      webhook;
+    - deixe vazias, no Preview, as chaves do Inngest: com as da produção, o que
+      o ensaio enviasse rodaria nos jobs da produção. Sem elas o que é agendado
+      não roda, e o ensaio não precisa disso.
+
+    No preview, compre o FlyeeClub em real pelo sandbox do Asaas e em dólar
+    com um cartão de teste do Stripe, veja o acesso chegar a `/inicio` pelo
+    webhook, reembolse e veja o acesso cair. Assine o FlyeeClub Pro e cancele.
+    Sem esta parte, a primeira compra em dólar é uma de verdade.
+18. **Abrir.** No mesmo dia, nesta ordem:
+    1. uma compra de verdade do FlyeeClub, com um CPF real, ainda na lista de
+       espera: logado, em `/assinatura`. O checkout não depende do estágio, só
+       os botões do site. A fatura abre, o pagamento volta para o painel,
+       `/inicio` mostra o acesso e o recibo chega por e-mail. Reembolse pelo
+       painel do Asaas e confira que o acesso cai;
+    2. em `/admin/support`, "Lançamento do site" passa a "Aberto". Os botões do
+       site deixam de levar à lista e passam a levar ao cadastro e ao checkout.
+       Confira um deles deslogado.
+19. **O primeiro dia.** `/admin/membros` para as contas novas e quem ficou sem
+    computador conectado; `/admin/metricas` para as portas de entrada; a fila de
+    webhooks do Asaas, que é interrompida depois de 15 falhas seguidas; as
+    execuções no Inngest; os envios no Resend.
 
 ## E-mails e jobs
 
@@ -314,9 +578,10 @@ requisição.
 ### Smoke test pós-configuração
 
 Home pública em `https://flyee.club` e `https://flyee.club/en` → aviso de
-cookies → `/auth/sign-up` → `/inicio` → um checkout de teste em BRL (Asaas
-sandbox) e outro em USD (Stripe test) → confirmar `InitiateCheckout`/`Purchase`
-no Gerenciador de Eventos (Meta) e no GA4.
+cookies (aparece quando há Pixel ou GA4) → `/auth/sign-up` → `/inicio`. Os
+eventos `InitiateCheckout` e `Purchase` se conferem no Gerenciador de Eventos
+(Meta) e no GA4 durante as compras do roteiro: as de teste no ensaio e a de verdade na
+abertura ("Roteiro da abertura", passos 17 e 18).
 
 ## Troubleshooting
 
@@ -341,16 +606,9 @@ no Gerenciador de Eventos (Meta) e no GA4.
   GitHub, não o build da Vercel**. Como o deploy é build na nuvem, o
   `vercel deploy` fica BLOQUEADO esperando a Vercel terminar; o
   `timeout-minutes` do job é, na prática, "quanto tempo o build pode levar".
-  Duas coisas seguram isso hoje:
-  1. `timeout-minutes: 60` no workflow (era 30).
-  2. `.vercelignore` na raiz exclui `apps/web/src/app/(dashboard)/ui` — o
-     showcase de componentes do template, que sozinho é **121 das 201 rotas**
-     do app. Ele é referência de desenvolvimento (nada fora dele o importa e o
-     menu não linka), mas era gerado estaticamente em todo build de produção —
-     e o build roda com `experimental.cpus: 1` (o container de 8 GB dá OOM com
-     workers paralelos), ou seja, rota a rota. Verificado localmente: sem o
-     `/ui`, o build completo leva **~4,5 min**. O código continua no git e
-     segue acessível em `http://localhost:3000/ui` no dev.
+  O que segura isso hoje é o `timeout-minutes: 60` do workflow (era 30). A
+  vitrine de componentes do template, que sozinha era mais da metade das rotas
+  e dominava o tempo do build, saiu do repositório na fase 1.
 
   Antes de mexer em timeout, **confira o build na Vercel** (link "Inspect" do
   log): se ele concluiu, o deploy foi para produção mesmo com o job vermelho.

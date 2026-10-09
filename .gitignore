@@ -52,8 +52,11 @@ supabase/migrations/*.sql
 next-env.d.ts
 
 # local configuration — real keys live here, never in git (.env.example is the tracked reference)
+# Every env file, whatever its suffix: the rehearsal's and the one `vercel env
+# pull` writes are as secret as .env.local.
 .env
-.env.local
+.env.*
+!.env.example
 .claude/settings.local.json
 
 .vercel

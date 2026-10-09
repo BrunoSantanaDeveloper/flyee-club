@@ -1,11 +1,13 @@
-# Files NOT uploaded to Vercel. Everything here is excluded from the cloud
-# build, so it must never be imported by shipped code.
-
-# The MUI template's component showcase: 121 of the app's 201 routes, and pure
-# dev reference (root CLAUDE.md marks it for pruning before launch). Nothing
-# outside it imports it and the sidebar menu does not link it, so it ships
-# nothing — but static-generating it dominated the build, which runs with
-# `experimental.cpus: 1` (see apps/web/next.config.mjs: the 8 GB build
-# container OOMs with parallel workers, so routes are generated serially).
-# Keep the source in git for local reference at http://localhost:3000/ui.
-apps/web/src/app/(dashboard)/ui
+# Files NOT uploaded to Vercel. The Vercel CLI never reads .gitignore: it skips
+# its own short list (.env.local and .env.*.local are on it, plain .env is not)
+# plus what is written here.
+#
+# Environment values come from the Vercel project settings and from nowhere
+# else. A deploy typed on a developer's machine would otherwise upload
+# apps/web/.env, the build would read it, and every variable the project lacks
+# would take its value from that file. While that file is the copy inherited
+# from MedChina (CLAUDE.md, "Safety during the transition"), those values are
+# another product's production credentials.
+# scripts/preflight-env.test.mjs fails if these two lines go.
+.env
+.env.*
