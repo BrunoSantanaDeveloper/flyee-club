@@ -218,6 +218,30 @@ test("Stripe: a test key cannot open the store, a live one does not belong in a 
   );
 });
 
+test("reais on Stripe: the store opens without Asaas, and not without Stripe", () => {
+  const values = { ...complete(), BILLING_BRL_PROVIDER: "stripe" };
+  for (const key of ["ASAAS_API_KEY", "ASAAS_WEBHOOK_TOKEN", "ASAAS_BASE_URL"]) delete values[key];
+  const report = judge(values, { stage: "open" });
+  assert.equal(report.errors, 0);
+  assert.deepEqual(levelOf(report, "ASAAS_API_KEY"), ["note"]);
+  // What reais lose on Stripe is said once, beside the choice.
+  assert.match(of(report, "BILLING_BRL_PROVIDER")[0].message, /no card installments/u);
+
+  const withoutStripe = { ...values };
+  delete withoutStripe.STRIPE_SECRET_KEY;
+  assert.deepEqual(levelOf(judge(withoutStripe, { stage: "open" }), "STRIPE_SECRET_KEY"), ["error"]);
+  assert.deepEqual(levelOf(judge(withoutStripe, { stage: "waitlist" }), "STRIPE_SECRET_KEY"), ["note"]);
+});
+
+test("a BRL provider that is neither asaas nor stripe closes the till in reais", () => {
+  assert.deepEqual(levelOf(judge({ ...complete(), BILLING_BRL_PROVIDER: "strype" }), "BILLING_BRL_PROVIDER"), [
+    "error",
+  ]);
+  // Empty and "asaas" are the default, and say nothing.
+  assert.deepEqual(levelOf(judge({ ...complete(), BILLING_BRL_PROVIDER: "" }), "BILLING_BRL_PROVIDER"), []);
+  assert.deepEqual(levelOf(judge({ ...complete(), BILLING_BRL_PROVIDER: "Asaas" }), "BILLING_BRL_PROVIDER"), []);
+});
+
 test("e-mail: no sender means the test sender, and the sender's domain is the site's", () => {
   const missing = judge({ ...complete(), EMAIL_FROM: "" });
   assert.match(of(missing, "EMAIL_FROM")[0].message, /onboarding@resend\.dev/u);

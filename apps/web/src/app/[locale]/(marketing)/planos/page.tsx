@@ -14,6 +14,7 @@ import { COOKIE_KEYS } from "@/constants";
 import { localizeHref } from "@/i18n/routing";
 import NiShieldCheck from "@/icons/nexture/ni-shield-check";
 import { resolveCurrency } from "@/lib/billing-currency";
+import { getMaxInstallments } from "@/lib/billing-settings";
 import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
 import { publicPageMetadata } from "@/lib/seo";
@@ -33,12 +34,15 @@ export default async function PricingPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [t, locale, params, cookieStore, stage] = await Promise.all([
+  const [t, locale, params, cookieStore, stage, splitsInReais] = await Promise.all([
     getTranslations("marketing"),
     getLocale(),
     searchParams,
     cookies(),
     getLaunchStage(),
+    // The FAQ speaks of the split in reais in both languages, so it follows
+    // the checkout in reais: no split while Stripe charges them.
+    getMaxInstallments("BRL").then((count) => count > 1),
   ]);
   // The visitor's own pick (a `?moeda=` link, kept by the middleware) wins;
   // otherwise the page language decides: Portuguese BRL, English USD.
@@ -122,7 +126,7 @@ export default async function PricingPage({
         title={t("faq-title")}
         items={[1, 2, 3, 4].map((index) => ({
           question: t(`faq-${index}-question`),
-          answer: t(`faq-${index}-answer`),
+          answer: index === 1 && !splitsInReais ? t("faq-1-answer-at-once") : t(`faq-${index}-answer`),
         }))}
       />
 

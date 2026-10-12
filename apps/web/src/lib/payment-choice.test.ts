@@ -1,8 +1,13 @@
 import { resolvePaymentChoice } from "./payment-choice";
 import { describe, expect, it } from "vitest";
 
-const yearlyBrl = { planPeriod: "yearly", planKind: "recurring" as const, currency: "BRL", maxInstallments: 12 };
-const accessBrl = { planPeriod: null, planKind: "access" as const, currency: "BRL", maxInstallments: 12 };
+const yearlyBrl = {
+  planPeriod: "yearly",
+  planKind: "recurring" as const,
+  provider: "asaas" as const,
+  maxInstallments: 12,
+};
+const accessBrl = { planPeriod: null, planKind: "access" as const, provider: "asaas" as const, maxInstallments: 12 };
 
 describe("resolvePaymentChoice", () => {
   it("passes a card purchase on an annual BRL plan through with its instalments", () => {
@@ -68,12 +73,21 @@ describe("resolvePaymentChoice", () => {
       resolvePaymentChoice({
         planPeriod: "yearly",
         planKind: "recurring",
-        currency: "USD",
+        provider: "stripe",
         maxInstallments: 12,
         method: "pix",
         installments: 5,
       }),
     ).toEqual({ method: undefined, installments: 1 });
+  });
+
+  it("lets Stripe choose the method in reais too, and never splits the access there", () => {
+    expect(resolvePaymentChoice({ ...accessBrl, provider: "stripe", method: "credit_card", installments: 12 })).toEqual(
+      { method: undefined, installments: 1 },
+    );
+    expect(
+      resolvePaymentChoice({ ...accessBrl, provider: null, method: "pix", installments: 1 }).method,
+    ).toBeUndefined();
   });
 
   it("ignores a method it does not know instead of forwarding it to the provider", () => {

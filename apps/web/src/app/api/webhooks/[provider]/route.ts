@@ -612,6 +612,7 @@ async function handleEvent(supabase: ServiceClient, event: BillingEvent) {
             grantId: grant.grantId ?? null,
             amountCents: accessSoldCents,
             currency: event.currency.toUpperCase(),
+            provider: event.provider,
           });
         }
 

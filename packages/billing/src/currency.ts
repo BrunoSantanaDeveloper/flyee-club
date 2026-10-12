@@ -4,8 +4,10 @@
  * into the browser bundle.
  *
  * One rule decides which provider charges a purchase: the currency of the
- * plan. BRL goes through Asaas (PIX, card, installments, the NFS-e Asaas
- * issues); USD goes through Stripe. A plan never changes provider because of
+ * plan. USD goes through Stripe. BRL goes through Asaas (PIX, card,
+ * installments, the NFS-e Asaas issues), unless the deployment names Stripe
+ * for it (`BILLING_BRL_PROVIDER=stripe`, decided 2026-10-12: Stripe charges
+ * everything until Asaas is set up). A plan never changes provider because of
  * who buys it, and a currency whose provider is not configured is simply not
  * on sale in that deployment.
  */
@@ -18,16 +20,42 @@ export const BILLING_CURRENCIES: readonly BillingCurrency[] = ["BRL", "USD"];
 export const isBillingCurrency = (value: unknown): value is BillingCurrency =>
   typeof value === "string" && (BILLING_CURRENCIES as readonly string[]).includes(value);
 
-/** The single routing table. */
+/** The routing table when the deployment says nothing. */
 export const CURRENCY_PROVIDER: Record<BillingCurrency, BillingProviderName> = {
   BRL: "asaas",
   USD: "stripe",
 };
 
+/**
+ * The provider that charges reais, from `BILLING_BRL_PROVIDER`: empty means
+ * the default (Asaas). Any other value is null, and then nothing priced in
+ * BRL is on sale: a typo must close the till, not pick a provider.
+ */
+export function parseBrlProvider(value: string | null | undefined): BillingProviderName | null {
+  const name = (value ?? "").trim().toLowerCase();
+  if (name === "") return CURRENCY_PROVIDER.BRL;
+  return name === "asaas" || name === "stripe" ? name : null;
+}
+
 /** The provider a currency routes to, configured or not; null for a currency we do not sell in. */
-export function providerNameForCurrency(currency: string | null | undefined): BillingProviderName | null {
+export function providerNameForCurrency(
+  currency: string | null | undefined,
+  brlProvider: BillingProviderName | null = CURRENCY_PROVIDER.BRL,
+): BillingProviderName | null {
   const code = (currency ?? "").trim().toUpperCase();
-  return isBillingCurrency(code) ? CURRENCY_PROVIDER[code] : null;
+  if (!isBillingCurrency(code)) return null;
+  return code === "BRL" ? brlProvider : CURRENCY_PROVIDER[code];
+}
+
+/**
+ * Whether the payment method and the card installments are chosen on our own
+ * checkout page. Only Asaas: it charges the PIX shown here and splits a card.
+ * Stripe's hosted page picks the method itself (card, and PIX when its
+ * dashboard has it on) and does not split a card in Brazil, so a purchase
+ * through it carries neither.
+ */
+export function choosesPaymentHere(provider: BillingProviderName | null): boolean {
+  return provider === "asaas";
 }
 
 /**

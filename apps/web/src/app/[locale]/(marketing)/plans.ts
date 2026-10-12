@@ -97,8 +97,8 @@ export async function getDisplayPlans({
     getTranslations("marketing"),
     getLocale(),
     listPublicPlans({ surface: "site", currency }),
-    // Card installments exist only in reais (Asaas); the ceiling is data.
-    currency === "BRL" ? getMaxInstallments() : Promise.resolve(1),
+    // Card installments exist only in reais charged by Asaas; the ceiling is data.
+    getMaxInstallments(currency),
   ]);
 
   if (!rows || rows.length === 0) {

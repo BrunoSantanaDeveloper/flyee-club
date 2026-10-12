@@ -51,11 +51,11 @@ select is_empty(
   'no seeded text in force has a dash, an exclamation mark, an emoji or a banned word'
 );
 
-select is(
-  (select array_agg(version order by slug) from public.consent_terms
+select ok(
+  (select count(*) = 2 and bool_and(version >= case slug when 'cli-connection' then 2 else 5 end)
+   from public.consent_terms
    where locale = 'en' and is_active and slug in ('cli-connection', 'terms')),
-  array[2, 5],
-  'migration 0035 put version 2 of the English CLI connection term and version 5 of the English terms in force'
+  'migration 0035 put version 2 of the English CLI connection term and version 5 of the English terms in force, or a later one (the English 6 came with migration 0041)'
 );
 select ok(
   (select n.body_md = replace(o.body_md, 'It unlocks the app store', 'It gives access to the app store')
@@ -71,11 +71,11 @@ select ok(
    where n.slug = 'cli-connection' and n.locale = 'en' and n.version = 2),
   'and so does the English CLI connection term from version 1'
 );
-select is(
-  (select array_agg(version order by slug) from public.consent_terms
+select ok(
+  (select count(*) = 2 and bool_and(case slug when 'cli-connection' then version = 1 else version >= 4 end)
+   from public.consent_terms
    where locale = 'pt-BR' and is_active and slug in ('cli-connection', 'terms')),
-  array[1, 4],
-  'the Portuguese texts, already inside the rules, keep their versions'
+  'the Portuguese texts, already inside the rules, kept their versions through 0035 (the Portuguese terms 5 came with migration 0041)'
 );
 
 select * from finish();

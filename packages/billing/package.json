@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Per-organization billing behind a provider interface: Asaas (BRL) and Stripe (USD) for the one-time kit, subscriptions, coupons and entitlement grants.",
+  "description": "Per-organization billing behind a provider interface: Asaas (BRL) and Stripe (USD, and BRL while BILLING_BRL_PROVIDER=stripe) for the one-time kit, subscriptions, coupons and entitlement grants.",
   "exports": {
     ".": "./src/index.ts",
     "./public": "./src/public.ts",
@@ -18,6 +18,6 @@
     "stripe": "^18.0.0"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test src/billing-core.test.ts"
+    "test": "node --experimental-strip-types --test src/billing-core.test.ts src/providers/stripe.test.ts"
   }
 }

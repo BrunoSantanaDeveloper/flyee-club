@@ -1,5 +1,5 @@
-import { PROVIDER_MAX_INSTALLMENTS } from "@flyee/billing/currency";
-import type { PaymentMethod } from "@flyee/billing/types";
+import { choosesPaymentHere, PROVIDER_MAX_INSTALLMENTS } from "@flyee/billing/currency";
+import type { BillingProviderName, PaymentMethod } from "@flyee/billing/types";
 
 /**
  * What the customer may actually be charged, decided on the server.
@@ -8,9 +8,10 @@ import type { PaymentMethod } from "@flyee/billing/types";
  * is a public endpoint, and the values that reach the provider are settled
  * here. The rules, all of them money:
  *
- *  - **Methods belong to a currency.** PIX and a chosen card exist only in BRL
- *    (Asaas); a USD purchase goes to Stripe's own checkout, which picks the
- *    method itself.
+ *  - **Methods belong to the provider that charges here.** PIX and a chosen
+ *    card exist only through Asaas, in BRL; a purchase through Stripe (USD,
+ *    and BRL while `BILLING_BRL_PROVIDER=stripe`) goes to Stripe's own
+ *    checkout, which picks the method itself and splits nothing.
  *  - **Installments only on a card.** Pix has no instalment concept at Asaas;
  *    asking for 5x on Pix would silently produce five separate charges the
  *    customer has to pay by hand, which is not what either side agreed to.
@@ -32,13 +33,14 @@ export function resolvePaymentChoice(input: {
   planPeriod: string | null;
   /** A one-time access ("access") may be split; a recurring plan only when yearly. */
   planKind: "recurring" | "access";
-  currency: string;
+  /** Who charges this purchase (`providerForCurrency`). */
+  provider: BillingProviderName | null;
   /** The configured ceiling; 1 turns installments off. */
   maxInstallments: number;
 }): ResolvedPaymentChoice {
-  const brl = input.currency.trim().toUpperCase() === "BRL";
+  const here = choosesPaymentHere(input.provider);
   const method: PaymentMethod | undefined =
-    brl && (input.method === "credit_card" || input.method === "pix") ? input.method : undefined;
+    here && (input.method === "credit_card" || input.method === "pix") ? input.method : undefined;
 
   const asked = Number(input.installments);
   const wanted = Number.isFinite(asked) ? Math.floor(asked) : 1;

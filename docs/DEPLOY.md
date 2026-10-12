@@ -128,8 +128,9 @@ Operação:
 
 | Variável | Observação |
 | --- | --- |
-| `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` / `ASAAS_BASE_URL` | cobrança em BRL (produção: `https://api.asaas.com/v3`) |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | cobrança em USD |
+| `BILLING_BRL_PROVIDER` | quem cobra em real: vazio ou `asaas` é o Asaas; `stripe` manda o real para a Stripe (decidido em 2026-10-12: a Stripe cobra tudo até o Asaas existir). Qualquer outro valor tira o real de venda |
+| `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` / `ASAAS_BASE_URL` | cobrança em BRL pelo Asaas (produção: `https://api.asaas.com/v3`); dispensáveis enquanto `BILLING_BRL_PROVIDER=stripe` |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | cobrança em USD, e em BRL enquanto `BILLING_BRL_PROVIDER=stripe` |
 | `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | jobs em background. Sem elas o que parte de uma ação roda no próprio pedido, mas nada agendado roda (lembretes, resumos, encerramento de assinaturas, limpeza): obrigatórias em produção |
 | `RESEND_API_KEY` / `EMAIL_FROM` | e-mails do app (sem elas os avisos ficam só no sino do painel). **Obrigatórias para a lista de espera**: sem o e-mail de confirmação ninguém confirma, e o formulário responde que a lista está fora do ar. Ver "E-mails e jobs" |
 | `CONTACT_FORM_TO` | destino do formulário de contato |
@@ -183,8 +184,8 @@ Este roteiro substitui o antigo "Primeiro deploy". O andamento está em
 | Conta no Resend com o domínio verificado | todo e-mail, inclusive os de login | A |
 | App no Inngest | tudo que é agendado | A |
 | Razão social, CNPJ, cidade e UF | os termos identificam a operadora pelo rodapé | A |
-| Conta Asaas aprovada para produção | vender em real | B |
-| Conta Stripe | vender em dólar; sem ela o site em inglês não vende | B |
+| Conta Stripe (Stripe Brasil, da empresa) | vender em dólar e, enquanto o Asaas não existe, em real; sem ela a loja não vende nada | B |
+| Conta Asaas aprovada para produção | vender em real pelo Asaas, com Pix na página, parcelamento e a NFS-e; dispensável enquanto a Stripe cobra o real | depois da abertura |
 | Os cinco pacotes `.zip` | vêm do repositório do produto | B |
 | A CLI 1.0.0 publicada no npm como `latest`, do lado do produto | `/instalar.md` manda a IA rodar `npx --yes flyee@latest`; tem de existir antes do ensaio (passo 16, abaixo) | B |
 | Preços conferidos | os de `plans` são hipóteses | B |
@@ -293,9 +294,9 @@ ilustrações de terminal do site mostram comandos `npx flyee`. Antes do passo
    npm run db:gate:remote     # aplica e roda o pgTAP
    ```
 
-   Num projeto vazio, o plano responde `Remote migrations: 0 applied, 41
-   pending.` e lista de `0000_init.sql` a `0040_entry_version.sql`. O gate
-   termina com `Remote pgTAP: 432 assertions passed.` Ele recusa um banco que
+   Num projeto vazio, o plano responde `Remote migrations: 0 applied, 42
+   pending.` e lista de `0000_init.sql` a `0041_payment_processors.sql`. O gate
+   termina com `Remote pgTAP: 436 assertions passed.` Ele recusa um banco que
    não construiu: se o plano falar em arquivos desconhecidos ou em esquema sem
    histórico, pare e não aplique.
 3. **Vercel.** Crie o projeto e os secrets do GitHub ("Setup único"). Cadastre
@@ -338,7 +339,15 @@ ilustrações de terminal do site mostram comandos `npx flyee`. Antes do passo
 
 ### Marco B: a loja aberta
 
-11. **Cobrança em real.** Na conta Asaas de **produção**:
+11. **Cobrança em real.** Até o Asaas existir, quem cobra o real é a Stripe
+    (decidido em 2026-10-12): `BILLING_BRL_PROVIDER=stripe` na Vercel, e o
+    passo 12 vale para as duas moedas. Em real pela Stripe não há parcelamento
+    (a Stripe não parcela no Brasil), o Pix aparece na página da Stripe se
+    estiver ligado lá e só no FlyeeClub, e a NFS-e é emitida fora da
+    plataforma: o checkout continua pedindo o CPF ou CNPJ e o guarda na conta
+    de quem compra. O resto deste passo fica para quando o Asaas chegar.
+
+    Quando a conta Asaas de **produção** estiver aprovada:
     - gere a chave de produção, que começa com `$aact_prod_`;
     - cadastre `flyee.club` em _Minha Conta → Informações_. Sem um site
       cadastrado, quem paga não é devolvido ao painel;
@@ -351,20 +360,41 @@ ilustrações de terminal do site mostram comandos `npx flyee`. Antes do passo
 
     Na Vercel, as três juntas, no mesmo deploy: `ASAAS_API_KEY`,
     `ASAAS_WEBHOOK_TOKEN` e `ASAAS_BASE_URL=https://api.asaas.com/v3`. Com a
-    chave de produção e o endereço vazio, toda cobrança é recusada. O
-    `docs/ASAAS-GO-LIVE.md` guarda o que cada um desses itens custou quando
-    faltou; os nomes e valores dele são do MedChina.
-12. **Cobrança em dólar**, se for vender em inglês. No Stripe, o webhook em
-    `https://flyee.club/api/webhooks/stripe` com `checkout.session.completed`,
-    `customer.subscription.created`, `customer.subscription.updated`,
-    `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`,
-    `charge.refunded` e `charge.dispute.created`. Na Vercel,
-    `STRIPE_SECRET_KEY` (a de produção, `sk_live_`) e `STRIPE_WEBHOOK_SECRET`.
-    Sem o Stripe, os planos em dólar não ficam à venda e `/en` não vende nada:
-    é uma decisão, não um erro.
+    chave de produção e o endereço vazio, toda cobrança é recusada. No mesmo
+    deploy, apague `BILLING_BRL_PROVIDER` (ou ponha `asaas`): as compras novas
+    em real passam ao Asaas, e as assinaturas do FlyeeClub Pro já vendidas em
+    real continuam na Stripe até acabarem, porque cada uma guarda o provedor
+    que a cobra. O `docs/ASAAS-GO-LIVE.md` guarda o que cada um desses itens
+    custou quando faltou; os nomes e valores dele são do MedChina.
+12. **Stripe**: dólar, e real enquanto `BILLING_BRL_PROVIDER=stripe`. Na conta
+    da Stripe Brasil, no modo de produção:
+    - o webhook em `https://flyee.club/api/webhooks/stripe`, criado na versão
+      de API **`2025-08-27.basil`**, a da biblioteca `stripe` 18.5 que o código
+      usa: os eventos chegam no formato da versão do endpoint, e o código lê
+      campos que só existem nesse formato (a assinatura de uma fatura vem em
+      `invoice.parent`). Os nove eventos: `checkout.session.completed`,
+      `checkout.session.async_payment_succeeded` (o Pix confirmado depois do
+      checkout; sem ele um Pix pago nunca libera o acesso),
+      `customer.subscription.created`, `customer.subscription.updated`,
+      `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`,
+      `charge.refunded` e `charge.dispute.created`;
+    - em _Settings → Payment methods_, deixe ligado só o que quer oferecer: o
+      cartão, e o Pix se quiser (ele só aparece no FlyeeClub, porque assinatura
+      com Pix não existe numa conta brasileira). Um método que confirma depois,
+      como o boleto, também libera pelo mesmo evento, mas leva dias;
+    - em _Settings → Billing → Customer portal_, ative o portal: é por ele que
+      um assinante do FlyeeClub Pro troca o cartão recusado. Sem ele, o botão
+      leva à fatura;
+    - na Vercel, `STRIPE_SECRET_KEY` (a de produção, `sk_live_`) e
+      `STRIPE_WEBHOOK_SECRET`.
+
+    Sem a Stripe e com o real no Asaas, os planos em dólar não ficam à venda e
+    `/en` não vende nada: é uma decisão, não um erro. Com o real na Stripe, sem
+    ela a loja não vende nada, e o `npm run preflight` diz isso.
 13. **Preços.** Em `/admin/billing`, aba "Planos", confira o preço do FlyeeClub
     em real e em dólar, o prazo de acesso e que só ele tem "Aparece no site
-    público". O teto de parcelas é dado de `platform_settings.billing`. Os
+    público". O teto de parcelas é dado de `platform_settings.billing` e só
+    vale com o real no Asaas. Os
     valores do seed são hipóteses.
 14. **Conferência.** `npm run preflight -- --stage open` sem `✘`, no arquivo
     local e no que a Vercel devolve.
@@ -445,23 +475,27 @@ ilustrações de terminal do site mostram comandos `npx flyee`. Antes do passo
       o ensaio enviasse rodaria nos jobs da produção. Sem elas o que é agendado
       não roda, e o ensaio não precisa disso.
 
-    No preview, compre o FlyeeClub em real pelo sandbox do Asaas e em dólar
-    com um cartão de teste do Stripe, veja o acesso chegar a `/inicio` pelo
-    webhook, reembolse e veja o acesso cair. Assine o FlyeeClub Pro e cancele.
-    Sem esta parte, a primeira compra em dólar é uma de verdade.
+    No preview, compre o FlyeeClub em real (pela Stripe de teste enquanto
+    `BILLING_BRL_PROVIDER=stripe`, uma vez no cartão e uma no Pix de teste; ou
+    pelo sandbox do Asaas) e em dólar com um cartão de teste da Stripe, veja o
+    acesso chegar a `/inicio` pelo webhook, reembolse e veja o acesso cair.
+    Assine o FlyeeClub Pro e cancele. Sem esta parte, a primeira compra é uma
+    de verdade. Com o real na Stripe, o Asaas de sandbox não é preciso.
 18. **Abrir.** No mesmo dia, nesta ordem:
     1. uma compra de verdade do FlyeeClub, com um CPF real, ainda na lista de
        espera: logado, em `/assinatura`. O checkout não depende do estágio, só
        os botões do site. A fatura abre, o pagamento volta para o painel,
        `/inicio` mostra o acesso e o recibo chega por e-mail. Reembolse pelo
-       painel do Asaas e confira que o acesso cai;
+       painel de quem cobrou (a Stripe, enquanto ela cobra o real) e confira
+       que o acesso cai;
     2. em `/admin/support`, "Lançamento do site" passa a "Aberto". Os botões do
        site deixam de levar à lista e passam a levar ao cadastro e ao checkout,
        e o passo da instalação, na home e em `/como-funciona`, passa a dar o
        endereço de `/instalar.md`. Confira os dois deslogado.
 19. **O primeiro dia.** `/admin/membros` para as contas novas e quem ficou sem
-    computador conectado; `/admin/metricas` para as portas de entrada; a fila de
-    webhooks do Asaas, que é interrompida depois de 15 falhas seguidas; as
+    computador conectado; `/admin/metricas` para as portas de entrada; os
+    webhooks da Stripe (_Developers → Webhooks_, as entregas com falha) e, com o
+    Asaas, a fila dele, que é interrompida depois de 15 falhas seguidas; as
     execuções no Inngest; os envios no Resend.
 
 ## E-mails e jobs

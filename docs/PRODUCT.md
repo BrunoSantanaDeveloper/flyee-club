@@ -44,7 +44,7 @@ Registradas ao transformar a base copiada do MedChina na plataforma do flyee.clu
 | --- | --- |
 | Base | Este repositório não tem mais vínculo com o template flyee. O escopo npm `@flyee/*` continua, porque flyee é a marca. |
 | Banco | Projeto Supabase novo, com um conjunto enxuto de migrações escrito do zero só com o que é genérico. |
-| Pagamento | Asaas para BRL e Stripe para USD, escolhidos pela moeda de cada compra. |
+| Pagamento | Asaas para BRL e Stripe para USD, escolhidos pela moeda de cada compra. *Revisado em 2026-10-12: a Stripe cobra também o real até o Asaas existir.* |
 | Site público | Completo desde já, bilíngue e indexado: português em `/`, inglês em `/en`, com textos provisórios. |
 | Marca | Nome flyee.club. Logo oficial entregue em 2026-10-01 (`apps/web/public/brand/`). Tipografia definida na mesma data: Londrina Solid nos títulos, JetBrains Mono em comandos e Mulish no texto. Paleta ainda provisória: o tema laranja do template, até a paleta do flyee.club virar tokens. A TT Chocolates, licenciada para o MedChina, saiu. |
 | "1 acesso" | Limite de dispositivos por degrau: kit 1, assinatura 3, Pro 5. |
@@ -52,7 +52,7 @@ Registradas ao transformar a base copiada do MedChina na plataforma do flyee.clu
 | Segmentos | Produto próprio, freelancer ou agência, profissional que usa IA todo dia, dev, e "outro" para quem não se encaixa. "Outro" não entra na regra de foco. *Revisado em 2026-10-06: os segmentos passaram a ser os perfis do site (negócio, agência, produto digital, dev e outro), migração `0028`.* |
 | Console de perguntas ao banco | `/admin/insights` continua, com uma chave de IA paga pelo operador. Não gasta crédito do integrante. |
 | Vídeos das aulas | YouTube não listado para todas as aulas, inclusive as avançadas. A plataforma só entrega o id do vídeo avançado a quem tem direito; um link repassado continua assistível, e esse risco está aceito. *Revisado em 2026-10-06: o guia passou a ser escrito, no pacote; o vídeo, quando há, é opcional e fica dentro do guia, com a mesma regra de acesso.* |
-| Nota fiscal | Emitida direto no Asaas. A plataforma não tem lógica fiscal. |
+| Nota fiscal | Emitida direto no Asaas. A plataforma não tem lógica fiscal. *Revisado em 2026-10-12: enquanto a Stripe cobra o real, a nota é emitida fora da plataforma.* |
 | Encontros | Por link externo (Zoom, Meet ou transmissão). O painel guarda o link e conta o clique em "entrar" como presença. |
 | Endereços em inglês | Traduzidos já na v1: `/en/pricing`, `/en/how-it-works`, `/en/catalog` e assim por diante. |
 | Termos de uso, privacidade e cookies | Considerados revisados. Entram como versão 1 nos dois idiomas, sem marca de provisório. |
@@ -210,7 +210,7 @@ Tomadas pelo dono do produto depois da análise do repositório do produto (`C:\
 
 ## Decisões tomadas 2026-10-12
 
-Tomada pelo dono do produto depois do roteiro da abertura (12.7 do plano). Onde uma linha anterior deste documento diz outra coisa, vale esta seção.
+Tomadas pelo dono do produto depois do roteiro da abertura (12.7 do plano). Onde uma linha anterior deste documento diz outra coisa, vale esta seção.
 
 **A frase da IA só com a loja aberta**
 
@@ -221,6 +221,16 @@ Tomada pelo dono do produto depois do roteiro da abertura (12.7 do plano). Onde 
 | Onde vale | Só no site público, pela regra `invitesToInstall` de `apps/web/src/lib/launch.ts`. Um texto público que cita a página tem um par para antes da abertura, e um teste cobra o par. |
 | O que não muda | `/instalar.md` continua respondendo, e o painel e o e-mail de boas-vindas continuam dando a frase: o ensaio da abertura usa os três com o site ainda na lista de espera. As ilustrações de terminal do site continuam mostrando comandos `npx flyee`, rotulados como o que a IA roda. |
 | O que sobra até a CLI ir para o npm | Quem cria conta pelo "Entrar" do site recebe a frase no painel e no e-mail, e quem digita um comando que viu numa ilustração roda a 0.7.9. A CLI 1.0.0 como `latest` no npm fecha os dois, e por isso ela vem antes do ensaio e da abertura (`docs/DEPLOY.md`, "Roteiro da abertura", passo 16). |
+
+**A Stripe cobra tudo até o Asaas existir**
+
+| Tema | Decisão |
+| --- | --- |
+| A decisão | Até o Asaas estar configurado, a Stripe cobra também em real, numa conta da Stripe Brasil; depois, só o dólar, como no desenho de 2026-09-30. A troca é a variável `BILLING_BRL_PROVIDER` (`stripe` agora; vazia ou `asaas` depois), sem mudar código (`docs/BILLING.md`, "Moeda e provedor"). |
+| O que o real perde na Stripe | O parcelamento no cartão, porque a Stripe não parcela no Brasil: a vitrine, `/settings/billing` e o FAQ de `/planos` deixam de citar parcelas. O Pix na nossa página: ele aparece na página da Stripe quando está ligado no painel dela, e só em compra única, porque assinatura com Pix não existe numa conta brasileira. A NFS-e automática: a nota é emitida fora da plataforma, e o recibo não promete nota. |
+| O que fica | O checkout em real continua pedindo CPF ou CNPJ (decidido na mesma data) e o guarda na conta de quem compra: é para ele que a nota sai, e a volta do Asaas encontra o dado pronto. |
+| Os termos | Versão nova dos termos de uso nos dois idiomas (migração `0041`): as compras são processadas pela Stripe ou pela Asaas, conforme a página de pagamento, e o parcelamento vale quando a página o oferece. O mesmo texto serve à volta do Asaas. |
+| A volta do Asaas | As compras novas em real passam ao Asaas no deploy que troca a variável. As assinaturas do FlyeeClub Pro vendidas em real pela Stripe seguem nela até acabarem, porque cada uma guarda o provedor que a cobra. |
 
 ## Mercado: onde está o vão
 

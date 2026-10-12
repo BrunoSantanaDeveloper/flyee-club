@@ -85,7 +85,7 @@ export async function notifyPlanActive(service: SupabaseClient, orgId: string, p
 export async function notifyAccessGranted(
   service: SupabaseClient,
   orgId: string,
-  purchase: { planId: string; grantId: string | null; amountCents: number; currency: string },
+  purchase: { planId: string; grantId: string | null; amountCents: number; currency: string; provider: string },
 ): Promise<void> {
   await quietly("access_granted", orgId, async () => {
     const plan = await planFacts(service, purchase.planId);
@@ -111,8 +111,9 @@ export async function notifyAccessGranted(
         planName: plan.name,
         amountLabel: moneyLabel(purchase.amountCents, purchase.currency, person.locale),
         untilLabel: expiresAt ? dateLabel(expiresAt, person.locale, person.timezone) : null,
-        // A purchase in reais gets its tax invoice from Asaas, in a separate e-mail.
-        fiscalNote: purchase.currency === "BRL",
+        // A purchase Asaas charged gets its tax invoice from Asaas, in a
+        // separate e-mail. Stripe issues none, so its receipt promises none.
+        fiscalNote: purchase.provider === "asaas",
         appUrl: memberUrl(HOME),
       });
     }

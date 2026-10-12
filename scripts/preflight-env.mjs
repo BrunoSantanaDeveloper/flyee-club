@@ -43,6 +43,7 @@ const KNOWN = new Set([
   "ASAAS_WEBHOOK_TOKEN",
   "ASAAS_BASE_URL",
   "BILLING_PIX_ENABLED",
+  "BILLING_BRL_PROVIDER",
   "NEXT_PUBLIC_META_PIXEL_ID",
   "NEXT_PUBLIC_GA4_ID",
   "GA4_API_SECRET",
@@ -577,7 +578,32 @@ export function inspect(
   // ---- Billing
   {
     const group = "Billing";
-    // BRL goes through Asaas, and FlyeeClub, the plan every button sells, is priced in BRL.
+    // BRL goes through Asaas unless BILLING_BRL_PROVIDER names Stripe (decided
+    // 2026-10-12: Stripe charges everything until Asaas is set up), and
+    // FlyeeClub, the plan every button sells, is priced in BRL. The rule is
+    // parseBrlProvider in packages/billing/src/currency.ts: empty is Asaas,
+    // anything but the two names closes the till in reais.
+    const brlValue = get("BILLING_BRL_PROVIDER").trim().toLowerCase();
+    const brlProvider = brlValue === "" ? "asaas" : brlValue === "asaas" || brlValue === "stripe" ? brlValue : null;
+    if (unread("BILLING_BRL_PROVIDER")) {
+      skip(group, "BILLING_BRL_PROVIDER", "which provider charges reais");
+    } else if (brlProvider === null) {
+      add(
+        "error",
+        group,
+        "BILLING_BRL_PROVIDER",
+        "neither asaas nor stripe: nothing priced in BRL can be bought, FlyeeClub included",
+      );
+    } else if (brlProvider === "stripe") {
+      add(
+        "note",
+        group,
+        "BILLING_BRL_PROVIDER",
+        "stripe: reais go through Stripe, with no card installments, PIX only if it is on in Stripe's dashboard, and the NFS-e issued outside the platform",
+      );
+    }
+    const brlOnStripe = brlProvider === "stripe";
+
     const asaas = get("ASAAS_API_KEY");
     const base = get("ASAAS_BASE_URL").replace(/\/+$/u, "");
     const liveBase = base === ASAAS_PRODUCTION;
@@ -586,12 +612,14 @@ export function inspect(
     const sandboxKey = asaas.startsWith("$aact_hmlg_");
     if (!has("ASAAS_API_KEY")) {
       add(
-        open ? "error" : "note",
+        open && !brlOnStripe ? "error" : "note",
         group,
         "ASAAS_API_KEY",
-        open
-          ? "missing: nothing priced in BRL can be bought, FlyeeClub included"
-          : "not set: nothing is on sale at this stage",
+        brlOnStripe
+          ? "not set: not needed while BILLING_BRL_PROVIDER=stripe"
+          : open
+            ? "missing: nothing priced in BRL can be bought, FlyeeClub included"
+            : "not set: nothing is on sale at this stage",
       );
     } else {
       if (!has("ASAAS_WEBHOOK_TOKEN")) {
@@ -705,14 +733,17 @@ export function inspect(
     }
 
     // USD goes through Stripe: the English site sells the same access in USD.
+    // With reais on Stripe too, it is the one provider the store has.
     const stripe = get("STRIPE_SECRET_KEY");
     if (!has("STRIPE_SECRET_KEY")) {
       add(
-        open ? "warning" : "note",
+        open ? (brlOnStripe ? "error" : "warning") : "note",
         group,
         "STRIPE_SECRET_KEY",
         open
-          ? "missing: nothing priced in USD can be bought, so /en sells nothing"
+          ? brlOnStripe
+            ? "missing: nothing can be bought, FlyeeClub in BRL included, while BILLING_BRL_PROVIDER=stripe"
+            : "missing: nothing priced in USD can be bought, so /en sells nothing"
           : "not set: nothing is on sale at this stage",
       );
     } else {
@@ -727,7 +758,7 @@ export function inspect(
           "error",
           group,
           "STRIPE_SECRET_KEY",
-          "a test key: a purchase in USD would grant the access and charge nothing",
+          "a test key: a purchase through Stripe would grant the access and charge nothing",
         );
       } else if (!production && live) {
         add("warning", group, "STRIPE_SECRET_KEY", "a live key in a preview: a test purchase there charges real money");

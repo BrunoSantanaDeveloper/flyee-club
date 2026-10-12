@@ -23,6 +23,11 @@ update public.profiles set is_superadmin = true where id = 'a2000000-0000-4000-8
 create temporary table results (name text primary key, payload jsonb);
 grant select, insert on results to authenticated;
 
+-- The version of the terms the migrations put in force, so that a later
+-- revision of the seeded text does not renumber this file.
+create temporary table seeded_terms as
+  select version from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active;
+
 -- ---------- What the legal pages read ----------
 
 select is(
@@ -64,8 +69,8 @@ reset role;
 
 select is(
   (select version from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active),
-  5,
-  'a revision is published as the next version (version 4 came with migration 0031)'
+  (select version + 1 from seeded_terms),
+  'a revision is published as the next version after the one the migrations put in force'
 );
 select is(
   (select count(*)::int from public.consent_terms where slug = 'terms' and locale = 'pt-BR' and is_active),
@@ -135,7 +140,7 @@ select is(
   (select array_agg(t.version order by t.version) from public.consent_acceptances a
    join public.consent_terms t on t.id = a.term_id
    where a.user_id = 'a2000000-0000-4000-8000-000000000001' and t.slug = 'terms'),
-  array[5, 6],
+  (select array[version + 1, version + 2] from seeded_terms),
   'a new version is a new acceptance, and the old one stays as history'
 );
 

@@ -16,8 +16,8 @@ import { campaignQuery, pickCampaignParams } from "@/lib/campaign-params";
 import { getGuaranteeDays } from "@/lib/guarantee";
 import { pendingPixCharge } from "@/lib/pending-pix";
 import { createClient } from "@flyee/auth/server";
-import { isPixAvailable } from "@flyee/billing";
-import { formatPrice } from "@flyee/billing/currency";
+import { isPixAvailable, routedProviderFor } from "@flyee/billing";
+import { choosesPaymentHere, formatPrice } from "@flyee/billing/currency";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("product");
@@ -36,8 +36,10 @@ const PENDING_KIT_WINDOW_MS = 24 * 60 * 60 * 1000;
  *
  * `?plan=<slug>` names what is bought; without it the door is the kit, in the
  * member's currency (`kit` in BRL, `kit-usd` in USD). The plan's currency
- * decides the provider and therefore the form: BRL asks for the CPF/CNPJ and
- * the payment method, USD continues to Stripe's own page (docs/BILLING.md).
+ * decides the provider and therefore the form: BRL asks for the CPF/CNPJ, and
+ * through Asaas also the payment method; Stripe (USD, and BRL while
+ * `BILLING_BRL_PROVIDER=stripe`) takes the method on its own page
+ * (docs/BILLING.md).
  */
 export default async function AssinaturaPage({
   searchParams,
@@ -66,11 +68,7 @@ export default async function AssinaturaPage({
     redirect(`/auth/sign-in?next=${encodeURIComponent(`/assinatura?plan=${requestedSlug}${campaignQuery(campaign)}`)}`);
   }
 
-  const [guaranteeDays, pixAvailable, maxInstallments] = await Promise.all([
-    getGuaranteeDays(),
-    isPixAvailable(),
-    getMaxInstallments(),
-  ]);
+  const [guaranteeDays, pixAvailable] = await Promise.all([getGuaranteeDays(), isPixAvailable()]);
 
   // One workspace per member, so the first membership is THE membership.
   const { data: membership } = await supabase
@@ -272,9 +270,14 @@ export default async function AssinaturaPage({
     );
   }
 
-  // Installments in BRL, on a card, for the one-time access or a yearly plan
-  // (the server re-applies the same rule, lib/payment-choice.ts).
-  const splittable = planCurrency === "BRL" && (oneTime || planRow.period === "yearly");
+  // The method and the installments are chosen here only when Asaas charges
+  // the purchase; Stripe's page takes the method itself.
+  const paymentHere = choosesPaymentHere(routedProviderFor(planCurrency));
+  // Installments on a card, for the one-time access or a yearly plan (the
+  // server re-applies the same rule, lib/payment-choice.ts); the ceiling is 1
+  // for a currency charged by Stripe.
+  const splittable = paymentHere && (oneTime || planRow.period === "yearly");
+  const maxInstallments = splittable ? await getMaxInstallments(planCurrency) : 1;
 
   return (
     <Shell wide>
@@ -293,8 +296,9 @@ export default async function AssinaturaPage({
         renewalFrom={renewalFrom}
         guaranteeDays={guaranteeDays}
         priceCents={Number(planRow.price_cents)}
-        maxInstallments={splittable ? maxInstallments : 1}
-        pixAvailable={planCurrency === "BRL" && pixAvailable}
+        paymentHere={paymentHere}
+        maxInstallments={maxInstallments}
+        pixAvailable={paymentHere && planCurrency === "BRL" && pixAvailable}
         campaign={campaign}
         // Only the owner or an admin may start a checkout; saying so up front
         // beats letting her fill a form the server will refuse.

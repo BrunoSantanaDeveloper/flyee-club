@@ -163,10 +163,16 @@ export class StripeProvider implements PaymentProvider {
     const events: BillingEvent[] = [];
 
     switch (event.type) {
-      case "checkout.session.completed": {
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
         const session = event.data.object;
         // One-off payments (an access plan / one-time bumps) have
         // no subscription and no invoice.paid — record the payment here.
+        // A card is paid when the session completes. A PIX (or a boleto)
+        // completes the session UNPAID and is confirmed later by
+        // `async_payment_succeeded`; without that event a paid PIX never
+        // granted its access. Both name the same payment intent, so the
+        // grant stays one per purchase.
         if (session.mode === "payment" && session.payment_status === "paid") {
           events.push({
             providerEventId: event.id,
@@ -175,8 +181,8 @@ export class StripeProvider implements PaymentProvider {
             metadata: (session.metadata ?? {}) as Partial<CheckoutMetadata>,
             providerInvoiceId: String(session.payment_intent ?? session.id),
             amountCents: session.amount_total ?? 0,
-            // Stripe always names it; the fallback is the only currency routed here.
-            currency: (session.currency ?? "usd").toUpperCase(),
+            // Stripe always names it: BRL or USD, since reais may go through Stripe too.
+            currency: (session.currency ?? "").toUpperCase(),
             paidAt: new Date(),
           });
         }

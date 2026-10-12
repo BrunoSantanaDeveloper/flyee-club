@@ -46,11 +46,12 @@ const ERROR_KEY: Record<string, string> = {
 /**
  * The whole purchase, in one submit (docs/BILLING.md).
  *
- * BRL goes through Asaas, which needs the payer's CPF or CNPJ and lets her
- * choose PIX or card (installments on a yearly plan): the document and the
- * payment are one gesture, and the button says where it goes. USD goes
- * through Stripe's own secure page, which collects the card itself, so the
- * only step here is the summary and one button.
+ * BRL needs the payer's CPF or CNPJ, whoever charges it. Through Asaas she
+ * also chooses PIX or card here (installments on the access or a yearly
+ * plan): the document and the payment are one gesture, and the button says
+ * where it goes. Stripe's own secure page collects the method itself (USD,
+ * and BRL while `BILLING_BRL_PROVIDER=stripe`), so through it the steps here
+ * are the details in reais, the summary and one button.
  */
 export default function CheckoutForm({
   orgId,
@@ -66,6 +67,7 @@ export default function CheckoutForm({
   switchingFrom,
   profile,
   priceCents,
+  paymentHere,
   maxInstallments,
   pixAvailable,
   campaign,
@@ -87,6 +89,8 @@ export default function CheckoutForm({
   profile: Profile;
   /** Drives the instalment labels; the server re-derives the real amount. */
   priceCents: number;
+  /** The method (and the installments) is chosen on this page: true only when Asaas charges it. */
+  paymentHere: boolean;
   /** The instalments this purchase may be split into (1 = none). */
   maxInstallments: number;
   /** False while the account cannot charge Pix, so it is never offered. */
@@ -128,8 +132,9 @@ export default function CheckoutForm({
     setWorking(true);
 
     if (brl) {
-      // Persist the fiscal data first: the provider refuses to create a
-      // customer without it, and Asaas issues the NFS-e from it.
+      // Persist the fiscal data first: Asaas refuses to create a customer
+      // without it and issues the NFS-e from it, and through Stripe it is
+      // what the invoice issued outside the platform is made out to.
       const supabase = createClient();
       const { data, error: saveError } = await supabase.rpc("update_billing_profile", {
         target_org: orgId,
@@ -154,8 +159,8 @@ export default function CheckoutForm({
       planId,
       idempotencyKey: operationKey,
       couponCode: coupon || null,
-      paymentMethod: brl ? payment.method : null,
-      installments: brl ? payment.installments : 1,
+      paymentMethod: paymentHere ? payment.method : null,
+      installments: paymentHere ? payment.installments : 1,
       campaign: campaign ?? null,
       // Back to the home of the member area, whichever way she paid.
       returnTo: "home",
@@ -211,7 +216,11 @@ export default function CheckoutForm({
           {oneTime ? t("checkout-title-kit") : t("checkout-title-subscription")}
         </Typography>
         <Typography variant="body2" className="text-text-secondary">
-          {brl ? t("checkout-subtitle-brl") : t("checkout-subtitle-usd")}
+          {!brl
+            ? t("checkout-subtitle-usd")
+            : paymentHere
+              ? t("checkout-subtitle-brl")
+              : t("checkout-subtitle-brl-stripe")}
         </Typography>
       </Box>
 
@@ -274,7 +283,7 @@ export default function CheckoutForm({
       )}
 
       <Box className="flex flex-col gap-3">
-        {brl && (
+        {paymentHere && (
           <>
             <Typography variant="subtitle2" className="text-text-secondary">
               {t("checkout-step-payment")}
@@ -336,7 +345,7 @@ export default function CheckoutForm({
       <Button variant="contained" size="large" onClick={() => void submit()} disabled={working}>
         {working
           ? t("checkout-submitting")
-          : !brl
+          : !paymentHere
             ? t("checkout-pay-stripe")
             : payment.method === "pix"
               ? t("checkout-pay-pix")

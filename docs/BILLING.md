@@ -5,11 +5,11 @@ Desenho vigente da cobrança do FlyeeClub, escrito na fase 4 de `docs/PLANO-IMPL
 ## Em uma tela
 
 - **Dois planos pagos**: FlyeeClub (`kit`: pagamento único, válido por 1 ano, renovado com uma nova compra) e FlyeeClub Pro (`club`: assinatura mensal ou anual). O Pro de antes (`pro-*`) saiu da vitrine na migração `0025`: inativo, invendável, mantido pelo histórico. Sem compra, a conta fica no Gratuito. Todo plano pago pode ser usado em projetos de clientes. Mentoria e consultoria são serviços sob demanda, não planos: o painel oferece e o formulário de contato recebe.
-- **A moeda escolhe o provedor**: real vai para o Asaas, dólar vai para a Stripe. Não existe chave de provedor.
+- **A moeda escolhe o provedor**: dólar vai para a Stripe; real vai para o Asaas, ou para a Stripe enquanto `BILLING_BRL_PROVIDER=stripe` (decidido em 2026-10-12: a Stripe cobra tudo até o Asaas estar configurado, e depois só o dólar). Essa variável é a única chave de provedor, e só move o real.
 - **Nada é liberado no checkout.** O acesso nasce no webhook do pagamento confirmado, de forma idempotente.
 - **Uma só resposta para "o que esta conta pode usar"**: a função `org_entitlements(org)`. Tela nenhuma decide pelo nome ou slug do plano.
 - **Preço travado**: a assinatura guarda o preço, a moeda e o cupom com que foi vendida. Mudar o preço do plano só afeta compras novas.
-- **Nota fiscal**: o Asaas emite a NFS-e das vendas em real. As vendas em dólar ficam fora dele (ver "Nota fiscal").
+- **Nota fiscal**: o Asaas emite a NFS-e das vendas em real que ele cobra. O que a Stripe cobra fica fora dele (ver "Nota fiscal").
 
 ## A escada
 
@@ -52,11 +52,12 @@ O kit é idempotente por compra: a chave `invoice_key = provedor:id_da_compra` i
 
 ## Moeda e provedor
 
-- **Roteamento**: `providerForCurrency` em `packages/billing/src/index.ts`. BRL vai para o Asaas e USD para a Stripe. Uma moeda cujo provedor não tem chave configurada não pode ser comprada: o checkout responde `currency_unavailable`.
+- **Roteamento**: `providerForCurrency` em `packages/billing/src/index.ts`. USD vai para a Stripe. BRL vai para o provedor que `BILLING_BRL_PROVIDER` nomeia (`parseBrlProvider` em `packages/billing/src/currency.ts`): vazio ou `asaas` é o Asaas, `stripe` é a Stripe, e qualquer outro valor tira o real de venda. Uma moeda cujo provedor não tem chave configurada não pode ser comprada: o checkout responde `currency_unavailable`. A falta da chave do Asaas nunca manda o real para a Stripe sozinha; só a variável faz isso.
+- **O que muda com o real na Stripe**: a página de pagamento é a da Stripe, que escolhe o método (o cartão, e o Pix quando está ligado no painel dela, só em compra única); não há parcelamento, porque a Stripe não parcela no Brasil; e não há NFS-e automática. As telas leem isso de `choosesPaymentHere` (`@flyee/billing/currency`): o checkout mostra a escolha de método e as parcelas só quando o Asaas cobra, e a vitrine, `/settings/billing` e o FAQ de `/planos` deixam de falar em parcelas (`getMaxInstallments(moeda)` responde 1).
 - **Moeda exibida ao visitante**: um link com `?moeda=BRL` ou `?moeda=USD` vence; o middleware guarda a escolha num cookie de um ano. Sem escolha, o idioma da página decide: português mostra real, inglês mostra dólar.
 - **Guarda no Asaas**: o provedor recusa qualquer plano que não seja BRL (`asaas_currency_unsupported`), para um preço em dólar nunca ser cobrado como o mesmo número em reais.
-- **Dados fiscais**: CPF ou CNPJ só são exigidos quando o provedor é o Asaas (`billing_profile_required`). Telefone e endereço são opcionais.
-- **Pix**: só em BRL, oferecido quando a conta Asaas tem chave Pix ativa. `BILLING_PIX_ENABLED=false` desliga o Pix na hora.
+- **Dados fiscais**: CPF ou CNPJ são exigidos em toda compra em real, seja quem for que cobre (`billing_profile_required`): o Asaas emite a NFS-e com eles, e com o real na Stripe é para eles que a nota emitida fora da plataforma sai. Ficam na conta (`organizations.billing_cpf_cnpj`). Telefone e endereço são opcionais.
+- **Pix**: só em BRL. Pelo Asaas, oferecido na nossa página quando a conta tem chave Pix ativa; `BILLING_PIX_ENABLED=false` desliga o Pix na hora. Pela Stripe, é um método da página dela, ligado ou não no painel, e confirma depois do checkout (`checkout.session.async_payment_succeeded`).
 
 ## Do clique ao acesso
 
@@ -66,7 +67,7 @@ O kit é idempotente por compra: a chave `invoice_key = provedor:id_da_compra` i
 4. O provedor cria a cobrança:
    - **FlyeeClub**: cobrança avulsa (Asaas `/payments`, à vista ou parcelada no cartão; Stripe Checkout em modo `payment`).
    - **FlyeeClub Pro**: assinatura no provedor (Asaas `/subscriptions`; Stripe Checkout em modo `subscription`).
-   - **Parcelado em real** (kit ou anual): uma cobrança parcelada no Asaas (ver "Parcelamento").
+   - **Parcelado em real** (kit ou anual, só com o real no Asaas): uma cobrança parcelada no Asaas (ver "Parcelamento").
 5. A operação fecha. Para o kit, só registra o link de pagamento. Para assinatura, grava a linha `incomplete` com o preço vendido, a moeda, o código do cupom e, no parcelado, a referência do parcelamento com `renews = false`.
 
 Respostas de erro do checkout: `coupon_invalid`, `currency_unavailable`, `billing_profile_required`, `offer_closed`, `pix_unavailable` e `unavailable`. Cada uma tem texto próprio na tela.
@@ -86,7 +87,7 @@ Cada evento do provedor vira um evento normalizado:
 | Asaas `PAYMENT_OVERDUE`, `PAYMENT_CREDIT_CARD_CAPTURE_REFUSED` | `payment_failed` |
 | Asaas `PAYMENT_REFUNDED`, `PAYMENT_PARTIALLY_REFUNDED`, `PAYMENT_CHARGEBACK_REQUESTED`, `PAYMENT_CHARGEBACK_DISPUTE` | `payment_reverted` |
 | Asaas `SUBSCRIPTION_DELETED` | `subscription_canceled` |
-| Stripe `checkout.session.completed` (modo `payment`, pago) | `payment_succeeded` |
+| Stripe `checkout.session.completed` (modo `payment`, pago) e `checkout.session.async_payment_succeeded` (o Pix ou o boleto confirmado depois do checkout) | `payment_succeeded`, uma concessão por payment intent |
 | Stripe `customer.subscription.created` e `.updated` | `subscription_activated` se ativa; `subscription_canceled` se `incomplete_expired`, `unpaid` ou `canceled` |
 | Stripe `customer.subscription.deleted` | `subscription_canceled` |
 | Stripe `invoice.paid` / `invoice.payment_failed` | `payment_succeeded` / `payment_failed` |
@@ -102,7 +103,7 @@ O que cada evento normalizado faz (`apps/web/src/app/api/webhooks/[provider]/rou
 
 Idempotência: cada entrega passa por `claim_billing_webhook_event` e `complete_billing_webhook_event`, com teto de tentativas. A rota processa até 6 segundos na resposta e continua o resto em `after()`. Uma reentrega durante o processamento recebe `event_in_progress` e é ignorada.
 
-Os eventos para assinar no painel de cada provedor são os da tabela acima. O passo a passo do Asaas está em `docs/ASAAS-GO-LIVE.md`.
+Os eventos para assinar no painel de cada provedor são os da tabela acima. O passo a passo está em `docs/DEPLOY.md`, "Roteiro da abertura", passos 11 (Asaas) e 12 (Stripe, com a versão de API do webhook, `2025-08-27.basil`, a da biblioteca `stripe` 18.5); o que cada item do Asaas custou quando faltou está em `docs/ASAAS-GO-LIVE.md`.
 
 ## Estados da assinatura
 
@@ -118,14 +119,14 @@ Durante a carência de `past_due` (`platform_settings.dunning.grace_days`, 7 dia
 
 ## Parcelamento
 
-- **Onde existe**: no kit e nos planos anuais, em real, só no cartão, até `platform_settings.billing.max_installments` (o Asaas aceita no máximo 12). Nunca num plano mensal (`lib/payment-choice.ts`).
+- **Onde existe**: no kit e nos planos anuais, em real cobrado pelo Asaas, só no cartão, até `platform_settings.billing.max_installments` (o Asaas aceita no máximo 12). Nunca num plano mensal, e nunca pela Stripe, que não parcela no Brasil (`lib/payment-choice.ts`).
 - **O que é**: o Asaas não parcela assinaturas. O anual parcelado é uma compra única dividida pela operadora do cartão, e não renova sozinha. A tela diz isso antes do pagamento. O kit parcelado é a mesma compra única de sempre, dividida em parcelas: o prazo de 1 ano conta da primeira parcela confirmada.
 - **Ativação**: o checkout guarda a referência do parcelamento em `subscriptions.provider_payment_id`, que toda parcela carrega no webhook. A primeira parcela paga ativa a linha por um período a partir do pagamento, com `cancel_at_period_end`.
 - **Uma venda, não doze**: o Asaas confirma todas as parcelas em segundos, em entregas paralelas. Só o handler que tira a linha de `incomplete` registra a venda: aviso, evento, atribuição e Purchase no Meta e no GA4, pelo valor total.
 - **Reembolso**: reembolsar a compra encerra o período na hora, porque não existe assinatura no provedor cujo cancelamento a encerraria depois.
 - **Fim do período**: o job de cancelamentos encerra a linha. O integrante compra de novo para continuar.
 
-Na vitrine, o card do FlyeeClub em reais mostra "ou em até Nx de R$ X no cartão", com N vindo de `platform_settings.billing.max_installments` e o valor da parcela calculado do preço já com cupom, como o Asaas divide: em centavos inteiros, com a sobra na última parcela (`lib/installments.ts`). O checkout oferece de 1x até N e mostra o valor da última parcela quando ela é diferente. Em dólar não há parcelamento, e a linha não aparece. O mesmo vale para `/settings/billing`.
+Com o real no Asaas, o card do FlyeeClub em reais, na vitrine, mostra "ou em até Nx de R$ X no cartão", com N vindo de `platform_settings.billing.max_installments` e o valor da parcela calculado do preço já com cupom, como o Asaas divide: em centavos inteiros, com a sobra na última parcela (`lib/installments.ts`). O checkout oferece de 1x até N e mostra o valor da última parcela quando ela é diferente. Em dólar não há parcelamento, e a linha não aparece. O mesmo vale para `/settings/billing`.
 
 ## Fim do kit e renovação
 
@@ -186,7 +187,8 @@ Os tokens da CLI só valem enquanto a conta tem `catalog_access`. Eles são revo
 
 ## Nota fiscal
 
-- **Vendas em real**: a NFS-e é emitida pelo próprio Asaas, configurado no painel dele para emitir a nota de cada cobrança confirmada. A plataforma não chama a API de notas. O recibo do kit avisa que a nota chega pelo Asaas.
+- **Vendas em real pelo Asaas**: a NFS-e é emitida pelo próprio Asaas, configurado no painel dele para emitir a nota de cada cobrança confirmada. A plataforma não chama a API de notas. O recibo do kit avisa que a nota chega pelo Asaas, e só quando o Asaas cobrou (`fiscalNote` em `lib/billing-notices.ts`).
+- **Vendas em real pela Stripe** (enquanto `BILLING_BRL_PROVIDER=stripe`): a Stripe não emite NFS-e. A nota é emitida fora da plataforma, com o CPF ou CNPJ que o checkout gravou na conta de quem comprou, e o recibo não promete nota.
 - **Vendas em dólar**: a Stripe não passa pelo Asaas, então nenhuma nota é emitida automaticamente. Como documentar essas vendas é decisão contábil pendente.
 - `invoices.fiscal_document_url` fica reservado para guardar o link da nota quando houver integração.
 
@@ -204,8 +206,9 @@ Os tokens da CLI só valem enquanto a conta tem `catalog_access`. Eles são revo
 | `platform_settings` | `billing` | teto de parcelas |
 | `platform_settings` | `guarantee` | prazo de garantia exibido |
 | `platform_settings` | `pix_provisional_access` | acesso provisório do Pix |
+| env | `BILLING_BRL_PROVIDER` | quem cobra o real: vazio ou `asaas`, ou `stripe` |
 | env | `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `ASAAS_BASE_URL` | Asaas (BRL) |
-| env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe (USD) |
+| env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe (USD, e BRL com `BILLING_BRL_PROVIDER=stripe`) |
 | env | `BILLING_PIX_ENABLED` | `false` desliga o Pix |
 
 Jobs no Inngest: liquidação de cancelamentos a cada 15 minutos, manutenção diária às 04:20 UTC (leases vencidos e checkouts abandonados) e, todo dia às 13:15 UTC, os avisos de fim de período pago e de fim do kit e a liquidação dos kits que terminaram.

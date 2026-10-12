@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { currencyForLocale, formatPrice, isBillingCurrency, providerNameForCurrency } from "./currency.ts";
+import {
+  choosesPaymentHere,
+  currencyForLocale,
+  formatPrice,
+  isBillingCurrency,
+  parseBrlProvider,
+  providerNameForCurrency,
+} from "./currency.ts";
 import { enabledFeatures, hasEntitlement, limitOf, tierOf } from "./entitlements.ts";
 
 describe("prices as people write them", () => {
@@ -27,6 +34,27 @@ describe("currency routing", () => {
     assert.equal(providerNameForCurrency("BRL"), "asaas");
     assert.equal(providerNameForCurrency("usd"), "stripe");
     assert.equal(providerNameForCurrency(" Usd "), "stripe");
+  });
+
+  it("sends reais to Stripe only when the deployment says so, and dollars stay on Stripe", () => {
+    assert.equal(providerNameForCurrency("BRL", "stripe"), "stripe");
+    assert.equal(providerNameForCurrency("USD", "stripe"), "stripe");
+    assert.equal(providerNameForCurrency("USD", "asaas"), "stripe");
+    assert.equal(providerNameForCurrency("BRL", null), null);
+  });
+
+  it("reads BILLING_BRL_PROVIDER, closing the till on a value that names no provider", () => {
+    assert.equal(parseBrlProvider(undefined), "asaas");
+    assert.equal(parseBrlProvider(" "), "asaas");
+    assert.equal(parseBrlProvider("Stripe"), "stripe");
+    assert.equal(parseBrlProvider("asaas"), "asaas");
+    assert.equal(parseBrlProvider("strype"), null);
+  });
+
+  it("chooses the method and the installments on our page only through Asaas", () => {
+    assert.equal(choosesPaymentHere("asaas"), true);
+    assert.equal(choosesPaymentHere("stripe"), false);
+    assert.equal(choosesPaymentHere(null), false);
   });
 
   it("sells in no other currency", () => {
@@ -68,6 +96,12 @@ describe("entitlements", () => {
 
   it("lists what a card shows, devices apart", () => {
     assert.deepEqual(enabledFeatures(kit), ["catalog_access"]);
-    assert.deepEqual(enabledFeatures(club), ["catalog_access", "advanced_lessons", "recipes", "roadmap_vote", "meetings"]);
+    assert.deepEqual(enabledFeatures(club), [
+      "catalog_access",
+      "advanced_lessons",
+      "recipes",
+      "roadmap_vote",
+      "meetings",
+    ]);
   });
 });

@@ -116,11 +116,12 @@ export async function validateCouponCode(
 /**
  * Whether plans in this currency can be sold in this deployment (its provider
  * is configured), and the most card installments the checkout offers in it
- * (reais only; 1 means none), so the plans read what the checkout will offer.
+ * (reais through Asaas only; 1 means none), so the plans read what the
+ * checkout will offer.
  */
 export async function checkoutAvailability(currency: string): Promise<{ available: boolean; maxInstallments: number }> {
   const available = providerForCurrency(currency) !== null;
-  const maxInstallments = available && currency.trim().toUpperCase() === "BRL" ? await getMaxInstallments() : 1;
+  const maxInstallments = available ? await getMaxInstallments(currency) : 1;
   return { available, maxInstallments };
 }
 
@@ -135,8 +136,9 @@ const CHECKOUT_RETURN = { onboarding: "/onboarding", billing: "/settings/billing
  * Starts a purchase: a subscription (club, Pro) or the one-time kit
  * (docs/BILLING.md).
  *
- * The plan's currency picks the provider (BRL Asaas, USD Stripe), and only
- * Asaas needs the payer's CPF/CNPJ. A subscription writes its pending row now,
+ * The plan's currency picks the provider (BRL Asaas, or Stripe while
+ * `BILLING_BRL_PROVIDER=stripe`; USD Stripe), and every purchase in reais
+ * needs the payer's CPF/CNPJ. A subscription writes its pending row now,
  * with the price, currency and coupon it was SOLD at (the snapshot that later
  * price edits never touch); the kit writes nothing but the operation, because
  * its right is granted by the webhook on the paid invoice, never here.
@@ -178,10 +180,9 @@ export async function startCheckout(input: {
       return { error: blocked };
     }
 
-    const [{ data: planRow }, { orgName, payer }, maxInstallments] = await Promise.all([
+    const [{ data: planRow }, { orgName, payer }] = await Promise.all([
       supabase.from("plans").select("*").eq("id", input.planId).eq("is_active", true).single(),
       loadPayer(supabase, input.orgId),
-      getMaxInstallments(),
     ]);
     if (!planRow || planRow.is_free || planRow.is_addon) {
       logBillingFailure("plan_not_purchasable", { orgId: input.orgId, planId: input.planId, found: Boolean(planRow) });
@@ -196,10 +197,12 @@ export async function startCheckout(input: {
       logBillingFailure("currency_unavailable", { orgId: input.orgId, currency: planRow.currency });
       return { error: "currency_unavailable" };
     }
-    // Asaas rejects a customer without cpfCnpj, so this would fail deep inside
-    // the provider call with a generic message. Named here, the UI can send
-    // her to the form that fixes it instead of "try again later".
-    if (provider === "asaas" && !payer.document) {
+    // Every purchase in reais carries the payer's CPF or CNPJ: Asaas rejects a
+    // customer without it (and issues the NFS-e from it), and with reais on
+    // Stripe it is what the invoice issued outside the platform is made out to
+    // (decided 2026-10-12). Named here, the UI can send her to the form that
+    // fixes it instead of "try again later".
+    if (planRow.currency === "BRL" && !payer.document) {
       logBillingFailure("missing_billing_document", { orgId: input.orgId });
       return { error: "billing_profile_required" };
     }
@@ -267,13 +270,13 @@ export async function startCheckout(input: {
     }
     activeClaim = { service, operationId: claim.operationId, claimToken: claim.claimToken };
 
-    const origin = await appOrigin();
+    const [origin, maxInstallments] = await Promise.all([appOrigin(), getMaxInstallments(planRow.currency)]);
     const choice = resolvePaymentChoice({
       planKind: planRow.kind,
       method: input.paymentMethod,
       installments: input.installments,
       planPeriod: planRow.period,
-      currency: planRow.currency,
+      provider,
       maxInstallments,
     });
     const returnPath = CHECKOUT_RETURN[input.returnTo ?? "billing"];
