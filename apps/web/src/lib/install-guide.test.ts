@@ -195,6 +195,38 @@ describe("the texts that send a member's AI to /instalar.md", () => {
     }
   });
 
+  it("on the public site, each has a twin for before the opening that names neither the page nor a command", async () => {
+    // The waitlist may be live before the installer is on npm (lib/launch.ts,
+    // `invitesToInstall`): a public text that names the page comes with the
+    // one the site shows until the store opens.
+    const names = (text: string) => /flyee\.club\/[\w/-]*\.md/.test(text);
+    for (const locale of ["pt-BR", "en"] as const) {
+      const twins: string[] = [];
+      const twin = (text: unknown, where: string) => {
+        expect(typeof text, where).toBe("string");
+        expect(text as string, where).not.toMatch(/\.md\b|npx /);
+        twins.push(where);
+      };
+      // The site's catalog: `<key>` and `<key>-waitlist`.
+      const marketing: Record<string, string> = CATALOGS[locale].marketing;
+      for (const [key, text] of Object.entries(marketing)) {
+        if (names(text)) twin(marketing[`${key}-waitlist`], `marketing.${key}-waitlist`);
+      }
+      // The home's copy: `<field>` and `<field>Waitlist` side by side.
+      const walk = (node: unknown, trail: string) => {
+        if (!node || typeof node !== "object") return;
+        const record = node as Record<string, unknown>;
+        for (const [key, value] of Object.entries(record)) {
+          if (typeof value === "string" && names(value)) twin(record[`${key}Waitlist`], `${trail}.${key}Waitlist`);
+          else walk(value, `${trail}.${key}`);
+        }
+      };
+      walk(await getHomeCopy(locale), "home");
+      // How it works and the home each name the page once.
+      expect(twins, locale).toEqual(["marketing.how-step-2-body-waitlist", "home.steps.items.1.bodyWaitlist"]);
+    }
+  });
+
   it("carry the page's address in every sentence a screen offers to copy", () => {
     for (const catalog of Object.values(CATALOGS)) {
       for (const key of ["ask-ai-install", "ask-ai-add", "ask-ai-add-recipe", "ask-ai-reconnect"] as const) {

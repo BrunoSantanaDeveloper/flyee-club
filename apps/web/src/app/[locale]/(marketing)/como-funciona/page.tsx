@@ -20,7 +20,7 @@ import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
 import NiKey from "@/icons/nexture/ni-key";
 import NiTerminal from "@/icons/nexture/ni-terminal";
 import { REFERENCE_COMMAND } from "@/lib/install-links";
-import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
+import { getLaunchStage, invitesToInstall, primaryCtaFor } from "@/lib/launch";
 import { publicPageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +55,9 @@ const STEP_COMMANDS = [
   REFERENCE_COMMAND.update,
 ] as const;
 
+/** The step whose text names /instalar.md once the store is open. */
+const INSTALL_STEP = 2;
+
 /**
  * /como-funciona (EN /how-it-works): how a member goes from an account to a
  * tool running in their AI, and the mechanisms behind it — the 30-day token,
@@ -63,13 +66,18 @@ const STEP_COMMANDS = [
  * opens the page; nothing here claims more than the platform does. The member
  * asks and their AI runs the commands (docs/PRODUCT.md, 2026-10-08): the
  * terminals show what the AI runs, the ones /instalar.md gives it
- * (`REFERENCE_COMMAND`), never a task for the visitor.
+ * (`REFERENCE_COMMAND`), never a task for the visitor. Until the store opens
+ * the install step says what the AI does without the page's address
+ * (`invitesToInstall`, docs/PRODUCT.md, 2026-10-12).
  */
 export default async function HowItWorksPage() {
   const [t, stage] = await Promise.all([getTranslations("marketing"), getLaunchStage()]);
   const cta = primaryCtaFor(stage);
   const isOpen = stage === "open";
   const primary = { label: t(cta.labelKey), href: cta.href };
+  // Read with a literal key: the catalog check does not see a key built inside t().
+  const installBodyBeforeOpening = t("how-step-2-body-waitlist");
+  const showsInstallAddress = invitesToInstall(stage);
 
   return (
     <>
@@ -130,7 +138,8 @@ export default async function HowItWorksPage() {
           return {
             kicker: t(`how-step-${index}-kicker`),
             title: t(`how-step-${index}-title`),
-            body: t(`how-step-${index}-body`),
+            body:
+              index === INSTALL_STEP && !showsInstallAddress ? installBodyBeforeOpening : t(`how-step-${index}-body`),
             deliverableLabel: t(command ? "how-step-command" : "how-step-where"),
             deliverableValue: command ?? t("how-step-1-value"),
             tone: STEP_TONES[index - 1],

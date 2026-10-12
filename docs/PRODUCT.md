@@ -208,6 +208,20 @@ Tomadas pelo dono do produto depois da análise do repositório do produto (`C:\
 | O que fica fora da página | O que só o FlyeeClub Pro tem, porque a página é pública, e a conta sem compra, de que as mensagens do próprio instalador falam. |
 | A copy da home | Os passos 2 e 3 de "Como funciona" e a resposta "Preciso saber programar?" deixam de mandar a pessoa ao terminal. A frase do brief "rode `npx flyee` e cole o token" não entra: o login é aprovado no navegador, sem token para colar. Pela mesma regra mudaram três frases que o plano não citava e que diziam "com um comando": o subtítulo da loja ("peça à sua IA para instalar"), o terceiro motivo de "Por que uma loja de apps" ("a sua IA instala a versão nova quando você pede") e a descrição da busca. A pergunta "Funciona no app do Claude ou do ChatGPT, sem terminal?" continua com a resposta "Ainda não". |
 
+## Decisões tomadas 2026-10-12
+
+Tomada pelo dono do produto depois do roteiro da abertura (12.7 do plano). Onde uma linha anterior deste documento diz outra coisa, vale esta seção.
+
+**A frase da IA só com a loja aberta**
+
+| Tema | Decisão |
+| --- | --- |
+| O problema | A home e `/como-funciona` diziam para pedir à IA a instalação por `flyee.club/instalar.md`, e a página manda rodar `npx --yes flyee@latest`. Em 2026-10-12 o `latest` do pacote `flyee` no npm era a 0.7.9, um agente de código de outro projeto do operador, e a CLI do FlyeeClub ainda não estava publicada. O roteiro exigia a CLI no npm antes de a lista de espera ir ao ar. |
+| A decisão | Opção 2 (2026-10-12): enquanto o estágio do site é "Lista de espera", a home e `/como-funciona` dizem o que a IA faz, sem dar o endereço da página. Com o estágio "Aberto", a frase com o endereço volta. Assim a lista de espera pode ir ao ar antes da CLI. |
+| Onde vale | Só no site público, pela regra `invitesToInstall` de `apps/web/src/lib/launch.ts`. Um texto público que cita a página tem um par para antes da abertura, e um teste cobra o par. |
+| O que não muda | `/instalar.md` continua respondendo, e o painel e o e-mail de boas-vindas continuam dando a frase: o ensaio da abertura usa os três com o site ainda na lista de espera. As ilustrações de terminal do site continuam mostrando comandos `npx flyee`, rotulados como o que a IA roda. |
+| O que sobra até a CLI ir para o npm | Quem cria conta pelo "Entrar" do site recebe a frase no painel e no e-mail, e quem digita um comando que viu numa ilustração roda a 0.7.9. A CLI 1.0.0 como `latest` no npm fecha os dois, e por isso ela vem antes do ensaio e da abertura (`docs/DEPLOY.md`, "Roteiro da abertura", passo 16). |
+
 ## Mercado: onde está o vão
 
 O concorrente mais próximo tem nome: o Ratos OS vende um `AGENTS.md` com pastas e skills para Claude Code, Codex e Hermes por R$ 97, com um ano de acesso e sem renovação automática. O vão que sobra é exatamente o seu modelo: ninguém vende a atualização contínua como produto, e ninguém entrega em mais de um idioma.

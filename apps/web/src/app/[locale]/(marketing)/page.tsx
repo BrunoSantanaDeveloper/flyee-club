@@ -40,7 +40,7 @@ import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
 import { accountServices, isNewApp, servicesPhrase } from "@/lib/catalog/store-badges";
 import { storeLook } from "@/lib/catalog/store-look";
-import { getLaunchStage, primaryCtaFor } from "@/lib/launch";
+import { getLaunchStage, invitesToInstall, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
 import { publicPageMetadata } from "@/lib/seo";
 import { trackAttributes } from "@/lib/site-events";
@@ -349,8 +349,10 @@ export default async function Home() {
         variant="mono"
         eyebrow={copy.steps.eyebrow}
         title={copy.steps.title}
-        steps={copy.steps.items.map((step, index) => ({
+        steps={copy.steps.items.map(({ bodyWaitlist, ...step }, index) => ({
           ...step,
+          // Before the opening the install step names no address to follow (lib/launch.ts).
+          body: invitesToInstall(stage) ? step.body : (bodyWaitlist ?? step.body),
           tone: (["accent-2", "accent-1", "accent-4"] as const)[index % 3],
         }))}
       />

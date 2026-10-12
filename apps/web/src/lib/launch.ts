@@ -51,3 +51,17 @@ export type NavCta = { labelKey: "cta-nav" | "cta-waitlist"; href: string };
 
 export const navCtaFor = (stage: LaunchStage): NavCta =>
   stage === "open" ? { labelKey: "cta-nav", href: "/planos" } : { labelKey: "cta-waitlist", href: "/espera" };
+
+/**
+ * Whether a public page tells the visitor what to paste into their AI to
+ * install, the sentence that names `/instalar.md` (decided 2026-10-12,
+ * docs/PRODUCT.md). Only once the store is open: the waitlist may go live
+ * before the installer is on npm, and until then that page would send an AI
+ * to run whatever the package name holds there. Before the opening a page
+ * says what the AI will do, with no address to follow.
+ *
+ * It is the public site's rule alone. `/instalar.md` itself, the member area
+ * and the welcome e-mail do not read the stage: the rehearsal of the opening
+ * (docs/DEPLOY.md) uses them while the site is still on the waitlist.
+ */
+export const invitesToInstall = (stage: LaunchStage): boolean => stage === "open";

@@ -368,6 +368,7 @@
     "how-step-2-kicker": "login",
     "how-step-2-title": "Conecte o computador",
     "how-step-2-body": "Peça à sua IA para instalar o flyee seguindo flyee.club/instalar.md. O navegador abre para você aprovar a conexão. Numa máquina sem navegador, você digita um código curto no painel.",
+    "how-step-2-body-waitlist": "Você pede à sua IA para instalar o flyee, e ela roda o instalador. O navegador abre para você aprovar a conexão. Numa máquina sem navegador, você digita um código curto no painel.",
     "how-step-3-kicker": "add",
     "how-step-3-title": "Instale o app",
     "how-step-3-body": "Peça o app pelo nome. Ele entra no harness e passa a valer no Claude Code, no Codex, no Gemini CLI ou no Cursor do projeto.",

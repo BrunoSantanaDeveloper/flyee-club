@@ -87,6 +87,8 @@ export const homeCopyPtBR = {
         kicker: "login",
         title: "Instale no seu Claude",
         body: "Peça à sua IA: instale o flyee seguindo flyee.club/instalar.md. Ela roda o instalador e você só aprova a conexão no navegador.",
+        // Until the store opens the page gives no address to follow (lib/launch.ts, `invitesToInstall`).
+        bodyWaitlist: "Você pede na conversa, a sua IA roda o instalador e você só aprova a conexão no navegador.",
       },
       {
         kicker: "add",

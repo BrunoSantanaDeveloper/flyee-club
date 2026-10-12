@@ -73,6 +73,8 @@ export const homeCopy: HomeCopy = {
         kicker: "login",
         title: "Install it in your Claude",
         body: "Ask your AI: install flyee by following flyee.club/en/install.md. It runs the installer and you only approve the connection in the browser.",
+        bodyWaitlist:
+          "You ask in the conversation, your AI runs the installer and you only approve the connection in the browser.",
       },
       {
         kicker: "add",

@@ -255,6 +255,25 @@ test("how it works, the app store and about render in both languages without rem
   }
 });
 
+test("before the opening, no public page gives the visitor's AI an address to install from", async ({ page }) => {
+  // No database in this run, so the site reads as on the waitlist (lib/launch.ts).
+  // The installer may not be on npm yet (docs/PRODUCT.md, 2026-10-12): the home
+  // and how it works say what the AI will do and name no page for it to follow.
+  for (const route of ["/", "/en", "/como-funciona", "/en/how-it-works"]) {
+    await page.goto(route);
+    await expect(page.locator("main"), route).not.toContainText(/flyee\.club\/[\w/-]*\.md/);
+  }
+  for (const [route, says] of [
+    ["/", "a sua IA roda o instalador"],
+    ["/en", "your AI runs the installer"],
+    ["/como-funciona", "ela roda o instalador"],
+    ["/en/how-it-works", "it runs the installer"],
+  ]) {
+    await page.goto(route);
+    await expect(page.locator("main"), route).toContainText(says);
+  }
+});
+
 test("the founders offer is gone: its addresses are no page of the site", async ({ request }) => {
   // FlyeeClub has no founders price (docs/PRODUCT.md, 2026-10-08). The page is
   // no longer a public address, so it answers like any unknown one.

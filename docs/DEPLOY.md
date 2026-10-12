@@ -183,10 +183,10 @@ Este roteiro substitui o antigo "Primeiro deploy". O andamento está em
 | Conta no Resend com o domínio verificado | todo e-mail, inclusive os de login | A |
 | App no Inngest | tudo que é agendado | A |
 | Razão social, CNPJ, cidade e UF | os termos identificam a operadora pelo rodapé | A |
-| A CLI 1.0.0 publicada no npm, do lado do produto | o site já manda a IA rodar `npx --yes flyee@latest` (passo 4, abaixo) | A |
 | Conta Asaas aprovada para produção | vender em real | B |
 | Conta Stripe | vender em dólar; sem ela o site em inglês não vende | B |
 | Os cinco pacotes `.zip` | vêm do repositório do produto | B |
+| A CLI 1.0.0 publicada no npm como `latest`, do lado do produto | `/instalar.md` manda a IA rodar `npx --yes flyee@latest`; tem de existir antes do ensaio (passo 16, abaixo) | B |
 | Preços conferidos | os de `plans` são hipóteses | B |
 | Um segundo projeto no Supabase, o sandbox do Asaas e o modo de teste do Stripe | o ensaio das compras sem dinheiro de verdade (passo 17, abaixo) | B |
 
@@ -268,6 +268,15 @@ um é um passo abaixo.
 
 ### Marco A: a lista de espera no ar
 
+A lista de espera não espera a CLI. Enquanto o estágio é "Lista de espera", a
+home e `/como-funciona` descrevem a instalação sem dar o endereço de
+`/instalar.md` (decisão de 2026-10-12, `docs/PRODUCT.md`). Duas coisas sobram
+até a CLI 1.0.0 ir para o npm (passo 16), porque até lá o `flyee@latest` é a
+0.7.9, um agente de código de outro projeto: quem cria conta pelo "Entrar" do
+site recebe a frase da instalação no painel e no e-mail de boas-vindas, e as
+ilustrações de terminal do site mostram comandos `npx flyee`. Antes do passo
+16, não divulgue `/instalar.md` nem convide ninguém a criar conta.
+
 1. **Variáveis locais.** Preencha o `apps/web/.env.local` com os valores do
    projeto novo, a partir do `apps/web/.env.example`. Toda chave que o
    `apps/web/.env` herdado define precisa aparecer no `.env.local`, vazia se
@@ -295,25 +304,17 @@ um é um passo abaixo.
    como _Config_. Confira com o `vercel env pull` e o `preflight --file` da
    seção acima. Não pode sobrar `✘`, e cada `?` tem de ser uma chave que você já
    conferiu no arquivo local.
-4. **A CLI no npm, antes do domínio.** A home e `/como-funciona` dizem para
-   pedir à IA a instalação por `flyee.club/instalar.md`, e essa página manda
-   rodar `npx --yes flyee@latest`. Em 2026-10-08 o `latest` do pacote `flyee`
-   no npm era a 0.7.9, de outro projeto: uma IA que seguisse a página rodaria
-   esse código. A CLI 1.0.0 vai para o npm do lado do produto, e
-   `npm view flyee dist-tags` tem de mostrar a 1.0.0 como `latest` antes de o
-   domínio apontar para o site. Com a loja fechada e o catálogo vazio, quem
-   rodar a CLI só conecta uma conta.
-5. **Domínio.** `flyee.club` na Vercel e no registrador ("Domínio"), e o mesmo
+4. **Domínio.** `flyee.club` na Vercel e no registrador ("Domínio"), e o mesmo
    domínio verificado no Resend antes de definir `EMAIL_FROM`.
-6. **Deploy.** Rode o workflow `Deploy` ou faça o push na `main`. As variáveis
+5. **Deploy.** Rode o workflow `Deploy` ou faça o push na `main`. As variáveis
    `NEXT_PUBLIC_` entram no build: mudou uma, faça outro deploy.
-7. **Login.** No Supabase, em Authentication: o Site URL e as Redirect URLs
+6. **Login.** No Supabase, em Authentication: o Site URL e as Redirect URLs
    (`https://flyee.club/auth/callback` e `https://flyee.club/**`), o SMTP do
    Resend, "Confirm email" ligado e os três modelos de e-mail ("E-mails de
    autenticação", abaixo).
-8. **Jobs.** No Inngest, sincronize o app em `https://flyee.club/api/inngest`.
+7. **Jobs.** No Inngest, sincronize o app em `https://flyee.club/api/inngest`.
    As funções da tabela de "Jobs" devem aparecer.
-9. **Sua conta de operador.** Crie a conta em `/auth/sign-up` e promova-a no SQL
+8. **Sua conta de operador.** Crie a conta em `/auth/sign-up` e promova-a no SQL
    Editor do Supabase. A sessão do editor não tem JWT, e a trava de superadmin
    permite:
 
@@ -322,23 +323,22 @@ um é um passo abaixo.
    where id = (select id from auth.users where email = 'seu@email');
    ```
 
-10. **Empresa, estágio e versão mínima.** Em `/admin/support`, preencha "Razão
-    social", "CNPJ" e "Cidade e UF". Os termos de uso e a política de
-    privacidade identificam a operadora pelo rodapé, então isso precisa estar
-    no ar antes de divulgar qualquer página. Deixe "Lançamento do site" em
-    "Lista de espera". Em `/admin/catalogo`, aba "Entrega", "Versão mínima da
-    CLI atendida" passa de `0.1.0` a `1.0.0`: a linha 0.x do pacote `flyee` é
-    de outro projeto e não fala este contrato.
-11. **Prova.** Inscreva o seu e-mail em `/espera`, abra o link que chega,
+9. **Empresa e estágio.** Em `/admin/support`, preencha "Razão social", "CNPJ" e
+   "Cidade e UF". Os termos de uso e a política de privacidade identificam a
+   operadora pelo rodapé, então isso precisa estar no ar antes de divulgar
+   qualquer página. Deixe "Lançamento do site" em "Lista de espera".
+10. **Prova.** Inscreva o seu e-mail em `/espera`, abra o link que chega,
     confirme no botão e veja "Pronto, você está na lista". Repita em
     `/en/waitlist`. Confira `/legal/termos` com a versão e a data, a empresa no
     rodapé, e `/sitemap.xml` com `/espera` e `/en/waitlist`. A inscrição aparece
     em `/admin/leads`. Busque `https://flyee.club/instalar.md`: a frase do
-    primeiro parágrafo tem de terminar com esse mesmo endereço.
+    primeiro parágrafo tem de terminar com esse mesmo endereço. Na home e em
+    `/como-funciona`, o passo da instalação não cita esse endereço enquanto o
+    estágio for "Lista de espera".
 
 ### Marco B: a loja aberta
 
-12. **Cobrança em real.** Na conta Asaas de **produção**:
+11. **Cobrança em real.** Na conta Asaas de **produção**:
     - gere a chave de produção, que começa com `$aact_prod_`;
     - cadastre `flyee.club` em _Minha Conta → Informações_. Sem um site
       cadastrado, quem paga não é devolvido ao painel;
@@ -354,7 +354,7 @@ um é um passo abaixo.
     chave de produção e o endereço vazio, toda cobrança é recusada. O
     `docs/ASAAS-GO-LIVE.md` guarda o que cada um desses itens custou quando
     faltou; os nomes e valores dele são do MedChina.
-13. **Cobrança em dólar**, se for vender em inglês. No Stripe, o webhook em
+12. **Cobrança em dólar**, se for vender em inglês. No Stripe, o webhook em
     `https://flyee.club/api/webhooks/stripe` com `checkout.session.completed`,
     `customer.subscription.created`, `customer.subscription.updated`,
     `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`,
@@ -362,13 +362,13 @@ um é um passo abaixo.
     `STRIPE_SECRET_KEY` (a de produção, `sk_live_`) e `STRIPE_WEBHOOK_SECRET`.
     Sem o Stripe, os planos em dólar não ficam à venda e `/en` não vende nada:
     é uma decisão, não um erro.
-14. **Preços.** Em `/admin/billing`, aba "Planos", confira o preço do FlyeeClub
+13. **Preços.** Em `/admin/billing`, aba "Planos", confira o preço do FlyeeClub
     em real e em dólar, o prazo de acesso e que só ele tem "Aparece no site
     público". O teto de parcelas é dado de `platform_settings.billing`. Os
     valores do seed são hipóteses.
-15. **Conferência.** `npm run preflight -- --stage open` sem `✘`, no arquivo
+14. **Conferência.** `npm run preflight -- --stage open` sem `✘`, no arquivo
     local e no que a Vercel devolve.
-16. **Catálogo.** Em `/admin/catalogo`:
+15. **Catálogo.** Em `/admin/catalogo`:
     - aba "Categorias da loja": as cinco do brief já vêm do banco (Vender,
       Divulgar, Vídeo, Pesquisa, Construir);
     - aba "Ferramentas": cadastre os quatro apps. Em cada um, o slug (é o nome
@@ -384,10 +384,18 @@ um é um passo abaixo.
       fica como a de entrada e a 1.1.0 como a completa. Nos três apps que só têm
       a 1.0.0, a marca entrega o app inteiro a quem não comprou. Se não é isso
       que você quer, use "Tirar a marca de entrada" neles. Vale desde a
-      publicação, mesmo com o site na lista de espera: quem seguir
-      `/instalar.md` cria a conta e instala a versão marcada.
+      publicação, mesmo com o site na lista de espera: com a CLI no npm (passo
+      16), quem seguir `/instalar.md` cria a conta e instala a versão marcada.
 
     Confira `/catalogo` e `/en/catalog` deslogado, e `/modulos` logado.
+16. **A CLI no npm e a versão mínima.** `/instalar.md`, o painel e o e-mail de
+    boas-vindas mandam a IA rodar `npx --yes flyee@latest`. Em 2026-10-12 o
+    `latest` do pacote `flyee` no npm era a 0.7.9, de outro projeto: uma IA que
+    seguisse a página rodaria esse código. A CLI 1.0.0 vai para o npm do lado
+    do produto, e `npm view flyee dist-tags` tem de mostrar a 1.0.0 como
+    `latest` antes do ensaio. Depois, em `/admin/catalogo`, aba "Entrega",
+    "Versão mínima da CLI atendida" passa de `0.1.0` a `1.0.0`: a linha 0.x não
+    fala este contrato.
 17. **Ensaio.** Antes de abrir, sem dinheiro de verdade, em duas partes.
 
     **A CLI e a IA, na produção.** O site continua na lista de espera, e nada
@@ -448,8 +456,9 @@ um é um passo abaixo.
        `/inicio` mostra o acesso e o recibo chega por e-mail. Reembolse pelo
        painel do Asaas e confira que o acesso cai;
     2. em `/admin/support`, "Lançamento do site" passa a "Aberto". Os botões do
-       site deixam de levar à lista e passam a levar ao cadastro e ao checkout.
-       Confira um deles deslogado.
+       site deixam de levar à lista e passam a levar ao cadastro e ao checkout,
+       e o passo da instalação, na home e em `/como-funciona`, passa a dar o
+       endereço de `/instalar.md`. Confira os dois deslogado.
 19. **O primeiro dia.** `/admin/membros` para as contas novas e quem ficou sem
     computador conectado; `/admin/metricas` para as portas de entrada; a fila de
     webhooks do Asaas, que é interrompida depois de 15 falhas seguidas; as
