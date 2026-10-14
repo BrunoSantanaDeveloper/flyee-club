@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { finalizeVersionUpload, requireSuperadmin, uploadLimitBytes } from "@/lib/catalog/upload";
+import { consoleActor, finalizeVersionUpload, readVersionRequest, requireSuperadmin } from "@/lib/catalog/upload";
 import { createServiceClient } from "@flyee/auth/service";
 
 /**
@@ -14,7 +14,8 @@ import { createServiceClient } from "@flyee/auth/service";
  *    (scripts and tests; bound by the platform's request size limit).
  *
  * Answers 422 with every problem found in the package, 409 when the version
- * already exists, and 201 with the checksum the catalog will publish.
+ * already exists, and 201 with the checksum the catalog will publish. The
+ * product's CI uses the same steps at /api/service/catalog/versions.
  */
 export async function POST(request: Request) {
   const session = await requireSuperadmin();
@@ -27,37 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
 
-  const contentType = request.headers.get("content-type") ?? "";
-  let moduleSlug = "";
-  let stagingPath: string | undefined;
-  let bytes: Uint8Array | undefined;
+  const read = await readVersionRequest(request);
+  if (!read.ok) return NextResponse.json({ error: read.error }, { status: read.status });
 
-  if (contentType.includes("multipart/form-data")) {
-    const declared = Number(request.headers.get("content-length") ?? 0);
-    if (declared > uploadLimitBytes() + 1024 * 1024) {
-      return NextResponse.json({ error: "package_too_large" }, { status: 413 });
-    }
-    let form: FormData;
-    try {
-      form = await request.formData();
-    } catch {
-      return NextResponse.json({ error: "invalid_request" }, { status: 400 });
-    }
-    moduleSlug = String(form.get("module") ?? "");
-    const file = form.get("file");
-    if (file instanceof File) bytes = new Uint8Array(await file.arrayBuffer());
-  } else {
-    let body: { module?: unknown; staging_path?: unknown };
-    try {
-      body = (await request.json()) as typeof body;
-    } catch {
-      return NextResponse.json({ error: "invalid_request" }, { status: 400 });
-    }
-    moduleSlug = typeof body.module === "string" ? body.module : "";
-    stagingPath = typeof body.staging_path === "string" ? body.staging_path : undefined;
-  }
-
-  const result = await finalizeVersionUpload(service, session, { moduleSlug, bytes, stagingPath });
+  const result = await finalizeVersionUpload(service, consoleActor(session), read.input);
   if (!result.ok) {
     return NextResponse.json(
       { error: result.error, ...(result.errors ? { errors: result.errors } : {}) },

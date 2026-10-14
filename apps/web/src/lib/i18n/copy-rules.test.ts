@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import { type CopyRule as Rule, DASH, EMOJI, EXCLAMATION, FREE, PRO, WORDS } from "@/lib/i18n/copy-rules";
 import en from "@flyee/content/messages/en.json";
 import ptBR from "@flyee/content/messages/pt-BR.json";
 
@@ -30,19 +31,7 @@ import ptBR from "@flyee/content/messages/pt-BR.json";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const fromRoot = (...segments: string[]) => path.join(ROOT, ...segments);
 
-type Rule = { name: string; test: (text: string) => boolean };
-
-const DASH: Rule = { name: "dash", test: (text) => /[–—]/u.test(text) };
-// The brief keeps © and → on purpose; neither reads as an emoji.
-const EMOJI: Rule = { name: "emoji", test: (text) => /(?![©→])\p{Extended_Pictographic}/u.test(text) };
-const EXCLAMATION: Rule = { name: "exclamation mark", test: (text) => text.includes("!") };
-const WORDS: Rule = {
-  name: "banned word",
-  test: (text) =>
-    /(?<![\p{L}\p{N}])(?:desbloque|potencializ|sem esforço|soluç(?:ão|ões) inovadora|unlock|elevat|empower|seamless|robust|supercharg|game-changing|it['’]s not just)/iu.test(
-      text,
-    ),
-};
+// The rules themselves live in lib/i18n/copy-rules.ts, which the catalog import also runs.
 const ALL_RULES = [DASH, EXCLAMATION, EMOJI, WORDS];
 
 const breaksOf = (text: string, rules: Rule[]) => rules.filter((rule) => rule.test(text)).map((rule) => rule.name);
@@ -184,14 +173,9 @@ describe("copy rules: no dash, exclamation mark, emoji or banned word in what pe
  * announces or names a free plan, a free account or a free sample. The account
  * with no purchase is reached through content and described by what it is
  * ("sem acesso à loja", "app de entrada"), never as a plan with a name. The
- * operator console is out: there the flag is called what it is.
+ * operator console is out: there the flag is called what it is. The rule is
+ * FREE in lib/i18n/copy-rules.ts.
  */
-const FREE: Rule = {
-  name: "free",
-  test: (text) =>
-    // "sem custo extra" stays: the brief says it of the apps that join an access already paid for.
-    /(?<![\p{L}\p{N}])(?:gr[aá]tis|gratuit|free(?![\p{L}\p{N}])|sem custo(?! extra)|no cost|at no charge)/iu.test(text),
-};
 
 /** The one place the word is true and allowed: the waiting list itself costs nothing. */
 const FREE_ALLOWED = new Set(["marketing.waitlist-faq-1-answer"]);
@@ -270,12 +254,8 @@ describe("the free rung is never offered: no free plan, account or sample in wha
  * names FlyeeClub Pro, or the "flyeeClub completo" of the home brief; the
  * member area offers it on the click of one of its features. The legal texts
  * (consent_terms, in the database) still describe both plans: they are the
- * contract, not an advertisement.
+ * contract, not an advertisement. The rule is PRO in lib/i18n/copy-rules.ts.
  */
-const PRO: Rule = {
-  name: "FlyeeClub Pro",
-  test: (text) => /\bPro\b/.test(text) || /flyee\s?club\s+complet/i.test(text),
-};
 
 const PUBLIC_SITE_CODE = [
   "apps/web/src/app/[locale]",

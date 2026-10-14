@@ -75,6 +75,23 @@ describe("middleware: locale routing of the public site", () => {
     expect(pathOf(prefixed.headers.get("location"))).toBe("/auth/sign-in");
   });
 
+  it("lets the product's CI reach the catalog service routes without a session", async () => {
+    // Each route checks the service token itself (lib/catalog/service-token.ts).
+    for (const path of [
+      "/api/service/catalog/import",
+      "/api/service/catalog/uploads",
+      "/api/service/catalog/versions",
+    ]) {
+      expect(
+        (await middleware(request(path, { accept: "application/json" }))).headers.get("location"),
+        path,
+      ).toBeNull();
+    }
+    // The prefix is the folder, not any address that starts with the word.
+    const lookalike = await middleware(request("/api/services-status", { accept: "application/json" }));
+    expect(lookalike.headers.get("location")).not.toBeNull();
+  });
+
   it("carries the refreshed session into the rewritten request and the response", async () => {
     session.refreshes = true;
     const response = await middleware(request("/en/pricing", { ...DOCUMENT, cookie: "sb-test-auth-token=stale" }));

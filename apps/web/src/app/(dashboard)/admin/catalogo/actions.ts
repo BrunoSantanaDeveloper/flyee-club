@@ -130,7 +130,9 @@ export async function saveModule(input: ModuleInput): Promise<CatalogActionResul
     icon: icon || null,
     name,
     summary: localized(input.summary, 280, false) ?? {},
-    description_md: localized(input.descriptionMd, 8000, false) ?? {},
+    // The same ceiling as the product's import (lib/catalog/index-import.ts): a README that came in
+    // whole must not be cut the first time the operator saves the form.
+    description_md: localized(input.descriptionMd, 20_000, false) ?? {},
     compatible_ais: compatibleAis,
     external_credentials: credentials,
     entitlement_key: entitlementKey,

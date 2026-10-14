@@ -51,6 +51,9 @@ const PUBLIC_PREFIXES = [
   // The CLI delivery API authenticates every call with its own bearer token
   // (lib/cli/gates.ts); a cookie session means nothing there.
   "/api/cli",
+  // The product's CI sends apps with the service token (FLYEE_SERVICE_TOKEN,
+  // lib/catalog/service-token.ts), checked by each route; it has no session.
+  "/api/service/",
   // Endpoints a person reaches from an e-mail, with no account or signed out:
   // each carries its own token (the unsubscribe link, lib/unsubscribe.ts). The
   // trailing slash is part of the rule: `/api/publicity` is not this folder.

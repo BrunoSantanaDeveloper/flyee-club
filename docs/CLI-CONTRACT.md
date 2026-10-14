@@ -421,7 +421,7 @@ Duas páginas fora da API, sem sessão e fora do índice dos buscadores.
 
 Decididas em 2026-10-06 (`docs/PRODUCT.md`, "Decisões tomadas 2026-10-06"; `docs/PLANO-IMPLEMENTACAO.md`, fases 9 e 10). Nenhuma está no ar: a CLI não deve depender delas até cada item ser movido para o corpo deste contrato. Todas são compatíveis com a v1, porque só acrescentam campos e recusas que a CLI já sabe tratar.
 
-Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Os canais, com `newest` e `entitled` por versão, entraram no corpo no mesmo dia (12.5: seções 4.3, 4.4 e 4.5), e `/instalar.md` também (12.6: seção 8.2). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura.
+Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Os canais, com `newest` e `entitled` por versão, entraram no corpo no mesmo dia (12.5: seções 4.3, 4.4 e 4.5), e `/instalar.md` também (12.6: seção 8.2). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura. O token de serviço e a importação do índice (fase 10.2) entraram no corpo em 2026-10-14, na seção 10.
 
 | Onde | Mudança |
 |---|---|
@@ -431,3 +431,83 @@ Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `a
 | 6. Manifesto | `manifest_version: 2` acrescenta `automation`, `requires` e `example_prompt`; a v1 continua aceita; o JSON Schema de 4.8 publica as duas versões (fase 10.1). |
 | Porta MCP | Servidor MCP remoto em `/api/mcp`, só leitura, atrás do mesmo servidor OAuth e das mesmas barreiras: catálogo, guia de um app, novidades, estado da conta e instruções de instalação (fase 10.5). O servidor MCP local da CLI fica fora deste contrato. |
 | 7. Guias no pacote | Sem mudança no contrato, registrado aqui porque os pacotes de 2026-10-08 não o seguem: a página do app lê só os quatro caminhos da seção 7 (`guides/pt-BR/usar.md`, `guides/pt-BR/abrir-o-capo.md`, `guides/en/usar.md` e `guides/en/abrir-o-capo.md`). Um pacote que traga só `README.md` é aceito e fica sem guia na página. |
+
+## 10. Envio de apps pela CI do produto (token de serviço)
+
+Servido desde 2026-10-14 (fase 10.2 do plano). A CI do repositório do produto cria e atualiza os apps e envia as versões como rascunho, sem uma pessoa logada. Publicar continua sendo um clique do operador em `/admin/catalogo`: nada desta seção publica, retira ou arquiva uma versão ou um app.
+
+**Autenticação.** Um segredo só, com o mesmo nome dos dois lados: `FLYEE_SERVICE_TOKEN`, nas variáveis da Vercel da plataforma e nos segredos do GitHub do produto. Pelo menos 32 caracteres; gere com `openssl rand -hex 32`. Cada chamada leva `Authorization: Bearer <token>`. Sem o token configurado na plataforma, ou com um mais curto que 32 caracteres, as três rotas respondem `503 service_token_not_configured`. Toda escrita grava um evento de auditoria sem autor, com `via: "service_token"`.
+
+### 10.1 `POST /api/service/catalog/import`
+
+Corpo: o `dist/index.json` que o `npm run index` do produto escreve, `{ "generated_at": …, "apps": [ … ] }`, até 200 apps e 2 MB. Cada app cria o módulo, se ele não existe, ou o atualiza.
+
+| Campo do índice | No catálogo | Quando |
+|---|---|---|
+| `slug` | o endereço do app | identifica; nunca muda |
+| `title` | o nome, por idioma | a cada importação; um idioma ausente no índice mantém o texto do catálogo |
+| `summary` | o resumo, por idioma | a cada importação, com a mesma regra |
+| `trail`, `type` | a etapa e o tipo | a cada importação; a etapa precisa existir no catálogo |
+| `compatible_ais`, `external_credentials` | as IAs testadas e as chaves | a cada importação |
+| `description_md` | a descrição em português | só quando o app ainda não tem uma; sai sem o `# Título` do topo, que a página já mostra |
+| `version`, `sha256`, `size_bytes`, `package`, `permissions`, `lessons`, `changelog`, `license` | nada | chegam com o pacote, em 10.3 |
+
+O que a importação nunca escreve: a categoria da loja, os perfis, o ícone, a ordem, a chave de acesso, o estado do app e o estado e a marca de entrada de cada versão. Isso é do console.
+
+Todo texto que a loja mostra passa pela regra de texto da plataforma (sem travessão, sem ponto de exclamação, sem emoji, sem as palavras proibidas, sem "grátis" ou "free" e sem o nome do FlyeeClub Pro). Um nome que quebra a regra recusa o app. Um resumo ou uma descrição que quebra fica de fora, com um aviso, e o operador escreve no console.
+
+Resposta `200`, uma linha por app, mais a contagem:
+
+```json
+{
+  "apps": [
+    { "slug": "video-render", "result": "created" },
+    { "slug": "youtube-research", "result": "updated", "fields": ["summary"], "warnings": ["description_md: breaks the copy rules (free), left out"] },
+    { "slug": "motion-carousel", "result": "unchanged" },
+    { "slug": "Bad_Slug", "result": "refused", "errors": ["slug: lowercase letters, digits and hyphens, 2 to 60"] }
+  ],
+  "summary": { "created": 1, "updated": 1, "unchanged": 1, "refused": 1 }
+}
+```
+
+Um app recusado não impede os outros. Um arquivo que não é um índice responde `422 invalid_index`, e nada é escrito.
+
+### 10.2 `POST /api/service/catalog/uploads`
+
+Sem corpo. Responde `{ staging_path, signed_url, token, max_bytes }`: um endereço assinado para mandar o ZIP a um armazenamento privado de passagem, igual ao que o console usa. Envie o arquivo com `PUT` no `signed_url`, com `Content-Type: application/zip`. O limite é `max_bytes`, de `MODULE_UPLOAD_MAX_MB`.
+
+### 10.3 `POST /api/service/catalog/versions`
+
+Corpo JSON `{ "module": "<slug>", "staging_path": "<o de 10.2>" }`. A plataforma lê o pacote, faz a mesma inspeção do console (seção 7), confere `name`, `trail` e `type` contra o módulo, recalcula o SHA-256 e grava a versão como rascunho, com os guias que o pacote traz. Um pacote pequeno, até o limite de corpo da Vercel (4,5 MB), também pode ir direto, em multipart, com `module` e `file`.
+
+| Resposta | O que quer dizer |
+|---|---|
+| `201 { version }` | rascunho criado; `version.sha256` tem de ser igual ao que o `pack` imprimiu |
+| `404 module_not_found` | o app não existe: rode a importação de 10.1 antes |
+| `409 version_exists` | essa versão já está no catálogo; uma nova execução da CI é inofensiva |
+| `422 invalid_package` ou `manifest_mismatch` | `errors` lista cada problema do pacote |
+| `401` ou `503` | o token (veja o começo desta seção) |
+
+### 10.4 A ordem numa tag `<slug>@<versão>`
+
+```bash
+set -euo pipefail
+base="https://flyee.club"
+auth="Authorization: Bearer ${FLYEE_SERVICE_TOKEN}"
+zip="dist/modules/${slug}-${version}.zip"
+
+npm run index
+curl -fsS -X POST "$base/api/service/catalog/import" -H "$auth" \
+  -H "Content-Type: application/json" --data-binary @dist/index.json
+
+slot="$(curl -fsS -X POST "$base/api/service/catalog/uploads" -H "$auth")"
+curl -fsS -X PUT "$(jq -r .signed_url <<<"$slot")" \
+  -H "Content-Type: application/zip" --data-binary @"$zip"
+
+status="$(curl -sS -o finalize.json -w '%{http_code}' -X POST "$base/api/service/catalog/versions" -H "$auth" \
+  -H "Content-Type: application/json" \
+  --data "$(jq -n --arg m "$slug" --arg p "$(jq -r .staging_path <<<"$slot")" '{module: $m, staging_path: $p}')")"
+[ "$status" = 201 ] || [ "$status" = 409 ] || { cat finalize.json; exit 1; }
+```
+
+Depois disso a versão aparece como rascunho em `/admin/catalogo/<slug>`, e o operador a publica. A primeira versão publicada de um app recebe a marca de entrada sozinha (seção 4.3).
