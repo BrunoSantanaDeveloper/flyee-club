@@ -69,6 +69,10 @@ select is(
     where n.nspname = 'public'
       and has_function_privilege('anon', p.oid, 'EXECUTE')
       and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+      -- An event trigger's function cannot be called through the API or any
+      -- query; Supabase adds one (rls_auto_enable, behind ensure_rls) to turn
+      -- row level security on for every new table.
+      and p.prorettype <> 'event_trigger'::regtype
   ),
   array['catalog_latest_version', 'current_consent_terms', 'roadmap_coming_next', 'verify_module_version'],
   'an anonymous visitor can call exactly four functions (roadmap_coming_next since 0033; founders_offer left in 0038)'
@@ -126,6 +130,7 @@ select is(
     where n.nspname = 'public'
       and has_function_privilege('public', p.oid, 'EXECUTE')
       and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+      and p.prorettype <> 'event_trigger'::regtype
       and p.proname not in ('catalog_latest_version', 'current_consent_terms', 'verify_module_version')
   ),
   '{}'::text[],
