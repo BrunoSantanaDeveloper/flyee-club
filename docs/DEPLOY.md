@@ -145,6 +145,21 @@ Operação:
    - `VERCEL_TOKEN` — o token criado
    - `VERCEL_ORG_ID` — `orgId` do `.vercel/project.json`
    - `VERCEL_PROJECT_ID` — `projectId` do `.vercel/project.json`
+3. **Autor dos commits.** No plano Hobby a Vercel só aceita o deploy de um
+   commit cujo autor é o dono do time, mesmo vindo da CLI. Sem o GitHub
+   conectado à conta da Vercel (e ele fica desconectado, pelo conflito de
+   contas acima), ela reconhece o dono pelo e-mail: o e-mail do commit tem de
+   ser o da conta da Vercel. Por isso o repositório tem a identidade própria,
+   como no MedChina:
+
+   ```bash
+   git config --local user.email <e-mail da conta da Vercel>
+   ```
+
+   A alternativa, sem mexer no git, é cadastrar e verificar o e-mail dos commits
+   como e-mail secundário da conta (Vercel → Account Settings → Emails). Vale
+   para todo clone e toda máquina que commita: um commit de outro autor no
+   topo da `main` é bloqueado (ver "Troubleshooting").
 
 ### 5. Domínio
 
@@ -637,6 +652,13 @@ abertura ("Roteiro da abertura", passos 17 e 18).
 - `Project not found` / erro de escopo no `vercel deploy` →
   `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` não batem com o token (token criado em
   outro team). Recrie o token no escopo certo.
+- Job de deploy parado em "Building…" até o limite de 60 minutos, e a Vercel
+  mostra o deploy como **Blocked** ("the commit author doesn't have permission
+  to create deployments for this project") → o autor do commit no topo da
+  `main` não é o dono do time Hobby. Confira com `git log -1 --format=%ae`, que
+  tem de ser o e-mail da conta da Vercel ("Setup único", passo 4.3), e faça um
+  commit novo com esse autor: reexecutar o workflow manda o mesmo commit e é
+  bloqueado de novo. O build nunca começa; quem espera é o `vercel deploy`.
 - Build da nuvem falha por variável faltando → cadastre-a no ambiente
   correspondente da Vercel (o build de PR usa **Preview**, o de `main`/manual
   usa **Production**).
