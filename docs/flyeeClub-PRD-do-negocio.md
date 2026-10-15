@@ -196,7 +196,7 @@ Os dois repositórios nunca importam código um do outro. O produto depende só 
 
 | Camada | Tecnologia e regra |
 | --- | --- |
-| Web | Next.js 15 (App Router), React 19, Tailwind 4. MUI v9 e MUI X Premium só nas áreas logadas; o site público roda sem MUI, pela nota de desempenho no celular |
+| Web | Next.js 15 (App Router), React 19, Tailwind 4. MUI v9 e MUI X (só os pacotes gratuitos, sem chave de licença) só nas áreas logadas; o site público roda sem MUI, pela nota de desempenho no celular |
 | Dados | Supabase: Postgres com RLS em toda tabela, auth e storage. Drizzle como espelho. Migrações 0000 a 0040, ainda não aplicadas num projeto hospedado |
 | Cobrança | Asaas (real: PIX, cartão, nota fiscal) e Stripe (dólar) atrás de um `PaymentProvider` |
 | E-mail e jobs | Resend com React Email nos dois idiomas; Inngest para o resumo de segunda, os avisos de fim de período e os backups noturnos |
@@ -404,7 +404,7 @@ O produto escreve no computador de outra pessoa e a plataforma cobra dela, entã
 | Contrato | Versão mínima da CLI e avisos de descontinuação servidos pela plataforma; campos novos lidos só quando presentes | `GET /api/cli/version`, seção 9 do contrato |
 | Auditoria e backup | Toda mutação auditada; trilha de acesso; backup lógico noturno | `recordAudit`, `audit_events`, `packages/backup` |
 | Credenciais da transição | O `apps/web/.env` herdado tem credenciais de produção do MedChina; o `.env.local` as anula. Nenhum `db:*:remote` roda antes de o `.env.local` apontar para o projeto novo; nenhum arquivo de ambiente vai ao git nem ao Vercel | `.gitignore`, `.vercelignore`, portão `remote-db-gate.mjs`, `npm run preflight` |
-| Licenças | O repositório da plataforma fica privado por causa do MUI X Premium e do template Nexture; nada desse código vai para um app | Regra do repositório; checagem antes do saas-starter |
+| Licenças | O repositório da plataforma fica privado por causa do template Nexture; nada desse código vai para um app | Regra do repositório; checagem antes do saas-starter |
 | Suporte | Assíncrono e coletivo; aviso de versão dentro do harness; FAQ que cresce das perguntas | Painel, `status`, fase 11 |
 
 ## Go-to-market
@@ -415,7 +415,7 @@ O lançamento acontece em dois tempos, lista de espera e loja aberta, e o canal 
 
 | Marco | O que acontece | O que só o operador traz | Botões do site |
 | --- | --- | --- | --- |
-| A · Lista de espera no ar | Banco novo, Vercel, CLI 1.0.0 no npm antes do domínio, domínio, deploy, login, jobs, conta de operador, dados da empresa, estágio `waitlist`, `min_cli_version` 1.0.0, prova com o próprio e-mail | Projeto Supabase, licença do MUI X Premium, projeto e token da Vercel, domínio, Resend com o domínio verificado, Inngest, razão social, CNPJ, cidade e UF | "Entrar na lista de espera" |
+| A · Lista de espera no ar | Banco novo, Vercel, CLI 1.0.0 no npm antes do domínio, domínio, deploy, login, jobs, conta de operador, dados da empresa, estágio `waitlist`, `min_cli_version` 1.0.0, prova com o próprio e-mail | Projeto Supabase, projeto e token da Vercel, domínio, Resend com o domínio verificado, Inngest, razão social, CNPJ, cidade e UF | "Entrar na lista de espera" |
 | B · Loja aberta | Asaas e Stripe em produção, preços conferidos, `preflight --stage open` limpo, apps criados e pacotes enviados no console com categorias, perfis e versões de entrada, ensaio sem dinheiro (instalação com a CLI real e compra num preview com sandbox), uma compra real, estágio `open` | Conta Asaas aprovada, conta Stripe, os cinco ZIPs, um segundo projeto Supabase para o ensaio | "Assinar FlyeeClub agora" |
 
 **O funil de conteúdo**

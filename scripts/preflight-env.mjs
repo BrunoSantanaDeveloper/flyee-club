@@ -32,7 +32,6 @@ export const TARGETS = ["production", "preview"];
 const KNOWN = new Set([
   "NEXT_PUBLIC_SITE_URL",
   "NEXT_PUBLIC_STORAGE_PREFIX",
-  "NEXT_PUBLIC_MUI_X_LICENSE_KEY",
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "DATABASE_URL",
@@ -77,10 +76,9 @@ const INHERITED_MARKERS = /^(?:WHATSAPP_|EVOLUTION_|NEXT_PUBLIC_POSTHOG_)/u;
 
 /**
  * Inherited values that name no service of the other product, so they stop
- * nothing: a licence the same developer may hold for both, the address the
- * contact form writes to, and plain settings.
+ * nothing: the address the contact form writes to, and plain settings.
  */
-const SHARED_WHEN_INHERITED = new Set(["NEXT_PUBLIC_MUI_X_LICENSE_KEY", "CONTACT_FORM_TO"]);
+const SHARED_WHEN_INHERITED = new Set(["CONTACT_FORM_TO"]);
 const SETTINGS_WHEN_INHERITED = new Set([
   "NEXT_PUBLIC_STORAGE_PREFIX",
   "ASAAS_BASE_URL",
@@ -105,9 +103,6 @@ function inheritedFinding(key, where) {
 }
 
 const ASAAS_PRODUCTION = "https://api.asaas.com/v3";
-
-/** What .env.example ships in the licence variable: a value that is no value. */
-const LICENSE_PLACEHOLDER = "YOUR_MUIX_LICENSE_KEY";
 
 /** The first line of a file `vercel env pull` wrote. */
 const VERCEL_HEADER = "# Created by Vercel CLI";
@@ -343,20 +338,6 @@ export function inspect(
       );
     } else {
       add("ok", group, key, get(key));
-    }
-
-    const license = get("NEXT_PUBLIC_MUI_X_LICENSE_KEY");
-    if (unread("NEXT_PUBLIC_MUI_X_LICENSE_KEY")) {
-      skip(group, "NEXT_PUBLIC_MUI_X_LICENSE_KEY", "that it is a licence and not the placeholder of .env.example");
-    } else if (!license || license === LICENSE_PLACEHOLDER) {
-      add(
-        "error",
-        group,
-        "NEXT_PUBLIC_MUI_X_LICENSE_KEY",
-        `${license ? "still the placeholder of .env.example" : "missing"}: the member area and the consoles show the MUI X licence watermark`,
-      );
-    } else {
-      add("ok", group, "NEXT_PUBLIC_MUI_X_LICENSE_KEY", "set");
     }
   }
 
@@ -916,7 +897,7 @@ export function inspect(
       if (value === "" || TOOLING.test(key) || unread(key)) continue;
       if (layeredOver && entry.source === layeredOver) {
         // Still read from the copy: a key .env.local forgot to define.
-        if (!KNOWN.has(key) || value === LICENSE_PLACEHOLDER) continue;
+        if (!KNOWN.has(key)) continue;
         const [level, message] = inheritedFinding(key, `read from ${copy}, the inherited copy`) ?? [
           "error",
           `read from ${copy}, the inherited copy: this is a MedChina value. Define the key in .env.local, empty to switch it off`,

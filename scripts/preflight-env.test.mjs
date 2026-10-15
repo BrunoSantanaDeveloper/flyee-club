@@ -22,7 +22,6 @@ const poolerUrl = (ref) =>
 /** Everything a production deployment of the open store holds. */
 const complete = () => ({
   NEXT_PUBLIC_SITE_URL: "https://flyee.club",
-  NEXT_PUBLIC_MUI_X_LICENSE_KEY: "licence-key-of-this-developer",
   NEXT_PUBLIC_SUPABASE_URL: `https://${REF}.supabase.co`,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: jwt({ role: "anon", ref: REF }),
   SUPABASE_SERVICE_ROLE_KEY: jwt({ role: "service_role", ref: REF }),
@@ -61,7 +60,6 @@ test("a complete production environment of the open store has nothing to fix", (
 test("each variable the open store cannot run without is an error when missing", () => {
   for (const key of [
     "NEXT_PUBLIC_SITE_URL",
-    "NEXT_PUBLIC_MUI_X_LICENSE_KEY",
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
@@ -78,12 +76,13 @@ test("each variable the open store cannot run without is an error when missing",
     delete values[key];
     assert.ok(levelOf(judge(values), key).includes("error"), `${key} missing should stop the deploy`);
   }
-  // The placeholder of .env.example is no licence.
-  assert.ok(
-    levelOf(
-      judge({ ...complete(), NEXT_PUBLIC_MUI_X_LICENSE_KEY: "YOUR_MUIX_LICENSE_KEY" }),
-      "NEXT_PUBLIC_MUI_X_LICENSE_KEY",
-    ).includes("error"),
+});
+
+test("a MUI X licence key is a leftover: the platform uses the free packages only", () => {
+  const report = judge({ ...complete(), NEXT_PUBLIC_MUI_X_LICENSE_KEY: "licence-key-of-someone" });
+  assert.deepEqual(
+    of(report, "NEXT_PUBLIC_MUI_X_LICENSE_KEY").map((finding) => [finding.group, finding.level]),
+    [["Leftovers", "warning"]],
   );
 });
 
@@ -322,7 +321,7 @@ test("layered files: a value still read from the inherited copy is an error, by 
       "NEXT_PUBLIC_SUPABASE_URL=https://medchinaprojectref00.supabase.co",
       `STRIPE_SECRET_KEY=${fake("sk", "live", "m".repeat(24))}`,
       `STRIPE_WEBHOOK_SECRET=${fake("whsec", "m".repeat(24))}`,
-      "NEXT_PUBLIC_MUI_X_LICENSE_KEY=the-shared-licence-key",
+      "CONTACT_FORM_TO=operator@example.com",
       "NEXT_PUBLIC_TITLE=MedChina",
       "META_CAPI_TOKEN=",
     ].join("\n"),
@@ -331,7 +330,7 @@ test("layered files: a value still read from the inherited copy is an error, by 
   const ours = { ...complete() };
   delete ours.STRIPE_SECRET_KEY;
   delete ours.STRIPE_WEBHOOK_SECRET;
-  delete ours.NEXT_PUBLIC_MUI_X_LICENSE_KEY;
+  delete ours.CONTACT_FORM_TO;
   const env = layerEnv([
     { name: "apps/web/.env.local", entries: envOf(ours) },
     { name: "apps/web/.env", entries: theirs },
@@ -343,7 +342,7 @@ test("layered files: a value still read from the inherited copy is an error, by 
     [
       ["STRIPE_SECRET_KEY", "error"],
       ["STRIPE_WEBHOOK_SECRET", "error"],
-      ["NEXT_PUBLIC_MUI_X_LICENSE_KEY", "warning"],
+      ["CONTACT_FORM_TO", "warning"],
     ],
   );
   assert.match(inherited[0].message, /MedChina value.*\.env\.local/u);
@@ -366,12 +365,9 @@ test("layered files: a value still read from the inherited copy is an error, by 
   );
 });
 
-test("an inherited setting is a note, and the licence placeholder is no value at all", () => {
-  const theirs = parseEnv(
-    "WHATSAPP_PROVIDER=meta\nBACKUP_RETENTION_DAYS=30\nNEXT_PUBLIC_MUI_X_LICENSE_KEY=YOUR_MUIX_LICENSE_KEY",
-  );
+test("an inherited setting is a note", () => {
+  const theirs = parseEnv("WHATSAPP_PROVIDER=meta\nBACKUP_RETENTION_DAYS=30");
   const ours = complete();
-  delete ours.NEXT_PUBLIC_MUI_X_LICENSE_KEY;
   const env = layerEnv([
     { name: "apps/web/.env.local", entries: envOf(ours) },
     { name: "apps/web/.env", entries: theirs },
@@ -383,9 +379,6 @@ test("an inherited setting is a note, and the licence placeholder is no value at
       .map((finding) => [finding.key, finding.level]),
     [["BACKUP_RETENTION_DAYS", "note"]],
   );
-  // The placeholder is reported where it matters: the licence is not set.
-  assert.match(of(report, "NEXT_PUBLIC_MUI_X_LICENSE_KEY")[0].message, /placeholder of \.env\.example/u);
-  assert.equal(of(report, "NEXT_PUBLIC_MUI_X_LICENSE_KEY")[0].level, "error");
 });
 
 test("layered files: a value copied from the copy into .env.local is an error under any name", () => {
@@ -395,7 +388,6 @@ test("layered files: a value copied from the copy into .env.local is an error un
     [
       "WHATSAPP_PROVIDER=meta",
       `ANTHROPIC_API_KEY=${theirAi}`,
-      "NEXT_PUBLIC_MUI_X_LICENSE_KEY=the-shared-licence-key",
       "CONTACT_FORM_TO=operator@example.com",
       "ASAAS_BASE_URL=https://api.asaas.com/v3",
     ].join("\n"),
@@ -404,7 +396,6 @@ test("layered files: a value copied from the copy into .env.local is an error un
     ...complete(),
     // Moved to another name, and still the other product's key.
     GEMINI_API_KEY: theirAi,
-    NEXT_PUBLIC_MUI_X_LICENSE_KEY: "the-shared-licence-key",
     CONTACT_FORM_TO: "operator@example.com",
   };
   const env = layerEnv([
@@ -417,7 +408,6 @@ test("layered files: a value copied from the copy into .env.local is an error un
       .filter((finding) => finding.group === "Inherited from MedChina")
       .map((finding) => [finding.key, finding.level]),
     [
-      ["NEXT_PUBLIC_MUI_X_LICENSE_KEY", "note"],
       ["CONTACT_FORM_TO", "note"],
       ["GEMINI_API_KEY", "error"],
       // ANTHROPIC_API_KEY is not in .env.local, so it is read from the copy.
@@ -636,7 +626,6 @@ test("the report never prints a credential", () => {
   const text = format(judge(values), "a test");
   const json = JSON.stringify(judge(values));
   for (const key of [
-    "NEXT_PUBLIC_MUI_X_LICENSE_KEY",
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",

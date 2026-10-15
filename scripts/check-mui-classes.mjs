@@ -28,11 +28,8 @@ const PACKAGES = [
   "@mui/material",
   "@mui/lab",
   "@mui/x-data-grid",
-  "@mui/x-data-grid-pro",
-  "@mui/x-data-grid-premium",
   "@mui/x-charts",
   "@mui/x-date-pickers",
-  "@mui/x-date-pickers-pro",
   "@mui/x-tree-view",
 ];
 

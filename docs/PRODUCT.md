@@ -471,7 +471,7 @@ Das seis decisões originais, três foram tomadas em 2026-09-30 e estão marcada
 
 **Do lado do produto (fora deste repositório)**
 
-- [ ] **Licenças do saas-starter.** Um módulo derivado desta base não pode levar a chave do MUI X Premium, que é licenciado por desenvolvedor; cada integrante precisaria da própria licença. O código do template licenciado (a vitrine `/ui` e os ícones Nexture) e as fontes comerciais precisam de checagem de licença antes de qualquer redistribuição.
+- [ ] **Licenças do saas-starter.** O MUI X deixou de pesar aqui: desde 2026-10-14 a plataforma usa só os pacotes gratuitos, sem chave de licença, e o que só um pacote pago tem vira componente próprio. O código do template licenciado (a vitrine `/ui` e os ícones Nexture) e as fontes comerciais precisam de checagem de licença antes de qualquer redistribuição.
 - [x] **Arquivo de entrada do harness.** Decidido em 2026-10-06: `AGENTS.md` canônico com ponteiros `CLAUDE.md` e `GEMINI.md`, skills em `.agents/skills/` com pontes em `.claude/skills/`, geradas pelo core como este repositório já faz em `scripts/sync-agent-harness.mjs` (seção "Decisões tomadas 2026-10-06").
 
 ## Fontes

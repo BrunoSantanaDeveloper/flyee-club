@@ -3,8 +3,6 @@
 import { useTranslations } from "next-intl";
 import { Suspense } from "react";
 
-import { LicenseInfo } from "@mui/x-license";
-
 import CookieConsent from "@/components/consent/cookie-consent";
 import DashboardTrackers from "@/components/consent/dashboard-trackers";
 import AnnouncementBanner from "@/components/layout/announcements/announcement-banner";
@@ -19,12 +17,10 @@ import MenuBackdrop from "@/components/layout/menu/menu-backdrop";
 import { UpgradePromptProvider } from "@/components/product/upgrade-prompt";
 import SupportWidget from "@/components/support/support-widget";
 
-LicenseInfo.setLicenseKey(process.env.NEXT_PUBLIC_MUI_X_LICENSE_KEY || "");
-
 /**
  * The chrome of the member area and the admin consoles: header, menu, banners
- * and the content frame. A client component (the menu state and the MUI X
- * licence need the browser), so the segment's layout stays a server component
+ * and the content frame. A client component (the menu state needs the
+ * browser), so the segment's layout stays a server component
  * and wraps this in the shell that provides MUI and the messages
  * (components/layout/app-shell.tsx).
  */

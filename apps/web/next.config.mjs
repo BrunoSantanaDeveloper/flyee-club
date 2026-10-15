@@ -13,7 +13,7 @@ const nextConfig = {
   // before the first byte (no loading boundary above them), so this delays
   // nothing.
   htmlLimitedBots: /.*/,
-  // Vercel's default build container is 8 GB. This app is large (MUI X Premium,
+  // Vercel's default build container is 8 GB. This app is large (MUI and MUI X,
   // many admin/marketing routes), and parallel static-generation workers
   // collectively exhausted the container (SIGKILL / OOM) after a successful
   // compile. Cap build parallelism to one worker and enable Next's webpack

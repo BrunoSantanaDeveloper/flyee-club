@@ -13,7 +13,7 @@ O **produto** (a CLI, o core do harness e o conteúdo dos módulos) é um projet
 
 ## Stack
 
-Monorepo npm workspaces: `apps/web` (Next.js 15, MUI v9 + MUI X Premium, Tailwind 4) e `packages/*` (auth, db, billing, audit, email, jobs, design-tokens, content e outros). Supabase (Postgres + RLS, Auth, Storage), Inngest, Resend, Vercel.
+Monorepo npm workspaces: `apps/web` (Next.js 15, MUI v9 + MUI X só nos pacotes gratuitos, Tailwind 4) e `packages/*` (auth, db, billing, audit, email, jobs, design-tokens, content e outros). Supabase (Postgres + RLS, Auth, Storage), Inngest, Resend, Vercel.
 
 ## Comandos (na raiz)
 
@@ -29,4 +29,4 @@ npm run test:db      # testes pgTAP no banco local
 
 > Antes de qualquer comando que toque serviços externos, confira `apps/web/.env.local` e `apps/web/.env`: o `.env` herdado da cópia do MedChina aponta para os serviços do MedChina. Ver `docs/DEPLOY.md`.
 
-Repositório privado: contém código de UI licenciado comercialmente (MUI X Premium).
+Repositório privado: contém código de UI licenciado comercialmente (os componentes do template Nexture).

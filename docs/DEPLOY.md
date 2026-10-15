@@ -98,7 +98,7 @@ mesma biblioteca que ela usa para decidir o que sobe.
 ### 3. Variáveis de ambiente (Settings → Environment Variables)
 
 Cadastre em **Production** (e repita em **Preview** as que quiser testar em
-PRs — no mínimo as de Supabase e a licença MUI). Referência completa:
+PRs — no mínimo as de Supabase). Referência completa:
 `apps/web/.env.example`.
 
 > **Atenção, ambiente local:** o `apps/web/.env` veio da cópia do MedChina e
@@ -121,7 +121,6 @@ Obrigatórias para produção:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | idem |
 | `DATABASE_URL` | connection string **pooled** (porta 6543) |
 | `SUPABASE_SERVICE_ROLE_KEY` | server-only (admin, backups, billing público) |
-| `NEXT_PUBLIC_MUI_X_LICENSE_KEY` | licença MUI X Premium |
 | `NEXT_PUBLIC_SITE_URL` | domínio canônico, sem barra final (sitemap/robots/OG/JSON-LD caem para `http://localhost:3000` sem ela) |
 
 Operação:
@@ -178,7 +177,6 @@ Este roteiro substitui o antigo "Primeiro deploy". O andamento está em
 | O quê | Para quê | Marco |
 | --- | --- | --- |
 | Projeto novo no Supabase | banco, login e arquivos | A |
-| Licença do MUI X Premium | `NEXT_PUBLIC_MUI_X_LICENSE_KEY`; sem ela o painel mostra a marca d'água | A |
 | Projeto na Vercel e um token | o deploy pelo pipeline ("Setup único", passos 1, 2 e 4) | A |
 | O domínio `flyee.club` no registrador | site, remetente dos e-mails, endereços de login | A |
 | Conta no Resend com o domínio verificado | todo e-mail, inclusive os de login | A |
@@ -231,9 +229,9 @@ O que ele confere além de "está preenchida":
   script a reconhece pelas variáveis que só o MedChina lia), nenhum valor dele
   pode estar em vigor. Uma chave que o `.env.local` esqueceu de definir é erro,
   pelo nome. Um valor copiado do `.env` para o `.env.local` também, sob
-  qualquer nome: é o que sobra quando se começa copiando o arquivo inteiro. A
-  licença do MUI e o endereço do formulário de contato podem ser os mesmos nos
-  dois produtos, e aparecem só como informação.
+  qualquer nome: é o que sobra quando se começa copiando o arquivo inteiro. O
+  endereço do formulário de contato pode ser o mesmo nos dois produtos, e
+  aparece só como informação.
 
 Para conferir o que está cadastrado na Vercel, puxe as variáveis para um
 arquivo e passe o arquivo ao script:
