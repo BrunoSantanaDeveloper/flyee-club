@@ -36,19 +36,22 @@ jwt_expiry = 3600
 enable_signup = true
 
 # The auth e-mails (confirmation, password recovery, e-mail change), in both
-# languages. They are rendered by Supabase Auth, not by the app; the hosted
-# project gets the same files pasted in its dashboard (docs/DEPLOY.md). E-mail
-# confirmation stays off locally, where there is no inbox to read it from.
+# languages. They are sent by Supabase Auth, not by the app, and rendered from
+# packages/email (npm run supabase:templates -w @flyee/email, which also checks
+# these subjects). The subject is a template too: the account's locale picks
+# the language. The hosted project gets the same files and subjects pasted in
+# its dashboard (docs/DEPLOY.md). E-mail confirmation stays off locally, where
+# there is no inbox to read it from.
 [auth.email.template.confirmation]
-subject = "Confirme seu e-mail no FlyeeClub / Confirm your email at FlyeeClub"
+subject = '{{ if eq (printf "%v" .Data.locale) "en" }}Confirm your email at FlyeeClub{{ else }}Confirme seu e-mail no FlyeeClub{{ end }}'
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.recovery]
-subject = "Redefina sua senha do FlyeeClub / Reset your FlyeeClub password"
+subject = '{{ if eq (printf "%v" .Data.locale) "en" }}Reset your FlyeeClub password{{ else }}Redefina sua senha do FlyeeClub{{ end }}'
 content_path = "./supabase/templates/recovery.html"
 
 [auth.email.template.email_change]
-subject = "Confirme seu novo e-mail no FlyeeClub / Confirm your new email at FlyeeClub"
+subject = '{{ if eq (printf "%v" .Data.locale) "en" }}Confirm your new email at FlyeeClub{{ else }}Confirme seu novo e-mail no FlyeeClub{{ end }}'
 content_path = "./supabase/templates/email_change.html"
 
 [analytics]

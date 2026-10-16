@@ -1,16 +1,20 @@
+import { BRAND } from "@flyee/content";
 import { render } from "@react-email/render";
 import { createElement, type ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { emailCopyFor } from "./copy";
 import type { EmailLocale } from "./locale";
+import { plainTextOf } from "./plain-text";
 import AccessEndedEmail from "./templates/access-ended";
+import AdminWeeklyDigestEmail from "./templates/admin-weekly-digest";
 import ContactFormEmail from "./templates/contact-form";
 import KitReceiptEmail from "./templates/kit-receipt";
 import LeadConfirmEmail from "./templates/lead-confirm";
 import MeetingEmail, { type MeetingEmailKind } from "./templates/meeting";
 import MemberWelcomeEmail from "./templates/member-welcome";
 import NewsletterEmail from "./templates/newsletter";
+import { LOGO } from "./templates/shell";
 import SubscriptionActiveEmail, { unlockedLines } from "./templates/subscription-active";
 import SubscriptionCanceledEmail from "./templates/subscription-canceled";
 import TermEndingEmail from "./templates/term-ending";
@@ -22,11 +26,12 @@ const APP = "https://flyee.club/inicio";
 const UNSUBSCRIBE = "https://flyee.club/api/public/email/unsubscribe?k=m&t=00000000-0000-4000-8000-000000000000";
 
 /**
- * The text a reader sees, on one line: the plain-text rendering wraps at 80
- * columns, so a sentence would otherwise be cut wherever the wrap falls.
+ * The text a reader sees, on one line: the plain-text part (what is sent
+ * beside the HTML) wraps at 80 columns, so a sentence would otherwise be cut
+ * wherever the wrap falls.
  */
 async function textOf(element: ReactElement): Promise<string> {
-  return (await render(element, { plainText: true })).replace(/\s+/g, " ");
+  return (await plainTextOf(element)).replace(/\s+/g, " ");
 }
 
 /** The address as it is written inside an HTML attribute. */
@@ -115,6 +120,15 @@ function every(locale: EmailLocale): Record<string, ReactElement> {
   };
 }
 
+/** The operator's Monday digest: in Portuguese only, so it is outside `every`. */
+const digest = createElement(AdminWeeklyDigestEmail, {
+  headline: "Semana de 6 a 12 de out · 14 kits",
+  focus: "Foco: negócio.",
+  rows: [{ segment: "Negócio", kit: "8", activation: "62%", weekly: "5", conversion: "12%", revenue: "R$ 97" }],
+  attention: [{ label: "contas sem computador conectado", count: 3 }],
+  appUrl: APP,
+});
+
 describe("e-mail templates", () => {
   for (const locale of LOCALES) {
     it(`render in ${locale} with the language on the document and no template leftovers`, async () => {
@@ -151,6 +165,39 @@ describe("e-mail templates", () => {
     expect(en).toContain(
       "Paste into the conversation with your AI: Install flyee by following https://flyee.club/en/install.md",
     );
+  });
+
+  it("share the frame: the logo from the site, with its name, and the light scheme declared", async () => {
+    const logo = `src="${BRAND.siteUrl}${LOGO.path}"`;
+    const messages = [
+      ...LOCALES.flatMap((locale) => Object.entries(every(locale))),
+      ["admin-weekly-digest", digest] as const,
+      ["contact-form", createElement(ContactFormEmail, { name: "Ana", email: "ana@example.com", message: "oi" })] as const,
+    ];
+    for (const [name, element] of messages) {
+      const html = await render(element);
+      expect(html, name).toContain(logo);
+      expect(html, name).toContain('alt="FlyeeClub"');
+      expect(html, name).toContain('<meta name="color-scheme" content="light"/>');
+    }
+  });
+
+  it("write a one-link message's address out under the small print", async () => {
+    for (const locale of LOCALES) {
+      const text = await textOf(every(locale)["lead-confirm"]);
+      expect(text, locale).toContain(`${emailCopyFor(locale).shell.fallback} ${APP}`);
+      // Not in the messages whose button opens the dashboard.
+      expect(await textOf(every(locale)["member-welcome"]), locale).not.toContain(emailCopyFor(locale).shell.fallback);
+    }
+  });
+
+  it("send a plain-text part without the hidden preview line, each address printed once per link", async () => {
+    const text = await plainTextOf(every("pt-BR")["lead-confirm"]);
+    expect(text).not.toMatch(/[​-‏﻿]/);
+    expect(text).not.toContain(emailCopyFor("pt-BR").leadConfirm.preview);
+    expect(text).not.toContain(LOGO.path);
+    // The button prints its label and address, the written-out link its address alone.
+    expect(text.split(APP)).toHaveLength(3);
   });
 
   it("only the messages a reader may stop carry an unsubscribe link", async () => {

@@ -3,19 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "E-mail: Resend client, React Email templates and their copy in both languages. No-ops gracefully when RESEND_API_KEY is absent.",
+  "description": "E-mail: Resend client, React Email templates and their copy in both languages, and the Supabase Auth templates rendered from them. No-ops gracefully when RESEND_API_KEY is absent.",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "supabase:templates": "vitest run src/supabase-templates.test.ts --update"
   },
   "dependencies": {
+    "@flyee/content": "*",
     "@react-email/components": "^0.0.36",
+    "@react-email/render": "^1.0.6",
     "resend": "^4.0.0"
   },
   "devDependencies": {
-    "@react-email/render": "^1.0.6",
     "vitest": "^4.1.10"
   },
   "peerDependencies": {

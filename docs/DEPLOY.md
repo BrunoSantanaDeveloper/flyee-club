@@ -529,7 +529,13 @@ perfil (`profiles.locale`) ou da inscrição (`leads.locale`).
   painel, e as telas que dependem de e-mail (lista de espera, "escrever para a
   lista") dizem que o envio está fora do ar.
 - Os links dos e-mails usam `NEXT_PUBLIC_SITE_URL`. Sem ela, apontam para
-  `http://localhost:3000`.
+  `http://localhost:3000`. O logo do cabeçalho também: é lido de
+  `<NEXT_PUBLIC_SITE_URL>/images/email/logo.png`, então só aparece quando o
+  site está no ar nesse endereço.
+- Todo e-mail usa a mesma moldura (`packages/email/src/templates/shell.tsx`):
+  o logo na faixa escura, o título, o botão amarelo com o rótulo grafite, as
+  notas e a assinatura. Cada mensagem vai com a versão em HTML e a versão em
+  texto puro, gerada do mesmo modelo.
 - O resumo semanal e as mensagens para a lista levam o link de descadastro no
   corpo e no cabeçalho `List-Unsubscribe` (um clique). O endereço é
   `/api/public/email/unsubscribe`, público por definição; quem clica no link
@@ -538,33 +544,50 @@ perfil (`profiles.locale`) ou da inscrição (`leads.locale`).
 ### E-mails de autenticação (Supabase Auth)
 
 Confirmação de cadastro, troca de senha e troca de e-mail são enviados pelo
-Supabase, não pelo app. Os modelos bilíngues estão em `supabase/templates/` e
-escolhem o idioma pelo `locale` gravado no cadastro (`{{ .Data.locale }}`;
-conta sem ele lê em português).
+Supabase, não pelo app. Os modelos em `supabase/templates/` são gerados de
+`packages/email` (`templates/auth.tsx`, com a mesma moldura dos e-mails do app
+e o texto em `copy/pt-BR.ts` e `copy/en.ts`) por
+`npm run supabase:templates -w @flyee/email`. Nunca edite os arquivos à mão: o
+teste do pacote falha quando um deles não é o que o código gera. Cada arquivo
+tem os dois idiomas e escolhe pelo `locale` gravado no cadastro
+(`{{ .Data.locale }}`; conta sem ele lê em português). O assunto também é um
+modelo e segue o mesmo idioma.
+
+Sem SMTP próprio, o Supabase envia pelo servidor dele: o remetente é "Supabase
+Auth <noreply@mail.app.supabase.io>", o rodapé diz "powered by Supabase", o
+painel não deixa trocar os modelos e os envios param em poucos por hora. Por
+isso o passo 1 vem antes de todos.
 
 1. **Authentication → Emails → SMTP Settings**: ligar o SMTP próprio com o
    Resend (host `smtp.resend.com`, porta `465`, usuário `resend`, senha a
-   `RESEND_API_KEY`, remetente o mesmo endereço de `EMAIL_FROM`). Sem SMTP
-   próprio o Supabase limita os envios a poucos por hora.
+   `RESEND_API_KEY`). O remetente é o mesmo de `EMAIL_FROM`: o endereço do
+   domínio verificado no Resend (por exemplo `oi@flyee.club`) no campo do
+   endereço e `FlyeeClub` no campo do nome.
 2. **Authentication → Sign In / Providers → Email**: ligar "Confirm email". É o
    link de confirmação que leva a conta nova a `/auth/callback`, de onde saem o
    aviso e o e-mail de boas-vindas.
-3. **Authentication → Emails → Templates**: colar o conteúdo de cada arquivo e
-   o assunto correspondente. O assunto vai nos dois idiomas porque é uma linha
-   só:
+3. **Authentication → URL Configuration**: o Site URL é `https://flyee.club`,
+   sem barra no fim. Os modelos leem o logo de
+   `{{ .SiteURL }}/images/email/logo.png`.
+4. **Authentication → Emails → Templates**: colar o arquivo inteiro de cada
+   modelo (a nota no topo é um comentário do modelo e não sai no e-mail) e o
+   assunto correspondente, cada um numa linha só:
 
    | Modelo no painel | Arquivo | Assunto |
    | --- | --- | --- |
-   | Confirm signup | `supabase/templates/confirmation.html` | `Confirme seu e-mail no flyee.club / Confirm your email at flyee.club` |
-   | Reset password | `supabase/templates/recovery.html` | `Redefina sua senha do flyee.club / Reset your flyee.club password` |
-   | Change email address | `supabase/templates/email_change.html` | `Confirme seu novo e-mail no flyee.club / Confirm your new email at flyee.club` |
+   | Confirm signup | `supabase/templates/confirmation.html` | `{{ if eq (printf "%v" .Data.locale) "en" }}Confirm your email at FlyeeClub{{ else }}Confirme seu e-mail no FlyeeClub{{ end }}` |
+   | Reset password | `supabase/templates/recovery.html` | `{{ if eq (printf "%v" .Data.locale) "en" }}Reset your FlyeeClub password{{ else }}Redefina sua senha do FlyeeClub{{ end }}` |
+   | Change email address | `supabase/templates/email_change.html` | `{{ if eq (printf "%v" .Data.locale) "en" }}Confirm your new email at FlyeeClub{{ else }}Confirme seu novo e-mail no FlyeeClub{{ end }}` |
 
-   Os outros modelos do painel (convite, link mágico, reautenticação) não são
+   Os assuntos são os de `supabase/config.toml`, que o mesmo teste confere. Os
+   outros modelos do painel (convite, link mágico, reautenticação) não são
    usados pelo app e ficam como estão.
-4. **Teste**: criar uma conta em `/auth/sign-up` com o site em português e outra
-   em `/en`, e conferir que cada confirmação chega no idioma certo. Estes
-   modelos são renderizados pelo Supabase e não passam pelos testes do
-   repositório: este teste manual é a verificação deles.
+5. **Teste**: criar uma conta em `/auth/sign-up` com o site em português e outra
+   em `/en`, e conferir que cada confirmação chega no idioma certo, com o
+   assunto no mesmo idioma, o logo no topo e o remetente do FlyeeClub. Pedir
+   "Esqueci minha senha" para uma das contas confere o segundo modelo. O
+   repositório confere o que os arquivos dizem; o que o Supabase faz com eles
+   só este teste confere.
 
 O `supabase/config.toml` aponta para os mesmos arquivos, para quem ligar a
 confirmação por e-mail no Supabase local.

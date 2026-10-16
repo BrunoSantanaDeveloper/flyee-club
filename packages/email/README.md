@@ -19,7 +19,12 @@ The e-mails the platform sends to members and to contacts of the list: the Resen
 
 ## Templates
 
-`src/templates/` holds one React Email component per message, all inside `shell.tsx` (language on the document, preview line, one card, small print, signature). Inline styles only: e-mail clients ignore stylesheets, so the colours in `shell.tsx` are the light values of `packages/design-tokens` copied by hand. Keep them aligned when the palette changes. The button carries the charcoal label on the yellow, not white, and the yellow is never the colour of text or of a link (`docs/DESIGN.md`, palette usage).
+`src/templates/` holds one React Email component per message, all inside `shell.tsx`: language on the document, the light scheme declared, preview line, one card with the logo on the deep band, the heading, the body, small print, signature. Inline styles only: e-mail clients ignore stylesheets, so the colours in `shell.tsx` are the light values of `packages/design-tokens` copied by hand, each beside the token it copies. Keep them aligned when the palette changes. The button carries the charcoal label on the yellow, not white, and the yellow is never the colour of text or of a link (`docs/DESIGN.md`, palette usage).
+
+- **The logo** is `apps/web/public/images/email/logo.png`, the dark lockup on the deep band, derived from the official SVG by `npm run brand:assets -w @flyee/web` (mail clients show no SVG). Its background is the band's colour, so a client that repaints the message in dark mode still shows it whole. It is read from `BRAND.siteUrl` (`NEXT_PUBLIC_SITE_URL`), so it appears once the site is live at that address.
+- **A message that is one link** (a confirmation, a reset) passes `fallbackUrl` to the shell: the address is written out under the small print, for a client that will not open the button.
+- **Every send carries a plain-text part** (`src/plain-text.ts`), rendered from the same template without the logo and the hidden preview line: a message that is HTML alone scores worse with spam filters.
+- **The operator's mail** (the Monday digest, the contact form) uses the same shell, in Portuguese; the digest takes the wide column (640) for its table.
 
 | Sender | Message | Can the reader stop it? |
 | --- | --- | --- |
@@ -45,13 +50,13 @@ The batch senders send up to `BATCH_LIMIT` (100) messages in one request, each t
 npm run test:email     # from the repo root
 ```
 
-`src/templates.test.tsx` renders every template in both languages and checks the language on the document, that both languages have the same blocks in the same order, that only the stoppable messages carry an unsubscribe link, and the rules a template states (the receipt's end date, what a plan unlocks, why a subscription ended). No test sends anything.
+`src/templates.test.tsx` renders every template in both languages and checks the language on the document, that both languages have the same blocks in the same order, that every message has the shared frame (the logo, its alt, the light scheme), that the plain-text part carries no hidden preview line, that only the stoppable messages carry an unsubscribe link, and the rules a template states (the receipt's end date, what a plan unlocks, why a subscription ended). `src/supabase-templates.test.ts` checks the Supabase templates (below). No test sends anything.
 
 ## Env vars (apps/web/.env)
 
 ```
 RESEND_API_KEY=        # server-only
-EMAIL_FROM=            # verified sender, e.g. "flyee.club <oi@flyee.club>"
+EMAIL_FROM=            # verified sender, e.g. "FlyeeClub <oi@flyee.club>"
 CONTACT_FORM_TO=       # where the contact form goes (falls back to EMAIL_FROM)
 ```
 
@@ -59,4 +64,10 @@ Without a verified domain, Resend only delivers from `onboarding@resend.dev` to 
 
 ## Supabase auth e-mails
 
-Confirmation, password recovery and e-mail change are sent by Supabase Auth, not by this package. Their bilingual templates are in `supabase/templates/`, and `docs/DEPLOY.md` ("E-mails e jobs") says how to point Supabase at Resend's SMTP and where to paste them.
+Confirmation, password recovery and e-mail change are sent by Supabase Auth, not by this package, but they are written here: `src/templates/auth.tsx` is the same shell with the copy in `copy/*.ts` (`auth`), and the link, the site and the addresses are the Go template fields Supabase fills in when it sends. `src/supabase-templates.ts` renders it in each language into one file per message, the English one behind the account's `locale`, and builds the subject the same way (Supabase runs the subject through the same template engine).
+
+```bash
+npm run supabase:templates -w @flyee/email   # writes supabase/templates/*.html
+```
+
+Never edit those files by hand: `src/supabase-templates.test.ts` fails when one is not what the source renders, when a field reaches it escaped, or when `supabase/config.toml` lacks the subject. `docs/DEPLOY.md` ("E-mails e jobs") says how to point Supabase at Resend's SMTP and where to paste the files and subjects.

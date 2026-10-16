@@ -4,6 +4,46 @@ import type { EmailCopy } from "./pt-BR";
 export const emailCopy: EmailCopy = {
   shell: {
     signature: "FlyeeClub · apps that run in the AI you already use",
+    logoAlt: "FlyeeClub",
+    fallback: "If the button does not open, copy this address and paste it into your browser:",
+  },
+
+  auth: {
+    confirmation: {
+      subject: "Confirm your email at FlyeeClub",
+      preview: "One click to activate your account",
+      heading: "Confirm your email",
+      body: ["One step left to create your FlyeeClub account: confirming that this address is yours."],
+      button: "Confirm my email",
+      notes: [
+        "If the link has expired, ask for a new one on the FlyeeClub sign-in screen.",
+        "Not you? Ignore this message: without the confirmation, the account is not activated.",
+      ],
+    },
+    recovery: {
+      subject: "Reset your FlyeeClub password",
+      preview: "The button opens the page to create a new password",
+      heading: "Reset your password",
+      body: ["We received a request to change the password of your FlyeeClub account."],
+      button: "Create a new password",
+      notes: [
+        "If the link has expired, ask for a new one under Forgot my password.",
+        "Did not ask for this? Ignore this message: your password stays the same.",
+      ],
+    },
+    emailChange: {
+      subject: "Confirm your new email at FlyeeClub",
+      preview: "The change only takes effect after the confirmation",
+      heading: "Confirm your new email",
+      body: (from, to) => [
+        `You asked to change the email of your FlyeeClub account from ${from} to ${to}.`,
+        "The change only takes effect after the confirmation.",
+      ],
+      button: "Confirm the new email",
+      notes: [
+        "Did not ask for this? Ignore this message and change your password: someone may have signed in to your account.",
+      ],
+    },
   },
 
   memberWelcome: {

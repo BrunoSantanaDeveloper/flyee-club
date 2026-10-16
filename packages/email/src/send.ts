@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import { Resend } from "resend";
 
+import { plainTextOf } from "./plain-text";
+
 /** True when transactional email is configured (server-only env var). */
 export const isEmailConfigured = Boolean(process.env.RESEND_API_KEY);
 
@@ -30,12 +32,18 @@ export type Message = {
   unsubscribeUrl?: string;
 };
 
-function payload(message: Message) {
+/**
+ * What goes to the provider. The plain-text part is rendered from the same
+ * template (src/plain-text.ts): a message that is HTML alone scores worse with
+ * spam filters, and some readers show only text.
+ */
+async function payload(message: Message) {
   return {
     from: DEFAULT_FROM,
     to: message.to,
     subject: message.subject,
     react: message.react,
+    text: await plainTextOf(message.react),
     ...(message.replyTo ? { replyTo: message.replyTo } : {}),
     ...(message.unsubscribeUrl
       ? {
@@ -56,7 +64,7 @@ function payload(message: Message) {
 export async function send(message: Message): Promise<SendResult> {
   if (!isEmailConfigured) return { sent: false };
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const { error } = await resend.emails.send(payload(message));
+  const { error } = await resend.emails.send(await payload(message));
   return error ? { sent: false, error: error.message } : { sent: true };
 }
 
@@ -73,6 +81,6 @@ export async function sendBatch(messages: Message[]): Promise<SendResult & { cou
   if (messages.length === 0) return { sent: true, count: 0 };
   if (messages.length > BATCH_LIMIT) return { sent: false, count: 0, error: "batch_too_large" };
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const { error } = await resend.batch.send(messages.map(payload));
+  const { error } = await resend.batch.send(await Promise.all(messages.map(payload)));
   return error ? { sent: false, count: 0, error: error.message } : { sent: true, count: messages.length };
 }

@@ -17,7 +17,13 @@ export type LeadConfirmEmailProps = {
 export default function LeadConfirmEmail({ locale, confirmUrl }: LeadConfirmEmailProps) {
   const copy = emailCopyFor(locale).leadConfirm;
   return (
-    <EmailShell locale={locale} preview={copy.preview} heading={copy.heading} notes={[copy.expiry, copy.ignore]}>
+    <EmailShell
+      locale={locale}
+      preview={copy.preview}
+      heading={copy.heading}
+      notes={[copy.expiry, copy.ignore]}
+      fallbackUrl={confirmUrl}
+    >
       <EmailText>{copy.body}</EmailText>
       <EmailButton href={confirmUrl}>{copy.button}</EmailButton>
     </EmailShell>

@@ -9,8 +9,9 @@
  *   (apps/web/src/components/logo/logo.tsx) references those files, and
  *   apps/web/public/images/email/logo.svg is the light lockup again.
  * - every raster below (the square `mark`, the home-screen tile, the three
- *   .ico files) is DERIVED from the mark: after replacing a master, run
- *   `npm run brand:assets -w @flyee/web` instead of exporting by hand.
+ *   .ico files) and the e-mail header (public/images/email/logo.png, the dark
+ *   lockup on the deep band) is DERIVED from the masters: after replacing
+ *   one, run `npm run brand:assets -w @flyee/web` instead of exporting by hand.
  *
  * The logo is official (delivered 2026-10-01). The palette is still
  * provisional (docs/PRODUCT.md). The tagline/description here are the

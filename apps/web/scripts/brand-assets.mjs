@@ -17,6 +17,9 @@
  *   public/favicon/favicon-dark.ico    16, 32 and 48 px, for dark tab strips
  *   public/favicon.ico                 the yellow tile: what a client asks for
  *                                      when it reads no <link rel="icon">
+ *   public/images/email/logo.png       432x108, the dark lockup on the deep
+ *                                      band: the header of every e-mail
+ *                                      (packages/email, templates/shell.tsx)
  *
  * Usage: npm run brand:assets -w @flyee/web   (after replacing a master)
  *
@@ -121,5 +124,22 @@ write("favicon/favicon-light.ico", await ico(MASTERS.light));
 const darkIco = await ico(MASTERS.dark);
 write("favicon/favicon-dark.ico", darkIco);
 write("favicon.ico", darkIco);
+
+// The e-mail header. Mail clients show no SVG, so it is a PNG, three times the
+// 144x36 it is shown at. It carries the deep band (--background-deep, #303030)
+// as its own background instead of transparency: a client that repaints the
+// band in dark mode still shows the lockup whole, with "flyee" in white.
+const DEEP_BAND = { r: 48, g: 48, b: 48 };
+const lockup = await sharp(readFileSync(resolve(PUBLIC, "brand/logo-and-lettermark-dark.svg")), { density: 288 })
+  .png()
+  .toBuffer();
+write(
+  "images/email/logo.png",
+  await sharp(lockup)
+    .resize(432, 108, { fit: "contain", background: DEEP_BAND })
+    .flatten({ background: DEEP_BAND })
+    .png({ compressionLevel: 9, palette: true })
+    .toBuffer(),
+);
 
 console.log(written.map((line) => `wrote public/${line}`).join("\n"));

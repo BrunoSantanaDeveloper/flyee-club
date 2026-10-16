@@ -357,7 +357,7 @@ Shell: `menu-items.ts` (1.6), `plan-indicator.tsx` mostra o tier via `use-entitl
 - Descadastro: `api/public/email/unsubscribe` tratando `profiles.email_unsubscribe_token` e `leads.email_unsubscribe_token`, resposta bilíngue.
 - `packages/jobs/src/index.ts` `JobEvents`: `backup/run.requested`, `flyee/meeting.email`, `flyee/lead.confirm`, `flyee/updates.digest`, `flyee/token.reminder`; `api/inngest/route.ts` serve `adminFunctions`, `billingFunctions`, `meetingFunctions`, `leadFunctions`, `tokenFunctions`, `updatesDigestFunctions`, `productEventsFunctions` (rollup/purge), `backupFunctions`.
 - In-app: `notifyUsers` para ativação, lembrete do dia 25 (`source_key token-reminder:<family>`), nova versão em módulo instalado (semanal), lembretes de encontro.
-- Auth do Supabase via SMTP Resend: templates bilíngues com condicionais Go-template em `{{ .Data.locale }}` (o sign-up envia `locale` na metadata); assunto nos dois idiomas separados por " / ".
+- Auth do Supabase via SMTP Resend: templates bilíngues com condicionais Go-template em `{{ .Data.locale }}` (o sign-up envia `locale` na metadata). Desde 2026-10-16 eles são gerados de `packages/email` (`templates/auth.tsx`, a mesma moldura dos e-mails do app, com o logo) por `npm run supabase:templates -w @flyee/email`, e o assunto também escolhe o idioma pelo `locale` (antes ia nos dois idiomas separados por " / ").
 
 ---
 

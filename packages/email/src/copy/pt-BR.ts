@@ -16,6 +16,52 @@ export const emailCopy = {
   shell: {
     /** The line under every message. */
     signature: "FlyeeClub · apps que rodam na IA que você já usa",
+    /** The header's image says the name of the brand, so its text is the name. */
+    logoAlt: "FlyeeClub",
+    /** Above the button's address, written out, in a message whose whole point is that one link. */
+    fallback: "Se o botão não abrir, copie este endereço e cole no navegador:",
+  },
+
+  /**
+   * The three messages Supabase Auth sends: they become supabase/templates/
+   * (templates/auth.tsx). The link and the addresses are fields Supabase fills
+   * in when it sends, so a sentence takes them as arguments, like any value.
+   */
+  auth: {
+    confirmation: {
+      subject: "Confirme seu e-mail no FlyeeClub",
+      preview: "Um clique para ativar a sua conta",
+      heading: "Confirme seu e-mail",
+      body: ["Falta um passo para criar a sua conta no FlyeeClub: confirmar que este endereço é seu."],
+      button: "Confirmar meu e-mail",
+      notes: [
+        "Se o link tiver expirado, peça outro na tela de entrada do FlyeeClub.",
+        "Não foi você? Ignore esta mensagem: sem a confirmação, a conta não é ativada.",
+      ],
+    },
+    recovery: {
+      subject: "Redefina sua senha do FlyeeClub",
+      preview: "O botão abre a página para criar uma senha nova",
+      heading: "Redefina sua senha",
+      body: ["Recebemos um pedido para trocar a senha da sua conta no FlyeeClub."],
+      button: "Criar uma senha nova",
+      notes: [
+        "Se o link tiver expirado, peça outro em Esqueci minha senha.",
+        "Não pediu a troca? Ignore esta mensagem: a sua senha continua a mesma.",
+      ],
+    },
+    emailChange: {
+      subject: "Confirme seu novo e-mail no FlyeeClub",
+      preview: "A troca só vale depois da confirmação",
+      heading: "Confirme seu novo e-mail",
+      /** `from` and `to` are the current address and the new one. */
+      body: (from: string, to: string) => [
+        `Você pediu para trocar o e-mail da sua conta no FlyeeClub de ${from} para ${to}.`,
+        "A troca só vale depois da confirmação.",
+      ],
+      button: "Confirmar o novo e-mail",
+      notes: ["Não pediu a troca? Ignore esta mensagem e troque a sua senha: alguém pode ter entrado na sua conta."],
+    },
   },
 
   memberWelcome: {
