@@ -223,6 +223,11 @@ const VERSION_COLUMNS =
 const MODULE_COLUMNS =
   "id, slug, trail, store_category, personas, type, icon, name, summary, description_md, compatible_ais, external_credentials, status, entitlement_key, sort, published_at, created_at, updated_at";
 
+/** Which read failed and what PostgREST said, for the server log (loadConsole); the page shows neither. */
+function readError(scope: string, label: string, error: { code?: string; message?: string }): Error {
+  return new Error(`${scope}: ${label}: ${error.code ?? ""} ${error.message ?? ""}`.trim());
+}
+
 function toVersion(row: VersionRow, stats: Stats["versions"][number] | undefined): AdminVersion {
   return {
     id: row.id,
@@ -277,7 +282,7 @@ function toModule(row: Record<string, unknown>, usage: ModuleUsage | undefined, 
 
 async function readStats(supabase: SupabaseClient): Promise<Stats> {
   const { data, error } = await supabase.rpc("admin_catalog_stats");
-  if (error || !data) throw new Error("catalog_stats_failed");
+  if (error || !data) throw readError("catalog_stats_failed", "admin_catalog_stats", error ?? {});
   return data as Stats;
 }
 
@@ -286,7 +291,7 @@ export async function loadTrails(supabase: SupabaseClient): Promise<AdminTrail[]
     .from("catalog_trails")
     .select("slug, name, description, icon, sort")
     .order("sort");
-  if (error) throw new Error("trails_failed");
+  if (error) throw readError("trails_failed", "catalog_trails", error);
   return (data ?? []).map((row) => ({
     slug: row.slug,
     name: row.name ?? {},
@@ -304,7 +309,7 @@ export async function loadStoreSettings(supabase: SupabaseClient): Promise<Store
 
 export async function loadStoreCategories(supabase: SupabaseClient): Promise<AdminStoreCategory[]> {
   const { data, error } = await supabase.from("catalog_store_categories").select("slug, name, sort").order("sort");
-  if (error) throw new Error("store_categories_failed");
+  if (error) throw readError("store_categories_failed", "catalog_store_categories", error);
   return (data ?? []).map((row) => ({ slug: row.slug, name: row.name ?? {}, sort: row.sort }));
 }
 
@@ -340,8 +345,16 @@ export async function loadCatalogAdmin(supabase: SupabaseClient): Promise<{
     supabase.from("platform_settings").select("value").eq("key", "cli").maybeSingle(),
     readStats(supabase),
   ]);
-  for (const read of [modulesRead, versionsRead, recipesRead, recipeModulesRead, workflowsRead, settingsRead]) {
-    if (read.error) throw new Error("catalog_admin_failed");
+  const reads = {
+    catalog_modules: modulesRead,
+    catalog_module_versions: versionsRead,
+    catalog_recipes: recipesRead,
+    catalog_recipe_modules: recipeModulesRead,
+    catalog_recipe_workflows: workflowsRead,
+    platform_settings: settingsRead,
+  };
+  for (const [label, read] of Object.entries(reads)) {
+    if (read.error) throw readError("catalog_admin_failed", label, read.error);
   }
 
   const versionStats = new Map(stats.versions.map((entry) => [entry.versionId, entry]));
@@ -403,7 +416,7 @@ export async function loadModuleAdmin(
     .select(MODULE_COLUMNS)
     .eq("slug", slug)
     .maybeSingle();
-  if (error) throw new Error("module_failed");
+  if (error) throw readError("module_failed", "catalog_modules", error);
   if (!row) return null;
   const moduleId = row.id as string;
 
@@ -420,7 +433,8 @@ export async function loadModuleAdmin(
       .order("sort"),
     readStats(supabase),
   ]);
-  if (versionsRead.error || lessonsRead.error) throw new Error("module_failed");
+  if (versionsRead.error) throw readError("module_failed", "catalog_module_versions", versionsRead.error);
+  if (lessonsRead.error) throw readError("module_failed", "catalog_lessons", lessonsRead.error);
 
   const versionStats = new Map(stats.versions.map((entry) => [entry.versionId, entry]));
   const versions = ((versionsRead.data ?? []) as VersionRow[]).map((version) =>

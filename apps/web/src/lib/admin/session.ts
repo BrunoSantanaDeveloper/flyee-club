@@ -44,7 +44,10 @@ export async function loadConsole<T extends object>(
   if (!session) return { kind: "unavailable" };
   try {
     return { kind: "ready", ...(await read(session)) };
-  } catch {
+  } catch (error) {
+    // The page says only that the read failed; the reason goes to the server log, where the
+    // operator can find it (a missing column grant hid behind this screen once, migration 0042).
+    console.error("[admin] console read failed:", error instanceof Error ? error.message : error);
     return { kind: "error" };
   }
 }
