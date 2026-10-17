@@ -60,7 +60,8 @@ select is(
   'a visitor reads the personas of a published app'
 );
 select is(
-  (select count(*)::int from public.catalog_modules where 'agencia' = any (personas)),
+  -- The test's app only: a live project's published apps carry personas too.
+  (select count(*)::int from public.catalog_modules where 'agencia' = any (personas) and id::text like 'b3100000-%'),
   1,
   'and filters the published apps by persona'
 );

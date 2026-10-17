@@ -115,9 +115,14 @@ select throws_ok(
 
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 set local role anon;
-select is((select count(*)::int from public.catalog_modules), 1, 'a visitor reads the published catalog');
+-- The test's rows only (ids b6000000-…): a live project has its own published apps.
 select is(
-  (select count(*)::int from public.catalog_module_versions),
+  (select count(*)::int from public.catalog_modules where id::text like 'b6000000-%'),
+  1,
+  'a visitor reads the published catalog'
+);
+select is(
+  (select count(*)::int from public.catalog_module_versions where id::text like 'b6000000-%'),
   2,
   'and the released versions, yanked included, but never a draft'
 );

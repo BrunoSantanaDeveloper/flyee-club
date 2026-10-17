@@ -130,8 +130,10 @@ begin
     coalesce((
       select array_agg(g.depth || '@' || v.version order by v.version, g.depth)
       from public.catalog_guides g join public.catalog_module_versions v on v.id = g.version_id
+      -- The test's app only: a live project carries the real apps' guides and videos too.
+      where v.module_id = 'c8100000-0000-4000-8000-000000000001'
     ), '{}'),
-    (select count(*)::int from public.catalog_lesson_videos)
+    (select count(*)::int from public.catalog_lesson_videos where lesson_id::text like 'c8100000-%')
   );
   execute 'reset role';
 end;

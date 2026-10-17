@@ -77,7 +77,9 @@ select ok(
 select is((select payload ->> 'code' from res where name = 'bad'), 'invalid_device', 'a malformed device id is refused');
 select is((select payload ->> 'code' from res where name = 'foreign'), 'not_authorized', 'nobody registers a device into somebody else''s workspace');
 select is(
-  (select count(*)::int from public.product_events where event_name = 'cli.installed'),
+  -- This member's machines only: a live project records real installs too.
+  (select count(*)::int from public.product_events
+   where event_name = 'cli.installed' and actor_id = 'a7000000-0000-4000-8000-000000000001'),
   1,
   'the first registration of a machine is the install event, and only the first'
 );
