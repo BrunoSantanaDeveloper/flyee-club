@@ -306,3 +306,39 @@ describe("the public site never names FlyeeClub Pro", () => {
     expect(found).toEqual([]);
   });
 });
+
+/**
+ * The database refuses the same emoji as the app (decided 2026-10-17, when
+ * the ✓ and ✗ of the product's guides passed here and failed there). Postgres
+ * has no Extended_Pictographic, so pgTAP 0033 lists its ranges; this test
+ * derives the same list from EMOJI and prints the class to paste on a drift.
+ */
+describe("the database refuses the same emoji as the app", () => {
+  it("pgTAP 0033 lists exactly the code points EMOJI refuses", () => {
+    const ranges: [number, number][] = [];
+    let start: number | null = null;
+    for (let cp = 0; cp <= 0x110000; cp++) {
+      const hit = cp <= 0x10ffff && EMOJI.test(String.fromCodePoint(cp));
+      if (hit && start === null) start = cp;
+      if (!hit && start !== null) {
+        ranges.push([start, cp - 1]);
+        start = null;
+      }
+    }
+    const escape = (cp: number) =>
+      cp <= 0xffff
+        ? `\\u${cp.toString(16).toUpperCase().padStart(4, "0")}`
+        : `\\U${cp.toString(16).toUpperCase().padStart(8, "0")}`;
+    const expected = `[${ranges.map(([a, b]) => (a === b ? escape(a) : `${escape(a)}-${escape(b)}`)).join("")}]`;
+
+    const sql = fs.readFileSync(fromRoot("packages/db/tests/0033_copy_rules.test.sql"), "utf8");
+    // The class is the concatenation of the quoted pieces between the two $emoji$ marks.
+    const literal = (sql.split("$emoji$")[1] ?? "")
+      .split("'")
+      .filter((_, index) => index % 2 === 1)
+      .join("");
+    expect(literal, `the class pgTAP 0033 should list: ${expected}`).toBe(expected);
+    // The marks the product's guides use are not emoji; © and → stay, as the brief keeps them.
+    expect(["✓", "✗", "△", "○", "©", "→"].filter((mark) => EMOJI.test(mark))).toEqual([]);
+  });
+});
