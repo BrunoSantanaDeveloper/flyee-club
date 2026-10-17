@@ -66,3 +66,38 @@ describe("site events on the FAQ", () => {
     expect(trackSiteEvent).toHaveBeenLastCalledWith("faq_open", expect.objectContaining({ question_id: "2" }));
   });
 });
+
+describe("site events on a segment", () => {
+  it("reports segment_click and keeps the segment for the waitlist and the sign-up", () => {
+    document.cookie.split("; ").forEach((entry) => {
+      document.cookie = `${entry.split("=")[0]}=; max-age=0; path=/`;
+    });
+    render(
+      <>
+        <MarketingAnalytics />
+        <a
+          href="#para-quem-e-agencia"
+          data-track="segment_click"
+          data-track-segment="agencia"
+          data-track-location="hero"
+        >
+          sua agência
+        </a>
+        <a href="#x" data-track="segment_click" data-track-segment="marketing" data-track-location="hero">
+          outro
+        </a>
+      </>,
+    );
+    fireEvent.click(screen.getByText("sua agência"));
+    expect(trackSiteEvent).toHaveBeenLastCalledWith(
+      "segment_click",
+      expect.objectContaining({ segment: "agencia", location: "hero" }),
+    );
+    expect(document.cookie).toMatch(/segmento=agencia/);
+
+    // An unknown value is reported as clicked but never kept.
+    fireEvent.click(screen.getByText("outro"));
+    expect(document.cookie).toMatch(/segmento=agencia/);
+    expect(document.cookie).not.toMatch(/marketing/);
+  });
+});

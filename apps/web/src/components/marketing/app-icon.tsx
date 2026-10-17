@@ -7,10 +7,11 @@ export type { AppIconSize };
 
 /**
  * An app's icon, the same wherever the app appears (the hero, the store
- * carousel, the featured app, /catalogo and the app's page): a rounded
- * square filled with the hue of its store category, as the home brief asks
- * ("ícone quadrado de cantos arredondados, com uma cor por categoria"), and
- * the app's own glyph in white.
+ * carousel, the featured app, /catalogo, the app's page and the console): a
+ * white rounded square with the app's own glyph in the hue of its store
+ * category, the brief's "uma cor por categoria" carried by the glyph (the
+ * treatment the owner chose on 2026-10-17, as in the reference of logos on
+ * white tiles; app-icon-tile.tsx).
  *
  * The glyph is the one the operator names in the console, drawn from the
  * ORIGINAL Nexture set (icons/app-glyphs.tsx) and not from the interface's

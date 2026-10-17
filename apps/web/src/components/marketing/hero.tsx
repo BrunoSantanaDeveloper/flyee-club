@@ -1,8 +1,41 @@
 import Eyebrow from "@/components/marketing/eyebrow";
+import LocaleLink from "@/components/marketing/locale-link";
 import Section from "@/components/marketing/section";
 import SiteButton from "@/components/site/button";
+import NiArrowRight from "@/icons/nexture/ni-arrow-right";
 
 export type HeroCta = { label: string; href: string; icon?: React.ReactNode };
+
+/** The pill above the title that leads to one thing (the featured app, docs/HOME-COPY.md, "Selo"). */
+export type HeroBadge = {
+  /** The short word in the yellow chip ("Novo", "Em destaque"). */
+  tag: string;
+  label: string;
+  /** Internal Portuguese path. */
+  href: string;
+  /** The site event of the click (`trackAttributes`, lib/site-events.ts). */
+  track?: Record<string, string>;
+};
+
+/** The badge: a bordered pill, the tag as a yellow chip with the charcoal label, the arrow in the ink. */
+function Badge({ badge }: { badge: HeroBadge }) {
+  return (
+    <LocaleLink
+      href={badge.href}
+      className="group border-grey-100 bg-background-paper hover:border-grey-200 focus-visible:outline-primary-ink inline-flex max-w-full items-center gap-2.5 rounded-full border py-1 pr-3.5 pl-1 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+      {...badge.track}
+    >
+      <span className="bg-primary text-primary-contrast flex-none rounded-full px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase">
+        {badge.tag}
+      </span>
+      <span className="text-text-primary truncate font-semibold">{badge.label}</span>
+      <NiArrowRight
+        size="small"
+        className="text-primary-ink flex-none transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+      />
+    </LocaleLink>
+  );
+}
 
 /**
  * Funnel stage: attention + value proposition. Above the fold it must answer
@@ -19,6 +52,7 @@ export type HeroCta = { label: string; href: string; icon?: React.ReactNode };
  */
 export default function Hero({
   eyebrow,
+  badge,
   title,
   subtitle,
   primaryCta,
@@ -33,11 +67,14 @@ export default function Hero({
   track,
 }: {
   eyebrow?: string;
+  /** Center layout: a pill link in place of the eyebrow (the featured app of the home). */
+  badge?: HeroBadge;
   /** The section's key in the measurement (`section_view`). */
   track?: string;
   /** Accepts rich content (e.g. t.rich with <em> for the two-tone blueprint headline). */
   title: React.ReactNode;
-  subtitle: string;
+  /** Text, or text with links in it (the segments of the home, each a link to its persona). */
+  subtitle: React.ReactNode;
   /** The page's conversion action. Required unless `action` replaces the buttons. */
   primaryCta?: HeroCta;
   secondaryCta?: HeroCta;
@@ -70,7 +107,7 @@ export default function Hero({
 }) {
   // How many lines the copy column renders, for the delay of the media.
   const extra = layout === "split" ? highlights?.length : strip?.items.length;
-  const lines = [eyebrow, title, subtitle, true, note, extra].filter(Boolean).length;
+  const lines = [eyebrow ?? badge, title, subtitle, true, note, extra].filter(Boolean).length;
   const entrance = { "--hero-media-delay": `${((lines - 1) * 0.12 + 0.25).toFixed(2)}s` } as React.CSSProperties;
 
   const ctas = action ?? (
@@ -143,7 +180,7 @@ export default function Hero({
     <Section spacing="default" decor={decor} className="overflow-hidden" track={track}>
       <div data-hero style={entrance} className="flex flex-col items-center">
         <div data-hero-copy className="flex flex-col items-center gap-6 text-center">
-          {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+          {badge ? <Badge badge={badge} /> : eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
 
           {/* display-xl over a wider measure: the title takes two lines and the
               product below it starts above the fold (docs/HOME-COPY.md). */}

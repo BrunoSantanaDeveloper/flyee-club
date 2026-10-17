@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { addressWithCategory, categoryFromSearch } from "./category-param";
+import { useEffect, useState } from "react";
 
 import { TONE, type Tone } from "@/components/marketing/tone";
 import { trackSiteEvent } from "@/lib/site-events";
@@ -49,10 +50,20 @@ export default function StoreGrid({
 }) {
   const [active, setActive] = useState<string | null>(null);
   const current = categories.find((category) => category.slug === active) ?? null;
-  // A category chosen (or cleared) is a site event; re-pressing the active chip clears it.
+
+  // An address with `?cat=` opens the grid filtered (category-param.ts); no event, nobody chose yet.
+  const slugs = categories.map((category) => category.slug).join(",");
+  useEffect(() => {
+    const named = categoryFromSearch(window.location.search, slugs.split(","));
+    if (named) setActive(named);
+  }, [slugs]);
+
+  // A category chosen (or cleared) is a site event and goes to the address, without scrolling the
+  // page; re-pressing the active chip clears it.
   const choose = (slug: string | null) => {
     setActive(slug);
     trackSiteEvent("store_filter", { category: slug ?? "all" });
+    window.history.replaceState(null, "", addressWithCategory(window.location.href, slug));
   };
 
   const chip = (selected: boolean, tone?: Tone) =>

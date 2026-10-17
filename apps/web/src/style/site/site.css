@@ -428,6 +428,20 @@
     color: hsl(var(--primary));
     background-image: none;
   }
+
+  /* ---------- App icon in the brand's colours ---------- */
+  /* The glyph of an app in the brand's hue (components/marketing/app-icon-tile.tsx) is drawn like
+     the logo on a light page: charcoal, with its second tone (the faint parts of a Nexture glyph)
+     in the yellow. On a dark page the glyph is the yellow and keeps its faint parts. */
+  .app-glyph-duo path[opacity="0.4"] {
+    fill: hsl(var(--primary));
+    opacity: 1;
+  }
+
+  .dark .app-glyph-duo path[opacity="0.4"] {
+    fill: currentColor;
+    opacity: 0.4;
+  }
 }
 
 @keyframes site-drawer-in {

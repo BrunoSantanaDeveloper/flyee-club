@@ -112,7 +112,7 @@
       "name": "Hero",
       "file": "hero.tsx",
       "funnel": "attention + value proposition",
-      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle, primaryCta (unless action), secondaryCta{label, href, icon?}, action? (replaces the buttons with the conversion itself, e.g. the waitlist form), note?, highlights?: string[] (reassurance chips row, split only), strip?: {label, items: {name, mark?}[]} (center layout only: a labelled row under the note, each item its mark in one colour (AiMark) or, without one, a muted wordmark: the AIs the apps run on)",
+      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, badge?: {tag, label, href, track?} (center: a pill link in place of the eyebrow, the yellow tag chip + label + arrow: the featured app), title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle (text or nodes: the home links its segments), primaryCta (unless action), secondaryCta{label, href, icon?}, action? (replaces the buttons with the conversion itself, e.g. the waitlist form), note?, highlights?: string[] (reassurance chips row, split only), strip?: {label, items: {name, mark?}[]} (center layout only: a labelled row under the note, each item its mark in one colour (AiMark) or, without one, a muted wordmark: the AIs the apps run on)",
       "use": "owns the page <h1> AND the page's one orchestrated motion moment: the entrance is CSS keyed on data-hero (style/layout/marketing-motion.css), copy line by line, then the media, then the satellites of a composition, starting with the first paint; a server component (no script of its own); split + <ProductFrame glow> is the committed direction for product-heavy pages; media is required in practice (premium bar #1)"
     },
     {
@@ -182,7 +182,7 @@
       "name": "Faq",
       "file": "faq.tsx",
       "funnel": "objection handling",
-      "props": "eyebrow?, title, subtitle?, items: {question, answer}, id?, layout: stack|split (sticky intro + list), link?: {label, href}",
+      "props": "eyebrow?, title, subtitle?, items: {question, answer}, id?, layout: stack|split (sticky intro + list), link?: {label, href}, footnote? (a line under the questions: the contact page)",
       "use": "REAL purchase objections (price, lock-in, security, updates) answered plainly; emits FAQPage JsonLd"
     },
     {
@@ -239,7 +239,7 @@
       "file": "store-grid.tsx",
       "role": "desire",
       "props": "label (names the chip group for assistive technology), allLabel, categories: {slug, label, tone, description?}[], items: {key, category: string|null, card: ReactNode}[], columns: 3|4",
-      "use": "the app store grid with its category filter (docs/HOME-COPY.md): every card is rendered on the server and stays in the HTML, the chips (buttons with aria-pressed, the selected one inverted) only hide the other categories, and the selected category shows its one-line description; category null shows under every filter (the request card); cards are usually <RuledCard>; one column on phones"
+      "use": "the app store grid with its category filter (docs/HOME-COPY.md): every card is rendered on the server and stays in the HTML, the chips (buttons with aria-pressed, the selected one inverted) only hide the other categories, and the selected category shows its one-line description; category null shows under every filter (the request card); cards are usually <RuledCard>; one column on phones; the chosen category goes to the address as ?cat= (category-param.ts) and an address with it opens filtered"
     },
     {
       "name": "AppStorePreview",
@@ -253,7 +253,7 @@
       "file": "app-icon.tsx",
       "role": "evidence",
       "props": "name (catalog_modules.icon; empty or unknown draws the apps glyph), tone (the store look of the app: its category hue, else its stage hue), size: xs|sm|md|lg|xl|2xl, className (a responsive size)",
-      "use": "an app's identity everywhere (hero shelf, featured row, carousel, /catalogo, the app page, the operator console): a squircle in the gradient of its hue with the app's glyph in white (the yellow takes the charcoal), drawn from the ORIGINAL Nexture set through icons/app-glyphs.tsx, never the interface's Phosphor icons; server-rendered, a client component receives it as an element. AppIconTile (app-icon-tile.tsx) is the tile without its glyph; AppIconLazy (app-icon-lazy.tsx, client, with useAppGlyphs) draws any typed name in the operator console, loading the glyph set after the page instead of in its first load"
+      "use": "an app's identity everywhere (hero shelf, featured row, carousel, /catalogo, the app page, the operator console): a white squircle (hairline, soft neutral shadow) with the app's glyph in its hue: the accents as they are (their light step on a dark page), the brand's hue drawn like the logo, charcoal with its second tone in the yellow (`app-glyph-duo`, style/site/site.css); the owner's choice of 2026-10-17 among four treatments, drawn from the ORIGINAL Nexture set through icons/app-glyphs.tsx, never the interface's Phosphor icons; server-rendered, a client component receives it as an element. AppIconTile (app-icon-tile.tsx) is the tile without its glyph; AppIconLazy (app-icon-lazy.tsx, client, with useAppGlyphs) draws any typed name in the operator console, loading the glyph set after the page instead of in its first load"
     },
     {
       "name": "AppShowcase",
@@ -267,7 +267,7 @@
       "file": "app-carousel.tsx",
       "role": "desire",
       "props": "label (names the strip), chipsLabel, allLabel, previousLabel, nextLabel, categories: {slug, label, tone}[], items: {key, category: string|null, card: ReactNode}[]",
-      "use": "the store of the home in ONE row: category chips (store_filter), a native scroller that snaps to a card (finger, trackpad, keyboard) and a round button on each side that scrolls one card and switches off at the ends; four cards on a computer, two on a tablet, one and the edge of the next on a phone (the strip reaches the screen edges there); every card stays in the HTML, the chips only hide"
+      "use": "the store of the home in ONE row: category chips (store_filter), a native scroller that snaps to a card (finger, trackpad, keyboard) and a round button on each side that scrolls one card and switches off at the ends; four cards on a computer, two on a tablet, one and the edge of the next on a phone (the strip reaches the screen edges there); every card stays in the HTML, the chips only hide; the chosen category goes to the address as ?cat= (category-param.ts) and an address with it opens filtered"
     },
     {
       "name": "AppCard",
@@ -282,6 +282,13 @@
       "role": "trust",
       "props": "id: claude_code|codex|gemini_cli|cursor (the manifest's compatible_ais), className; SUPPORTED_AIS and aiName() beside it",
       "use": "the official mark of an AI the apps run on, one colour (currentColor), with its name as the accessible name and tooltip; the hero strip shows the four (decided 2026-10-17); never decoration, never a client logo"
+    },
+    {
+      "name": "PersonaGrid",
+      "file": "persona-grid.tsx",
+      "role": "desire",
+      "props": "id (the anchor; each card is #<id>-<segment>), track?, eyebrow?, title, appsLabel, personas: {segment, name, text, icon, tone, starters: {slug, name, icon (AppIcon xs), href, track?}[], chosen?}[], notForYou?: {title, items[]}",
+      "use": "the home brief's \"Para quem é\": one card per site persona with what that reader does and the apps marked a good start for it (lib/catalog/starters.ts, at most three, none hides the row), then a dashed \"Não é para você se\" panel; a click on a card is segment_click (location who_for) and the one listener keeps the segment; a card rings while it is the :target (the hero's segment links) or the ?segment= of the address"
     },
     {
       "name": "IndexGrid",

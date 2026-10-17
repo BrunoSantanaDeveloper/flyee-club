@@ -13,7 +13,13 @@ export const homeCopy: HomeCopy = {
     newLabel: "New",
     title: "Apps that automate your company's work in **your favorite AI**.",
     subtitle:
-      "Sales, content, video, research and product: every repetitive task becomes an app that runs in Claude Code, Codex or the AI you already use. For your business, your agency, your digital product or your dev work.",
+      "Sales, content, video, research and product: every repetitive task becomes an app that runs in Claude Code, Codex or the AI you already use. For {negocio}, {agencia}, {produto} or {dev}.",
+    segments: {
+      negocio: "your business",
+      agencia: "your agency",
+      produto: "your digital product",
+      dev: "your dev work",
+    },
     secondaryCta: "Is FlyeeClub for me?",
     note: "One year of access, one payment. You use your own AI plan.",
     stripLabel: "Works with the AI you already use",
@@ -116,13 +122,45 @@ export const homeCopy: HomeCopy = {
       },
       {
         title: "Runs on what you have",
-        body: "The apps use your own AI plan and keep what they produce in files on your computer. FlyeeClub does not charge per use.",
+        body: "The apps use your own AI plan and keep what they produce in files on your computer. FlyeeClub does not charge per use. If you ever switch AIs, what they produced stays with you.",
       },
       {
         title: "Updated when AI changes",
         body: "AI changes every week. When it does, we update the app and your AI installs the new version when you ask.",
       },
     ],
+  },
+
+  whoFor: {
+    eyebrow: "Who it's for",
+    title: "If you repeat the same tasks every week, there's an app for you.",
+    appsLabel: "Apps to start with",
+    personas: {
+      negocio: {
+        name: "Your business",
+        text: "You run the company with a small team and want to stop paying for a separate tool for every task.",
+      },
+      agencia: {
+        name: "Your agency",
+        text: "You serve clients, solo or with a team, and need to deliver more without losing each client's voice.",
+      },
+      produto: {
+        name: "Your digital product",
+        text: "You sell online and need pages, content and video going out every week.",
+      },
+      dev: {
+        name: "Your dev work",
+        text: "You build products and want every project to start with a standard, without repeating the rules to the agent.",
+      },
+    },
+    notForYou: {
+      title: "Not for you if",
+      items: [
+        "You want to watch lessons. Here you install and use.",
+        "You don't want to install anything on your computer. Today the apps run in terminal AIs: Claude Code, Codex, Gemini CLI and Cursor.",
+        "You don't have an AI plan and don't plan to get one. FlyeeClub uses yours.",
+      ],
+    },
   },
 
   origin: {
@@ -158,46 +196,60 @@ export const homeCopy: HomeCopy = {
     title: "Questions",
     items: [
       {
+        id: "curso",
         question: "Is this a course?",
         answer:
           "No. It is an app store you install and use in your work. Each app comes with a short guide, made for you to start using it, not watching.",
       },
       {
+        id: "computadores",
         question: "On how many computers can I use it?",
         answer: "One. Each access is for one person, on one machine.",
       },
       {
+        id: "programar",
         question: "Do I need to know how to code?",
         answer:
           "No. Your AI installs and updates for you: you ask in the conversation, confirm what it is about to do and approve the connection in the browser.",
       },
       {
+        id: "sem-terminal",
         question: "Does it work in the Claude or ChatGPT app, without a terminal?",
         answer: "Not yet. Today FlyeeClub runs in terminal AIs: Claude Code, Codex, Gemini CLI and Cursor.",
       },
       {
+        id: "custo-ia",
         question: "Is there an AI cost on top of the access?",
         answer:
           "Your own AI plan. FlyeeClub does not charge per use; some apps use your account on outside services, and each app's page says so.",
       },
       {
+        id: "sem-atualizar",
         question: "What happens if I go a while without updating?",
         answer:
           "Nothing is uninstalled; what is on your machine stays the same. After 30 days without updating, the installer asks you to confirm your access in the dashboard before it downloads the new version.",
       },
       {
+        id: "clientes",
         question: "Can I use it in client projects?",
         answer: "Yes. FlyeeClub covers your own projects and your clients' projects.",
       },
       {
+        id: "idiomas",
         question: "Which languages?",
         answer: "Apps, guides and the dashboard in Portuguese and English.",
       },
       {
+        id: "reembolso",
         question: "What if it is not for me?",
         answer: "Within the guarantee period, you ask support for a full refund.",
       },
     ],
+    contact: {
+      lead: "Still have a question before you join?",
+      link: "Talk to us on the contact page",
+      tail: "Bruno answers.",
+    },
   },
 
   cta: {

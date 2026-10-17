@@ -16,7 +16,9 @@ import FeatureRows from "@/components/marketing/feature-row";
 import Hero from "@/components/marketing/hero";
 import { getHomeCopy, type HomeCopy } from "@/components/marketing/home-copy";
 import { rich } from "@/components/marketing/home-copy/rich";
+import { splitTokens } from "@/components/marketing/home-copy/tokens";
 import LocaleLink from "@/components/marketing/locale-link";
+import PersonaGrid, { type Persona } from "@/components/marketing/persona-grid";
 import PricingSection from "@/components/marketing/pricing-section";
 import ProcessSteps from "@/components/marketing/process-steps";
 import ProductComposition, { type Satellite } from "@/components/marketing/product-composition";
@@ -26,29 +28,36 @@ import { KpiChip, LinkChip, ReadoutChip } from "@/components/marketing/satellite
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import TerminalFrame from "@/components/marketing/terminal-frame";
-import { TONE } from "@/components/marketing/tone";
+import { TONE, type Tone } from "@/components/marketing/tone";
 import SiteButton from "@/components/site/button";
 import { COOKIE_KEYS } from "@/constants";
 import NiAi from "@/icons/nexture/ni-ai";
 import NiArrowRight from "@/icons/nexture/ni-arrow-right";
+import NiBriefcase from "@/icons/nexture/ni-briefcase";
 import NiCells from "@/icons/nexture/ni-cells";
+import NiCode from "@/icons/nexture/ni-code";
 import NiCoin from "@/icons/nexture/ni-coin";
 import NiFlask from "@/icons/nexture/ni-flask";
 import NiHealth from "@/icons/nexture/ni-health";
 import NiKey from "@/icons/nexture/ni-key";
 import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiRefresh from "@/icons/nexture/ni-refresh";
+import NiRocket from "@/icons/nexture/ni-rocket";
 import NiServer from "@/icons/nexture/ni-server";
+import NiUsers from "@/icons/nexture/ni-users";
 import { resolveCurrency } from "@/lib/billing-currency";
+import { getMaxInstallments } from "@/lib/billing-settings";
 import { pickFeatured } from "@/lib/catalog/featured";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
+import { startersFor } from "@/lib/catalog/starters";
 import { accountServices, isNewApp, servicesPhrase } from "@/lib/catalog/store-badges";
 import { storeLook } from "@/lib/catalog/store-look";
 import { getLaunchStage, invitesToInstall, primaryCtaFor } from "@/lib/launch";
 import { normalizeCouponCode } from "@/lib/offer-link";
 import { publicPageMetadata } from "@/lib/seo";
 import { trackAttributes } from "@/lib/site-events";
+import { normalizeSegment, PERSONA_SEGMENTS } from "@/lib/site-segment";
 import { resolvePublicCoupon } from "@flyee/billing/public";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -64,6 +73,17 @@ export async function generateMetadata(): Promise<Metadata> {
 
 type App = PublicCatalog["modules"][number];
 
+/** The anchor of "Para quem é"; each persona's card is `#para-quem-e-<segment>`. */
+const WHO_FOR = "para-quem-e";
+
+/** Each persona's concept and hue in "Para quem é" (the site's personas, lib/site-segment.ts). */
+const PERSONA_LOOK: Record<(typeof PERSONA_SEGMENTS)[number], { icon: React.ReactNode; tone: Tone }> = {
+  negocio: { icon: <NiBriefcase size="medium" />, tone: "accent-4" },
+  agencia: { icon: <NiUsers size="medium" />, tone: "accent-2" },
+  produto: { icon: <NiRocket size="medium" />, tone: "accent-1" },
+  dev: { icon: <NiCode size="medium" />, tone: "accent-3" },
+};
+
 /** The home's copy with one value filled in ("Atualizado em {date}"). */
 const fill = (text: string, values: Record<string, string>) =>
   text.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
@@ -78,19 +98,34 @@ const fill = (text: string, values: Record<string, string>) =>
  * 2026-10-17 set the marks, the shelf of icons, the result in place of the
  * command and the row (docs/DESIGN.md, "Reference ingredients").
  *
+ * "Para quem é" (the personas, each with the apps marked for it) sits after
+ * the reasons for a store, and the hero's segments and its "O FlyeeClub é pra
+ * mim?" lead to it, the brief's way of learning which segment a visitor is
+ * while the quiz and the segment pages do not exist.
+ *
  * Left out until they exist, as that draft asks: the testimonials (only
  * placeholders today), the custom-app, mentoring and consulting block (the
- * platform does not sell them yet), the "Para quem é" pages, the quiz and the
+ * platform does not sell them yet), the segment pages, the quiz and the
  * compatibility page. Every button that converts follows the launch stage
  * (lib/launch.ts): the waitlist until the site opens, sign-up after.
  */
-export default async function Home() {
-  const [locale, t, stage, cookieStore] = await Promise.all([
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [locale, t, stage, cookieStore, params, splitsInReais] = await Promise.all([
     getLocale(),
     getTranslations("marketing"),
     getLaunchStage(),
     cookies(),
+    searchParams,
+    // How long the access lasts says what /planos says: the split in reais only while the
+    // checkout in reais splits (no split while Stripe charges them).
+    getMaxInstallments("BRL").then((count) => count > 1),
   ]);
+  // A `?segment=` link rings its persona's card (the brief, 7.8).
+  const chosenSegment = normalizeSegment(typeof params.segment === "string" ? params.segment : null);
   const copy: HomeCopy = await getHomeCopy(locale);
   const cta = primaryCtaFor(stage);
   const primary = { label: t(cta.labelKey), href: cta.href };
@@ -247,17 +282,77 @@ export default async function Home() {
   const hasExample = featured?.slug === example.slug;
   const featuredServices = featured ? accountServices(featured.external_credentials) : [];
 
+  // The hero's segments: each a link to its persona's card, which rings while it is the
+  // target; the click is `segment_click` (`location: "hero"`) and keeps the segment.
+  const subtitle = splitTokens(copy.hero.subtitle, PERSONA_SEGMENTS).map((part, index) =>
+    "token" in part ? (
+      <a
+        key={index}
+        href={`#${WHO_FOR}-${part.token}`}
+        className="text-text-primary decoration-primary-ink font-semibold underline decoration-2 underline-offset-4"
+        {...trackAttributes({ event: "segment_click", segment: part.token, location: "hero" })}
+      >
+        {copy.hero.segments[part.token as keyof typeof copy.hero.segments]}
+      </a>
+    ) : (
+      part.text
+    ),
+  );
+
+  // "Para quem é": each persona with the apps the operator marked for it (migration 0032).
+  const personas: Persona[] = PERSONA_SEGMENTS.map((segment) => ({
+    segment,
+    name: copy.whoFor.personas[segment].name,
+    text: copy.whoFor.personas[segment].text,
+    icon: PERSONA_LOOK[segment].icon,
+    tone: PERSONA_LOOK[segment].tone,
+    chosen: chosenSegment === segment,
+    starters: startersFor(apps, segment).map((app) => ({
+      slug: app.slug,
+      name: app.name ?? app.slug,
+      icon: icon(app, "xs"),
+      href: `/catalogo/${app.slug}`,
+      track: trackAttributes({ event: "app_card_click", app: app.slug, location: "who_for" }),
+    })),
+  }));
+
+  // How long the access lasts and the team question answer as /planos does (one source, the
+  // marketing catalog), after "curso" and "clientes" (the brief's order).
+  const duration = {
+    id: "duracao",
+    question: t("faq-1-question"),
+    answer: splitsInReais ? t("faq-1-answer") : t("faq-1-answer-at-once"),
+  };
+  const team = { id: "equipe", question: t("faq-4-question"), answer: t("faq-4-answer") };
+  const faqItems = copy.faq.items.flatMap((item) =>
+    item.id === "curso" ? [item, duration] : item.id === "clientes" ? [item, team] : [item],
+  );
+
   return (
     <>
       <Hero
         layout="center"
         decor="glow"
         track="hero"
-        eyebrow={featured ? `${copy.store.featuredLabel} · ${featured.name ?? featured.slug}` : copy.hero.eyebrow}
+        eyebrow={copy.hero.eyebrow}
+        // The brief's badge: the featured app, as a link to its page.
+        badge={
+          featured
+            ? {
+                tag:
+                  catalog && isNewApp(featured.firstPublishedAt, catalog.newBadgeDays)
+                    ? copy.hero.newLabel
+                    : copy.store.featuredLabel,
+                label: featured.name ?? featured.slug,
+                href: `/catalogo/${featured.slug}`,
+                track: trackAttributes({ event: "app_card_click", app: featured.slug, location: "badge" }),
+              }
+            : undefined
+        }
         title={rich(copy.hero.title)}
-        subtitle={copy.hero.subtitle}
+        subtitle={subtitle}
         primaryCta={primary}
-        secondaryCta={{ label: copy.hero.secondaryCta, href: "#perguntas" }}
+        secondaryCta={{ label: copy.hero.secondaryCta, href: `#${WHO_FOR}` }}
         note={copy.hero.note}
         strip={{
           label: copy.hero.stripLabel,
@@ -386,6 +481,16 @@ export default async function Home() {
         />
       </Section>
 
+      <PersonaGrid
+        id={WHO_FOR}
+        track="whoFor"
+        eyebrow={copy.whoFor.eyebrow}
+        title={copy.whoFor.title}
+        appsLabel={copy.whoFor.appsLabel}
+        personas={personas}
+        notForYou={copy.whoFor.notForYou}
+      />
+
       <Band angle={-1} background="primary-soft" decor="dots">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
           <p className="text-text-secondary m-0 text-sm font-semibold tracking-wide uppercase">{copy.origin.eyebrow}</p>
@@ -444,8 +549,21 @@ export default async function Home() {
         layout="split"
         eyebrow={copy.faq.eyebrow}
         title={copy.faq.title}
-        items={copy.faq.items}
+        items={faqItems}
         link={primary}
+        footnote={
+          <>
+            {copy.faq.contact.lead}{" "}
+            <LocaleLink
+              href="/contato"
+              className="text-text-primary font-semibold underline"
+              {...trackAttributes({ event: "contact_click", location: "faq_footer" })}
+            >
+              {copy.faq.contact.link}
+            </LocaleLink>
+            . {copy.faq.contact.tail}
+          </>
+        }
       />
 
       <Cta

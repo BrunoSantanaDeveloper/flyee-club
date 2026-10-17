@@ -33,6 +33,7 @@ export default function Faq({
   track,
   layout = "stack",
   link,
+  footnote,
 }: {
   eyebrow?: string;
   title: string;
@@ -44,6 +45,8 @@ export default function Faq({
   layout?: "stack" | "split";
   /** Split layout only: conversion link under the intro (repeats the page CTA). */
   link?: { label: string; href: string };
+  /** A line under the questions (the way to ask one that is not there: the contact page). */
+  footnote?: React.ReactNode;
 }) {
   const questions = (
     <Reveal className="flex w-full flex-col gap-2">
@@ -58,6 +61,7 @@ export default function Faq({
           <p className="site-disclosure-body">{item.answer}</p>
         </details>
       ))}
+      {footnote ? <p className="text-text-secondary m-0 mt-4 text-base leading-7">{footnote}</p> : null}
     </Reveal>
   );
 

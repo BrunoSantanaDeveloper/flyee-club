@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { trackPageView } from "@/lib/analytics";
-import { datasetToEventProps, isSiteEventName, trackSiteEvent } from "@/lib/site-events";
+import { datasetToEventProps, isSiteEventName, rememberSegment, trackSiteEvent } from "@/lib/site-events";
 
 /**
  * The browser side of the public site's measurement (docs/TRACKING.md):
@@ -19,7 +19,10 @@ import { datasetToEventProps, isSiteEventName, trackSiteEvent } from "@/lib/site
  *    (`lib/site-events.ts`), reported by this ONE listener so server
  *    components declare events without client code. A `<summary>` that adds
  *    `data-when="opening"` reports only the click that opens its `<details>`
- *    (the FAQ's `faq_open`: closing a question is not an event).
+ *    (the FAQ's `faq_open`: closing a question is not an event). A
+ *    `segment_click` also keeps the segment it names (`rememberSegment`), the
+ *    way a `?segment=` link does, so the waitlist and the sign-up pre-fill it:
+ *    that part is the page working, not tracking, and runs after an opt-out.
  *
  * Mounted ONLY in the marketing and funnel layouts. Every event is a no-op
  * once the visitor opted out (`track`).
@@ -67,6 +70,7 @@ export default function MarketingAnalytics() {
       if (!isSiteEventName(name)) return;
       // The click runs before the toggle: an open <details> is being closed.
       if (element.dataset.when === "opening" && element.closest("details")?.open) return;
+      if (name === "segment_click" && element.dataset.trackSegment) rememberSegment(element.dataset.trackSegment);
       trackSiteEvent(name, datasetToEventProps(element.dataset));
     };
     // Capture phase: the event is reported before a link navigates away.

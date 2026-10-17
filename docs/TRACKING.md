@@ -95,16 +95,16 @@ screen.
 
 | Event | Props | Where it fires today |
 |---|---|---|
-| `section_view` | `section` | the home's sections: `hero`, `store`, `howItWorks`, `whyStore`, `pricing`, `requirements`, `faq`, `finalCta` |
+| `section_view` | `section` | the home's sections: `hero`, `store`, `howItWorks`, `whyStore`, `whoFor`, `pricing`, `requirements`, `faq`, `finalCta` |
 | `cta_click` | `cta_id`: `nav`, `hero`, `plan_access`, `plan_full`, `final`, `footer` | the header, the hero, each pricing card, the final CTA, the footer. Since 2026-10-08 the site lists FlyeeClub alone, so `plan_full` appears only if the operator lists a subscription on the site |
 | `quiz_click` | `location` | the hero's secondary button ("O FlyeeClub é pra mim?") |
-| `segment_click` | `segment`, `location` | the waitlist's segment select (`waitlist`); the hero links and the "Para quem é" cards when the home carries them |
+| `segment_click` | `segment`, `location` | the waitlist's segment select (`waitlist`); since 2026-10-17 the segment links of the home's hero subtitle (`hero`) and a click on a "Para quem é" card (`who_for`). The listener of `MarketingAnalytics` also keeps the segment (`rememberSegment`), as a `?segment=` link does, so the waitlist and the sign-up pre-fill it |
 | `store_filter` | `category` (`all` when cleared) | the category chips of the store: the row of the home (`AppCarousel`) and the grid of `/catalogo` (`StoreGrid`) |
-| `app_card_click` | `app`, `location`: `hero` (an icon of the shelf in the hero), `featured` (the featured app's button), `store` (a card of the row) | opening an app's page from the home |
+| `app_card_click` | `app`, `location`: `badge` (the pill above the hero title), `hero` (an icon of the shelf in the hero), `featured` (the featured app's button), `store` (a card of the row), `who_for` (an app to start with, in "Para quem é") | opening an app's page from the home |
 | `locked_click` | `item` | unused since 2026-10-08: the locked "Pedir um app" card (`request`) sold FlyeeClub Pro and left the site; the name stays for the history of the reports |
 | `see_all_apps_click` | `location`: `hero` (the floating button over the shelf, which scrolls to the store), `store` (the link under the row, to `/catalogo`) | the "Ver todos os apps" links of the home |
 | `faq_open` | `question_id` (the item's id, else its position) | opening a question in any `Faq` |
-| `contact_click` | `location` | the footer's contact link |
+| `contact_click` | `location`: `footer`, `faq_footer` | the footer's contact link; the line under the home's questions |
 | `app_install_click`, `app_command_copy`, `compat_click` | `app` / — | reserved for the store cards and the compatibility block of the rebuilt home |
 
 **Server (Meta Conversions API)**

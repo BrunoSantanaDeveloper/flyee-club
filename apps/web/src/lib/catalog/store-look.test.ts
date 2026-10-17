@@ -21,7 +21,8 @@ const copy = { slug: "copy-lp", trail: "divulgar", storeCategory: "sell" };
 describe("storeLook: two layers, the store shows the category", () => {
   it("names a card by its store category, and by its stage when it has none", () => {
     const { lookOf } = storeLook(catalog);
-    expect(lookOf(videoApp)).toEqual({ name: "Vídeo", tone: "secondary" });
+    // Vídeo takes the brand's hue since 2026-10-17 (components/marketing/tone.ts).
+    expect(lookOf(videoApp)).toEqual({ name: "Vídeo", tone: "primary" });
     expect(lookOf(starter)).toEqual({ name: "Construir", tone: "accent-2" });
   });
 

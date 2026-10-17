@@ -10,9 +10,10 @@ import { cn } from "@/lib/utils";
  * rest (versions, the AIs it was tested on, the accounts it uses, the
  * changelog) is on the app's page, which the whole card opens.
  *
- * The art band above takes the category's hue at a low tint, with the dot
- * matrix of the hero, and the icon overlaps its lower edge, so a row of cards
- * reads as one shelf in several colours (the owner's references).
+ * The art band above takes the category's hue at a light tint, with the dot
+ * matrix of the hero, and the icon (a white tile, the glyph in the hue)
+ * overlaps its lower edge, so a row of cards reads as one shelf in a few calm
+ * colours (the owner's references and choice, 2026-10-17).
  */
 export default function AppCard({
   href,
@@ -44,11 +45,11 @@ export default function AppCard({
       className="group border-grey-100 bg-background-paper hover:border-grey-200 focus-visible:outline-primary-ink flex h-full w-full flex-col overflow-hidden rounded-3xl border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
       {...track}
     >
+      {/* A flat light tint of the hue on a light page (the yellow, a fill, at the /20 the palette asks
+          of it); on a dark page a tint turns olive, so the band is the neutral there. */}
       <div
-        className="relative h-24 flex-none"
-        style={{
-          background: `linear-gradient(160deg, hsl(var(${hue.cssVar}) / 0.24) 0%, hsl(var(${hue.cssVar}) / 0.08) 100%)`,
-        }}
+        className="dark:bg-grey-25 relative h-24 flex-none bg-[var(--app-band)]"
+        style={{ "--app-band": `hsl(var(${hue.cssVar}) / ${tone === "primary" ? 0.2 : 0.12})` } as React.CSSProperties}
       >
         <div
           aria-hidden

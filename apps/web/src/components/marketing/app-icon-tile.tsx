@@ -1,4 +1,4 @@
-import { TONE, type Tone } from "@/components/marketing/tone";
+import type { Tone } from "@/components/marketing/tone";
 import { cn } from "@/lib/utils";
 
 /** Preset tile sizes; `className` can still set a responsive size of its own. */
@@ -14,27 +14,29 @@ const SIZE = {
 export type AppIconSize = keyof typeof SIZE;
 
 /**
- * The gradient of a tile. Every stop keeps a white glyph at 3:1 or more (the
- * WCAG floor for an icon). The accents keep their values in both modes and run
- * from their main step to the dark one. The gold changes with the mode (it is
- * a lighter foreground on the dark page, where white on it measures 2:1), so on
- * a light page it runs from its light step to the main one and on a dark page
- * it stays on its dark step, which is the light page's main (5.6:1). The
- * yellow is the one fill that takes the charcoal glyph.
+ * The colour of the glyph, the one place an app's hue shows (decided by the
+ * owner on 2026-10-17, between four treatments: a white tile with a coloured
+ * glyph, as in the reference of logos on white tiles). The accents keep their
+ * values in both modes; on the dark page the glyph takes their light step.
+ * The brand's hue is the glyph of the logo: charcoal with its second tone in
+ * the yellow on a light page (`app-glyph-duo`, style/site/site.css), the
+ * yellow on a dark one. The gold of the secondary reads brown at this size,
+ * so a tile in it draws as the brand's.
  */
-const FILL: Record<Tone, string> = {
-  primary: "from-primary-light to-primary",
-  secondary: "from-secondary-light to-secondary dark:from-secondary-dark dark:to-secondary-dark/80",
-  "accent-1": "from-accent-1 to-accent-1-dark",
-  "accent-2": "from-accent-2 to-accent-2-dark",
-  "accent-3": "from-accent-3 to-accent-3-dark",
-  "accent-4": "from-accent-4 to-accent-4-dark",
+const GLYPH: Record<Tone, string> = {
+  primary: "app-glyph-duo text-primary-contrast dark:text-primary-ink",
+  secondary: "app-glyph-duo text-primary-contrast dark:text-primary-ink",
+  "accent-1": "text-accent-1 dark:text-accent-1-light",
+  "accent-2": "text-accent-2 dark:text-accent-2-light",
+  "accent-3": "text-accent-3 dark:text-accent-3-light",
+  "accent-4": "text-accent-4 dark:text-accent-4-light",
 };
 
 /**
- * The tile of an app's icon without its glyph: the shape, the fill in the
- * app's hue and the glyph's colour. <AppIcon> puts the glyph in it on the
- * server; the operator console puts it in once the glyph set has loaded
+ * The tile of an app's icon without its glyph: a white rounded square with a
+ * hairline and a soft neutral shadow, the same in every hue, so the page keeps
+ * its calm and the colour sits in the glyph. <AppIcon> puts the glyph in it on
+ * the server; the operator console puts it in once the glyph set has loaded
  * (app-icon-lazy.tsx), so neither imports the set where it does not have to.
  */
 export default function AppIconTile({
@@ -46,23 +48,23 @@ export default function AppIconTile({
   tone: Tone;
   size?: AppIconSize;
   className?: string;
-  /** The glyph, sized by the tile (`h-3/5 w-3/5`). */
+  /** The glyph, sized by the tile (`h-3/5 w-3/5`, contained variant). */
   children?: React.ReactNode;
 }) {
+  const small = size === "xs" || size === "sm";
   return (
     <span
       aria-hidden
       className={cn(
-        "inline-grid flex-none place-items-center bg-linear-150",
-        FILL[tone],
-        tone === "primary" ? "text-primary-contrast" : "text-text-contrast",
+        "border-grey-100 bg-background-paper inline-grid flex-none place-items-center border",
+        GLYPH[tone],
         SIZE[size],
         className,
       )}
       style={{
         // A squircle's proportion at every size; a class radius would be a fixed length.
         borderRadius: "28%",
-        boxShadow: `inset 0 1px 0 hsl(var(--text-contrast) / 0.22), 0 10px 22px -12px hsl(var(${TONE[tone].cssVar}) / 0.7)`,
+        boxShadow: small ? undefined : "0 6px 16px -8px hsl(var(--background-deep) / 0.28)",
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 "use client";
 
+import { addressWithCategory, categoryFromSearch } from "./category-param";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { StoreCategory } from "@/components/marketing/store-grid";
@@ -83,10 +84,19 @@ export default function AppCarousel({
     };
   }, [measure]);
 
-  // A category chosen (or cleared) is a site event; re-pressing the active chip clears it.
+  // An address with `?cat=` opens the row filtered (category-param.ts); no event, nobody chose yet.
+  const slugs = categories.map((category) => category.slug).join(",");
+  useEffect(() => {
+    const named = categoryFromSearch(window.location.search, slugs.split(","));
+    if (named) setActive(named);
+  }, [slugs]);
+
+  // A category chosen (or cleared) is a site event and goes to the address, without scrolling the
+  // page; re-pressing the active chip clears it.
   const choose = (slug: string | null) => {
     setActive(slug);
     trackSiteEvent("store_filter", { category: slug ?? "all" });
+    window.history.replaceState(null, "", addressWithCategory(window.location.href, slug));
     track.current?.scrollTo({ left: 0 });
     requestAnimationFrame(measure);
   };

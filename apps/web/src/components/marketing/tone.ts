@@ -47,16 +47,18 @@ export const trailTone = (slug: string, index: number): Tone => TRAIL_TONE[slug]
 
 /**
  * The store categories (`catalog_store_categories`, migration 0029) keep one
- * hue each in the public store. A category named like a stage keeps that
- * stage's hue (Vender accent-4, Divulgar accent-1, Construir accent-2); Vídeo
- * and Pesquisa take the two the stages leave freest. A category the operator
- * creates later falls back to the rotation.
+ * hue each in the public store, as the owner approved them on 2026-10-17 on
+ * the app icons (a white tile, the glyph in the hue): Divulgar the pink,
+ * Pesquisa the blue, Vídeo, where most apps live, the brand's own (its icons
+ * draw like the logo, charcoal and yellow; the dark gold it had read brown on
+ * the page), Construir the orchid of its stage and Vender the violet. A
+ * category the operator creates later falls back to the rotation.
  */
 export const STORE_CATEGORY_TONE: Record<string, Tone> = {
-  sell: "accent-4",
+  sell: "accent-3",
   promote: "accent-1",
-  video: "secondary",
-  research: "accent-3",
+  video: "primary",
+  research: "accent-4",
   build: "accent-2",
 };
 

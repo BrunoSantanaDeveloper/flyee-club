@@ -27,8 +27,15 @@ export const homeCopyPtBR = {
     eyebrow: "Loja de apps para a sua IA",
     newLabel: "Novo",
     title: "Apps que automatizam o trabalho da sua empresa na **sua IA favorita**.",
+    // {negocio}, {agencia}, {produto} and {dev} become links to their card in "Para quem é".
     subtitle:
-      "Vendas, conteúdo, vídeo, pesquisa e produto: cada tarefa repetitiva vira um app que roda no Claude Code, no Codex ou na IA que você já usa. Para o seu negócio, a sua agência, o seu produto digital ou o seu trabalho de dev.",
+      "Vendas, conteúdo, vídeo, pesquisa e produto: cada tarefa repetitiva vira um app que roda no Claude Code, no Codex ou na IA que você já usa. Para o {negocio}, a {agencia}, o {produto} ou o {dev}.",
+    segments: {
+      negocio: "seu negócio",
+      agencia: "sua agência",
+      produto: "seu produto digital",
+      dev: "seu trabalho de dev",
+    },
     secondaryCta: "O FlyeeClub é pra mim?",
     note: "Acesso de 1 ano, pagamento único. Você usa o seu próprio plano de IA.",
     stripLabel: "Funciona com a IA que você já usa",
@@ -137,13 +144,47 @@ export const homeCopyPtBR = {
       },
       {
         title: "Roda no que você já tem",
-        body: "Os apps usam o seu plano de IA e guardam o que produzem em arquivos no seu computador. O FlyeeClub não cobra por uso.",
+        body: "Os apps usam o seu plano de IA e guardam o que produzem em arquivos no seu computador. O FlyeeClub não cobra por uso. Se um dia trocar de IA, o que eles produziram continua com você.",
       },
       {
         title: "Atualizado quando a IA muda",
         body: "A IA muda toda semana. Quando muda, a gente atualiza o app e a sua IA instala a versão nova quando você pede.",
       },
     ],
+  },
+
+  // "Para quem é" (the brief, 7.8): one card per persona of the site, in the order of
+  // lib/site-segment.ts; the apps of each card come from data (migration 0032).
+  whoFor: {
+    eyebrow: "Para quem é",
+    title: "Se você repete as mesmas tarefas toda semana, tem app para você.",
+    appsLabel: "Apps para começar",
+    personas: {
+      negocio: {
+        name: "Seu negócio",
+        text: "Você toca a empresa com pouca gente e quer parar de assinar uma ferramenta para cada tarefa.",
+      },
+      agencia: {
+        name: "Sua agência",
+        text: "Você atende clientes, sozinho ou com time, e precisa entregar mais sem perder o tom de cada um.",
+      },
+      produto: {
+        name: "Seu produto digital",
+        text: "Você vende online e precisa de página, conteúdo e vídeo saindo toda semana.",
+      },
+      dev: {
+        name: "Seu trabalho de dev",
+        text: "Você constrói produto e quer começar cada projeto com padrão, sem repetir as regras para o agente.",
+      },
+    },
+    notForYou: {
+      title: "Não é para você se",
+      items: [
+        "Você quer assistir aulas. Aqui você instala e usa.",
+        "Você não quer instalar nada no computador. Hoje os apps rodam nas IAs de terminal: Claude Code, Codex, Gemini CLI e Cursor.",
+        "Você não tem um plano de IA e não pretende ter. O FlyeeClub usa o seu.",
+      ],
+    },
   },
 
   origin: {
@@ -178,48 +219,64 @@ export const homeCopyPtBR = {
   faq: {
     eyebrow: "Antes de entrar",
     title: "Perguntas",
+    // The ids are the brief's (`question_id` of faq_open). How long the access lasts and the team
+    // question come from the catalog that /planos answers with, after "curso" and "clientes".
     items: [
       {
+        id: "curso",
         question: "Isso é um curso?",
         answer:
           "Não. É uma loja de apps que você instala e usa no seu trabalho. Cada app vem com um guia curto, feito para você sair usando, e não assistindo.",
       },
       {
+        id: "computadores",
         question: "Em quantos computadores posso usar?",
         answer: "Em um. Cada acesso é de um usuário, em uma máquina.",
       },
       {
+        id: "programar",
         question: "Preciso saber programar?",
         answer:
           "Não. A sua IA instala e atualiza por você: você pede na conversa, confirma o que ela vai fazer e aprova a conexão no navegador.",
       },
       {
+        id: "sem-terminal",
         question: "Funciona no app do Claude ou do ChatGPT, sem terminal?",
         answer: "Ainda não. Hoje o FlyeeClub roda nas IAs de terminal: Claude Code, Codex, Gemini CLI e Cursor.",
       },
       {
+        id: "custo-ia",
         question: "Tem custo de IA além do acesso?",
         answer:
           "O seu plano de IA. O FlyeeClub não cobra por uso; alguns apps usam a sua conta em serviços externos, e a página de cada um avisa.",
       },
       {
+        id: "sem-atualizar",
         question: "O que acontece se eu ficar um tempo sem atualizar?",
         answer:
           "Nada é desinstalado; o que está na sua máquina continua igual. Se passar 30 dias sem atualizar, o instalador pede para você confirmar o acesso no painel antes de baixar a versão nova.",
       },
       {
+        id: "clientes",
         question: "Posso usar em projetos de clientes?",
         answer: "Pode. O FlyeeClub cobre os seus projetos e os projetos dos seus clientes.",
       },
       {
+        id: "idiomas",
         question: "Em que idiomas?",
         answer: "Apps, guias e painel em português e inglês.",
       },
       {
+        id: "reembolso",
         question: "E se não servir para mim?",
         answer: "Dentro do prazo de garantia, você pede o reembolso integral pelo suporte.",
       },
     ],
+    contact: {
+      lead: "Ficou com alguma dúvida antes de entrar?",
+      link: "Fale com a gente pela página de contato",
+      tail: "Quem responde é o Bruno.",
+    },
   },
 
   cta: {
