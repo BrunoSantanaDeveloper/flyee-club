@@ -450,8 +450,32 @@ Corpo: o `dist/index.json` que o `npm run index` do produto escreve, `{ "generat
 | `trail`, `type` | a etapa e o tipo | a cada importação; a etapa precisa existir no catálogo |
 | `compatible_ais`, `external_credentials` | as IAs testadas e as chaves | a cada importação |
 | `description_md` | a descrição em português | só quando o app ainda não tem uma; sai sem o `# Título` do topo, que a página já mostra |
+| `showcase` (opcional, desde 2026-10-17) | o exemplo do app respondendo a um pedido, por idioma | a cada importação, idioma por idioma; um idioma ausente no índice mantém o do catálogo |
 | `version`, `sha256`, `size_bytes`, `package`, `permissions`, `lessons`, `changelog`, `license` | nada | chegam com o pacote, em 10.3 |
 
+**O exemplo do app (`showcase`).** A loja mostra o que o app devolve, nunca o comando que o instala: a home, `/catalogo` e a página de cada app mostram o app respondendo a um pedido. Cada app manda o seu, nos dois idiomas quando puder:
+
+```json
+"showcase": {
+  "pt-BR": {
+    "request": "Quero gravar um vídeo de uns 10 minutos sobre marmita da semana. Me ajuda com o roteiro?",
+    "reply": [
+      { "label": "Título", "text": "Marmita da semana em 1 hora, sem repetir prato" },
+      { "label": "Gancho · 0:00", "text": "Na quarta você já não aguenta a mesma comida." }
+    ],
+    "saved": "Salvo em roteiros/marmita-da-semana/estrutura.md"
+  },
+  "en": { "request": "…", "reply": [{ "text": "…" }] }
+}
+```
+
+- `request`: o pedido que o integrante faz à IA, de 1 a 400 caracteres.
+- `reply`: de 1 a 8 linhas da resposta; cada uma tem `text` (até 280) e, se quiser, `label` (até 40: uma cena e o tempo, um passo, um número). A primeira linha aparece com mais destaque.
+- `saved`: opcional, a linha final com o que o app gravou (até 160).
+- Tem de ser um resultado que o app realmente produz, como no guia "usar". A página o chama de exemplo.
+- Todo texto passa pela regra de texto. Um idioma que quebra a regra ou o formato fica de fora, com um aviso em `warnings`, e o app entra mesmo assim.
+- Uma página em inglês só mostra o exemplo em inglês. Sem exemplo no idioma, a página do app fica só com o ícone e o texto, e a home e `/catalogo` mostram o resumo do app no lugar da resposta.
+- O campo vive só no índice, ao lado do nome e do resumo. Fica fora do `flyee.module.json`: o manifesto v1 não tem esse campo, e a CLI 1.x e a inspeção da plataforma leem o manifesto.
 O que a importação nunca escreve: a categoria da loja, os perfis, o ícone, a ordem, a chave de acesso, o estado do app e o estado e a marca de entrada de cada versão. Isso é do console.
 
 Todo texto que a loja mostra passa pela regra de texto da plataforma (sem travessão, sem ponto de exclamação, sem emoji, sem as palavras proibidas, sem "grátis" ou "free" e sem o nome do FlyeeClub Pro). Um nome que quebra a regra recusa o app. Um resumo ou uma descrição que quebra fica de fora, com um aviso, e o operador escreve no console.

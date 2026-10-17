@@ -57,20 +57,6 @@ export const homeCopy: HomeCopy = {
     viewApp: "See the app",
     featured: {
       slug: "youtube-script",
-      request:
-        "I want to record a video of about 10 minutes on how to prep a week of lunches without getting tired of them. Can you help with the script?",
-      reply: [
-        { label: "Title", text: "A week of lunches in 1 hour, no repeats" },
-        {
-          label: "Hook · 0:00",
-          text: "By Wednesday you can't face the same food again. The problem isn't the recipe, it's the order you cook in.",
-        },
-        { label: "Block 1 · 0:30", text: "Five bases that turn into ten different dishes" },
-        { label: "Block 2 · 3:00", text: "The cooking order that fits in one hour" },
-        { label: "Block 3 · 6:30", text: "How to store it so it lasts until Friday" },
-        { label: "Close · 9:10", text: "What to try in your first week" },
-      ],
-      saved: "Saved to roteiros/meal-prep-week/estrutura.md",
     },
     showcase: {
       context: "In your AI",

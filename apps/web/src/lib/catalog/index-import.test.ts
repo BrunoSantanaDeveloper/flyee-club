@@ -61,6 +61,7 @@ describe("the product's index, read before anything is written", () => {
         description: "Mostra, com números de verdade, quais vídeos subiram.",
         compatibleAis: ["claude_code"],
         externalCredentials: [],
+        showcase: {},
         warnings: [],
       },
     ]);
@@ -162,6 +163,7 @@ const existing = (overrides: Partial<ExistingModule> = {}): ExistingModule => ({
   description_md: { "pt-BR": "Texto que o operador escreveu para a loja." },
   compatible_ais: ["claude_code"],
   external_credentials: [],
+  showcase: null,
   ...overrides,
 });
 
@@ -221,6 +223,51 @@ describe("what the import does to each app", () => {
       parsedApps(index(app({ description_md: "# Pesquisa\n\nUm README novo." }))),
     );
     expect(kept.kind).toBe("unchanged");
+  });
+
+  it("takes the example of the app from the product, language by language", () => {
+    const pt = {
+      request: "Quais vídeos sobre marmita fizeram mais que o normal este mês?",
+      reply: [{ label: "1 · 4,2x", text: "Marmita fit para a semana toda" }],
+      saved: "Salvo em pesquisas/marmita.csv",
+    };
+    const en = {
+      request: "Which videos on meal prep beat the usual this month?",
+      reply: [{ text: "Meal prep for the week" }],
+    };
+
+    // New: the example goes in with the app.
+    const [created] = planImport([], parsedApps(index(app({ showcase: { "pt-BR": pt } }))));
+    expect(created).toMatchObject({ kind: "create", row: { showcase: { "pt-BR": pt } } });
+
+    // An index with only Portuguese keeps the English example the catalog has.
+    const [updated] = planImport(
+      [existing({ showcase: { en } })],
+      parsedApps(index(app({ showcase: { "pt-BR": pt } }))),
+    );
+    expect(updated).toMatchObject({ kind: "update", fields: ["showcase"], patch: { showcase: { "pt-BR": pt, en } } });
+
+    // An index with no example leaves the catalog's alone.
+    expect(planImport([existing({ showcase: { en } })], parsedApps(index(app())))[0].kind).toBe("unchanged");
+  });
+
+  it("leaves out an example that breaks a rule, and keeps the app", () => {
+    const parsed = parseCatalogIndex(
+      index(
+        app({
+          showcase: {
+            "pt-BR": { request: "Me mostra os vídeos!", reply: [{ text: "Marmita fit" }] },
+            en: { request: "Show me the videos", reply: [{ text: "Meal prep" }] },
+          },
+        }),
+      ),
+    );
+    if (!parsed.ok) throw new Error("unexpected");
+    expect(parsed.refused).toEqual([]);
+    expect(parsed.apps[0].showcase).toEqual({ en: { request: "Show me the videos", reply: [{ text: "Meal prep" }] } });
+    expect(parsed.apps[0].warnings).toEqual([
+      "showcase: pt-BR.request: breaks the copy rules (exclamation mark), left out",
+    ]);
   });
 });
 

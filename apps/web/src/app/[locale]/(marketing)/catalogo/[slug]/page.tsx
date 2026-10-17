@@ -3,13 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import AppIcon from "@/components/marketing/app-icon";
+import AppShowcase from "@/components/marketing/app-showcase";
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Cta from "@/components/marketing/cta";
 import LocaleLink from "@/components/marketing/locale-link";
 import MarkdownProse from "@/components/marketing/markdown-prose";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
-import TerminalFrame from "@/components/marketing/terminal-frame";
 import { TONE } from "@/components/marketing/tone";
 import { localizeHref } from "@/i18n/routing";
 import NiBook from "@/icons/nexture/ni-book";
@@ -84,9 +84,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 /**
  * /catalogo/<slug> (EN /catalog/<slug>): one published module as anybody may
- * read it — what it does, the command that installs it, what it can access and
- * which keys it asks for, every release with its changelog and verification
- * page, and the lessons (the videos themselves stay in the dashboard).
+ * read it — what it does, the app answering a request (its own example,
+ * migration 0043: what it returns, never the command that installs it), what
+ * it can access and which keys it asks for, every release with its changelog
+ * and verification page, and the lessons (the videos stay in the dashboard).
  *
  * A module that is not published is a 404. A module with no English text sends
  * the English address to the English catalog instead of serving Portuguese.
@@ -174,7 +175,7 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
       />
 
       <Section decor="glow">
-        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
+        <div className={cn("grid grid-cols-1 items-center gap-10", module.example && "lg:grid-cols-[1.1fr_1fr]")}>
           <div className="flex flex-col gap-6">
             <AppIcon name={module.icon} tone={module.look.tone} size="xl" />
             <SectionHeader
@@ -206,27 +207,20 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
               </LocaleLink>
             </p>
           </div>
-          <TerminalFrame
-            glow
-            title={t("catalog-terminal-title")}
-            label={t("module-terminal-label", { name })}
-            lines={
-              latest
-                ? [
-                    { kind: "command", text: `npx flyee add ${module.slug}` },
-                    {
-                      kind: "success",
-                      text: t("catalog-terminal-installed", { module: module.slug, version: latest.version }),
-                    },
-                    { kind: "success", text: t("catalog-terminal-verified") },
-                    { kind: "muted", text: t("catalog-terminal-update") },
-                  ]
-                : [
-                    { kind: "command", text: `npx flyee add ${module.slug}` },
-                    { kind: "muted", text: t("module-terminal-no-version") },
-                  ]
-            }
-          />
+          {/* The app's own example in this language. Without one the hero is the icon and the text:
+              a card repeating the summary printed beside it would read as a mistake. */}
+          {module.example ? (
+            <AppShowcase
+              icon={<AppIcon name={module.icon} tone={module.look.tone} size="sm" />}
+              name={name}
+              context={t("catalog-showcase-context")}
+              request={module.example.request}
+              lines={module.example.reply}
+              saved={module.example.saved}
+              caption={t("catalog-showcase-caption", { app: name })}
+              tone={module.look.tone}
+            />
+          ) : null}
         </div>
       </Section>
 

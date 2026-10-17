@@ -52,6 +52,20 @@ describe("readableCatalog: an address in a language serves that language", () =>
     expect(en.stats).toEqual({ modules: 1, versions: 2, lastReleaseAt: "2026-09-28T10:00:00Z" });
   });
 
+  it("gives each app its example in the language of the address only", () => {
+    const example = { request: "Me ajuda com o deploy?", reply: [{ label: "Passo 1", text: "Conferir as variáveis" }] };
+    const withExample: CatalogRows = {
+      ...rows,
+      modules: [{ ...rows.modules[0], showcase: { "pt-BR": example } }, rows.modules[1]],
+    };
+    expect(readableCatalog(catalog, withExample, "pt-BR").modules.map((module) => module.example)).toEqual([
+      example,
+      null,
+    ]);
+    // The English page never borrows the Portuguese example.
+    expect(readableCatalog(catalog, withExample, "en").modules.map((module) => module.example)).toEqual([null]);
+  });
+
   it("reads everything in Portuguese, the language every name is written in", () => {
     const pt = readableCatalog(catalog, rows, "pt-BR");
     expect(pt.modules.map((module) => module.slug)).toEqual(["deploy-check", "product-scope"]);

@@ -2,6 +2,7 @@ import { cache } from "react";
 
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadCatalog, loadModule } from "@/lib/catalog/read";
+import { type AppExample, exampleIn } from "@/lib/catalog/showcase";
 import { DEFAULT_NEW_BADGE_DAYS } from "@/lib/catalog/store-badges";
 import { type StoreLook, storeLook } from "@/lib/catalog/store-look";
 import { createAnonClient } from "@/lib/public-content";
@@ -11,6 +12,10 @@ import { createAnonClient } from "@/lib/public-content";
  * pages, the numbers of the home and the sitemap. Published rows only, through
  * the anonymous client and row-level security (migration 0008), with the same
  * reader as the CLI API and the member screens (lib/catalog/read.ts).
+ *
+ * Each app also brings its example of answering a request (migration 0043,
+ * lib/catalog/showcase.ts) in the language of the address only, which the
+ * store shows instead of an install command.
  *
  * That reader falls back to Portuguese when a text has no English version,
  * which is right for a member and wrong for a public address: an address in a
@@ -52,6 +57,8 @@ export type PublicCatalog = Omit<SharedCatalog, "modules"> & {
     personas: string[];
     /** When the app was first published (the "Novo" badge, migration 0034). */
     firstPublishedAt: string | null;
+    /** The app answering a request, in the language being read; null when it has none there. */
+    example: AppExample | null;
   })[];
   storeCategories: PublicStoreCategory[];
   /** How many days after its first publication an app is "Novo" (platform_settings.catalog). */
@@ -69,6 +76,7 @@ export type CatalogRows = {
     store_category?: string | null;
     personas?: string[] | null;
     published_at?: string | null;
+    showcase?: unknown;
   }[];
   /** platform_settings.catalog.new_badge_days, when it could be read. */
   newBadgeDays?: number | null;
@@ -97,6 +105,7 @@ export function readableCatalog(catalog: SharedCatalog, rows: CatalogRows, local
   const categoryOf = new Map(rows.modules.map((row) => [row.slug, row.store_category ?? null]));
   const personasOf = new Map(rows.modules.map((row) => [row.slug, row.personas ?? []]));
   const publishedOf = new Map(rows.modules.map((row) => [row.slug, row.published_at ?? null]));
+  const showcaseOf = new Map(rows.modules.map((row) => [row.slug, row.showcase]));
   const storeCategories = [...rows.storeCategories]
     .sort((a, b) => a.sort - b.sort)
     .map((row) => ({
@@ -113,6 +122,7 @@ export function readableCatalog(catalog: SharedCatalog, rows: CatalogRows, local
         storeCategory: categoryOf.get(module.slug) ?? null,
         personas: personasOf.get(module.slug) ?? [],
         firstPublishedAt: publishedOf.get(module.slug) ?? null,
+        example: exampleIn(showcaseOf.get(module.slug), locale),
       })),
     storeCategories,
     newBadgeDays:
@@ -134,7 +144,7 @@ async function readPublicCatalog(locale: CatalogLocale): Promise<PublicCatalogRe
       loadCatalog(client, { locale, stableOnly: false, limits: {} }),
       client
         .from("catalog_modules")
-        .select("id, slug, name, store_category, personas, published_at")
+        .select("id, slug, name, store_category, personas, published_at, showcase")
         .eq("status", "published"),
       client.from("catalog_module_versions").select("module_id, published_at").eq("status", "published"),
       client.from("catalog_recipes").select("slug, name").eq("status", "published"),
@@ -167,6 +177,8 @@ export type PublicModule = NonNullable<Awaited<ReturnType<typeof loadModule>>> &
   guides: Partial<Record<CatalogLocale, ("usar" | "abrir_o_capo")[]>>;
   /** The languages this module can be read in, for hreflang. */
   languages: CatalogLocale[];
+  /** The app answering a request, in the language of the address; null when it has none there. */
+  example: AppExample | null;
 };
 
 export type PublicModuleResult =
@@ -185,7 +197,7 @@ async function readPublicModule(slug: string, locale: CatalogLocale): Promise<Pu
       loadModule(client, { slug, locale, limits: {} }),
       client
         .from("catalog_modules")
-        .select("name, store_category")
+        .select("name, store_category, showcase")
         .eq("slug", slug)
         .eq("status", "published")
         .maybeSingle(),
@@ -229,6 +241,7 @@ async function readPublicModule(slug: string, locale: CatalogLocale): Promise<Pu
         guides: (guidesRow?.guides ?? {}) as PublicModule["guides"],
         trailName: trailNames?.[locale]?.trim() || trailNames?.["pt-BR"]?.trim() || null,
         languages: (["pt-BR", "en"] as const).filter((language) => hasText(name, language)),
+        example: exampleIn(names.data.showcase, locale),
       },
     };
   } catch {

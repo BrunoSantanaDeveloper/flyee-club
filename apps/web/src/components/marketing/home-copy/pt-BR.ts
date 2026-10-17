@@ -72,28 +72,14 @@ export const homeCopyPtBR = {
     updatedOn: "Atualizado em {date}",
     viewApp: "Ver o app",
     /**
-     * The featured app and its example (lib/catalog/featured.ts): the slot
-     * shows this app answering the request below, the result and not the
-     * command. Swap the slug and the example together at a launch. When the
-     * app is not in the catalog, the slot goes to the app updated last and
-     * shows what it does.
+     * The featured app (lib/catalog/featured.ts): the slot shows it answering a
+     * request, the result and not the command. Its example is data of the app
+     * (catalog_modules.showcase, migration 0043), sent by the product; swap the
+     * slug at a launch. When the app is not in the catalog, the slot goes to the
+     * app updated last; an app with no example in the language shows what it does.
      */
     featured: {
       slug: "youtube-script",
-      request:
-        "Quero gravar um vídeo de uns 10 minutos sobre como montar a marmita da semana sem enjoar. Me ajuda com o roteiro?",
-      reply: [
-        { label: "Título", text: "Marmita da semana em 1 hora, sem repetir prato" },
-        {
-          label: "Gancho · 0:00",
-          text: "Na quarta você já não aguenta a mesma comida. O problema não é a receita, é a ordem do preparo.",
-        },
-        { label: "Bloco 1 · 0:30", text: "Cinco bases que viram dez pratos diferentes" },
-        { label: "Bloco 2 · 3:00", text: "A ordem do preparo para caber em uma hora" },
-        { label: "Bloco 3 · 6:30", text: "Como guardar para durar até sexta" },
-        { label: "Fechamento · 9:10", text: "O que testar na primeira semana" },
-      ],
-      saved: "Salvo em roteiros/marmita-da-semana/estrutura.md",
     },
     showcase: {
       context: "Na sua IA",

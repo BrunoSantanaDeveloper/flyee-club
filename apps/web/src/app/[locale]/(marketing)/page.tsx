@@ -152,8 +152,7 @@ export default async function Home({
   const look = storeLook(catalog ?? { trails: [], storeCategories: [] });
   const lookOf = (app: App) => look.lookOf(app);
   const apps = look.sort(catalog?.modules ?? []);
-  const example = copy.store.featured;
-  const featured = pickFeatured(apps, example.slug);
+  const featured = pickFeatured(apps, copy.store.featured.slug);
   const icon = (app: App, size: React.ComponentProps<typeof AppIcon>["size"], className?: string) => (
     <AppIcon name={app.icon} tone={lookOf(app).tone} size={size} className={className} />
   );
@@ -277,9 +276,9 @@ export default async function Home({
     />
   );
 
-  // The featured app answers the request of the copy's example; another app in the slot
-  // (the copy names one that is not published) shows what it does, with nothing invented.
-  const hasExample = featured?.slug === example.slug;
+  // The featured app answers the request of its own example (migration 0043, sent by the
+  // product); an app with none in this language shows what it does, with nothing invented.
+  const example = featured?.example ?? null;
   const featuredServices = featured ? accountServices(featured.external_credentials) : [];
 
   // The hero's segments: each a link to its persona's card, which rings while it is the
@@ -402,9 +401,9 @@ export default async function Home({
                     icon={icon(featured, "sm")}
                     name={featured.name ?? featured.slug}
                     context={copy.store.showcase.context}
-                    request={hasExample ? example.request : undefined}
-                    lines={hasExample ? example.reply : [{ text: featured.summary ?? lookOf(featured).name }]}
-                    saved={hasExample ? example.saved : undefined}
+                    request={example?.request}
+                    lines={example?.reply ?? [{ text: featured.summary ?? lookOf(featured).name }]}
+                    saved={example?.saved}
                     caption={fill(copy.store.showcase.caption, { app: featured.name ?? featured.slug })}
                     tone={lookOf(featured).tone}
                   />

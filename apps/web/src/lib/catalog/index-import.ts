@@ -1,3 +1,4 @@
+import { readShowcase, type Showcase } from "@/lib/catalog/showcase";
 import { breaksOf } from "@/lib/i18n/copy-rules";
 import { AI_TOOLS, MODULE_TYPES } from "@flyee/catalog/manifest";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -10,8 +11,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *
  * Who decides what:
  *  - the product (the manifest, through the index): the name, the summary,
- *    the stage (`trail`), the type, the AIs it was tested on and the keys the
- *    member provides. They follow the product on every import;
+ *    the stage (`trail`), the type, the AIs it was tested on, the keys the
+ *    member provides and the example of the app answering a request
+ *    (`showcase`, lib/catalog/showcase.ts). They follow the product on every
+ *    import, language by language: a language the index does not carry keeps
+ *    what the catalog has;
  *  - the console: the store category, the personas, the icon, the order, the
  *    access key, the state and every version's state and entry mark. The
  *    import never writes them;
@@ -20,8 +24,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *    written for whoever installs the app and the store page is not.
  *
  * Every text the store would show passes the copy rules first: a name that
- * breaks one refuses the app, a summary or a description that breaks one is
- * left out with a warning, so the operator writes it in the console.
+ * breaks one refuses the app, a summary, a description or an example that
+ * breaks one is left out with a warning.
  */
 
 export const MAX_INDEX_BYTES = 2 * 1024 * 1024;
@@ -46,6 +50,8 @@ export type IndexedModule = {
   description: string | null;
   compatibleAis: string[];
   externalCredentials: Credential[];
+  /** The example per language, each checked; a broken language is left out with a warning. */
+  showcase: Showcase;
   warnings: string[];
 };
 
@@ -198,11 +204,25 @@ export function parseCatalogIndex(input: unknown): ParsedIndex {
       }
     }
 
+    const { showcase, problems: showcaseProblems } = readShowcase(app.showcase);
+    warnings.push(...showcaseProblems.map((problem) => `showcase: ${problem}, left out`));
+
     if (errors.length > 0 || !slug || !trail || !type) {
       refused.push({ slug: slug ?? `apps[${index}]`, errors });
       return;
     }
-    apps.push({ slug, trail, type, name, summary, description, compatibleAis, externalCredentials, warnings });
+    apps.push({
+      slug,
+      trail,
+      type,
+      name,
+      summary,
+      description,
+      compatibleAis,
+      externalCredentials,
+      showcase,
+      warnings,
+    });
   });
 
   return { ok: true, apps, refused };
@@ -219,6 +239,7 @@ export type ExistingModule = {
   description_md: Localized | null;
   compatible_ais: string[] | null;
   external_credentials: unknown;
+  showcase: Showcase | null;
 };
 
 type ModuleColumns = {
@@ -229,6 +250,7 @@ type ModuleColumns = {
   description_md: Localized;
   compatible_ais: string[];
   external_credentials: Credential[];
+  showcase: Showcase;
 };
 
 export type ImportOperation =
@@ -271,6 +293,7 @@ export function planImport(existing: ExistingModule[], apps: IndexedModule[]): I
           description_md: app.description ? { "pt-BR": app.description } : {},
           compatible_ais: app.compatibleAis,
           external_credentials: app.externalCredentials,
+          showcase: app.showcase,
         },
         warnings: app.warnings,
       };
@@ -287,6 +310,7 @@ export function planImport(existing: ExistingModule[], apps: IndexedModule[]): I
           : { ...(current.description_md ?? {}), "pt-BR": app.description },
       compatible_ais: app.compatibleAis,
       external_credentials: app.externalCredentials,
+      showcase: { ...(current.showcase ?? {}), ...app.showcase },
     };
     const before: ModuleColumns = {
       trail: current.trail,
@@ -296,6 +320,7 @@ export function planImport(existing: ExistingModule[], apps: IndexedModule[]): I
       description_md: current.description_md ?? {},
       compatible_ais: current.compatible_ais ?? [],
       external_credentials: (current.external_credentials as Credential[] | null) ?? [],
+      showcase: current.showcase ?? {},
     };
     const patch: Partial<ModuleColumns> = {};
     const fields: string[] = [];
@@ -345,7 +370,7 @@ export async function importCatalogIndex(
     service.from("catalog_trails").select("slug"),
     service
       .from("catalog_modules")
-      .select("id, slug, trail, type, name, summary, description_md, compatible_ais, external_credentials")
+      .select("id, slug, trail, type, name, summary, description_md, compatible_ais, external_credentials, showcase")
       .in(
         "slug",
         parsed.apps.map((app) => app.slug),

@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import AppIcon from "@/components/marketing/app-icon";
+import AppShowcase from "@/components/marketing/app-showcase";
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Cta from "@/components/marketing/cta";
+import { getHomeCopy } from "@/components/marketing/home-copy";
 import { RuledCard } from "@/components/marketing/ruled-grid";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import StoreGrid from "@/components/marketing/store-grid";
-import TerminalFrame from "@/components/marketing/terminal-frame";
+import { pickFeatured } from "@/lib/catalog/featured";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
 import { accountServices, isNewApp, servicesPhrase } from "@/lib/catalog/store-badges";
@@ -48,7 +50,8 @@ type App = PublicCatalog["modules"][number];
  * brief (`catalog_store_categories`, migration 0029; the stages stay the
  * catalog's taxonomy and name the module pages). Each card says what the app
  * does, its current version and the AIs it runs on, and leads to its page.
- * Installing is a member action (`npx flyee add`). Categories with nothing
+ * Beside the title, an app answers a request (decided 2026-10-17): what an
+ * app returns, never the command that installs it. Categories with nothing
  * published yet are named, never padded with placeholders. A store that could
  * not be read says so instead of looking empty.
  */
@@ -89,7 +92,15 @@ export default async function CatalogPage() {
   const look = storeLook(catalog);
   const apps = look.sort(catalog.modules);
   const empty = look.emptyFor(apps);
-  const example = apps.find((module) => module.latest) ?? null;
+  // The app beside the title: the home's featured app when it has an example in this
+  // language (migration 0043), else another app that has one, else the featured app saying
+  // what it does. Nothing is invented for an app the product sent no example for.
+  const featuredSlug = (await getHomeCopy(locale)).store.featured.slug;
+  const shown =
+    pickFeatured(
+      apps.filter((app) => app.example),
+      featuredSlug,
+    ) ?? pickFeatured(apps, featuredSlug);
 
   const card = (app: App) => {
     const category = look.lookOf(app);
@@ -142,20 +153,18 @@ export default async function CatalogPage() {
             />
             <p className="text-text-secondary m-0 text-sm">{t("catalog-count", { count: catalog.stats.modules })}</p>
           </div>
-          {example?.latest ? (
-            <TerminalFrame
-              glow
-              title={t("catalog-terminal-title")}
-              label={t("catalog-terminal-label")}
-              lines={[
-                { kind: "command", text: `npx flyee add ${example.slug}` },
-                {
-                  kind: "success",
-                  text: t("catalog-terminal-installed", { module: example.slug, version: example.latest.version }),
-                },
-                { kind: "success", text: t("catalog-terminal-verified") },
-                { kind: "muted", text: t("catalog-terminal-update") },
-              ]}
+          {shown ? (
+            <AppShowcase
+              icon={<AppIcon name={shown.icon} tone={look.lookOf(shown).tone} size="sm" />}
+              name={shown.name ?? shown.slug}
+              context={t("catalog-showcase-context")}
+              request={shown.example?.request}
+              lines={
+                shown.example?.reply ?? [{ text: shown.summary ?? t(TYPE_KEY[shown.type] ?? "catalog-type-tool") }]
+              }
+              saved={shown.example?.saved}
+              caption={t("catalog-showcase-caption", { app: shown.name ?? shown.slug })}
+              tone={look.lookOf(shown).tone}
             />
           ) : null}
         </div>

@@ -42,7 +42,7 @@ Building blocks for every public page under `apps/web/src/app/[locale]/(marketin
 
 - **`<AppIcon>`** — an app's identity wherever it appears: a white rounded square with the app's glyph in the hue of its store category (else its stage's); the brand's hue draws like the logo, charcoal and yellow. The glyph is the name the operator sets in `/admin/catalogo`, drawn from the ORIGINAL Nexture set through `icons/app-glyphs.tsx` (the alias draws the interface's Phosphor icons, and an app must not look like a control). Server only: a client component receives it as an element.
 - **`<AppStorePreview>`** — the hero's shelf: each app as its icon, large, with its name and category under it, inside `<ProductFrame>`; every icon links to the app's page.
-- **`<AppShowcase>`** — the featured app answering a request: the request, then the reply typed out line by line, then the file it saved. It loops while on screen (three rounds at most, then it rests on the full reply) and is whole in the server HTML.
+- **`<AppShowcase>`** — an app answering a request, in place of the command that installs it (the home, `/catalogo` and each app page): the request, then the reply typed out line by line, then the file it saved. The example is data of each app (`catalog_modules.showcase`, migration 0043), sent by the product. It loops while on screen (three rounds at most, then it rests on the full reply) and is whole in the server HTML.
 - **`<AppCarousel>` + `<AppCard>`** — the store in one row: category chips, a native scroller that snaps to a card, a button on each side; the card says only the icon, name, two lines, category and "Novo".
 - **`AiMark`** (`ai-marks.tsx`) — the marks of the AIs the apps run on, one colour, for the hero's "works with" strip.
 

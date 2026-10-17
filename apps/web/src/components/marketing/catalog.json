@@ -260,7 +260,7 @@
       "file": "app-showcase.tsx",
       "role": "evidence",
       "props": "icon (AppIcon), name, context (\"Na sua IA\"), request?, lines: {label?, text}[], saved?, caption (the figure's accessible name), tone",
-      "use": "the featured app answering a request: its RESULT, never the command that installs it; the reply types out line by line and loops while on screen (three rounds per visit, then it rests on the full reply; it stops off screen), whole in the server HTML, static under reduced motion, the same height while it types; the example lives in the home copy (store.featured) with the slug of its app"
+      "use": "the featured app answering a request: its RESULT, never the command that installs it; the reply types out line by line and loops while on screen (three rounds per visit, then it rests on the full reply; it stops off screen), whole in the server HTML, static under reduced motion, the same height while it types; the example is data of each app (catalog_modules.showcase, migration 0043, lib/catalog/showcase.ts), sent by the product; the home features the app its copy names (store.featured.slug), /catalogo the same or another app with an example, and each app page its own; with no example in the language the home and /catalogo show the summary as the reply, with no request, and the app page leaves the card out (it would repeat the summary printed beside it)"
     },
     {
       "name": "AppCarousel",
