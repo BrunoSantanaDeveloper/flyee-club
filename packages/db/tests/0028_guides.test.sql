@@ -56,7 +56,9 @@ begin
   execute 'set local role authenticated';
   insert into res values (
     label,
-    coalesce((select array_agg(depth || '@' || version_id::text order by depth, version_id) from public.catalog_guides), '{}')
+    -- The test's versions only: a live project carries the real apps' guides too.
+    coalesce((select array_agg(depth || '@' || version_id::text order by depth, version_id) from public.catalog_guides
+              where version_id::text like 'b2100000-%'), '{}')
   );
   execute 'reset role';
 end;

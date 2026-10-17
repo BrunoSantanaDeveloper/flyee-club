@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 -- ============================================================
 -- The privilege model, scanned from the catalog (every migration).
@@ -98,6 +98,8 @@ select is(
     where n.nspname = 'public' and c.relkind = 'r'
       and not has_table_privilege('authenticated', c.oid, 'SELECT')
       and not has_any_column_privilege('authenticated', c.oid, 'SELECT')
+      -- The runner's history, not the app's: only the remote gate creates it (asserted below).
+      and c.relname <> 'schema_migrations'
   ),
   array[
     'billing_webhook_events',
@@ -108,6 +110,15 @@ select is(
     'oauth_grants'
   ],
   'the tables only the backend touches are not readable by any session'
+);
+
+select ok(
+  to_regclass('public.schema_migrations') is null
+  or not (
+    has_table_privilege('anon', 'public.schema_migrations', 'SELECT')
+    or has_table_privilege('authenticated', 'public.schema_migrations', 'SELECT')
+  ),
+  'where the remote gate keeps its migration history, no session reads it'
 );
 
 select is(

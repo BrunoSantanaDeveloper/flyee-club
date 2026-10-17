@@ -28,6 +28,11 @@ create temporary table ctx as
 select (select org_id from public.memberships where user_id = 'a5000000-0000-4000-8000-000000000001') as org;
 grant select on ctx to authenticated, service_role;
 
+-- The test member's events only: on a live project the table already holds
+-- other people's, and the assertions below must not count them.
+create temporary view mine as
+select * from public.product_events where actor_id = 'a5000000-0000-4000-8000-000000000001';
+
 create temporary table res (name text primary key, payload jsonb);
 grant select, insert on res to authenticated, service_role;
 
@@ -42,17 +47,17 @@ select is((select count(*)::int from public.product_events), 0, 'a member cannot
 reset role;
 
 select is(
-  (select properties from public.product_events where event_name = 'upsell.viewed'),
+  (select properties from mine where event_name = 'upsell.viewed'),
   '{"offer": "club", "origin": "home", "platform": "web"}'::jsonb,
   'only allowlisted keys with allowlisted values survive; an unknown module and free text are dropped, and the browser is always "web"'
 );
 select ok(
   (select segment = 'dev' and locale = 'en' and ai_tool = 'claude_code' and org_id = (select org from ctx)
-   from public.product_events where event_name = 'upsell.viewed'),
+   from mine where event_name = 'upsell.viewed'),
   'segment, language and AI tool are stamped from the profile'
 );
 select is(
-  (select count(*)::int from public.product_events where event_name in ('kit.purchased', 'anything.else')),
+  (select count(*)::int from mine where event_name in ('kit.purchased', 'anything.else')),
   0,
   'the browser may not report a purchase, nor an event outside the vocabulary'
 );
@@ -79,11 +84,11 @@ reset role;
 select is((select payload from res where name = 'exec'), 'true'::jsonb, 'the backend records a CLI event');
 select ok(
   (select properties = '{"module": "deploy-guard", "trail": "publicar", "version": "1.2.0", "platform": "cli"}'::jsonb
-   from public.product_events where event_name = 'tool.executed'),
+   from mine where event_name = 'tool.executed'),
   'a published module and a valid version are kept, a malformed version is dropped, and the platform is forced to "cli"'
 );
 select ok(
-  (select occurred_at <= now() + interval '1 minute' from public.product_events where event_name = 'tool.executed'),
+  (select occurred_at <= now() + interval '1 minute' from mine where event_name = 'tool.executed'),
   'a timestamp in the future is not believed'
 );
 select throws_ok(
@@ -112,14 +117,15 @@ set local role authenticated;
 select public.track_product_event('upsell.clicked', '{"offer":"pro"}');
 reset role;
 select is(
-  (select count(*)::int from public.product_events where event_name = 'upsell.clicked'),
+  (select count(*)::int from mine where event_name = 'upsell.clicked'),
   120,
   'a browser over 120 events in the hour is dropped silently'
 );
 
 -- ---------- Support visits ----------
 
-delete from public.product_events where event_name = 'upsell.clicked';
+delete from public.product_events
+where event_name = 'upsell.clicked' and actor_id = 'a5000000-0000-4000-8000-000000000001';
 insert into public.impersonation_sessions (actor_id, target_user_id, reason, session_id, expires_at)
 values ('a5000000-0000-4000-8000-000000000002', 'a5000000-0000-4000-8000-000000000001',
         'Checking the upsell card', 'f5000000-0000-4000-8000-000000000001', now() + interval '30 minutes');
@@ -129,7 +135,7 @@ set local role authenticated;
 select public.track_product_event('upsell.clicked', '{"offer":"pro"}');
 reset role;
 select is(
-  (select count(*)::int from public.product_events where event_name = 'upsell.clicked'),
+  (select count(*)::int from mine where event_name = 'upsell.clicked'),
   0,
   'what an operator does inside a member''s session is not the member''s behaviour'
 );
@@ -160,7 +166,7 @@ set local role service_role;
 select public.purge_product_events(interval '1 day');
 reset role;
 select is(
-  (select count(*)::int from public.product_events where event_name = 'cli.login'),
+  (select count(*)::int from mine where event_name = 'cli.login'),
   1,
   'the purge never keeps less than three months, whatever it is asked'
 );
