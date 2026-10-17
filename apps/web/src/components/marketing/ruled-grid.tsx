@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 export type RuledGridItem = {
   /** Meaningful concept icon (@/icons/nexture/ni-*), tinted by `tone`. */
   icon?: React.ReactNode;
+  /** Cards variant: an app's own <AppIcon>, shown as it is (in place of `icon` and its tinted tile). */
+  appIcon?: React.ReactNode;
   title: string;
   body: string;
   tone?: Tone;
@@ -30,15 +32,16 @@ export function RuledCard({ item }: { item: RuledGridItem }) {
   const tone = TONE[item.tone ?? "primary"];
   return (
     <article className="border-grey-100 bg-background-paper flex h-full w-full flex-col rounded-3xl border p-7">
-      {(item.icon || item.badge) && (
+      {(item.icon || item.appIcon || item.badge) && (
         <div className="mb-5 flex flex-row items-center justify-between gap-3">
-          {item.icon ? (
-            <span className={cn("inline-grid h-12 w-12 place-items-center rounded-2xl", tone.softBg, tone.text)}>
-              {item.icon}
-            </span>
-          ) : (
-            <span />
-          )}
+          {item.appIcon ??
+            (item.icon ? (
+              <span className={cn("inline-grid h-12 w-12 place-items-center rounded-2xl", tone.softBg, tone.text)}>
+                {item.icon}
+              </span>
+            ) : (
+              <span />
+            ))}
           {item.badge && (
             <span className={cn("rounded-full px-3 py-1 text-xs font-bold", tone.softBg, "text-text-primary")}>
               {item.badge}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import AppIcon from "@/components/marketing/app-icon";
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Cta from "@/components/marketing/cta";
 import { RuledCard } from "@/components/marketing/ruled-grid";
@@ -8,7 +9,6 @@ import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import StoreGrid from "@/components/marketing/store-grid";
 import TerminalFrame from "@/components/marketing/terminal-frame";
-import CatalogIcon from "@/components/product/catalog-icon";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
 import { accountServices, isNewApp, servicesPhrase } from "@/lib/catalog/store-badges";
@@ -98,7 +98,8 @@ export default async function CatalogPage() {
     return (
       <RuledCard
         item={{
-          icon: <CatalogIcon name={app.icon} size="medium" />,
+          // The app's own icon, the same as on the home (docs/DESIGN.md, "Reference ingredients").
+          appIcon: <AppIcon name={app.icon} tone={category.tone} size="md" />,
           tone: category.tone,
           title: app.name ?? app.slug,
           body: app.summary ?? t(TYPE_KEY[app.type] ?? "catalog-type-tool"),

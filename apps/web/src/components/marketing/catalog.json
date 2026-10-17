@@ -35,14 +35,14 @@
       "name": "ProductComposition",
       "file": "product-composition.tsx",
       "role": "evidence",
-      "props": "frame (ProductFrame/screenshot), satellites: {children, position: top-left|top-right|right|bottom-right|bottom-left|left, depth: front|back, rotate: -6..6, float, floatDelay, parallax, hideBelow}[] (2–4)",
+      "props": "frame (ProductFrame/screenshot), satellites: {children, position: top-left|top-right|right|bottom-right|bottom|bottom-left|left (bottom: centred over the lower edge, the floating button), depth: front|back, rotate: -6..6, float, floatDelay, parallax, hideBelow}[] (2–4)",
       "use": "LAYERED hero media — central frame + floating chips overlapping its edges (the reference-site look); collapses to a chip row below md; the hero entrance (CSS) choreographs the frame and then the satellites (premium bar #9)"
     },
     {
       "name": "SatelliteChips",
       "file": "satellite-chips.tsx",
       "role": "evidence",
-      "props": "KpiChip{label,value,delta?,tone} · TrendChip{label,data?,tone} · AvatarRowChip{names,label} · ReadoutChip{text,tone}",
+      "props": "KpiChip{label,value,delta?,tone} · TrendChip{label,data?,tone} · AvatarRowChip{names,label} · ReadoutChip{text,tone} · LinkChip{label,href,icon?,track?} (a dark pill that is a link: the floating Ver todos os apps)",
       "use": "ready-made satellites for ProductComposition; REAL localized content only — a satellite that lies is worse than none"
     },
     {
@@ -112,7 +112,7 @@
       "name": "Hero",
       "file": "hero.tsx",
       "funnel": "attention + value proposition",
-      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle, primaryCta (unless action), secondaryCta{label, href, icon?}, action? (replaces the buttons with the conversion itself, e.g. the waitlist form), note?, highlights?: string[] (reassurance chips row, split only), strip?: {label, items: string[]} (center layout only: a labelled row of names under the note, e.g. the AIs the apps run on)",
+      "props": "layout: center|split, decor: glow|grid|none, media (evidence slot), eyebrow, title (string or rich node — t.rich with <em> renders the two-tone headline), subtitle, primaryCta (unless action), secondaryCta{label, href, icon?}, action? (replaces the buttons with the conversion itself, e.g. the waitlist form), note?, highlights?: string[] (reassurance chips row, split only), strip?: {label, items: {name, mark?}[]} (center layout only: a labelled row under the note, each item its mark in one colour (AiMark) or, without one, a muted wordmark: the AIs the apps run on)",
       "use": "owns the page <h1> AND the page's one orchestrated motion moment: the entrance is CSS keyed on data-hero (style/layout/marketing-motion.css), copy line by line, then the media, then the satellites of a composition, starting with the first paint; a server component (no script of its own); split + <ProductFrame glow> is the committed direction for product-heavy pages; media is required in practice (premium bar #1)"
     },
     {
@@ -133,7 +133,7 @@
       "name": "FeatureRows",
       "file": "feature-row.tsx",
       "funnel": "desire (depth)",
-      "props": "items: {eyebrow?, title, body, bullets?, media, tone}, decor, id, children? (what closes the same chapter, one row gap under the rows: the store grid under the featured app)",
+      "props": "items: {eyebrow?, title, body, bullets?, media, tone, icon? (beside the title: the featured app's AppIcon), action? (under the text: its one button)}, decor, id, children? (what closes the same chapter, one row gap under the rows: the store grid under the featured app)",
       "use": "alternating text↔evidence zig-zag for the 2–4 flagship features; use INSTEAD of a second card grid; decor=\"grid\" makes it the page's technical section; the eyebrow is text-coloured with a hue bar (no palette hue passes as small text on a light ground)"
     },
     {
@@ -231,7 +231,7 @@
       "name": "RuledGrid",
       "file": "ruled-grid.tsx",
       "role": "desire",
-      "props": "items: {icon?, title, body, tone?, link?: {label, href}, badge?, meta?}[], columns: 2|3|4, variant: light|deep|cards; RuledCard (named export) is one card of the cards variant, for grids that arrange cards themselves (StoreGrid)",
+      "props": "items: {icon?, appIcon? (an app's own AppIcon, shown as it is), title, body, tone?, link?: {label, href}, badge?, meta?}[], columns: 2|3|4, variant: light|deep|cards; RuledCard (named export) is one card of the cards variant, for grids that arrange cards themselves (StoreGrid)",
       "use": "hairline-ruled cell grid (benefits 3-col light, security 2-col deep) or separated cards (the module cards of /catalogo: badge beside the icon, a mono meta line for the version and AIs, a trailing link); meaningful concept icons in the family hue; the hue stays on the icon and the arrow, never on the words"
     },
     {
@@ -245,8 +245,43 @@
       "name": "AppStorePreview",
       "file": "app-store-preview.tsx",
       "role": "evidence",
-      "props": "apps: {slug, name, category, tone, icon}[], categories: string[], allLabel, installLabel, label (the accessible name: the preview is role=img)",
-      "use": "the home hero evidence: a still picture of the store (category chips + app tiles) built from the real published apps, inside <ProductFrame glow> in a ProductComposition with real-number satellites; never padded with invented apps"
+      "props": "apps: {slug, name, category, href, icon (AppIcon), track?}[], title (the shelf heading inside the frame), categories: string[] (pictured chips, hidden from assistive technology), allLabel, label (names the list of apps)",
+      "use": "the home hero evidence (2026-10-17, from the owner's reference): the apps as a shelf of large AppIcons with name and category under each, on a dot matrix, inside <ProductFrame glow> in a ProductComposition whose satellites are the real app count, the last update and the floating LinkChip to the store; every icon links to the app's page; three to a row (four from sm when there are seven or more), six at most on a phone; never padded with invented apps"
+    },
+    {
+      "name": "AppIcon",
+      "file": "app-icon.tsx",
+      "role": "evidence",
+      "props": "name (catalog_modules.icon; empty or unknown draws the apps glyph), tone (the store look of the app: its category hue, else its stage hue), size: xs|sm|md|lg|xl|2xl, className (a responsive size)",
+      "use": "an app's identity everywhere (hero shelf, featured row, carousel, /catalogo, the app page, the operator console): a squircle in the gradient of its hue with the app's glyph in white (the yellow takes the charcoal), drawn from the ORIGINAL Nexture set through icons/app-glyphs.tsx, never the interface's Phosphor icons; server-rendered, a client component receives it as an element. AppIconTile (app-icon-tile.tsx) is the tile without its glyph; AppIconLazy (app-icon-lazy.tsx, client, with useAppGlyphs) draws any typed name in the operator console, loading the glyph set after the page instead of in its first load"
+    },
+    {
+      "name": "AppShowcase",
+      "file": "app-showcase.tsx",
+      "role": "evidence",
+      "props": "icon (AppIcon), name, context (\"Na sua IA\"), request?, lines: {label?, text}[], saved?, caption (the figure's accessible name), tone",
+      "use": "the featured app answering a request: its RESULT, never the command that installs it; the reply types out line by line and loops while on screen (three rounds per visit, then it rests on the full reply; it stops off screen), whole in the server HTML, static under reduced motion, the same height while it types; the example lives in the home copy (store.featured) with the slug of its app"
+    },
+    {
+      "name": "AppCarousel",
+      "file": "app-carousel.tsx",
+      "role": "desire",
+      "props": "label (names the strip), chipsLabel, allLabel, previousLabel, nextLabel, categories: {slug, label, tone}[], items: {key, category: string|null, card: ReactNode}[]",
+      "use": "the store of the home in ONE row: category chips (store_filter), a native scroller that snaps to a card (finger, trackpad, keyboard) and a round button on each side that scrolls one card and switches off at the ends; four cards on a computer, two on a tablet, one and the edge of the next on a phone (the strip reaches the screen edges there); every card stays in the HTML, the chips only hide"
+    },
+    {
+      "name": "AppCard",
+      "file": "app-card.tsx",
+      "role": "desire",
+      "props": "href, icon (AppIcon size lg), name, summary, category, tone, badge? (\"Novo\"), track?",
+      "use": "one app of the carousel, reduced on purpose: an art band in the category hue with the icon over its edge, the name, two lines of what it does, the category and an arrow; the whole card links to the app's page, where versions, AIs, accounts and changelog live"
+    },
+    {
+      "name": "AiMark",
+      "file": "ai-marks.tsx",
+      "role": "trust",
+      "props": "id: claude_code|codex|gemini_cli|cursor (the manifest's compatible_ais), className; SUPPORTED_AIS and aiName() beside it",
+      "use": "the official mark of an AI the apps run on, one colour (currentColor), with its name as the accessible name and tooltip; the hero strip shows the four (decided 2026-10-17); never decoration, never a client logo"
     },
     {
       "name": "IndexGrid",

@@ -8,6 +8,10 @@ Every icon — original or adapter — is a default-exported component accepting
 
 Two files, on purpose. `nexture-icons.ts` holds the props type and the size helpers and imports no icon: every icon file imports it, so whatever it pulled in would ship with each icon. `icon-registry.tsx` imports the WHOLE set; a client component that imports it ships every icon to the browser. Use it only where the icon name is data (the dashboard menu, an icon the operator typed into the catalog). Until 2026-10-01 both lived in one file, and importing any single icon loaded all 429 on every page.
 
+## App icons draw the original Nexture set
+
+This project runs on Phosphor (the alias below is on), so `@/icons/nexture/ni-*` draws the interface's Phosphor icons. The tile of an app is the exception (decided 2026-10-17): [app-glyphs.tsx](app-glyphs.tsx) maps the same names as the registry to the ORIGINAL glyphs in `nexture/`, imported by relative path, and `components/marketing/app-icon.tsx` draws them in white on the app's tile, so an app never looks like a control of the page. Five glyphs were drawn for the first apps in the Nexture style (24 grid, 1.5 stroke, two tones, outlined and contained): `ni-clapperboard`, `ni-film`, `ni-carousel`, `ni-script` and `ni-video-search`. A new one goes in `nexture/`, gets its stub (`npm run icons:stubs -w @flyee/web`), a line in `icon-registry.tsx` and a line in `app-glyphs.tsx`; [app-glyphs.test.ts](app-glyphs.test.ts) fails when the lists drift.
+
 ## Switching a project to Phosphor
 
 1. Generate fallback stubs for icons without a real adapter yet:

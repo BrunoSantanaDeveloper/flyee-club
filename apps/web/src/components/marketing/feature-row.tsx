@@ -14,6 +14,10 @@ export type FeatureRowItem = {
   media: React.ReactNode;
   /** Harmonic hue for this feature family (eyebrow + bullet marks). Default: primary. */
   tone?: Tone;
+  /** Beside the title: the thing the row is about (an app's <AppIcon> for the featured app). */
+  icon?: React.ReactNode;
+  /** Under the text: the row's one action (a button to the app's page). */
+  action?: React.ReactNode;
 };
 
 /**
@@ -70,7 +74,14 @@ export default function FeatureRows({
                     {item.eyebrow}
                   </p>
                 )}
-                <h3 className="font-display text-display-md text-text-primary font-bold">{item.title}</h3>
+                {item.icon ? (
+                  <div className="flex flex-row items-center gap-4">
+                    {item.icon}
+                    <h3 className="font-display text-display-md text-text-primary font-bold">{item.title}</h3>
+                  </div>
+                ) : (
+                  <h3 className="font-display text-display-md text-text-primary font-bold">{item.title}</h3>
+                )}
                 <p className="text-text-secondary mt-3 leading-7">{item.body}</p>
                 {item.bullets && item.bullets.length > 0 && (
                   <ul className="mt-5 flex flex-col gap-2.5">
@@ -82,6 +93,7 @@ export default function FeatureRows({
                     ))}
                   </ul>
                 )}
+                {item.action ? <div className="mt-7 flex flex-row flex-wrap gap-3">{item.action}</div> : null}
               </div>
               <div className={index % 2 === 1 ? "md:order-1" : undefined}>{item.media}</div>
             </Reveal>

@@ -9,7 +9,7 @@ import { Alert, Box, Button, Card, CardContent, Grid, Tab, Tabs, Typography } fr
 import type { GridColDef } from "@mui/x-data-grid";
 
 import DataTable from "@/components/data-grid/data-table";
-import CatalogIcon from "@/components/product/catalog-icon";
+import AppIconLazy from "@/components/marketing/app-icon-lazy";
 import EmptyState from "@/components/product/empty-state";
 import { StatTile } from "@/components/product/home-tiles";
 import PageHeader from "@/components/product/page-header";
@@ -33,6 +33,7 @@ import {
 import { formatNumber } from "@/lib/admin/format";
 import { labelOf, MODULE_STATUS_LABEL, MODULE_TYPE_LABEL } from "@/lib/admin/labels";
 import type { ConsoleState } from "@/lib/admin/session";
+import { storeLook } from "@/lib/catalog/store-look";
 
 export type CatalogState = ConsoleState<{
   trails: AdminTrail[];
@@ -115,6 +116,16 @@ export default function CatalogView({ state }: { state: CatalogState }) {
     (slug: string) => textOf(trails.find((trail) => trail.slug === slug)?.name, slug),
     [trails],
   );
+  // Each row shows the app's icon as the store draws it (components/marketing/app-icon.tsx).
+  const storeCategories = useMemo(() => ready?.storeCategories ?? [], [ready?.storeCategories]);
+  const look = useMemo(
+    () =>
+      storeLook({
+        trails: trails.map((trail) => ({ slug: trail.slug, name: textOf(trail.name) })),
+        storeCategories: storeCategories.map((category) => ({ slug: category.slug, name: textOf(category.name) })),
+      }),
+    [trails, storeCategories],
+  );
 
   const columns = useMemo<GridColDef<AdminModule>[]>(
     () => [
@@ -126,12 +137,7 @@ export default function CatalogView({ state }: { state: CatalogState }) {
         valueGetter: (_, row) => `${textOf(row.name, row.slug)} ${row.slug}`,
         renderCell: ({ row }) => (
           <Box className="flex min-w-0 flex-row items-center gap-3 py-1">
-            <Box
-              aria-hidden
-              className="bg-primary/20 text-primary-ink flex h-9 w-9 flex-none items-center justify-center rounded-xl"
-            >
-              <CatalogIcon name={row.icon} size="medium" />
-            </Box>
+            <AppIconLazy name={row.icon} tone={look.lookOf(row).tone} size="sm" />
             <Box className="flex min-w-0 flex-col">
               <Typography variant="subtitle2" component="span" className="truncate">
                 {textOf(row.name, row.slug)}
@@ -204,7 +210,7 @@ export default function CatalogView({ state }: { state: CatalogState }) {
         valueGetter: (_, row) => row.usage.downloads30d,
       },
     ],
-    [trailName],
+    [trailName, look],
   );
 
   const header = (

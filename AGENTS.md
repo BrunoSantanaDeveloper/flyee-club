@@ -88,7 +88,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD, an
 - Every mutation records an audit event (`recordAudit` in `apps/web/src/lib/audit.ts`). Every table has RLS, and every new migration states its grants explicitly.
 - Visual identity changes ONLY in `packages/design-tokens/css/*.css`; run `npm run tokens:generate` and commit `tokens.generated.ts` with it.
 - npm workspaces: install dependencies from the root (`npm install`), never inside an app.
-- Icons: Phosphor through the tsconfig alias `@/icons/nexture/*` → `src/icons/phosphor/*` (fallback stubs re-export Nexture).
+- Icons: Phosphor through the tsconfig alias `@/icons/nexture/*` → `src/icons/phosphor/*` (fallback stubs re-export Nexture). App icons are the exception (decided 2026-10-17): an app's tile draws the ORIGINAL Nexture glyph its operator names, through `src/icons/app-glyphs.tsx`, so an app never looks like a control (`.claude/rules/icons.md`).
 - **MUI X through its free packages only** (decided 2026-10-14, as MedChina does): no Pro or Premium package and no licence key in any environment. A feature that only a paid package has (pinned columns, row grouping, a range picker, a funnel chart) is built as the platform's own component, never by installing the package. Enforced by `apps/web/src/lib/mui-x-free.test.ts`.
 - Fonts: Mulish (`--font-body`), Londrina Solid (`--font-heading`; `font-display` falls back to it) and JetBrains Mono (`--font-mono`). Londrina Solid has two weights, Regular and Black: Black (`font-bold`) for the display scale and headings from 24px up, Regular (`font-normal`) below that.
 - The dark band (footer, deep sections, terminal bodies) is `bg-background-deep`, never the dark primary: it has to stay dark under any palette.
@@ -281,6 +281,7 @@ paths: ["apps/web/src/icons/**", "apps/web/src/app/**"]
 - Every icon component implements `NextureIconsProps` (`size`, `variant`, `className`, `oneTone`) and is a default export. The props type and the size helpers live in `src/icons/nexture-icons.ts`, which imports NO icon (every icon file imports it).
 - `src/icons/icon-registry.tsx` (`IconMap`, `NextureIcons`) maps names to components and imports the whole set. Use it only where the icon name is data (the dashboard menu, a catalog icon typed by the operator); a client component that imports it ships every icon to the browser.
 - Alternative sets live in sibling folders (`src/icons/phosphor/`, ...) with identical file names; gaps are filled by `npm run icons:stubs -w @flyee/web` (fallback re-exports, never overwritten).
+- **App icons are the one exception** (decided 2026-10-17): the tile of an app (`components/marketing/app-icon.tsx`) draws the ORIGINAL Nexture glyph by name through `src/icons/app-glyphs.tsx`, which imports `./nexture/*` by relative path, so an app never looks like a control of the interface. A glyph the set lacks is drawn in the Nexture style (24 grid, 1.5 stroke, two tones, outlined and contained) into `src/icons/nexture/`, then gets its Phosphor stub (`icons:stubs`), a line in `icon-registry.tsx` and one in `app-glyphs.tsx`; `src/icons/app-glyphs.test.ts` fails when the two lists drift.
 - Adapters import icon libs from their SSR-safe entry (e.g. `@phosphor-icons/react/dist/ssr`) so they work in Server Components.
 
 ===== .claude/rules/marketing.md =====

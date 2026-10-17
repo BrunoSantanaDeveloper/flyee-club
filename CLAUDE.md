@@ -62,7 +62,7 @@ The PLATFORM of flyee.club: accounts, billing (Asaas for BRL, Stripe for USD, an
 - Every mutation records an audit event (`recordAudit` in `apps/web/src/lib/audit.ts`). Every table has RLS, and every new migration states its grants explicitly.
 - Visual identity changes ONLY in `packages/design-tokens/css/*.css`; run `npm run tokens:generate` and commit `tokens.generated.ts` with it.
 - npm workspaces: install dependencies from the root (`npm install`), never inside an app.
-- Icons: Phosphor through the tsconfig alias `@/icons/nexture/*` → `src/icons/phosphor/*` (fallback stubs re-export Nexture).
+- Icons: Phosphor through the tsconfig alias `@/icons/nexture/*` → `src/icons/phosphor/*` (fallback stubs re-export Nexture). App icons are the exception (decided 2026-10-17): an app's tile draws the ORIGINAL Nexture glyph its operator names, through `src/icons/app-glyphs.tsx`, so an app never looks like a control (`.claude/rules/icons.md`).
 - **MUI X through its free packages only** (decided 2026-10-14, as MedChina does): no Pro or Premium package and no licence key in any environment. A feature that only a paid package has (pinned columns, row grouping, a range picker, a funnel chart) is built as the platform's own component, never by installing the package. Enforced by `apps/web/src/lib/mui-x-free.test.ts`.
 - Fonts: Mulish (`--font-body`), Londrina Solid (`--font-heading`; `font-display` falls back to it) and JetBrains Mono (`--font-mono`). Londrina Solid has two weights, Regular and Black: Black (`font-bold`) for the display scale and headings from 24px up, Regular (`font-normal`) below that.
 - The dark band (footer, deep sections, terminal bodies) is `bg-background-deep`, never the dark primary: it has to stay dark under any palette.

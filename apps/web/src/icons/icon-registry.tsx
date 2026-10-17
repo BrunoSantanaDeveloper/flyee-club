@@ -71,6 +71,7 @@ import NiCalendar from "@/icons/nexture/ni-calendar";
 import NiCalendarClock from "@/icons/nexture/ni-calendar-clock";
 import NiCamera from "@/icons/nexture/ni-camera";
 import NiCar from "@/icons/nexture/ni-car";
+import NiCarousel from "@/icons/nexture/ni-carousel";
 import NiCartArrow from "@/icons/nexture/ni-cart-arrow";
 import NiCartCross from "@/icons/nexture/ni-cart-cross";
 import NiCartEmpty from "@/icons/nexture/ni-cart-empty";
@@ -107,6 +108,7 @@ import NiChevronUpDownReverseSmall from "@/icons/nexture/ni-chevron-up-down-reve
 import NiChevronUpDownSmall from "@/icons/nexture/ni-chevron-up-down-small";
 import NiChevronUpSmall from "@/icons/nexture/ni-chevron-up-small";
 import NiCircle from "@/icons/nexture/ni-circle";
+import NiClapperboard from "@/icons/nexture/ni-clapperboard";
 import NiClipboard from "@/icons/nexture/ni-clipboard";
 import NiClock from "@/icons/nexture/ni-clock";
 import NiCloud from "@/icons/nexture/ni-cloud";
@@ -194,6 +196,7 @@ import NiFaceNeutral from "@/icons/nexture/ni-face-neutral";
 import NiFaceSmile from "@/icons/nexture/ni-face-smile";
 import NiFaceSmileMore from "@/icons/nexture/ni-face-smile-more";
 import NiFemale from "@/icons/nexture/ni-female";
+import NiFilm from "@/icons/nexture/ni-film";
 import NiFilter from "@/icons/nexture/ni-filter";
 import NiFilterCross from "@/icons/nexture/ni-filter-cross";
 import NiFilterMinus from "@/icons/nexture/ni-filter-minus";
@@ -336,6 +339,7 @@ import NiSafe from "@/icons/nexture/ni-safe";
 import NiScale from "@/icons/nexture/ni-scale";
 import NiScissors from "@/icons/nexture/ni-scissors";
 import NiScreen from "@/icons/nexture/ni-screen";
+import NiScript from "@/icons/nexture/ni-script";
 import NiScriptSub from "@/icons/nexture/ni-script-sub";
 import NiScriptSuper from "@/icons/nexture/ni-script-super";
 import NiSearch from "@/icons/nexture/ni-search";
@@ -421,6 +425,7 @@ import NiUserMinus from "@/icons/nexture/ni-user-minus";
 import NiUserPlus from "@/icons/nexture/ni-user-plus";
 import NiUsers from "@/icons/nexture/ni-users";
 import NiVerified from "@/icons/nexture/ni-verified";
+import NiVideoSearch from "@/icons/nexture/ni-video-search";
 import NiWallet from "@/icons/nexture/ni-wallet";
 import NiWalletCrypto from "@/icons/nexture/ni-wallet-crypto";
 import NiWatch from "@/icons/nexture/ni-watch";
@@ -436,6 +441,8 @@ export const IconMap = {
   NiAirBalloon,
   NiAnchor,
   NiAnnouncement,
+  /** The name migration 0008 gave the Divulgar stage; the set calls the megaphone NiAnnouncement. */
+  NiMegaphone: NiAnnouncement,
   NiAntenna,
   NiArchiveCheck,
   NiArchive,
@@ -502,6 +509,7 @@ export const IconMap = {
   NiCalendar,
   NiCalendarClock,
   NiCamera,
+  NiCarousel,
   NiCar,
   NiCartArrow,
   NiCartCross,
@@ -539,6 +547,7 @@ export const IconMap = {
   NiChevronUpSmall,
   NiChevronUp,
   NiCircle,
+  NiClapperboard,
   NiClipboard,
   NiClock,
   NiCloudPartly,
@@ -626,6 +635,7 @@ export const IconMap = {
   NiFaceSmileMore,
   NiFaceSmile,
   NiFemale,
+  NiFilm,
   NiFilterCross,
   NiFilterMinus,
   NiFilterPlus,
@@ -768,6 +778,7 @@ export const IconMap = {
   NiScale,
   NiScissors,
   NiScreen,
+  NiScript,
   NiScriptSub,
   NiScriptSuper,
   NiSearch,
@@ -853,6 +864,7 @@ export const IconMap = {
   NiUser,
   NiUsers,
   NiVerified,
+  NiVideoSearch,
   NiWalletCrypto,
   NiWallet,
   NiWatch,

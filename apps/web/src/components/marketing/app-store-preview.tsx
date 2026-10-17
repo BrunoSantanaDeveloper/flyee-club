@@ -1,78 +1,115 @@
-import { TONE, type Tone } from "@/components/marketing/tone";
+import LocaleLink from "@/components/marketing/locale-link";
 import { cn } from "@/lib/utils";
 
 export type StoreApp = {
   slug: string;
   name: string;
-  /** The category it is listed under (the trail name). */
+  /** The category it is listed under (the store category, else the stage). */
   category: string;
-  tone: Tone;
+  /** The app's page (internal Portuguese path). */
+  href: string;
+  /** Its <AppIcon>, rendered on the server. */
   icon: React.ReactNode;
+  /** The site event of the click (`trackAttributes`, lib/site-events.ts). */
+  track?: Record<string, string>;
+};
+
+/** Up to three apps sit in one row; four to six make two rows of three; more, rows of four. */
+export function previewColumns(count: number): 1 | 2 | 3 | 4 {
+  if (count <= 3) return Math.max(1, count) as 1 | 2 | 3;
+  return count <= 6 ? 3 : 4;
+}
+
+const COLUMNS: Record<1 | 2 | 3 | 4, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-3 sm:grid-cols-4",
 };
 
 /**
  * The app store as the home's hero shows it (docs/HOME-COPY.md, "Imagem do
- * produto"): the category chips and a grid of app tiles, meant to sit inside a
- * <ProductFrame>. Built from the real catalog, so every name on it is a
- * published app; token-driven until a screenshot of the member store exists,
- * at which point a <ProductShot> replaces it on the same line.
+ * produto"), laid out the way an app shelf is read (decided 2026-10-17, from
+ * the owner's reference): each app as its icon, large, with the name and the
+ * category under it, on a quiet dot matrix. Built from the real catalog, so
+ * every icon on it is a published app; it sits inside a <ProductFrame>.
  *
- * It illustrates. The accessible list of apps is the store section of the
- * page, so the preview is one image with a label for assistive technology.
- * Two tiles per row on a phone, four from `md` up (the store's own grid).
+ * Every icon is a link to the app's page. The category chips above the shelf
+ * only picture the store (the filter that works is the carousel's, further
+ * down), so they are hidden from assistive technology. A phone shows six apps
+ * at most, three to a row.
  */
 export default function AppStorePreview({
   apps,
+  title,
   categories,
   allLabel,
-  installLabel,
   label,
 }: {
   apps: StoreApp[];
+  /** The shelf's heading inside the frame ("Loja de apps"). */
+  title: string;
   categories: string[];
   /** The first chip, shown selected ("Todos"). */
   allLabel: string;
-  /** The pill on each tile ("Instalar"). */
-  installLabel: string;
-  /** What the image shows, for assistive technology. */
+  /** What the list of apps is, for assistive technology. */
   label: string;
 }) {
+  const shown = apps.slice(0, 8);
   return (
-    <div role="img" aria-label={label} className="flex flex-col gap-4 p-4 sm:p-6">
-      <div aria-hidden className="flex flex-row flex-wrap gap-2">
-        <span className="bg-text-primary text-background-paper rounded-full px-3 py-1 text-xs font-semibold">
-          {allLabel}
-        </span>
-        {categories.map((category) => (
-          <span key={category} className="border-grey-100 text-text-secondary rounded-full border px-3 py-1 text-xs">
-            {category}
-          </span>
-        ))}
-      </div>
-      <div aria-hidden className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {apps.map((app) => (
-          <div
-            key={app.slug}
-            className="border-grey-100 bg-background flex min-w-0 flex-col gap-3 rounded-2xl border p-3"
-          >
-            <span
-              className={cn(
-                "inline-grid h-10 w-10 place-items-center rounded-xl",
-                TONE[app.tone].softBg,
-                TONE[app.tone].text,
-              )}
-            >
-              {app.icon}
-            </span>
-            <span className="flex min-w-0 flex-col">
-              <span className="text-text-primary truncate text-sm font-semibold">{app.name}</span>
-              <span className="text-text-secondary truncate text-xs">{app.category}</span>
-            </span>
-            <span className="border-grey-100 text-text-primary self-start rounded-full border px-2.5 py-0.5 text-xs">
-              {installLabel}
-            </span>
-          </div>
-        ))}
+    <div className="relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: "radial-gradient(hsl(var(--grey-200) / 0.7) 1px, transparent 1px)",
+          backgroundSize: "22px 22px",
+        }}
+      />
+      <div className="relative flex flex-col gap-7 px-4 pt-5 pb-8 sm:gap-9 sm:px-10 sm:pt-8 sm:pb-12">
+        <div className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <p className="font-display text-text-primary m-0 text-lg font-normal sm:text-xl">{title}</p>
+          {categories.length > 0 && (
+            <div aria-hidden className="hidden flex-row flex-wrap gap-2 sm:flex">
+              <span className="bg-text-primary text-background-paper rounded-full px-3 py-1 text-xs font-semibold">
+                {allLabel}
+              </span>
+              {categories.map((category) => (
+                <span
+                  key={category}
+                  className="border-grey-100 bg-background-paper text-text-secondary rounded-full border px-3 py-1 text-xs"
+                >
+                  {category}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <ul
+          aria-label={label}
+          className={cn(
+            "m-0 grid list-none gap-x-3 gap-y-7 p-0 sm:gap-x-8 sm:gap-y-10",
+            COLUMNS[previewColumns(shown.length)],
+          )}
+        >
+          {shown.map((app, index) => (
+            <li key={app.slug} className={cn("flex justify-center", index >= 6 && "hidden sm:flex")}>
+              <LocaleLink
+                href={app.href}
+                className="group focus-visible:outline-primary-ink flex w-full max-w-44 flex-col items-center gap-2.5 rounded-2xl text-center focus-visible:outline-2 focus-visible:outline-offset-4"
+                {...app.track}
+              >
+                <span className="transition-transform duration-200 group-hover:-translate-y-1 motion-reduce:transition-none">
+                  {app.icon}
+                </span>
+                <span className="font-display text-text-primary text-base leading-5 font-normal sm:text-lg sm:leading-6">
+                  {app.name}
+                </span>
+                <span className="text-text-secondary -mt-1.5 text-xs sm:text-sm">{app.category}</span>
+              </LocaleLink>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

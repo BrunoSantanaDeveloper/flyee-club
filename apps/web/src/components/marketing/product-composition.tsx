@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
 export type Satellite = {
   /** Usually one of the chips from satellite-chips.tsx. */
   children: React.ReactNode;
-  position: "top-left" | "top-right" | "right" | "bottom-right" | "bottom-left" | "left";
+  /** `bottom` sits centred over the lower edge of the frame (the brief's floating button). */
+  position: "top-left" | "top-right" | "right" | "bottom-right" | "bottom" | "bottom-left" | "left";
   /** front = overlaps the frame (z-20, stronger shadow); back = behind it (z-0, soft shadow). */
   depth?: "front" | "back";
   /** Slight tilt at md+; the mobile row stays level. */
@@ -41,6 +42,8 @@ const POSITION: Record<NonNullable<Satellite["position"]>, string> = {
   "top-right": "md:absolute md:-top-8 md:-right-6 lg:-right-10",
   right: "md:absolute md:top-1/3 md:-right-8",
   "bottom-right": "md:absolute md:-bottom-8 md:-right-6",
+  // Centred with auto margins, not a translate: the hero entrance animates the transform.
+  bottom: "md:absolute md:inset-x-0 md:-bottom-6 md:mx-auto md:w-fit",
   "bottom-left": "md:absolute md:-bottom-8 md:-left-6 lg:-left-12",
   left: "md:absolute md:top-1/2 md:-left-8",
 };

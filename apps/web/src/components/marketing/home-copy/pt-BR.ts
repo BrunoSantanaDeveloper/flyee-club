@@ -33,10 +33,11 @@ export const homeCopyPtBR = {
     note: "Acesso de 1 ano, pagamento único. Você usa o seu próprio plano de IA.",
     stripLabel: "Funciona com a IA que você já usa",
     store: {
-      label: "A loja de apps do FlyeeClub, com os apps publicados",
+      title: "Loja de apps",
+      label: "Os apps publicados na loja do FlyeeClub",
       allLabel: "Todos",
-      installLabel: "Instalar",
       appsLabel: "apps na loja",
+      updatedLabel: "Última atualização",
     },
     terminal: {
       title: "~/meu-projeto",
@@ -63,9 +64,37 @@ export const homeCopyPtBR = {
     usesAccount: "Usa sua conta {service}",
     updatedOn: "Atualizado em {date}",
     viewApp: "Ver o app",
-    terminalLabel: "O que a sua IA roda para instalar o app em destaque",
-    installed: "{app} {version} instalado",
-    verified: "Checksum sha256 conferido",
+    /**
+     * The featured app and its example (lib/catalog/featured.ts): the slot
+     * shows this app answering the request below, the result and not the
+     * command. Swap the slug and the example together at a launch. When the
+     * app is not in the catalog, the slot goes to the app updated last and
+     * shows what it does.
+     */
+    featured: {
+      slug: "youtube-script",
+      request:
+        "Quero gravar um vídeo de uns 10 minutos sobre como montar a marmita da semana sem enjoar. Me ajuda com o roteiro?",
+      reply: [
+        { label: "Título", text: "Marmita da semana em 1 hora, sem repetir prato" },
+        {
+          label: "Gancho · 0:00",
+          text: "Na quarta você já não aguenta a mesma comida. O problema não é a receita, é a ordem do preparo.",
+        },
+        { label: "Bloco 1 · 0:30", text: "Cinco bases que viram dez pratos diferentes" },
+        { label: "Bloco 2 · 3:00", text: "A ordem do preparo para caber em uma hora" },
+        { label: "Bloco 3 · 6:30", text: "Como guardar para durar até sexta" },
+        { label: "Fechamento · 9:10", text: "O que testar na primeira semana" },
+      ],
+      saved: "Salvo em roteiros/marmita-da-semana/estrutura.md",
+    },
+    showcase: {
+      context: "Na sua IA",
+      caption: "Exemplo do {app} respondendo a um pedido na sua IA",
+    },
+    carouselLabel: "Os apps da loja",
+    previous: "Apps anteriores",
+    next: "Próximos apps",
     footnote: "Nada de módulo para assistir. Você instala o app e usa; cada um tem um guia curto.",
     allApps: "Ver todos os apps",
     emptyTitle: "Os primeiros apps estão chegando",

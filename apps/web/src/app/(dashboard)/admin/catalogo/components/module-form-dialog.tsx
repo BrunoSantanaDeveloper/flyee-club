@@ -1,18 +1,19 @@
 "use client";
 
 import { type ModuleInput, saveModule } from "../actions";
+import AppIconField from "./app-icon-field";
 import { CheckGroup, CheckInput, LocalizedInput, SelectInput, TextInput } from "./fields";
 import { useState } from "react";
 
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, IconButton, Typography } from "@mui/material";
 
-import CatalogIcon from "@/components/product/catalog-icon";
 import DialogHeader from "@/components/product/dialog-header";
 import NiBinEmpty from "@/icons/nexture/ni-bin-empty";
 import NiPlus from "@/icons/nexture/ni-plus";
 import type { AdminModule, AdminStoreCategory, AdminTrail, Credential } from "@/lib/admin/catalog";
 import { textOf } from "@/lib/admin/catalog";
 import { AI_TOOL_LABEL, MODULE_TYPE_LABEL, SEGMENT_LABEL } from "@/lib/admin/labels";
+import { storeLook } from "@/lib/catalog/store-look";
 import { PERSONA_SEGMENTS } from "@/lib/site-segment";
 
 const AI_OPTIONS = Object.entries(AI_TOOL_LABEL).map(([value, label]) => ({ value, label }));
@@ -69,6 +70,11 @@ export default function ModuleFormDialog({
   const slugFrozen = Boolean(module?.publishedAt);
   const set = <K extends keyof ModuleInput>(key: K, value: ModuleInput[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
+  // The hue the store gives the app with the category and stage chosen here (lib/catalog/store-look.ts).
+  const iconTone = storeLook({
+    trails: trails.map((trail) => ({ slug: trail.slug, name: textOf(trail.name) })),
+    storeCategories: storeCategories.map((category) => ({ slug: category.slug, name: textOf(category.name) })),
+  }).lookOf({ trail: form.trail, storeCategory: form.storeCategory }).tone;
 
   const setCredential = (index: number, patch: Partial<Credential>) =>
     set(
@@ -172,22 +178,9 @@ export default function ModuleFormDialog({
             onChange={(value) => set("personas", value)}
           />
 
-          <Box className="grid grid-cols-1 items-start gap-3 md:grid-cols-3">
-            <Box className="flex flex-row items-end gap-3">
-              <TextInput
-                label="Ícone"
-                value={form.icon}
-                onChange={(value) => set("icon", value)}
-                placeholder="NiRocket"
-                help="Nome do conjunto Ni. Vazio usa o ícone do catálogo."
-              />
-              <Box
-                aria-hidden
-                className="bg-primary/20 text-primary-ink mb-6 flex h-10 w-10 flex-none items-center justify-center rounded-xl"
-              >
-                <CatalogIcon name={form.icon} size="medium" />
-              </Box>
-            </Box>
+          <AppIconField value={form.icon} onChange={(value) => set("icon", value)} tone={iconTone} />
+
+          <Box className="grid grid-cols-1 items-start gap-3 md:grid-cols-2">
             <TextInput
               label="Ordem no catálogo"
               type="number"

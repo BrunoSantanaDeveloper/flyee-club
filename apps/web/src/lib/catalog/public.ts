@@ -3,6 +3,7 @@ import { cache } from "react";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadCatalog, loadModule } from "@/lib/catalog/read";
 import { DEFAULT_NEW_BADGE_DAYS } from "@/lib/catalog/store-badges";
+import { type StoreLook, storeLook } from "@/lib/catalog/store-look";
 import { createAnonClient } from "@/lib/public-content";
 
 /**
@@ -160,6 +161,8 @@ export const loadPublicCatalog = cache(readPublicCatalog);
 
 export type PublicModule = NonNullable<Awaited<ReturnType<typeof loadModule>>> & {
   trailName: string | null;
+  /** How the store shows the app: its category's name and hue, else its stage's (lib/catalog/store-look.ts). */
+  look: StoreLook;
   /** Which written guides the newest released version carries (migration 0030), by language. */
   guides: Partial<Record<CatalogLocale, ("usar" | "abrir_o_capo")[]>>;
   /** The languages this module can be read in, for hreflang. */
@@ -178,10 +181,16 @@ async function readPublicModule(slug: string, locale: CatalogLocale): Promise<Pu
   const client = createAnonClient();
   if (!client) return { kind: "unavailable" };
   try {
-    const [module, names, trails] = await Promise.all([
+    const [module, names, trails, categories] = await Promise.all([
       loadModule(client, { slug, locale, limits: {} }),
-      client.from("catalog_modules").select("name").eq("slug", slug).eq("status", "published").maybeSingle(),
-      client.from("catalog_trails").select("slug, name"),
+      client
+        .from("catalog_modules")
+        .select("name, store_category")
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle(),
+      client.from("catalog_trails").select("slug, name").order("sort"),
+      client.from("catalog_store_categories").select("slug, name").order("sort"),
     ]);
     if (names.error || trails.error) return { kind: "unavailable" };
     if (!module || !names.data) return { kind: "missing" };
@@ -198,12 +207,25 @@ async function readPublicModule(slug: string, locale: CatalogLocale): Promise<Pu
           .maybeSingle()
       : { data: null };
 
+    const named = (value: Localized) => value?.[locale]?.trim() || value?.["pt-BR"]?.trim() || null;
     const trail = (trails.data ?? []).find((row) => row.slug === module.trail);
     const trailNames = (trail?.name ?? null) as Localized;
+    // The app's place in the store, as the cards show it: its category's name and hue, else its
+    // stage's. A category list that could not be read leaves the stage, never the page.
+    const look = storeLook({
+      trails: (trails.data ?? []).map((row) => ({ slug: row.slug as string, name: named(row.name as Localized) })),
+      storeCategories: categories.error
+        ? []
+        : (categories.data ?? []).map((row) => ({
+            slug: row.slug as string,
+            name: named(row.name as Localized) ?? (row.slug as string),
+          })),
+    }).lookOf({ trail: module.trail, storeCategory: (names.data.store_category as string | null) ?? null });
     return {
       kind: "ready",
       module: {
         ...module,
+        look,
         guides: (guidesRow?.guides ?? {}) as PublicModule["guides"],
         trailName: trailNames?.[locale]?.trim() || trailNames?.["pt-BR"]?.trim() || null,
         languages: (["pt-BR", "en"] as const).filter((language) => hasText(name, language)),

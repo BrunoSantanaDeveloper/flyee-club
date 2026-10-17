@@ -3,6 +3,11 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { AiMark, aiName, SUPPORTED_AIS } from "@/components/marketing/ai-marks";
+import AppCard from "@/components/marketing/app-card";
+import AppCarousel from "@/components/marketing/app-carousel";
+import AppIcon from "@/components/marketing/app-icon";
+import AppShowcase from "@/components/marketing/app-showcase";
 import AppStorePreview from "@/components/marketing/app-store-preview";
 import Band from "@/components/marketing/band";
 import Cta from "@/components/marketing/cta";
@@ -16,17 +21,16 @@ import PricingSection from "@/components/marketing/pricing-section";
 import ProcessSteps from "@/components/marketing/process-steps";
 import ProductComposition, { type Satellite } from "@/components/marketing/product-composition";
 import ProductFrame from "@/components/marketing/product-frame";
-import RuledGrid, { RuledCard, type RuledGridItem } from "@/components/marketing/ruled-grid";
-import { KpiChip, ReadoutChip } from "@/components/marketing/satellite-chips";
+import RuledGrid from "@/components/marketing/ruled-grid";
+import { KpiChip, LinkChip, ReadoutChip } from "@/components/marketing/satellite-chips";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
-import StoreGrid from "@/components/marketing/store-grid";
 import TerminalFrame from "@/components/marketing/terminal-frame";
 import { TONE } from "@/components/marketing/tone";
-import CatalogIcon from "@/components/product/catalog-icon";
 import SiteButton from "@/components/site/button";
 import { COOKIE_KEYS } from "@/constants";
 import NiAi from "@/icons/nexture/ni-ai";
+import NiArrowRight from "@/icons/nexture/ni-arrow-right";
 import NiCells from "@/icons/nexture/ni-cells";
 import NiCoin from "@/icons/nexture/ni-coin";
 import NiFlask from "@/icons/nexture/ni-flask";
@@ -36,6 +40,7 @@ import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiRefresh from "@/icons/nexture/ni-refresh";
 import NiServer from "@/icons/nexture/ni-server";
 import { resolveCurrency } from "@/lib/billing-currency";
+import { pickFeatured } from "@/lib/catalog/featured";
 import type { CatalogLocale } from "@/lib/catalog/links";
 import { loadPublicCatalog, type PublicCatalog } from "@/lib/catalog/public";
 import { accountServices, isNewApp, servicesPhrase } from "@/lib/catalog/store-badges";
@@ -57,19 +62,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** The AIs v1 supports, named as text (docs/DESIGN.md: never as decorative logos). */
-const SUPPORTED_AIS = ["Claude Code", "Codex", "Gemini CLI", "Cursor"];
-
 type App = PublicCatalog["modules"][number];
-
-/** The app most recently updated: the store's featured slot, from real release dates. */
-function featuredApp(apps: App[]): App | null {
-  return (
-    [...apps]
-      .filter((app) => app.latest?.published_at)
-      .sort((a, b) => Date.parse(b.latest?.published_at ?? "") - Date.parse(a.latest?.published_at ?? ""))[0] ?? null
-  );
-}
 
 /** The home's copy with one value filled in ("Atualizado em {date}"). */
 const fill = (text: string, values: Record<string, string>) =>
@@ -77,10 +70,13 @@ const fill = (text: string, values: Record<string, string>) =>
 
 /**
  * The home (phase 7.2), composed as docs/HOME-COPY.md lays it out: a centred
- * hero with the store under the fold line, the app store itself (featured app,
- * categories, the grid), how it works, why a store, where the apps come from,
+ * hero with the marks of the AIs the apps run on and the store under the fold
+ * line, the app store itself (the featured app answering a request, then
+ * every app in one row), how it works, why a store, where the apps come from,
  * the access cards, the questions and the last call. Every app, date and count
- * comes from the catalog; every price from the plans.
+ * comes from the catalog; every price from the plans. The owner's review of
+ * 2026-10-17 set the marks, the shelf of icons, the result in place of the
+ * command and the row (docs/DESIGN.md, "Reference ingredients").
  *
  * Left out until they exist, as that draft asks: the testimonials (only
  * placeholders today), the custom-app, mentoring and consulting block (the
@@ -111,32 +107,21 @@ export default async function Home() {
     getDisplayPlans({ coupon, currency, stage }),
   ]);
   const catalog = catalogResult.kind === "ready" ? catalogResult.catalog : null;
-  const apps = catalog?.modules ?? [];
-  const featured = featuredApp(apps);
   const number = new Intl.NumberFormat(locale);
   const date = (iso: string | null | undefined) =>
     iso ? new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long" }) : "";
-
-  // The two badges of a store card, from data (migration 0034): "Novo" for the first days
-  // after an app's first publication, and the services of its required credentials.
-  const storeFlags = (app: App): RuledGridItem["flags"] => {
-    const services = accountServices(app.external_credentials);
-    return [
-      ...(catalog && isNewApp(app.firstPublishedAt, catalog.newBadgeDays) ? [{ label: copy.store.newBadge }] : []),
-      ...(services.length > 0
-        ? [
-            {
-              label: fill(copy.store.usesAccount, { service: servicesPhrase(services, locale) }),
-              tone: "neutral" as const,
-            },
-          ]
-        : []),
-    ];
-  };
+  const shortDate = (iso: string) => new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "short" });
 
   // The store filters by store category (migration 0029); an app without one shows its stage.
+  // Both the shelf of the hero and the row of the store list the apps in the store's order.
   const look = storeLook(catalog ?? { trails: [], storeCategories: [] });
-  const trailOf = (app: App) => look.lookOf(app);
+  const lookOf = (app: App) => look.lookOf(app);
+  const apps = look.sort(catalog?.modules ?? []);
+  const example = copy.store.featured;
+  const featured = pickFeatured(apps, example.slug);
+  const icon = (app: App, size: React.ComponentProps<typeof AppIcon>["size"], className?: string) => (
+    <AppIcon name={app.icon} tone={lookOf(app).tone} size={size} className={className} />
+  );
 
   const heroMedia =
     catalog && apps.length > 0 ? (
@@ -144,16 +129,17 @@ export default async function Home() {
         frame={
           <ProductFrame glow>
             <AppStorePreview
+              title={copy.hero.store.title}
               label={copy.hero.store.label}
               allLabel={copy.hero.store.allLabel}
-              installLabel={copy.hero.store.installLabel}
               categories={look.chipsFor(apps).map((chip) => chip.label)}
               apps={apps.slice(0, 8).map((app) => ({
                 slug: app.slug,
                 name: app.name ?? app.slug,
-                category: trailOf(app).name,
-                tone: trailOf(app).tone,
-                icon: <CatalogIcon name={app.icon} size="medium" />,
+                category: lookOf(app).name,
+                href: `/catalogo/${app.slug}`,
+                icon: icon(app, "xl", "sm:size-22"),
+                track: trackAttributes({ event: "app_card_click", app: app.slug, location: "hero" }),
               }))}
             />
           </ProductFrame>
@@ -168,7 +154,7 @@ export default async function Home() {
               <KpiChip label={copy.hero.store.appsLabel} value={number.format(catalog.stats.modules)} tone="accent-1" />
             ),
           },
-          ...(featured
+          ...(catalog.stats.lastReleaseAt
             ? ([
                 {
                   position: "bottom-left",
@@ -176,10 +162,29 @@ export default async function Home() {
                   rotate: -2,
                   float: true,
                   floatDelay: 1.2,
-                  children: <ReadoutChip text={`npx flyee add ${featured.slug}`} tone="accent-2" />,
+                  children: (
+                    <KpiChip
+                      label={copy.hero.store.updatedLabel}
+                      value={shortDate(catalog.stats.lastReleaseAt)}
+                      tone="accent-4"
+                    />
+                  ),
                 },
               ] satisfies Satellite[])
             : []),
+          {
+            // The brief's floating button over the preview: it takes the reader down to the store.
+            position: "bottom",
+            depth: "front",
+            children: (
+              <LinkChip
+                label={copy.store.allApps}
+                href="#apps"
+                icon={<NiArrowRight size="small" />}
+                track={trackAttributes({ event: "see_all_apps_click", location: "hero" })}
+              />
+            ),
+          },
         ]}
       />
     ) : (
@@ -219,22 +224,28 @@ export default async function Home() {
       />
     );
 
-  const appCard = (app: App): RuledGridItem => ({
-    icon: <CatalogIcon name={app.icon} size="medium" />,
-    tone: trailOf(app).tone,
-    title: app.name ?? app.slug,
-    body: app.summary ?? trailOf(app).name,
-    badge: trailOf(app).name,
-    meta: app.latest ? fill(copy.store.updatedOn, { date: date(app.latest.published_at) }) : undefined,
-    flags: storeFlags(app),
-    link: { label: copy.store.viewApp, href: `/catalogo/${app.slug}` },
-    track: trackAttributes({ event: "app_card_click", app: app.slug }),
-  });
+  // The row of the store: every app, the featured one in its place too (the brief), up to
+  // fifteen (the store page lists them all), filtered by the categories they are in. A card
+  // says less than the app's page: icon, name, two lines, category and, from data
+  // (migration 0034), "Novo" for the first days after the app's first publication.
+  const storeApps = apps.slice(0, 15);
+  const appCard = (app: App) => (
+    <AppCard
+      href={`/catalogo/${app.slug}`}
+      icon={icon(app, "lg")}
+      name={app.name ?? app.slug}
+      summary={app.summary ?? lookOf(app).name}
+      category={lookOf(app).name}
+      tone={lookOf(app).tone}
+      badge={catalog && isNewApp(app.firstPublishedAt, catalog.newBadgeDays) ? copy.store.newBadge : undefined}
+      track={trackAttributes({ event: "app_card_click", app: app.slug, location: "store" })}
+    />
+  );
 
-  // The store grid of the home: every app but the featured one, up to fifteen
-  // (the store page lists them all), filtered by the categories they are in.
-  const storeApps = apps.filter((app) => app.slug !== featured?.slug).slice(0, 15);
-  const storeCategories = look.chipsFor(storeApps);
+  // The featured app answers the request of the copy's example; another app in the slot
+  // (the copy names one that is not published) shows what it does, with nothing invented.
+  const hasExample = featured?.slug === example.slug;
+  const featuredServices = featured ? accountServices(featured.external_credentials) : [];
 
   return (
     <>
@@ -248,7 +259,10 @@ export default async function Home() {
         primaryCta={primary}
         secondaryCta={{ label: copy.hero.secondaryCta, href: "#perguntas" }}
         note={copy.hero.note}
-        strip={{ label: copy.hero.stripLabel, items: SUPPORTED_AIS }}
+        strip={{
+          label: copy.hero.stripLabel,
+          items: SUPPORTED_AIS.map((id) => ({ name: aiName(id), mark: <AiMark id={id} className="size-7" /> })),
+        }}
         media={heroMedia}
       />
 
@@ -263,65 +277,64 @@ export default async function Home() {
             items={[
               {
                 eyebrow: copy.store.featuredLabel,
+                icon: icon(featured, "lg"),
                 title: featured.name ?? featured.slug,
-                body: featured.summary ?? trailOf(featured).name,
+                body: featured.summary ?? lookOf(featured).name,
                 bullets: [
-                  trailOf(featured).name,
+                  lookOf(featured).name,
                   ...(featured.latest
                     ? [
                         `v${featured.latest.version} · ${fill(copy.store.updatedOn, { date: date(featured.latest.published_at) })}`,
                       ]
                     : []),
+                  ...(featuredServices.length > 0
+                    ? [fill(copy.store.usesAccount, { service: servicesPhrase(featuredServices, locale) })]
+                    : []),
                 ],
-                tone: trailOf(featured).tone,
+                tone: lookOf(featured).tone,
+                action: (
+                  <SiteButton
+                    variant="pastel"
+                    href={`/catalogo/${featured.slug}`}
+                    {...trackAttributes({ event: "app_card_click", app: featured.slug, location: "featured" })}
+                  >
+                    {copy.store.viewApp}
+                  </SiteButton>
+                ),
+                // The result of the app, not the command that installs it (decided 2026-10-17).
                 media: (
-                  <div className="flex flex-col gap-4">
-                    <TerminalFrame
-                      title={copy.hero.terminal.title}
-                      label={copy.store.terminalLabel}
-                      lines={[
-                        { kind: "command", text: `npx flyee add ${featured.slug}` },
-                        ...(featured.latest
-                          ? [
-                              {
-                                kind: "success" as const,
-                                text: fill(copy.store.installed, {
-                                  app: featured.slug,
-                                  version: featured.latest.version,
-                                }),
-                              },
-                              { kind: "success" as const, text: copy.store.verified },
-                            ]
-                          : []),
-                      ]}
-                    />
-                    <SiteButton variant="pastel" href={`/catalogo/${featured.slug}`} className="self-start">
-                      {copy.store.viewApp}
-                    </SiteButton>
-                  </div>
+                  <AppShowcase
+                    icon={icon(featured, "sm")}
+                    name={featured.name ?? featured.slug}
+                    context={copy.store.showcase.context}
+                    request={hasExample ? example.request : undefined}
+                    lines={hasExample ? example.reply : [{ text: featured.summary ?? lookOf(featured).name }]}
+                    saved={hasExample ? example.saved : undefined}
+                    caption={fill(copy.store.showcase.caption, { app: featured.name ?? featured.slug })}
+                    tone={lookOf(featured).tone}
+                  />
                 ),
               },
             ]}
           >
             <div className="flex flex-col gap-8">
-              <StoreGrid
-                label={copy.store.categoriesLabel}
+              {/* Only the apps: asking for a custom app is FlyeeClub Pro's, and the
+                  site never advertises it (docs/PRODUCT.md, 2026-10-08). */}
+              <AppCarousel
+                label={copy.store.carouselLabel}
+                chipsLabel={copy.store.categoriesLabel}
                 allLabel={copy.store.allLabel}
-                categories={storeCategories}
-                // Only the apps: asking for a custom app is FlyeeClub Pro's, and the
-                // site never advertises it (docs/PRODUCT.md, 2026-10-08).
-                items={storeApps.map((app) => ({
-                  key: app.slug,
-                  category: app.storeCategory,
-                  card: <RuledCard item={appCard(app)} />,
-                }))}
+                previousLabel={copy.store.previous}
+                nextLabel={copy.store.next}
+                categories={look.chipsFor(storeApps)}
+                items={storeApps.map((app) => ({ key: app.slug, category: app.storeCategory, card: appCard(app) }))}
               />
               <p className="text-text-secondary m-0 text-center text-base leading-7">
                 {copy.store.footnote}{" "}
                 <LocaleLink
                   href="/catalogo"
                   className="text-text-primary font-semibold underline"
-                  data-track="see_all_apps_click"
+                  {...trackAttributes({ event: "see_all_apps_click", location: "store" })}
                 >
                   {copy.store.allApps}
                 </LocaleLink>

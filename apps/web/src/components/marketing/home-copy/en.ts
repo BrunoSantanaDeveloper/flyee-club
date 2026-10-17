@@ -18,10 +18,11 @@ export const homeCopy: HomeCopy = {
     note: "One year of access, one payment. You use your own AI plan.",
     stripLabel: "Works with the AI you already use",
     store: {
-      label: "The FlyeeClub app store, with the published apps",
+      title: "App store",
+      label: "The apps published in the FlyeeClub store",
       allLabel: "All",
-      installLabel: "Install",
       appsLabel: "apps in the store",
+      updatedLabel: "Last update",
     },
     terminal: {
       title: "~/my-project",
@@ -48,9 +49,30 @@ export const homeCopy: HomeCopy = {
     usesAccount: "Uses your {service} account",
     updatedOn: "Updated on {date}",
     viewApp: "See the app",
-    terminalLabel: "What your AI runs to install the featured app",
-    installed: "{app} {version} installed",
-    verified: "sha256 checksum verified",
+    featured: {
+      slug: "youtube-script",
+      request:
+        "I want to record a video of about 10 minutes on how to prep a week of lunches without getting tired of them. Can you help with the script?",
+      reply: [
+        { label: "Title", text: "A week of lunches in 1 hour, no repeats" },
+        {
+          label: "Hook · 0:00",
+          text: "By Wednesday you can't face the same food again. The problem isn't the recipe, it's the order you cook in.",
+        },
+        { label: "Block 1 · 0:30", text: "Five bases that turn into ten different dishes" },
+        { label: "Block 2 · 3:00", text: "The cooking order that fits in one hour" },
+        { label: "Block 3 · 6:30", text: "How to store it so it lasts until Friday" },
+        { label: "Close · 9:10", text: "What to try in your first week" },
+      ],
+      saved: "Saved to roteiros/meal-prep-week/estrutura.md",
+    },
+    showcase: {
+      context: "In your AI",
+      caption: "Example of {app} answering a request in your AI",
+    },
+    carouselLabel: "The apps in the store",
+    previous: "Previous apps",
+    next: "Next apps",
     footnote: "No modules to watch. You install the app and use it; each one comes with a short guide.",
     allApps: "See all apps",
     emptyTitle: "The first apps are on their way",

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import AppIcon from "@/components/marketing/app-icon";
 import BreadcrumbJsonLd from "@/components/marketing/breadcrumb-json-ld";
 import Cta from "@/components/marketing/cta";
 import LocaleLink from "@/components/marketing/locale-link";
@@ -9,7 +10,7 @@ import MarkdownProse from "@/components/marketing/markdown-prose";
 import Section from "@/components/marketing/section";
 import SectionHeader from "@/components/marketing/section-header";
 import TerminalFrame from "@/components/marketing/terminal-frame";
-import { TONE, trailTone } from "@/components/marketing/tone";
+import { TONE } from "@/components/marketing/tone";
 import { localizeHref } from "@/i18n/routing";
 import NiBook from "@/icons/nexture/ni-book";
 import NiKey from "@/icons/nexture/ni-key";
@@ -125,7 +126,8 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
 
   const { module } = result;
   const name = module.name ?? module.slug;
-  const tone = TONE[trailTone(module.trail, 0)];
+  // The hue of the app's store category, the one its icon and its card take everywhere.
+  const tone = TONE[module.look.tone];
   const latest = module.latest;
   const permissions = (latest?.permissions ?? []) as Permission[];
   const credentials = (module.external_credentials ?? []) as Credential[];
@@ -174,6 +176,7 @@ export default async function ModulePage({ params }: { params: Promise<{ slug: s
       <Section decor="glow">
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
           <div className="flex flex-col gap-6">
+            <AppIcon name={module.icon} tone={module.look.tone} size="xl" />
             <SectionHeader
               as="h1"
               align="start"

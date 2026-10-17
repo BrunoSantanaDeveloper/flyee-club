@@ -56,10 +56,12 @@ export default function Hero({
   highlights?: string[];
   /**
    * Center layout only: a quiet "works with" line between the actions and the
-   * media (a label, then names as muted wordmarks). Names are text, never logos
-   * of other companies (docs/DESIGN.md).
+   * media: a label, then each item as its mark in one colour (the AIs the apps
+   * run on, components/marketing/ai-marks.tsx; docs/DESIGN.md, "Imagery"), or
+   * as a muted wordmark when it has no mark. The mark carries the name for
+   * assistive technology and as a tooltip.
    */
-  strip?: { label: string; items: string[] };
+  strip?: { label: string; items: { name: string; mark?: React.ReactNode }[] };
   /** Product evidence. Required in practice — a hero without it fails the premium bar. */
   media?: React.ReactNode;
   /** "center": stacked, media below. "split": copy left, media right (data/product-heavy pages). */
@@ -154,14 +156,27 @@ export default function Hero({
           {ctas}
           {noteLine}
           {strip && strip.items.length > 0 && (
-            <div className="mt-2 flex flex-col items-center gap-2">
+            <div className="mt-2 flex flex-col items-center gap-3">
               <p className="text-text-secondary text-sm">{strip.label}</p>
-              <ul className="flex flex-row flex-wrap items-center justify-center gap-x-8 gap-y-2">
-                {strip.items.map((item) => (
-                  <li key={item} className="text-text-secondary font-heading text-xl font-normal tracking-tight">
-                    {item}
-                  </li>
-                ))}
+              <ul
+                aria-label={strip.label}
+                className="m-0 flex list-none flex-row flex-wrap items-center justify-center gap-x-9 gap-y-3 p-0"
+              >
+                {strip.items.map((item) =>
+                  item.mark ? (
+                    // One standard for every mark: one colour, one height, the hover in the text colour.
+                    <li
+                      key={item.name}
+                      className="text-text-secondary hover:text-text-primary flex size-7 items-center justify-center transition-colors"
+                    >
+                      {item.mark}
+                    </li>
+                  ) : (
+                    <li key={item.name} className="text-text-secondary font-heading text-xl font-normal tracking-tight">
+                      {item.name}
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
           )}

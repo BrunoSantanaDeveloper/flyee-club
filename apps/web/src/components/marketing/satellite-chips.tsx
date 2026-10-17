@@ -95,6 +95,36 @@ export function AvatarRowChip({ names, label }: { names: string[]; label: string
   );
 }
 
+/**
+ * A dark pill that is a link: the floating button over the store preview of
+ * the home ("Ver todos os apps", docs/HOME-COPY.md). The deep band's
+ * neutral, so it stays dark under any palette and in both modes.
+ */
+export function LinkChip({
+  label,
+  href,
+  icon,
+  track,
+}: {
+  label: string;
+  /** An anchor of the page or an address; a plain link either way. */
+  href: string;
+  icon?: React.ReactNode;
+  /** The site event of the click (`trackAttributes`, lib/site-events.ts). */
+  track?: Record<string, string>;
+}) {
+  return (
+    <a
+      href={href}
+      className="bg-background-deep text-text-contrast focus-visible:outline-primary-ink inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold whitespace-nowrap hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+      {...track}
+    >
+      {label}
+      {icon}
+    </a>
+  );
+}
+
 /** Mono status line with a live dot — the instrument/terminal mood. */
 export function ReadoutChip({ text, tone = "accent-4" }: { text: string; tone?: Tone }) {
   const hue = TONE[tone];
