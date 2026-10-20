@@ -17,12 +17,10 @@ import {
   Typography,
 } from "@mui/material";
 
-import AskAiBlock from "@/components/product/ask-ai-block";
-import CloudSessionBlock from "@/components/product/cloud-session-block";
+import InstallPathBlock from "@/components/product/install-path-block";
 import SetupWizard from "@/components/product/setup-wizard";
 import { DEFAULTS } from "@/config";
 import { setClientLocale } from "@/i18n/locale";
-import { cloudSessionUrl, installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import { updateProfile } from "@/lib/member/actions";
 import { AI_TOOL_OPTIONS, aiToolName, SEGMENT_OPTIONS } from "@/lib/member/labels";
 
@@ -172,25 +170,7 @@ export default function OnboardingWizard({
             hint: t("onboarding-install-hint"),
             content: (
               <Box className="flex flex-col gap-3">
-                <AskAiBlock
-                  label={t("ask-ai-label")}
-                  prompt={t("ask-ai-install", { url: installGuideUrl(answers.locale) })}
-                  copyLabel={t("ask-ai-copy")}
-                  copiedLabel={t("ask-ai-copied")}
-                  referenceLabel={t("ask-ai-reference")}
-                  command={REFERENCE_COMMAND.install}
-                />
-                <CloudSessionBlock
-                  title={t("cloud-title")}
-                  summary={t("cloud-summary")}
-                  steps={[t("cloud-step-1"), t("cloud-step-2"), t("cloud-step-3")]}
-                  hosts={cloudHosts}
-                  copyLabel={(host) => t("cloud-copy", { host })}
-                  copiedLabel={t("cloud-copied")}
-                  openLabel={t("cloud-open")}
-                  openHint={t("cloud-open-hint")}
-                  openHref={cloudSessionUrl(t("cloud-prompt", { url: installGuideUrl(answers.locale) }))}
-                />
+                <InstallPathBlock locale={answers.locale} cloudHosts={cloudHosts} />
                 <Typography variant="body2" className="text-text-secondary">
                   {hasAccess ? t("onboarding-install-note-access") : t("onboarding-install-note-free")}
                 </Typography>

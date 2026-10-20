@@ -187,9 +187,18 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
 
   it("gives a session in the cloud the hosts to allow, the change only the person makes, and no terminal", () => {
     // The product's request of 2026-10-20, item 1.
-    for (const [page, title] of [
-      [pt, "## Claude Code na nuvem"],
-      [english, "## Claude Code in the cloud"],
+    for (const [page, title, labels] of [
+      // The Portuguese labels are the ones the operator saw on claude.ai (2026-10-20).
+      [
+        pt,
+        "## Claude Code na nuvem",
+        ["Editar ambiente de nuvem", "Acesso à rede", "Limitado", "Domínios permitidos", "Salvar alterações"],
+      ],
+      [
+        english,
+        "## Claude Code in the cloud",
+        ["Edit cloud environment", "Network access", "Allowed domains", "Save changes"],
+      ],
     ] as const) {
       const section = page.slice(page.indexOf(title), page.indexOf("\n## ", page.indexOf(title) + 1));
       expect(section.length, title).toBeGreaterThan(500);
@@ -197,10 +206,7 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
       for (const field of ["CLAUDE_CODE_REMOTE", "host_not_allowed", "platform.message", "device_limit_reached"]) {
         expect(code(section), field).toContain(field);
       }
-      // The labels of the claude.ai screen, in English until the operator sends the Portuguese ones.
-      for (const label of ["Edit cloud environment", "Network access", "Custom", "Allowed domains", "Save changes"]) {
-        expect(section, label).toContain(label);
-      }
+      for (const label of labels) expect(section, label).toContain(label);
       expect(section).not.toMatch(/\bterminal\b/i);
       // Before the steps, which the section points to.
       expect(page.indexOf(title)).toBeLessThan(page.indexOf(page === pt ? "## Passos" : "## Steps"));
