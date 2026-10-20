@@ -1,6 +1,7 @@
 import HomeView, { type HomeState } from "./home-view";
 
 import { localizeHref } from "@/i18n/routing";
+import { cloudHostsNow } from "@/lib/cli/settings";
 import { getMemberContext } from "@/lib/member/context";
 import { loadDevices } from "@/lib/member/devices";
 import { loadNews } from "@/lib/member/news";
@@ -25,7 +26,7 @@ export default async function HomePage() {
   // Below FlyeeClub Pro, its card may show: what each of its areas has
   // published decides which lines say "Em breve".
   const belowPro = entitlements.tier !== "club" && entitlements.tier !== "pro";
-  const [devices, news, offerPlans, upsellFacts, available] = await Promise.all([
+  const [devices, news, offerPlans, upsellFacts, available, cloudHosts] = await Promise.all([
     orgId
       ? loadDevices(context.supabase, { orgId, limit: limitOf(limits, "devices") }).catch(() => null)
       : Promise.resolve(null),
@@ -35,6 +36,7 @@ export default async function HomePage() {
       ? loadUpsellFacts(context.supabase, { orgId, tier: entitlements.tier }).catch(() => null)
       : Promise.resolve(null),
     belowPro ? loadProAvailability(context.supabase).catch(() => null) : Promise.resolve(null),
+    cloudHostsNow(),
   ]);
   const offers = upsellFacts
     ? decideOffers(upsellFacts, "home")
@@ -53,6 +55,7 @@ export default async function HomePage() {
     news,
     offers: offers.map((item) => ({ ...item, plan: offerPlans[item.offer] ?? null })),
     available,
+    cloudHosts,
     // The contact form in the member's language, opened on the service asked for.
     services: decideServiceOffers(entitlements.tier).map((offer) => ({
       offer,

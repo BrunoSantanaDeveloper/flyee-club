@@ -12,7 +12,7 @@ import {
   type StoreCategoryInput,
   type TrailInput,
 } from "../actions";
-import { LocalizedInput, TextInput } from "./fields";
+import { LocalizedInput, SelectInput, TextInput } from "./fields";
 import RecipeDialog from "./recipe-dialog";
 import { useSnackbar } from "notistack";
 import { useState } from "react";
@@ -552,6 +552,7 @@ export function DeliveryTab({ delivery, onChanged }: { delivery: DeliverySetting
     latestCoreVersion: delivery.latestCoreVersion ?? "",
     deprecations: delivery.deprecations.join("\n"),
     knownTools: delivery.knownTools.join("\n"),
+    packageHost: delivery.packageHost as string,
   });
   const [busy, setBusy] = useState(false);
   const set = (key: keyof typeof form) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
@@ -569,6 +570,7 @@ export function DeliveryTab({ delivery, onChanged }: { delivery: DeliverySetting
           latestCoreVersion: form.latestCoreVersion.trim() || null,
           deprecations: form.deprecations.split("\n"),
           knownTools: form.knownTools.split("\n"),
+          packageHost: form.packageHost as DeliverySettings["packageHost"],
         }),
       "Configurações da entrega salvas.",
     );
@@ -647,6 +649,27 @@ export function DeliveryTab({ delivery, onChanged }: { delivery: DeliverySetting
           placeholder="copilot"
           help="Quando a CLI não acha nenhuma das quatro IAs testadas e acha uma destas, o computador guarda o nome. Um nome fora da lista é descartado e o login segue. Use os nomes do registro do core, em minúsculas."
         />
+      </Box>
+
+      <Box className="flex flex-col gap-3">
+        <Typography variant="subtitle2" component="h3">
+          De onde saem os pacotes
+        </Typography>
+        <SelectInput
+          label="Endereço do download que a CLI recebe"
+          value={form.packageHost}
+          onChange={set("packageHost")}
+          options={[
+            { value: "storage", label: "Storage do Supabase, como sempre foi" },
+            { value: "preview", label: "flyee.club só nos previews, para o aceite" },
+            { value: "platform", label: "flyee.club em todo lugar" },
+          ]}
+        />
+        <Typography variant="body2" className="text-text-secondary">
+          Com o flyee.club, uma sessão do Claude Code na nuvem libera um endereço só, e o guia e o painel deixam de
+          pedir o do Storage. O link continua valendo 5 minutos e a CLI confere o SHA-256. Passe para flyee.club em todo
+          lugar depois do aceite num preview; voltar para o Storage não precisa de deploy.
+        </Typography>
       </Box>
 
       <Box>

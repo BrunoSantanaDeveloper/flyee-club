@@ -1,3 +1,4 @@
+import { type PackageHost, packageHostOf } from "@/lib/cli/package-host";
 import { compareSemver } from "@flyee/catalog/semver";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -125,6 +126,8 @@ export type DeliverySettings = {
    * dropped by `register_member_device`, so an absent list keeps nothing.
    */
   knownTools: string[];
+  /** Where packages leave from (lib/cli/package-host.ts): the storage, the platform in previews, or the platform. */
+  packageHost: PackageHost;
 };
 
 export const DEFAULT_DELIVERY: DeliverySettings = {
@@ -136,6 +139,7 @@ export const DEFAULT_DELIVERY: DeliverySettings = {
   latestCoreVersion: null,
   deprecations: [],
   knownTools: [],
+  packageHost: "storage",
 };
 
 const EMPTY_USAGE: ModuleUsage = {
@@ -182,6 +186,7 @@ export function deliveryFrom(value: Record<string, unknown> | null | undefined):
     knownTools: Array.isArray(value?.known_tools)
       ? value.known_tools.filter((entry): entry is string => typeof entry === "string")
       : [],
+    packageHost: packageHostOf(value?.package_host),
   };
 }
 

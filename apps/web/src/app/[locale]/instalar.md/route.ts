@@ -1,6 +1,7 @@
 import { isPublicLocale, localizeHref } from "@/i18n/routing";
+import { cloudHostsNow } from "@/lib/cli/settings";
 import { installGuide } from "@/lib/install-guide";
-import { cloudAllowedHosts, installGuideUrl } from "@/lib/install-links";
+import { installGuideUrl } from "@/lib/install-links";
 import { absoluteUrl } from "@/lib/seo";
 
 /**
@@ -22,14 +23,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ loc
   const body = installGuide(locale, {
     install: installGuideUrl(locale),
     store: absoluteUrl(localizeHref("/catalogo", locale)),
-    hosts: cloudAllowedHosts(),
+    hosts: await cloudHostsNow(),
   });
   return new Response(body, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
       "Content-Language": locale,
       "X-Robots-Tag": "noindex",
-      // The same for everyone and changed only by a deploy.
+      // The same for everyone, changed by a deploy or by the package host switch (5 minutes behind it).
       "Cache-Control": "public, max-age=300, s-maxage=3600",
     },
   });

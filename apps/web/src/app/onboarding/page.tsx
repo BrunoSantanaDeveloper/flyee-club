@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { DEFAULTS } from "@/config";
 import { COOKIE_KEYS } from "@/constants";
+import { cloudHostsNow } from "@/lib/cli/settings";
 import { getMemberContext } from "@/lib/member/context";
 import { normalizeSegment } from "@/lib/site-segment";
 
@@ -34,6 +35,7 @@ export default async function OnboardingPage() {
         locale: context.profile.locale,
       }}
       hasAccess={Boolean(context.entitlements.tier)}
+      cloudHosts={await cloudHostsNow()}
     />
   );
 }

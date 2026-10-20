@@ -7,6 +7,7 @@ import { requireSuperadmin } from "@/lib/admin/session";
 import { recordAudit } from "@/lib/audit";
 import { MODULES_BUCKET } from "@/lib/catalog/upload";
 import { AI_TOOL_DETAIL_PATTERN } from "@/lib/cli/installs";
+import { PACKAGE_HOSTS } from "@/lib/cli/package-host";
 import { PERSONA_SEGMENTS } from "@/lib/site-segment";
 import { createServiceClient } from "@flyee/auth/service";
 import { AI_TOOLS, MODULE_TYPES } from "@flyee/catalog/manifest";
@@ -654,6 +655,13 @@ export async function saveDelivery(input: DeliverySettings): Promise<CatalogActi
     };
   }
 
+  if (!(PACKAGE_HOSTS as readonly string[]).includes(input.packageHost)) {
+    return {
+      ok: false,
+      error: "Escolha de onde saem os pacotes: do Storage, do flyee.club só nos previews, ou do flyee.club.",
+    };
+  }
+
   const { error } = await session.supabase.from("platform_settings").upsert({
     key: "cli",
     value: {
@@ -664,13 +672,19 @@ export async function saveDelivery(input: DeliverySettings): Promise<CatalogActi
       latest_core_version: input.latestCoreVersion || null,
       deprecations,
       known_tools: knownTools,
+      package_host: input.packageHost,
     },
   });
   if (error) return { ok: false, error: dbMessage(error.message, error.code) };
   await recordAudit(session.supabase, "admin.cli_settings.updated", {
     entityType: "platform_settings",
     entityId: "cli",
-    metadata: { minCliVersion: input.minCliVersion, deprecations: deprecations.length, knownTools },
+    metadata: {
+      minCliVersion: input.minCliVersion,
+      deprecations: deprecations.length,
+      knownTools,
+      packageHost: input.packageHost,
+    },
   });
   refresh();
   return { ok: true, data: null };

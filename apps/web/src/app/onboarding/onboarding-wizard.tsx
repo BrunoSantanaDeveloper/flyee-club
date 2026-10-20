@@ -22,7 +22,7 @@ import CloudSessionBlock from "@/components/product/cloud-session-block";
 import SetupWizard from "@/components/product/setup-wizard";
 import { DEFAULTS } from "@/config";
 import { setClientLocale } from "@/i18n/locale";
-import { cloudAllowedHosts, cloudSessionUrl, installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
+import { cloudSessionUrl, installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import { updateProfile } from "@/lib/member/actions";
 import { AI_TOOL_OPTIONS, aiToolName, SEGMENT_OPTIONS } from "@/lib/member/labels";
 
@@ -43,10 +43,13 @@ export default function OnboardingWizard({
   firstName,
   initial,
   hasAccess,
+  cloudHosts,
 }: {
   firstName: string;
   initial: Answers;
   hasAccess: boolean;
+  /** What a Claude Code session in the cloud allows for flyee (lib/cli/settings.ts, cloudHostsNow). */
+  cloudHosts: string[];
 }) {
   const t = useTranslations("product");
   const router = useRouter();
@@ -181,7 +184,7 @@ export default function OnboardingWizard({
                   title={t("cloud-title")}
                   summary={t("cloud-summary")}
                   steps={[t("cloud-step-1"), t("cloud-step-2"), t("cloud-step-3")]}
-                  hosts={cloudAllowedHosts()}
+                  hosts={cloudHosts}
                   copyLabel={(host) => t("cloud-copy", { host })}
                   copiedLabel={t("cloud-copied")}
                   openLabel={t("cloud-open")}

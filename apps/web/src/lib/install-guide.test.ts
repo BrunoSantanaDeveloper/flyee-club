@@ -241,6 +241,8 @@ describe("the way into a Claude Code session in the cloud", () => {
   it("allows the site's host first, and never twice", () => {
     expect(cloudAllowedHosts()[0]).toBe(new URL(BRAND.siteUrl).host);
     expect(new Set(cloudAllowedHosts()).size).toBe(cloudAllowedHosts().length);
+    // Once packages leave from the platform (item 2), the site alone.
+    expect(cloudAllowedHosts(true)).toEqual([new URL(BRAND.siteUrl).host]);
   });
 
   it("opens claude.ai/code with the request in the reader's language and no environment (D3)", () => {

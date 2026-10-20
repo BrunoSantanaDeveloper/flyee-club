@@ -1,5 +1,7 @@
 import { grantsModuleKey } from "@/lib/catalog/read";
 import { cliLinks, runCliRequest } from "@/lib/cli/gates";
+import { platformPackageUrl, servesPackages } from "@/lib/cli/package-host";
+import { readPackageHost } from "@/lib/cli/settings";
 import { trackServerEvent } from "@/lib/product-events-server";
 import { channelOf, versionAllowed } from "@flyee/catalog/channels";
 import { isSemver } from "@flyee/catalog/semver";
@@ -19,6 +21,11 @@ const SIGNED_URL_TTL_S = 300;
  * not include, or a version outside the account's channel, since the account
  * with no purchase gets only the entry version of each app (0040). Past the
  * daily download ceiling, 429. Every package handed out is a `module_downloads` row.
+ *
+ * The URL is the storage's, or, when `platform_settings.cli.package_host` says
+ * so, the same signed link on the platform's own host (lib/cli/package-host.ts,
+ * the product's request of 2026-10-20, item 2): the host the CLI called, so a
+ * session in the cloud downloads from the one address it allows.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string; version: string }> }) {
   const { slug, version } = await params;
@@ -92,6 +99,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
         .from("modules")
         .createSignedUrl(row.storage_path as string, SIGNED_URL_TTL_S);
       if (signError || !signed?.signedUrl) throw new Error("download_sign_failed");
+      // Same token, same 300 seconds; a URL the platform cannot map keeps the storage's.
+      const url =
+        (servesPackages(await readPackageHost(service)) &&
+          platformPackageUrl(signed.signedUrl, new URL(request.url).origin)) ||
+        signed.signedUrl;
 
       const { error: trailError } = await service.from("module_downloads").insert({
         org_id: auth.orgId,
@@ -107,7 +119,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
         body: {
           slug,
           version: row.version,
-          url: signed.signedUrl,
+          url,
           expires_in: SIGNED_URL_TTL_S,
           sha256: row.sha256,
           size_bytes: Number(row.size_bytes),

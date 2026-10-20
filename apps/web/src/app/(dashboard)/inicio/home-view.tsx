@@ -17,7 +17,7 @@ import NiArrowRight from "@/icons/nexture/ni-arrow-right";
 import NiBadge from "@/icons/nexture/ni-badge";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiLaptop from "@/icons/nexture/ni-laptop";
-import { cloudAllowedHosts, cloudSessionUrl, installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
+import { cloudSessionUrl, installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
 import type { DevicesOverview } from "@/lib/member/devices";
 import { FEATURE_LABEL, TIER_LABEL } from "@/lib/member/labels";
 import type { NewsItem } from "@/lib/member/news";
@@ -40,6 +40,8 @@ export type HomeState =
       /** Null when the machines could not be read. */
       devices: DevicesOverview | null;
       news: NewsItem[] | null;
+      /** What a Claude Code session in the cloud allows for flyee (lib/cli/settings.ts, cloudHostsNow). */
+      cloudHosts: string[];
       /** The rungs offered without a click (lib/upsell.ts): both for an account that bought nothing. */
       offers: HomeOffer[];
       /** What each area of FlyeeClub Pro has published; null when unread, and then nothing says "Em breve". */
@@ -198,7 +200,7 @@ export default function HomeView({ state }: { state: HomeState }) {
                 title={t("cloud-title")}
                 summary={t("cloud-summary")}
                 steps={[t("cloud-step-1"), t("cloud-step-2"), t("cloud-step-3")]}
-                hosts={cloudAllowedHosts()}
+                hosts={state.cloudHosts}
                 copyLabel={(host) => t("cloud-copy", { host })}
                 copiedLabel={t("cloud-copied")}
                 openLabel={t("cloud-open")}

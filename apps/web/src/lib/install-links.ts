@@ -22,12 +22,15 @@ export function installGuideUrl(locale: string): string {
 /**
  * The hosts a Claude Code session in the cloud has to allow for flyee to work
  * (the product's request of 2026-10-20, item 1): the site, which serves this
- * guide and the CLI API, and the package storage, from which a download URL
- * still comes. The session's network reaches only what its environment allows,
- * and only the person can change that list.
+ * guide and the CLI API, and the package storage while a download URL comes
+ * from it. Once packages leave from the platform (`packagesFromPlatform`, the
+ * switch of lib/cli/package-host.ts, item 2), the site alone. The session's
+ * network reaches only what its environment allows, and only the person can
+ * change that list. lib/cli/settings.ts, `cloudHostsNow`, reads the switch.
  */
-export function cloudAllowedHosts(): string[] {
+export function cloudAllowedHosts(packagesFromPlatform = false): string[] {
   const hosts = [new URL(BRAND.siteUrl).host];
+  if (packagesFromPlatform) return hosts;
   try {
     const storage = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (storage) hosts.push(new URL(storage).host);

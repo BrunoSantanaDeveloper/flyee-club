@@ -276,7 +276,7 @@ Escopo `modules:download`, computador obrigatório.
 {
   "slug": "deploy-check",
   "version": "1.2.0",
-  "url": "https://…/storage/v1/object/sign/modules/…",
+  "url": "https://flyee.club/api/public/packages/deploy-check/1.2.0/deploy-check-1.2.0.zip?token=…",
   "expires_in": 300,
   "sha256": "…",
   "size_bytes": 18234,
@@ -286,6 +286,7 @@ Escopo `modules:download`, computador obrigatório.
 ```
 
 - A URL vale 5 minutos e não leva token: baixar sem o header `Authorization`.
+- A CLI baixa a `url` como veio, sem montar endereço. Ela sai do próprio host da plataforma, por `/api/public/packages/<slug>/<versão>/<slug>-<versão>.zip?token=…`, ou do Storage, conforme a chave `package_host` de `platform_settings.cli` (desde 2026-10-20, na aba Entrega; o Storage até o aceite num preview). Pela plataforma, o pacote vem com `Content-Type: application/zip`, o `Content-Length` de origem e `Cache-Control: no-store`; um link vencido responde 403 `link_expired`, e outro caminho, 404.
 - **Antes de extrair**, conferir o tamanho e o SHA-256 dos bytes baixados. Diferente: descartar e não instalar.
 - Recusas: 404 versão inexistente ou em rascunho, 410 `version_yanked`, 403 `denied_entitlement` (com o link de upgrade), 429 `download_limit`. `denied_entitlement` vale para um módulo que o plano não inclui e para uma versão fora do canal da conta: para a conta sem compra, qualquer versão que não seja a de entrada. A CLI nunca precisa pedir essa versão, porque baixa o `latest` do catálogo.
 - Cada download vira uma linha de `module_downloads`. A CLI reporta a instalação em si como evento (4.7).
