@@ -62,6 +62,7 @@ describe("the product's index, read before anything is written", () => {
         compatibleAis: ["claude_code"],
         externalCredentials: [],
         showcase: {},
+        showcaseRemoved: [],
         warnings: [],
       },
     ]);
@@ -268,6 +269,34 @@ describe("what the import does to each app", () => {
     expect(parsed.apps[0].warnings).toEqual([
       "showcase: pt-BR.request: breaks the copy rules (exclamation mark), left out",
     ]);
+  });
+
+  it("takes a language out when the index sends it as null, and only then", () => {
+    // The product's request of 2026-10-20, item 6: video-studio plans and writes in Portuguese.
+    const pt = { request: "Monta o vídeo da semana a partir destas gravações?", reply: [{ text: "Plano de cortes" }] };
+    const en = { request: "Edit this week's video from these recordings?", reply: [{ text: "Cut plan" }] };
+    const catalog = existing({ showcase: { "pt-BR": pt, en } });
+
+    // null: the English example leaves the catalog; the Portuguese one stays.
+    const [removed] = planImport([catalog], parsedApps(index(app({ showcase: { "pt-BR": pt, en: null } }))));
+    expect(removed).toMatchObject({ kind: "update", fields: ["showcase"], patch: { showcase: { "pt-BR": pt } } });
+
+    // Absent: the catalog keeps it.
+    expect(planImport([catalog], parsedApps(index(app({ showcase: { "pt-BR": pt } }))))[0].kind).toBe("unchanged");
+
+    // A language with a problem is left out with a warning, and the catalog keeps its own.
+    const broken = parseCatalogIndex(index(app({ showcase: { "pt-BR": pt, en: { request: "Edit it!", reply: [] } } })));
+    if (!broken.ok) throw new Error("unexpected");
+    expect(broken.apps[0].showcaseRemoved).toEqual([]);
+    expect(broken.apps[0].warnings).toEqual([
+      "showcase: en.request: breaks the copy rules (exclamation mark), left out",
+      "showcase: en.reply: 1 to 8 lines, left out",
+    ]);
+    expect(planImport([catalog], broken.apps)[0].kind).toBe("unchanged");
+
+    // A new app sent with a null language simply has none.
+    const [created] = planImport([], parsedApps(index(app({ showcase: { "pt-BR": pt, en: null } }))));
+    expect(created).toMatchObject({ kind: "create", row: { showcase: { "pt-BR": pt } } });
   });
 });
 

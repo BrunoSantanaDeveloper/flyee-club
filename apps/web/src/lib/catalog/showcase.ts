@@ -67,19 +67,36 @@ export function checkExample(value: unknown): { example: AppExample; problems: [
   return { example: { request, reply, ...(saved ? { saved } : {}) }, problems: [] };
 }
 
-/** Every language of a showcase, each checked on its own: one broken language never hides the other. */
-export function readShowcase(value: unknown): { showcase: Showcase; problems: string[] } {
+/**
+ * Every language of a showcase, each checked on its own: one broken language
+ * never hides the other. A language sent as `null` is one the product takes
+ * out of the store (`removed`, the product's request of 2026-10-20, item 6); a
+ * language left out says nothing, so the catalog keeps what it has.
+ */
+export function readShowcase(value: unknown): { showcase: Showcase; removed: ShowcaseLocale[]; problems: string[] } {
   const showcase: Showcase = {};
+  const removed: ShowcaseLocale[] = [];
   const problems: string[] = [];
-  if (value === undefined || value === null) return { showcase, problems };
-  if (!isRecord(value)) return { showcase, problems: ['must be an object by language ("pt-BR", "en")'] };
+  if (value === undefined || value === null) return { showcase, removed, problems };
+  if (!isRecord(value)) return { showcase, removed, problems: ['must be an object by language ("pt-BR", "en")'] };
   for (const locale of SHOWCASE_LOCALES) {
     if (value[locale] === undefined) continue;
+    if (value[locale] === null) {
+      removed.push(locale);
+      continue;
+    }
     const checked = checkExample(value[locale]);
     if ("example" in checked) showcase[locale] = checked.example;
     else problems.push(...checked.problems.map((problem) => `${locale}.${problem}`));
   }
-  return { showcase, problems };
+  return { showcase, removed, problems };
+}
+
+/** A showcase after the product's update: its languages over the catalog's, minus the ones it took out. */
+export function mergeShowcase(current: Showcase | null, sent: Showcase, removed: ShowcaseLocale[]): Showcase {
+  const merged: Showcase = { ...(current ?? {}), ...sent };
+  for (const locale of removed) delete merged[locale];
+  return merged;
 }
 
 /**

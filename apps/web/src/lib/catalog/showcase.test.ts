@@ -52,7 +52,8 @@ describe("the example of an app answering a request", () => {
     const { showcase, problems } = readShowcase({ "pt-BR": example, en: { request: "Help", reply: "x" } });
     expect(showcase).toEqual({ "pt-BR": example });
     expect(problems).toEqual(["en.reply: 1 to 8 lines"]);
-    expect(readShowcase(undefined)).toEqual({ showcase: {}, problems: [] });
+    expect(readShowcase(undefined)).toEqual({ showcase: {}, removed: [], problems: [] });
+    expect(readShowcase({ en: null }).removed).toEqual(["en"]);
     expect(readShowcase([example]).problems).toEqual(['must be an object by language ("pt-BR", "en")']);
   });
 

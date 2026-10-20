@@ -3,7 +3,7 @@
 Contrato entre a plataforma flyee.club (este repositório) e a CLI `npx flyee` (projeto separado). Escrito na fase 3 de `docs/PLANO-IMPLEMENTACAO.md` (2026-10-01). A CLI depende só do que está aqui; o resto da plataforma pode mudar sem aviso.
 
 - **Base**: `https://flyee.club` (uma prévia anuncia o próprio endereço nos documentos de descoberta).
-- **Formato**: JSON em UTF-8. Toda resposta da API leva `Cache-Control: no-store`.
+- **Formato**: JSON em UTF-8. Toda resposta da API leva `Cache-Control: no-store`, menos a de `GET /api/cli/version` (4.9), pública e igual para todos, que pode vir de um cache de até 5 minutos.
 - **Versão**: este é o contrato v1. Uma mudança incompatível ganha caminho novo; campos novos podem aparecer a qualquer momento e a CLI deve ignorar o que não conhece.
 
 ## 1. Identidade do computador
@@ -330,7 +330,7 @@ O JSON Schema do `flyee.module.json` (draft 2020-12), `$id` `https://flyee.club/
 }
 ```
 
-Uma CLI abaixo de `min_cli_version` deve pedir atualização antes de qualquer outra chamada. `deprecations` é uma lista de até 10 avisos em texto, que a CLI imprime como estão. Os valores vêm de `platform_settings.cli`, editados na aba Entrega de `/admin/catalogo`.
+Uma CLI abaixo de `min_cli_version` deve pedir atualização antes de qualquer outra chamada. O piso em vigor é `1.0.2`, desde 2026-10-20; o exemplo acima mostra só o formato. A resposta leva `Cache-Control: public, max-age=300`: um piso novo chega a toda CLI em até 5 minutos. `deprecations` é uma lista de até 10 avisos em texto, que a CLI imprime como estão. Os valores vêm de `platform_settings.cli`, editados na aba Entrega de `/admin/catalogo`.
 
 `links` (desde 2026-10-08) traz o endereço da página pública de um app como modelo, em português (`module_page`) e em inglês (`module_page_en`): a CLI troca `{slug}` pelo slug do app, e `origem=cli` faz a visita e um cadastro que venha dela contarem na porta do instalador. É o link que a CLI mostra a quem roda `npx flyee add <slug>` sem conexão, com a frase "este app faz parte do acesso flyee.club"; a CLI nunca monta endereço da plataforma por conta própria.
 
@@ -425,7 +425,6 @@ Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `a
 
 | Onde | Mudança |
 |---|---|
-| 4.9 `min_cli_version` | Sobe para `1.0.0` quando a CLI `flyee@1.0.0` for publicada no npm: a linha 0.x do pacote `flyee` é de outro projeto e não fala este contrato. |
 | 4.5 download | Campo novo `license`: um JWT assinado pela plataforma, verificável offline pela chave pública em `/.well-known/jwks.json`, com identificador opaco da conta, `device_id`, módulo, versão e data, sem expiração. A CLI o guarda em `.flyee/licenses/<slug>.jwt` e só executa pipelines, agendamentos e ações do painel de um app cuja licença seja desta máquina (fase 10.6, confirmada em 2026-10-06). |
 | 4.7 `POST /api/cli/events` | Propriedade nova `trigger`, com `scheduled` ou `manual`, na lista fechada (fase 10.1). |
 | 6. Manifesto | `manifest_version: 2` acrescenta `automation`, `requires` e `example_prompt`; a v1 continua aceita; o JSON Schema de 4.8 publica as duas versões (fase 10.1). |
@@ -450,7 +449,7 @@ Corpo: o `dist/index.json` que o `npm run index` do produto escreve, `{ "generat
 | `trail`, `type` | a etapa e o tipo | a cada importação; a etapa precisa existir no catálogo |
 | `compatible_ais`, `external_credentials` | as IAs testadas e as chaves | a cada importação |
 | `description_md` | a descrição em português | só quando o app ainda não tem uma; sai sem o `# Título` do topo, que a página já mostra |
-| `showcase` (opcional, desde 2026-10-17) | o exemplo do app respondendo a um pedido, por idioma | a cada importação, idioma por idioma; um idioma ausente no índice mantém o do catálogo |
+| `showcase` (opcional, desde 2026-10-17) | o exemplo do app respondendo a um pedido, por idioma | a cada importação, idioma por idioma; um idioma ausente no índice mantém o do catálogo, e um idioma com `null` sai dele (desde 2026-10-20) |
 | `version`, `sha256`, `size_bytes`, `package`, `permissions`, `lessons`, `changelog`, `license` | nada | chegam com o pacote, em 10.3 |
 
 **O exemplo do app (`showcase`).** A loja mostra o que o app devolve, nunca o comando que o instala: a home, `/catalogo` e a página de cada app mostram o app respondendo a um pedido. Cada app manda o seu, nos dois idiomas quando puder:
@@ -474,6 +473,7 @@ Corpo: o `dist/index.json` que o `npm run index` do produto escreve, `{ "generat
 - `saved`: opcional, a linha final com o que o app gravou (até 160).
 - Tem de ser um resultado que o app realmente produz, como no guia "usar". A página o chama de exemplo.
 - Todo texto passa pela regra de texto. Um idioma que quebra a regra ou o formato fica de fora, com um aviso em `warnings`, e o app entra mesmo assim.
+- Para tirar um idioma da loja, mande-o como `null`: `"showcase": { "pt-BR": { … }, "en": null }` apaga o exemplo em inglês do catálogo na importação seguinte e mantém o português. Um idioma que o índice não traz continua como está no catálogo, e um idioma com problema fica de fora com aviso, também mantendo o do catálogo.
 - Uma página em inglês só mostra o exemplo em inglês. Sem exemplo no idioma, a página do app fica só com o ícone e o texto, e a home e `/catalogo` mostram o resumo do app no lugar da resposta.
 - O campo vive só no índice, ao lado do nome e do resumo. Fica fora do `flyee.module.json`: o manifesto v1 não tem esse campo, e a CLI 1.x e a inspeção da plataforma leem o manifesto.
 O que a importação nunca escreve: a categoria da loja, os perfis, o ícone, a ordem, a chave de acesso, o estado do app e o estado e a marca de entrada de cada versão. Isso é do console.

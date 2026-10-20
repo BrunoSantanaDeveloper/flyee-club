@@ -1,4 +1,4 @@
-import { readShowcase, type Showcase } from "@/lib/catalog/showcase";
+import { mergeShowcase, readShowcase, type Showcase, type ShowcaseLocale } from "@/lib/catalog/showcase";
 import { breaksOf } from "@/lib/i18n/copy-rules";
 import { AI_TOOLS, MODULE_TYPES } from "@flyee/catalog/manifest";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -15,7 +15,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *    member provides and the example of the app answering a request
  *    (`showcase`, lib/catalog/showcase.ts). They follow the product on every
  *    import, language by language: a language the index does not carry keeps
- *    what the catalog has;
+ *    what the catalog has, and an example sent as `null` in a language takes
+ *    that language out (the product's request of 2026-10-20, item 6);
  *  - the console: the store category, the personas, the icon, the order, the
  *    access key, the state and every version's state and entry mark. The
  *    import never writes them;
@@ -52,6 +53,8 @@ export type IndexedModule = {
   externalCredentials: Credential[];
   /** The example per language, each checked; a broken language is left out with a warning. */
   showcase: Showcase;
+  /** The languages whose example the index sent as `null`: the catalog drops them. */
+  showcaseRemoved: ShowcaseLocale[];
   warnings: string[];
 };
 
@@ -204,7 +207,7 @@ export function parseCatalogIndex(input: unknown): ParsedIndex {
       }
     }
 
-    const { showcase, problems: showcaseProblems } = readShowcase(app.showcase);
+    const { showcase, removed: showcaseRemoved, problems: showcaseProblems } = readShowcase(app.showcase);
     warnings.push(...showcaseProblems.map((problem) => `showcase: ${problem}, left out`));
 
     if (errors.length > 0 || !slug || !trail || !type) {
@@ -221,6 +224,7 @@ export function parseCatalogIndex(input: unknown): ParsedIndex {
       compatibleAis,
       externalCredentials,
       showcase,
+      showcaseRemoved,
       warnings,
     });
   });
@@ -310,7 +314,7 @@ export function planImport(existing: ExistingModule[], apps: IndexedModule[]): I
           : { ...(current.description_md ?? {}), "pt-BR": app.description },
       compatible_ais: app.compatibleAis,
       external_credentials: app.externalCredentials,
-      showcase: { ...(current.showcase ?? {}), ...app.showcase },
+      showcase: mergeShowcase(current.showcase, app.showcase, app.showcaseRemoved),
     };
     const before: ModuleColumns = {
       trail: current.trail,
