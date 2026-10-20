@@ -121,6 +121,12 @@
       "use": "The sentence a member gives their AI (install flyee, add an app, update, reconnect), on the primary tint with a copy button, and the command the AI will run below it as a reference. The member never uses the terminal (docs/PRODUCT.md, 2026-10-08): never show a command as a task, never a terminal block to copy from. The commands live in lib/install-links.ts (REFERENCE_COMMAND) and every sentence (the ask-ai-* keys) ends with installGuideUrl(locale), the address of /instalar.md in the member's language, so the AI finds the commands whether or not flyee is already in the project."
     },
     {
+      "name": "CloudSessionBlock",
+      "from": "@/components/product/cloud-session-block",
+      "props": "title, summary, steps: [3 strings], hosts: string[] (lib/install-links.ts, cloudAllowedHosts), copyLabel(host), copiedLabel, openLabel, openHint, openHref (cloudSessionUrl: claude.ai/code with ?prompt= and no environment)",
+      "use": "The way into a Claude Code session in the cloud, collapsed under the AskAiBlock that installs flyee (the home and the onboarding install step): the one network change only the person makes on Claude's screen, the hosts to copy and a button that opens claude.ai/code with the request written. Never sends anyone to a terminal. The labels of Claude's screen stay in English until the operator confirms the Portuguese ones."
+    },
+    {
       "name": "DataTable",
       "from": "@/components/data-grid/data-table",
       "props": "rows, columns, loading, header?, actions?, filters?, noRowsOverlay, noResultsOverlay, onQuickFilterChange?, initialColumnVisibility?, enableExport?",

@@ -20,6 +20,34 @@ export function installGuideUrl(locale: string): string {
 }
 
 /**
+ * The hosts a Claude Code session in the cloud has to allow for flyee to work
+ * (the product's request of 2026-10-20, item 1): the site, which serves this
+ * guide and the CLI API, and the package storage, from which a download URL
+ * still comes. The session's network reaches only what its environment allows,
+ * and only the person can change that list.
+ */
+export function cloudAllowedHosts(): string[] {
+  const hosts = [new URL(BRAND.siteUrl).host];
+  try {
+    const storage = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (storage) hosts.push(new URL(storage).host);
+  } catch {
+    // A malformed address names nothing to allow.
+  }
+  return [...new Set(hosts)];
+}
+
+/**
+ * A new Claude Code session in the cloud with the request already written: it
+ * fills the box and sends nothing. It chooses no environment (decision D3 of
+ * 2026-10-20): the session opens in the one the person already uses, which is
+ * where they make the network change.
+ */
+export function cloudSessionUrl(prompt: string): string {
+  return `https://claude.ai/code?prompt=${encodeURIComponent(prompt)}`;
+}
+
+/**
  * The command behind each sentence a member gives their AI. The member never
  * types it (docs/PRODUCT.md, 2026-10-08): a screen shows it beside the
  * sentence as a reference, for whoever wants to know what the AI will run.

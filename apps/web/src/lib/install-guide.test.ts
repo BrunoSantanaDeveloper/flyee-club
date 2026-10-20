@@ -4,15 +4,24 @@ import { BRAND } from "@/brand";
 import { getHomeCopy } from "@/components/marketing/home-copy";
 import { localizeHref, matchPublicPath } from "@/i18n/routing";
 import { installGuide } from "@/lib/install-guide";
-import { INSTALL_GUIDE_PATH, installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
+import {
+  cloudAllowedHosts,
+  cloudSessionUrl,
+  INSTALL_GUIDE_PATH,
+  installGuideUrl,
+  REFERENCE_COMMAND,
+} from "@/lib/install-links";
 import en from "@flyee/content/messages/en.json";
 import ptBR from "@flyee/content/messages/pt-BR.json";
 
-const links = { install: "https://flyee.club/instalar.md", store: "https://flyee.club/catalogo" };
+/** The site and, while packages come from it, the package storage (lib/install-links.ts). */
+const hosts = ["flyee.club", "abcdefghijklmnopqrst.supabase.co"];
+const links = { install: "https://flyee.club/instalar.md", store: "https://flyee.club/catalogo", hosts };
 const pt = installGuide("pt-BR", links);
 const english = installGuide("en", {
   install: "https://flyee.club/en/install.md",
   store: "https://flyee.club/en/catalog",
+  hosts,
 });
 
 /** What a page writes between backticks, in the order it writes it: commands, flags, fields. */
@@ -48,7 +57,8 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
   it("is Markdown with one title and the same sections in both languages", () => {
     for (const page of [pt, english]) {
       expect(page.match(/^# /gm)).toHaveLength(1);
-      expect(page.match(/^## /gm)).toHaveLength(5);
+      // What flyee does, before you start, the cloud, the steps, after installing, when something fails.
+      expect(page.match(/^## /gm)).toHaveLength(6);
       expect(page.endsWith("\n")).toBe(true);
     }
     expect(pt.split("\n")).toHaveLength(english.split("\n").length);
@@ -163,6 +173,52 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
     expect(english).toContain("Never ask for the key in the conversation");
   });
 
+  it("goes on in the same conversation after installing, after an app and after an update", () => {
+    // The product's request of 2026-10-20, item 5: the AI reads what flyee just wrote and goes on.
+    expect(pt).not.toMatch(/conversa nova/i);
+    expect(english).not.toMatch(/new conversation/i);
+    for (const page of [pt, english]) {
+      expect(code(page)).toContain("AGENTS.md");
+      expect(code(page)).toContain(".flyee/modules/<app>/skills/<skill>/SKILL.md");
+    }
+    expect(pt.match(/nesta mesma conversa/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(english.match(/in this same conversation/g)?.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("gives a session in the cloud the hosts to allow, the change only the person makes, and no terminal", () => {
+    // The product's request of 2026-10-20, item 1.
+    for (const [page, title] of [
+      [pt, "## Claude Code na nuvem"],
+      [english, "## Claude Code in the cloud"],
+    ] as const) {
+      const section = page.slice(page.indexOf(title), page.indexOf("\n## ", page.indexOf(title) + 1));
+      expect(section.length, title).toBeGreaterThan(500);
+      for (const host of hosts) expect(code(section), host).toContain(host);
+      for (const field of ["CLAUDE_CODE_REMOTE", "host_not_allowed", "platform.message", "device_limit_reached"]) {
+        expect(code(section), field).toContain(field);
+      }
+      // The labels of the claude.ai screen, in English until the operator sends the Portuguese ones.
+      for (const label of ["Edit cloud environment", "Network access", "Custom", "Allowed domains", "Save changes"]) {
+        expect(section, label).toContain(label);
+      }
+      expect(section).not.toMatch(/\bterminal\b/i);
+      // Before the steps, which the section points to.
+      expect(page.indexOf(title)).toBeLessThan(page.indexOf(page === pt ? "## Passos" : "## Steps"));
+    }
+    // A platform that does not answer is shown as the CLI says it, and a refused host asks for the change.
+    expect(pt).toContain("mostre à pessoa `platform.message` como veio. Se `platform.error` for `host_not_allowed`");
+    expect(english).toContain(
+      "show the person `platform.message` as it came. If `platform.error` is `host_not_allowed`",
+    );
+  });
+
+  it("names one host, or several, the way each language lists them", () => {
+    const one = installGuide("pt-BR", { ...links, hosts: ["flyee.club"] });
+    expect(one).toContain("o flyee precisa de `flyee.club`.");
+    expect(pt).toContain("o flyee precisa de `flyee.club` e `abcdefghijklmnopqrst.supabase.co`.");
+    expect(english).toContain("flyee needs `flyee.club` and `abcdefghijklmnopqrst.supabase.co`.");
+  });
+
   it("stays out of what only FlyeeClub Pro has and of the account with no purchase", () => {
     // A public page: lib/i18n/copy-rules.test.ts reads it for the plan's name; these are its features.
     expect(pt).not.toMatch(/\breceitas?\b|\bencontros?\b|\broadmap\b|versão de entrada/i);
@@ -178,6 +234,26 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
     expect(matchPublicPath("/en/install.md")).toMatchObject({ locale: "en", internal: INSTALL_GUIDE_PATH });
     // Typed without the prefix, the English address asks for English.
     expect(matchPublicPath("/install.md")).toMatchObject({ locale: "en", prefixed: false });
+  });
+});
+
+describe("the way into a Claude Code session in the cloud", () => {
+  it("allows the site's host first, and never twice", () => {
+    expect(cloudAllowedHosts()[0]).toBe(new URL(BRAND.siteUrl).host);
+    expect(new Set(cloudAllowedHosts()).size).toBe(cloudAllowedHosts().length);
+  });
+
+  it("opens claude.ai/code with the request in the reader's language and no environment (D3)", () => {
+    for (const catalog of [ptBR, en]) {
+      const prompt = catalog.product["cloud-prompt"].replace("{url}", "https://flyee.club/instalar.md");
+      const href = new URL(cloudSessionUrl(prompt));
+      expect(href.origin + href.pathname).toBe("https://claude.ai/code");
+      expect(href.searchParams.get("prompt")).toBe(prompt);
+      expect(href.searchParams.has("environment")).toBe(false);
+    }
+    // The request works before the change: the doctor comes through npm, which every environment allows.
+    expect(ptBR.product["cloud-prompt"]).toContain("npx --yes flyee@latest doctor --json");
+    expect(en.product["cloud-prompt"]).toContain("npx --yes flyee@latest doctor --json");
   });
 });
 

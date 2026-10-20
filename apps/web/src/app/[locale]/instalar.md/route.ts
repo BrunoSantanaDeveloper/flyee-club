@@ -1,6 +1,6 @@
 import { isPublicLocale, localizeHref } from "@/i18n/routing";
 import { installGuide } from "@/lib/install-guide";
-import { installGuideUrl } from "@/lib/install-links";
+import { cloudAllowedHosts, installGuideUrl } from "@/lib/install-links";
 import { absoluteUrl } from "@/lib/seo";
 
 /**
@@ -22,6 +22,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ loc
   const body = installGuide(locale, {
     install: installGuideUrl(locale),
     store: absoluteUrl(localizeHref("/catalogo", locale)),
+    hosts: cloudAllowedHosts(),
   });
   return new Response(body, {
     headers: {
