@@ -280,6 +280,7 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
         "network.notes",
         // A key kept as a network secret never shows in `key list`: the page says so.
         "key list",
+        "may_be_network_secret",
       ]) {
         expect(code(section), field).toContain(field);
       }
