@@ -20,6 +20,7 @@ type RegisterResult = {
   device?: Record<string, unknown>;
   limit?: number;
   live_devices?: number;
+  cloud_replaced?: number;
   suspended?: boolean;
 };
 
@@ -64,6 +65,8 @@ export async function POST(request: Request) {
             device: result.device,
             limit: result.limit,
             live_devices: result.live_devices,
+            // A cloud session that took the place of the older one (migration 0044).
+            ...(result.cloud_replaced ? { cloud_replaced: result.cloud_replaced } : {}),
           },
         };
       }

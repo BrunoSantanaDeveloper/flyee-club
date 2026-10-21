@@ -16,7 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type DeviceRoom = {
   /** The plan's ceiling (`limits.devices`). */
   limit: number;
-  /** The machines connected now, the most recently used first. */
+  /** The computers connected now, the most recently used first (cloud sessions left out). */
   connected: MemberDevice[];
   /** At the limit, and the asking machine is not one of them. */
   full: boolean;
@@ -34,6 +34,7 @@ export async function loadDeviceRoom(
   } catch {
     return null;
   }
-  const connected = devices.filter((device) => !device.revokedAt);
+  // Computers only: a Claude Code session in the cloud takes its own place (migration 0044).
+  const connected = devices.filter((device) => !device.revokedAt && !device.cloud);
   return { limit, connected, full: isRoomFull(connected, limit, input.deviceId) };
 }

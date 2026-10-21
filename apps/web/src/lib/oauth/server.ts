@@ -419,7 +419,7 @@ export type DeviceAuthorization = {
 /** POST /api/oauth/device: a code pair for a machine without a browser. First-party clients only. */
 export async function startDeviceAuthorization(
   service: SupabaseClient,
-  input: { clientId: string; scope: string | null; deviceId: string | null },
+  input: { clientId: string; scope: string | null; deviceId: string | null; cloud?: string | null },
 ): Promise<{ ok: true; authorization: DeviceAuthorization } | TokenError> {
   const client = await getOauthClient(service, input.clientId);
   if (!client || !client.first_party || client.token_endpoint_auth_method !== "none") {
@@ -427,6 +427,9 @@ export async function startDeviceAuthorization(
   }
   if (input.deviceId && !isDeviceId(input.deviceId)) {
     return { ok: false, error: "invalid_request", description: "device_id must be 8 to 64 letters, digits, - or _." };
+  }
+  if (input.cloud && input.cloud !== "claude_code") {
+    return { ok: false, error: "invalid_request", description: "cloud is claude_code or absent." };
   }
 
   const deviceCode = mintSecret("mcdc");
@@ -443,6 +446,7 @@ export async function startDeviceAuthorization(
       user_code: userCode,
       scope,
       device_id: input.deviceId,
+      cloud: input.cloud || null,
       expires_at: expiresAt,
       interval_seconds: DEVICE_POLL_INTERVAL_S,
     });
@@ -472,6 +476,8 @@ export type PendingDeviceCode = {
   userCode: string;
   scope: string;
   deviceId: string | null;
+  /** `claude_code` when a Claude Code session in the cloud asked for the code (migration 0044). */
+  cloud: string | null;
   expiresAt: string;
   client: Pick<OauthClientRow, "id" | "client_id" | "client_name" | "first_party">;
 };
@@ -484,7 +490,7 @@ export async function findPendingDeviceCode(
   const { data } = await service
     .from("oauth_device_codes")
     .select(
-      "id, user_code, scope, device_id, expires_at, status, oauth_clients(id, client_id, client_name, first_party)",
+      "id, user_code, scope, device_id, cloud, expires_at, status, oauth_clients(id, client_id, client_name, first_party)",
     )
     .eq("user_code", userCode)
     .maybeSingle();
@@ -498,6 +504,7 @@ export async function findPendingDeviceCode(
     userCode: data.user_code as string,
     scope: data.scope as string,
     deviceId: (data.device_id as string | null) ?? null,
+    cloud: (data.cloud as string | null) ?? null,
     expiresAt: data.expires_at as string,
     client,
   };

@@ -32,6 +32,7 @@ import { findPendingDeviceCode } from "@/lib/oauth/server";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
+import { limitOf } from "@flyee/billing/entitlements";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -207,9 +208,13 @@ export default async function ActivatePage({
   // this very machine is one of them, the approval waits for a free place (lib/member/device-room.ts).
   const orgId = (membership?.org_id as string | undefined) ?? null;
   let room: DeviceRoom | null = null;
+  let cloudPlace = false;
   if (orgId) {
     const { data: entitlements } = await supabase.rpc("org_entitlements", { target_org: orgId });
-    if (entitlements?.active) {
+    // A Claude Code session in the cloud takes the account's cloud place, never a computer's (migration 0044).
+    // With no cloud place in the plan, it is a computer, as before.
+    cloudPlace = Boolean(pending.cloud) && limitOf(entitlements?.limits, "cloud_sessions") > 0;
+    if (entitlements?.active && !cloudPlace) {
       room = await loadDeviceRoom(supabase, { orgId, limits: entitlements.limits, deviceId: pending.deviceId });
     }
   }
@@ -248,6 +253,12 @@ export default async function ActivatePage({
       ) : first(query.freed) && !full ? (
         <Alert severity="success" className="neutral bg-background-paper/60!">
           {t("device-limit-freed")}
+        </Alert>
+      ) : null}
+
+      {cloudPlace ? (
+        <Alert severity="info" className="neutral bg-background-paper/60!">
+          {t("device-cloud-note")}
         </Alert>
       ) : null}
 

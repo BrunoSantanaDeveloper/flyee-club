@@ -22,12 +22,16 @@ export type MemberDevice = {
   revokedAt: string | null;
   /** When this machine must revalidate if it never updates again; null when no chain is live. */
   refreshExpiresAt: string | null;
+  /** `claude_code` for a Claude Code session in the cloud, which takes the cloud place (migration 0044). */
+  cloud: string | null;
 };
 
 export type DevicesOverview = {
   devices: MemberDevice[];
-  /** Live machines (not revoked). */
+  /** Live computers (not revoked, not a cloud session): what the plan's ceiling counts. */
   live: number;
+  /** The live Claude Code session in the cloud, out of the ceiling; null when there is none. */
+  cloudSession: MemberDevice | null;
   /** The plan's ceiling (`limits.devices`). */
   limit: number;
   /** The live chain closest to lapsing, for the home's "revalidate in N days". */
@@ -42,7 +46,7 @@ export async function loadDevices(
     supabase
       .from("member_devices")
       .select(
-        "id, device_id, name, os, ai_tool, cli_version, installed_modules, project_kind, first_seen_at, last_seen_at, last_update_at, revoked_at",
+        "id, device_id, name, os, ai_tool, cli_version, installed_modules, project_kind, first_seen_at, last_seen_at, last_update_at, revoked_at, cloud",
       )
       .eq("org_id", input.orgId)
       .order("last_seen_at", { ascending: false }),
@@ -78,6 +82,7 @@ export async function loadDevices(
     lastUpdateAt: (row.last_update_at as string | null) ?? null,
     revokedAt: (row.revoked_at as string | null) ?? null,
     refreshExpiresAt: row.revoked_at ? null : (expiry.get(row.device_id as string) ?? null),
+    cloud: (row.cloud as string | null) ?? null,
   }));
 
   const liveExpiries = devices
@@ -87,7 +92,8 @@ export async function loadDevices(
 
   return {
     devices,
-    live: devices.filter((device) => !device.revokedAt).length,
+    live: devices.filter((device) => !device.revokedAt && !device.cloud).length,
+    cloudSession: devices.find((device) => !device.revokedAt && device.cloud) ?? null,
     limit: input.limit,
     nextRevalidationAt: liveExpiries[0] ?? null,
   };

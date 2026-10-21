@@ -42,15 +42,15 @@ select hasnt_function(
 select ok(
   not has_function_privilege(
     'authenticated',
-    'public.register_member_device(uuid, uuid, text, uuid, text, text, text, text, text, text, jsonb, text, boolean, text)',
+    'public.register_member_device(uuid, uuid, text, uuid, text, text, text, text, text, text, jsonb, text, boolean, text, text)',
     'execute'
   )
   and not has_function_privilege(
     'anon',
-    'public.register_member_device(uuid, uuid, text, uuid, text, text, text, text, text, text, jsonb, text, boolean, text)',
+    'public.register_member_device(uuid, uuid, text, uuid, text, text, text, text, text, text, jsonb, text, boolean, text, text)',
     'execute'
   ),
-  'only the delivery API registers a machine, as before'
+  'only the delivery API registers a machine, as before (the signature since 0044, with the cloud mark)'
 );
 
 -- ---------- What is kept ----------

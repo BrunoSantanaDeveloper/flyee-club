@@ -9,7 +9,9 @@ import { createServiceClient } from "@flyee/auth/service";
  * on a machine without a browser. Answers the code pair; the member approves
  * the short code at `/ativar` on any device while the CLI polls the token
  * endpoint. `device_id` (our extension) names the machine, like the browser
- * flow's authorize parameter.
+ * flow's authorize parameter. `cloud=claude_code` (since migration 0044) marks a
+ * Claude Code session in the cloud, so /ativar does not ask it to disconnect a
+ * computer: a cloud session takes the account's cloud place.
  */
 export async function POST(request: Request) {
   const params = await readOauthParams(request);
@@ -29,6 +31,7 @@ export async function POST(request: Request) {
     clientId,
     scope: params.scope ?? null,
     deviceId: params.device_id || null,
+    cloud: params.cloud || null,
   });
   if (!result.ok) {
     return oauthError(result.error, result.description, result.error === "invalid_client" ? 401 : 400);

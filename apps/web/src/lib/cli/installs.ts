@@ -53,6 +53,11 @@ export const installSchema = z
     project_kind: z.enum(["own", "client"]).optional(),
     /** True right after `npx flyee update` ran: stamps the machine's last update. */
     updated: z.boolean().optional(),
+    /**
+     * A Claude Code session in the cloud (`CLAUDE_CODE_REMOTE=true`): it takes the account's cloud place
+     * instead of a computer's (migration 0044, docs/CLI-CONTRACT.md 4.2). Fixed when the row is created.
+     */
+    cloud: z.literal("claude_code").optional(),
   })
   .strict();
 
@@ -86,5 +91,6 @@ export function registerDeviceArgs(auth: Pick<VerifiedAccess, "userId" | "orgId"
     target_installed_modules: report.installed_modules ?? null,
     target_project_kind: report.project_kind ?? null,
     target_updated: report.updated ?? false,
+    target_cloud: report.cloud ?? null,
   };
 }

@@ -28,6 +28,7 @@ import EmptyState from "@/components/product/empty-state";
 import PageHeader from "@/components/product/page-header";
 import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import UsageMeter from "@/components/product/usage-meter";
+import NiCloud from "@/icons/nexture/ni-cloud";
 import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiListCircle from "@/icons/nexture/ni-list-circle";
 import { installGuideUrl, REFERENCE_COMMAND } from "@/lib/install-links";
@@ -134,7 +135,11 @@ export default function DevicesView({ state }: { state: DevicesState }) {
     }
 
     const { overview, locale } = state;
-    const live = overview.devices.filter((device) => !device.revokedAt);
+    // The computers the plan's ceiling counts, then the cloud session, which has its own place (migration 0044).
+    const live = [
+      ...overview.devices.filter((device) => !device.revokedAt && !device.cloud),
+      ...(overview.cloudSession ? [overview.cloudSession] : []),
+    ];
     const revoked = overview.devices.filter((device) => device.revokedAt);
 
     if (overview.devices.length === 0) {
@@ -221,9 +226,13 @@ export default function DevicesView({ state }: { state: DevicesState }) {
                 <CardContent className="flex flex-col gap-3">
                   <Box className="flex flex-row flex-wrap items-center justify-between gap-2">
                     <Box className="flex flex-row items-center gap-2">
-                      <NiLaptop size="medium" className="text-primary-ink" aria-hidden />
+                      {device.cloud ? (
+                        <NiCloud size="medium" className="text-primary-ink" aria-hidden />
+                      ) : (
+                        <NiLaptop size="medium" className="text-primary-ink" aria-hidden />
+                      )}
                       <Typography variant="h6" component="h2" className="mb-0">
-                        {device.name || t("oauth-device-unnamed")}
+                        {device.cloud ? t("devices-cloud-title") : device.name || t("oauth-device-unnamed")}
                       </Typography>
                       {device.projectKind === "client" ? (
                         <Chip size="small" variant="outlined" label={t("devices-client-project")} />
@@ -236,6 +245,11 @@ export default function DevicesView({ state }: { state: DevicesState }) {
                   <Typography variant="body2" className="text-text-secondary">
                     {details.join(" · ")}
                   </Typography>
+                  {device.cloud ? (
+                    <Typography variant="body2" className="text-text-secondary">
+                      {t("devices-cloud-body")}
+                    </Typography>
+                  ) : null}
                   <Typography variant="body2" className="text-text-secondary">
                     {device.lastUpdateAt
                       ? t("devices-last-update", { date: date(device.lastUpdateAt, locale) ?? "" })

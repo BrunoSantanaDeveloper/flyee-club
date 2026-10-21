@@ -55,8 +55,10 @@ grant_type=authorization_code&client_id=flyee-cli&code=<code>
 
 ```
 POST /api/oauth/device
-client_id=flyee-cli&scope=<os quatro>&device_id=<device_id>
+client_id=flyee-cli&scope=<os quatro>&device_id=<device_id>[&cloud=claude_code]
 ```
+
+`cloud=claude_code` (desde 2026-10-21) marca uma sessão do Claude Code na nuvem, com `CLAUDE_CODE_REMOTE=true`. Com ela, `/ativar` não pede para desconectar um computador quando a conta está no limite: a sessão na nuvem tem vaga própria (4.2). Outro valor responde 400 `invalid_request`.
 
 Resposta:
 
@@ -208,20 +210,22 @@ Escopo `profile:read`. Chamar logo depois do login e depois de todo `update` (co
   "core_version": "0.3.0",
   "installed_modules": [{ "slug": "deploy-check", "version": "1.2.0" }],
   "project_kind": "own",
-  "updated": false
+  "updated": false,
+  "cloud": "claude_code"
 }
 ```
 
 - `os`: `windows`, `macos`, `linux` ou `other`. `ai_tool`: `claude_code`, `codex`, `gemini_cli`, `cursor` ou `other`. `project_kind`: `own` ou `client`.
 - `ai_tool_detail` (desde 2026-10-08): só com `ai_tool` `other`, o nome curto da ferramenta do nível "compatível pelo padrão" que a CLI achou (`copilot`, `opencode`, `antigravity`, `kimi`, `windsurf` ou `aider`). O computador guarda o nome só quando ele está em `platform_settings.cli.known_tools`, editada na aba Entrega de `/admin/catalogo`. Um nome fora da lista, ou que não seja um texto curto em minúsculas, é descartado, e o registro segue.
+- `cloud` (desde 2026-10-21): `claude_code` numa sessão do Claude Code na nuvem (`CLAUDE_CODE_REMOTE=true`); ausente num computador. Outro valor responde 400. A marca vale na criação do registro e nunca muda depois: um computador não vira sessão na nuvem, nem o contrário. Enviá-la de novo num registro que já existe, como depois de `add` ou `update`, não muda nada e não é recusado. Cada conta tem uma vaga de nuvem (`plans.limits.cloud_sessions`, 1 em todo plano), fora do teto de computadores. Uma sessão na nuvem nova toma o lugar da anterior: a anterior é desconectada com o motivo `replaced`, com os tokens dela, e a resposta traz `cloud_replaced`. Nunca alcança um computador. Com `cloud_sessions` em 0, uma sessão na nuvem nova é registrada como um computador, como antes: ocupa um lugar do teto e, com o teto cheio, recebe o 409 `device_limit_reached` de sempre. A resposta traz então `device.cloud` em `null`.
 - Só `device_id` é obrigatório. Um campo omitido mantém o valor anterior; um relato que traz `ai_tool` decide também o `ai_tool_detail`, que se apaga quando não vem junto.
 - O que só descreve o computador nunca recusa o registro: `name` acima de 80 caracteres e `os_version` acima de 40 são cortados. O resto continua recusando com 400 `invalid_request`: `device_id`, versões e `installed_modules` fora do formato, um valor fora das listas de `os`, `ai_tool` e `project_kind`, e um campo que este contrato não serve (a seção 9 descreve campos que ainda não são aceitos).
-- 201 na primeira vez (é o evento `cli.installed`), 200 depois: `{ "status": "created", "device": {…}, "limit": 3, "live_devices": 2 }`.
+- 201 na primeira vez (é o evento `cli.installed`), 200 depois: `{ "status": "created", "device": {…, "cloud": null}, "limit": 3, "live_devices": 2 }`. `live_devices` conta só os computadores, sem a sessão na nuvem.
 - 409 `device_limit_reached` com `limit`, `live_devices` e `action_url` quando o plano não comporta mais um computador. Nada é gravado.
 - Um computador desconectado pelo integrante só volta com um login novo; com a mesma família responde `device_revoked`.
 - Um login feito sem `device_id` fica preso ao primeiro computador que se registrar.
 
-Tetos por degrau, hoje: Gratuito 1, kit 1, assinatura 3, Pro 5 (`plans.limits.devices`, dado configurável).
+Tetos por degrau, hoje: Gratuito 1, kit 1, assinatura 3, Pro 5 (`plans.limits.devices`, dado configurável), e uma sessão do Claude Code na nuvem em todos (`plans.limits.cloud_sessions`).
 
 ### 4.3 `GET /api/cli/catalog?locale=&stable=`
 
@@ -422,7 +426,7 @@ Duas páginas fora da API, sem sessão e fora do índice dos buscadores.
 
 Decididas em 2026-10-06 (`docs/PRODUCT.md`, "Decisões tomadas 2026-10-06"; `docs/PLANO-IMPLEMENTACAO.md`, fases 9 e 10). Nenhuma está no ar: a CLI não deve depender delas até cada item ser movido para o corpo deste contrato. Todas são compatíveis com a v1, porque só acrescentam campos e recusas que a CLI já sabe tratar.
 
-Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Os canais, com `newest` e `entitled` por versão, entraram no corpo no mesmo dia (12.5: seções 4.3, 4.4 e 4.5), e `/instalar.md` também (12.6: seção 8.2). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura. O token de serviço e a importação do índice (fase 10.2) entraram no corpo em 2026-10-14, na seção 10.
+Desde 2026-10-08 a ordem é a da fase 12 do plano, antes da abertura da loja. `ai_tool_detail`, `links.module_page` (com `links.module_page_en`) e `access.tier_name` entraram no corpo em 2026-10-08 (12.1: seções 4.1, 4.2 e 4.9). Os canais, com `newest` e `entitled` por versão, entraram no corpo no mesmo dia (12.5: seções 4.3, 4.4 e 4.5), e `/instalar.md` também (12.6: seção 8.2). Licença, `trigger`, manifesto v2 e a porta MCP ficam para depois da abertura. O token de serviço e a importação do índice (fase 10.2) entraram no corpo em 2026-10-14, na seção 10. A vaga de nuvem, com `cloud` no pedido do código (2.2) e no registro (4.2), entrou no corpo em 2026-10-21 (o item 4 do pedido do produto de 2026-10-20): a CLI pode enviá-la.
 
 | Onde | Mudança |
 |---|---|
