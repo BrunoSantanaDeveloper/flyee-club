@@ -64,8 +64,9 @@ const MESSAGES: Record<CliErrorCode, Record<CliLocale, string>> = {
     en: "This session belongs to another machine. Run `npx flyee login` on this one.",
   },
   device_limit_reached: {
-    "pt-BR": "Você chegou ao limite de {limit} computador(es) do seu plano. Desconecte um no painel ou mude de plano.",
-    en: "You reached your plan's limit of {limit} machine(s). Disconnect one in your dashboard or change plans.",
+    "pt-BR":
+      "Você chegou ao limite de {limit} {limit|computador|computadores} do seu plano. Desconecte um no painel ou mude de plano.",
+    en: "You reached your plan's limit of {limit} {limit|machine|machines}. Disconnect one in your dashboard or change plans.",
   },
   rate_limited: {
     "pt-BR": "Muitas chamadas em sequência. Espere um minuto e tente de novo.",
@@ -114,13 +115,22 @@ export function tierName(tier: Tier | null, locale: CliLocale): string | null {
   return tier ? TIER_NAMES[tier][locale] : null;
 }
 
-/** The message for a code, with `{name}` placeholders filled in. */
+/**
+ * The message for a code, with `{name}` placeholders filled in, and
+ * `{name|one|other}` replaced by the word that agrees with that number
+ * ("1 computador", "3 computadores").
+ */
 export function cliMessage(
   code: CliErrorCode,
   locale: CliLocale,
   values: Record<string, string | number> = {},
 ): string {
-  return MESSAGES[code][locale].replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in values ? String(values[key]) : match,
+  return MESSAGES[code][locale].replace(
+    /\{(\w+)(?:\|([^|}]*)\|([^}]*))?\}/g,
+    (match, key: string, one?: string, other?: string) => {
+      if (!(key in values)) return match;
+      if (one !== undefined && other !== undefined) return Number(values[key]) === 1 ? one : other;
+      return String(values[key]);
+    },
   );
 }

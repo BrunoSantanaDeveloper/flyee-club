@@ -1,4 +1,4 @@
-import { approveDevice, denyDevice } from "./actions";
+import { approveDevice, denyDevice, freeDeviceSlot } from "./actions";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -24,12 +24,14 @@ import NiCheck from "@/icons/nexture/ni-check";
 import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
 import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiUser from "@/icons/nexture/ni-user";
+import { type DevicesOverview, loadDevices } from "@/lib/member/devices";
 import { formatUserCode, normalizeUserCode } from "@/lib/oauth/device-code";
 import { type OauthScope, resolveRequestedScopes, SCOPE_LABEL_KEYS } from "@/lib/oauth/scopes";
 import { findPendingDeviceCode } from "@/lib/oauth/server";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
+import { limitOf } from "@flyee/billing/entitlements";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -40,7 +42,15 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  * approves. The terminal, polling, picks the access up by itself.
  *
  * Three states, one job each: type the code, approve it, or read the outcome.
+ *
+ * An account at its device limit sees its machines before the approval and
+ * disconnects one right there (the product's request of 2026-10-21, item 7.7):
+ * the limit used to show only after the approval, when the CLI registered the
+ * machine, and the member had to approve a second code. A machine that is
+ * already connected and asks again takes no new place.
  */
+
+const OS_NAME: Record<string, string> = { windows: "Windows", macos: "macOS", linux: "Linux" };
 
 const SCOPE_ICONS: Record<OauthScope, React.ReactNode> = {
   "profile:read": <NiUser size="medium" className="text-primary-ink" />,
@@ -49,7 +59,7 @@ const SCOPE_ICONS: Record<OauthScope, React.ReactNode> = {
   "telemetry:write": <NiChartLine size="medium" className="text-primary-ink" />,
 };
 
-const ERRORS = ["invalid", "expired", "plan", "workspace", "consent", "unavailable"] as const;
+const ERRORS = ["invalid", "expired", "plan", "workspace", "consent", "unavailable", "revoke"] as const;
 type ActivationError = (typeof ERRORS)[number];
 
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? "";
@@ -195,6 +205,21 @@ export default async function ActivatePage({
   const scopes = resolveRequestedScopes(pending.scope);
   const formatted = formatUserCode(code);
 
+  // The machines already connected, read with the member's session. At the limit, and unless
+  // this very machine is one of them, the approval waits for a free place.
+  const orgId = (membership?.org_id as string | undefined) ?? null;
+  let devices: DevicesOverview | null = null;
+  if (orgId) {
+    const { data: entitlements } = await supabase.rpc("org_entitlements", { target_org: orgId });
+    const limit = entitlements?.active ? limitOf(entitlements.limits ?? {}, "devices") : 0;
+    devices = await loadDevices(supabase, { orgId, limit }).catch(() => null);
+  }
+  const connected = (devices?.devices ?? []).filter((device) => !device.revokedAt);
+  const reconnecting = Boolean(pending.deviceId && connected.some((device) => device.deviceId === pending.deviceId));
+  const full = devices !== null && devices.limit > 0 && connected.length >= devices.limit && !reconnecting;
+  const locale = await getLocale();
+  const day = (value: string) => new Date(value).toLocaleDateString(locale, { day: "numeric", month: "long" });
+
   return (
     <ConsentShell>
       <Box className="flex flex-col items-center gap-2 text-center">
@@ -219,8 +244,58 @@ export default async function ActivatePage({
 
       {error ? (
         <Alert severity="warning" className="neutral bg-background-paper/60!">
-          {error === "consent" ? t("device-consent-failed") : t("device-code-unknown")}
+          {error === "consent"
+            ? t("device-consent-failed")
+            : error === "revoke"
+              ? t("devices-revoke-failed")
+              : t("device-code-unknown")}
         </Alert>
+      ) : first(query.freed) && !full ? (
+        <Alert severity="success" className="neutral bg-background-paper/60!">
+          {t("device-limit-freed")}
+        </Alert>
+      ) : null}
+
+      {full && devices ? (
+        <Box className="flex flex-col gap-3">
+          <Alert severity="warning" className="neutral bg-background-paper/60!">
+            {t("device-limit-full", { limit: devices.limit })}
+          </Alert>
+          <List disablePadding className="flex flex-col gap-2">
+            {connected.map((device) => (
+              <ListItem
+                key={device.id}
+                disableGutters
+                className="border-grey-100 rounded-lg border px-3 py-2"
+                secondaryAction={
+                  <Box component="form" action={freeDeviceSlot}>
+                    <input type="hidden" name="user_code" value={code} />
+                    <input type="hidden" name="device" value={device.id} />
+                    <Button type="submit" size="small" variant="text" color="grey">
+                      {t("devices-revoke")}
+                    </Button>
+                  </Box>
+                }
+              >
+                <ListItemIcon>
+                  <NiLaptop size="medium" className="text-primary-ink" />
+                </ListItemIcon>
+                <ListItemText
+                  primary={device.name || t("device-limit-unnamed")}
+                  secondary={[
+                    device.os ? (OS_NAME[device.os] ?? t("devices-os-other")) : null,
+                    t("device-limit-seen", { date: day(device.lastSeenAt) }),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                />
+              </ListItem>
+            ))}
+          </List>
+          <Typography variant="body2" className="text-text-secondary">
+            {t("device-limit-note")}
+          </Typography>
+        </Box>
       ) : null}
 
       <Divider />
@@ -257,12 +332,18 @@ export default async function ActivatePage({
       ) : null}
 
       <Box className="flex flex-col gap-2">
-        <Box component="form" action={approveDevice}>
-          <input type="hidden" name="user_code" value={code} />
-          <Button type="submit" variant="contained" fullWidth>
-            {t("oauth-authorize-approve")}
-          </Button>
-        </Box>
+        {full ? (
+          <Typography variant="body2" className="text-text-secondary text-center">
+            {t("device-limit-approve-hint")}
+          </Typography>
+        ) : (
+          <Box component="form" action={approveDevice}>
+            <input type="hidden" name="user_code" value={code} />
+            <Button type="submit" variant="contained" fullWidth>
+              {t("oauth-authorize-approve")}
+            </Button>
+          </Box>
+        )}
         <Box component="form" action={denyDevice}>
           <input type="hidden" name="user_code" value={code} />
           <Button type="submit" color="grey" variant="text" fullWidth>

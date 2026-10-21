@@ -165,12 +165,40 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
     expect(english).toContain("https://flyee.club/en/catalog");
   });
 
-  it("asks for the person's confirmation before anything runs, and never for a key in the conversation", () => {
-    const [confirmation, firstCommand] = [pt.indexOf("espere ela confirmar"), pt.indexOf("`npx --yes flyee")];
-    expect(confirmation).toBeGreaterThan(0);
-    expect(firstCommand).toBeGreaterThan(confirmation);
+  it("takes the request as the yes, asks only where a yes is due, and never for a key in the conversation", () => {
+    // The product's request of 2026-10-21, item 7.2: a second confirmation was a stop with nothing to decide.
+    const [rule, firstCommand] = [pt.indexOf("O pedido de instalação já é o sim"), pt.indexOf("`npx --yes flyee")];
+    expect(rule).toBeGreaterThan(0);
+    expect(firstCommand).toBeGreaterThan(rule);
+    expect(english).toContain("The request to install is already the yes");
+    expect(pt).not.toContain("espere ela confirmar");
+    expect(pt).toContain(
+      "Pergunte só onde esta página pede um sim: o Node.js, um app com o que ele pede, o commit na nuvem.",
+    );
     expect(pt).toContain("Nunca peça a chave na conversa");
     expect(english).toContain("Never ask for the key in the conversation");
+  });
+
+  it("talks simply, ends with what to ask now, and handles a refusal of the tool's permissions", () => {
+    // The product's request of 2026-10-21, items 7.1, 7.3, 7.5 and 7.6.
+    expect(pt).toContain("**Fale simples.**");
+    expect(english).toContain("**Keep it simple.**");
+    for (const page of [pt, english]) {
+      const top = page.indexOf(page === pt ? "**Fale simples.**" : "**Keep it simple.**");
+      expect(top).toBeLessThan(page.indexOf(page === pt ? "## Passos" : "## Steps"));
+    }
+    expect(pt).not.toContain("Diga à pessoa o que ficou instalado");
+    expect(pt).toContain("Diga em uma frase que o flyee está pronto e o que ela pode pedir agora.");
+    expect(english).toContain("Say in one sentence that flyee is ready and what they can ask for now.");
+    expect(pt).toContain(
+      "não procure outro caminho. Pergunte numa frase se pode fazer aquilo, dizendo o que é, e repita com o sim.",
+    );
+    expect(english).toContain("do not look for another way. Ask in one sentence whether you may do it");
+    // The cloud commit: one ask, no opening the files, and the mode switch at the first refusal.
+    expect(pt).toContain("Não abra os arquivos para conferir");
+    expect(pt).toContain("na primeira recusa, não tente de novo");
+    expect(english).toContain("Do not open the files to check them");
+    expect(english).toContain("at the first refusal, do not try again");
   });
 
   it("goes on in the same conversation after installing, after an app and after an update", () => {
@@ -260,8 +288,11 @@ describe("the way into a Claude Code session in the cloud", () => {
       expect(href.searchParams.has("environment")).toBe(false);
     }
     // The request works before the change: the doctor comes through npm, which every environment allows.
-    expect(ptBR.product["cloud-prompt"]).toContain("npx --yes flyee@latest doctor --json");
-    expect(en.product["cloud-prompt"]).toContain("npx --yes flyee@latest doctor --json");
+    // It names both commands, so auto mode's classifier sees the person's intent (item 7.4).
+    for (const catalog of [ptBR, en]) {
+      expect(catalog.product["cloud-prompt"]).toContain("npx --yes flyee@latest doctor --json");
+      expect(catalog.product["cloud-prompt"]).toContain("npx --yes flyee@latest login --device");
+    }
   });
 });
 

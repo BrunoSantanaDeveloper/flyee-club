@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 
 import { recordAudit } from "@/lib/audit";
+import { revokeDevice } from "@/lib/member/actions";
 import { formatUserCode, normalizeUserCode } from "@/lib/oauth/device-code";
 import { answerDeviceCode, findPendingDeviceCode } from "@/lib/oauth/server";
 import { acceptTerms } from "@flyee/audit";
@@ -75,6 +76,20 @@ export async function approveDevice(formData: FormData): Promise<void> {
     metadata: { client_name: pending!.client.client_name, device_id: pending!.deviceId },
   });
   redirect("/ativar?status=approved");
+}
+
+/**
+ * Makes room for the machine asking at /ativar when the account is at its
+ * device limit (the product's request of 2026-10-21, item 7.7): one of the
+ * account's machines is disconnected with the member's own session, as in
+ * /settings/devices, and the same code comes back, so one approval is enough.
+ */
+export async function freeDeviceSlot(formData: FormData): Promise<void> {
+  const code = normalizeUserCode(String(formData.get("user_code") ?? ""));
+  if (!code) redirect("/ativar?error=invalid");
+  const retry = `/ativar?code=${formatUserCode(code!)}`;
+  const result = await revokeDevice(String(formData.get("device") ?? ""));
+  redirect(result.ok ? `${retry}&freed=1` : `${retry}&error=revoke`);
 }
 
 export async function denyDevice(formData: FormData): Promise<void> {
