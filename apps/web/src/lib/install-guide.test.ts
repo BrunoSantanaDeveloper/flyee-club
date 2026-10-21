@@ -269,10 +269,26 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
       const section = page.slice(page.indexOf(title), page.indexOf("\n## ", page.indexOf(title) + 1));
       expect(section.length, title).toBeGreaterThan(500);
       for (const host of hosts) expect(code(section), host).toContain(host);
-      for (const field of ["CLAUDE_CODE_REMOTE", "host_not_allowed", "platform.message", "device_limit_reached"]) {
+      for (const field of [
+        "CLAUDE_CODE_REMOTE",
+        "host_not_allowed",
+        "platform.message",
+        "device_limit_reached",
+        // Item 9: the apps' own hosts, shown once from `add` and `doctor`, and the key that stays out of view.
+        "network.blocked",
+        "network.message",
+        "network.notes",
+        // A key kept as a network secret never shows in `key list`: the page says so.
+        "key list",
+      ]) {
         expect(code(section), field).toContain(field);
       }
       for (const label of labels) expect(section, label).toContain(label);
+      expect(section).toContain(page === pt ? "segredo de rede" : "network secret");
+      expect(commands(section).some((command) => / key set /.test(command))).toBe(true);
+      expect(section).toContain(
+        page === pt ? "Nunca peça a chave na conversa" : "Never ask for the key in the conversation",
+      );
       expect(section).not.toMatch(/\bterminal\b/i);
       // Before the steps, which the section points to.
       expect(page.indexOf(title)).toBeLessThan(page.indexOf(page === pt ? "## Passos" : "## Steps"));
