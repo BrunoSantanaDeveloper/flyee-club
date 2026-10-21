@@ -5,7 +5,13 @@ import { getLocale } from "next-intl/server";
 
 import { DEFAULTS } from "@/config";
 import { recordAudit } from "@/lib/audit";
-import { authorizeParamsFromForm, errorRedirectUrl, validateAuthorizeRequest } from "@/lib/oauth/authorize-request";
+import { revokeDevice } from "@/lib/member/actions";
+import {
+  authorizeParamsFromForm,
+  authorizeQuery,
+  errorRedirectUrl,
+  validateAuthorizeRequest,
+} from "@/lib/oauth/authorize-request";
 import { scopesToParam } from "@/lib/oauth/scopes";
 import { issueAuthorizationCode } from "@/lib/oauth/server";
 import { acceptTerms } from "@flyee/audit";
@@ -26,6 +32,20 @@ async function requireUser() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/sign-in");
   return { supabase, user: user! };
+}
+
+/**
+ * Makes room for the machine asking to connect when the account is at its
+ * device limit (the product's request of 2026-10-21, item 7.7): one of the
+ * account's machines is disconnected with the member's own session, as in
+ * /settings/devices, and the same authorization request comes back, so one
+ * approval is enough. The address is always this page's, never one the form names.
+ */
+export async function freeDeviceSlot(formData: FormData): Promise<void> {
+  await requireUser();
+  const params = authorizeParamsFromForm(formData);
+  const result = await revokeDevice(String(formData.get("device") ?? ""));
+  redirect(`/oauth/authorize?${authorizeQuery(params)}&${result.ok ? "freed=1" : "error=revoke"}`);
 }
 
 export async function approveAuthorization(formData: FormData): Promise<void> {

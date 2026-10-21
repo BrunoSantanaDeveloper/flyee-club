@@ -918,7 +918,7 @@
     "device-limit-full": "Sua conta já está no limite do plano, {limit, plural, one {# computador} other {# computadores}}. Para conectar este, desconecte um agora:",
     "device-limit-unnamed": "Computador sem nome",
     "device-limit-seen": "usado em {date}",
-    "device-limit-note": "O computador desconectado deixa de receber atualizações. As ferramentas já instaladas nele continuam funcionando.",
+    "device-limit-note": "O computador desconectado deixa de receber atualizações. Os apps já instalados nele continuam funcionando.",
     "device-limit-approve-hint": "Desconecte um computador acima para aprovar este.",
     "device-limit-freed": "Computador desconectado. Agora é só aprovar.",
     "revalidate-page-title": "Revalide o acesso deste computador",

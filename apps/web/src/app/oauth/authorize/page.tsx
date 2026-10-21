@@ -1,4 +1,4 @@
-import { approveAuthorization, denyAuthorization } from "./actions";
+import { approveAuthorization, denyAuthorization, freeDeviceSlot } from "./actions";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Alert, Box, Button, Divider, List, ListItem, ListItemIcon, ListItemText, Typography } from "@mui/material";
 
 import { ConsentError, ConsentShell } from "@/components/cli/consent-shell";
+import DeviceLimitSection from "@/components/cli/device-limit-section";
 import UpsellCard from "@/components/product/upsell-card";
 import { COOKIE_KEYS } from "@/constants";
 import NiBook from "@/icons/nexture/ni-book";
@@ -16,6 +17,7 @@ import NiRefresh from "@/icons/nexture/ni-refresh";
 import NiUser from "@/icons/nexture/ni-user";
 import { resolveCurrency } from "@/lib/billing-currency";
 import { type DeviceStatus, readDeviceStatus } from "@/lib/cli/device-status";
+import { type DeviceRoom, loadDeviceRoom } from "@/lib/member/device-room";
 import { OFFER_COPY, offerLines, REASON_COPY } from "@/lib/member/offer-copy";
 import { loadOfferPlans, type OfferPlan } from "@/lib/member/offers";
 import { loadProAvailability } from "@/lib/member/pro-availability";
@@ -62,7 +64,12 @@ export default async function AuthorizePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const t = await getTranslations("product");
-  const params = authorizeParamsFromSearch(await searchParams);
+  const query = await searchParams;
+  const params = authorizeParamsFromSearch(query);
+  const flag = (key: string) => {
+    const value = query[key];
+    return (Array.isArray(value) ? value[0] : value) ?? "";
+  };
   const errorCard = (message: string) => (
     <ConsentError
       title={t("oauth-authorize-error-title")}
@@ -122,6 +129,13 @@ export default async function AuthorizePage({
     device = await readDeviceStatus(service, { userId: user!.id, deviceId });
   }
   const revalidating = Boolean(device?.lapsed);
+
+  // At the device limit, and unless this very machine is already connected (a revalidation
+  // keeps its place), the approval waits for a free place (lib/member/device-room.ts, item 7.7).
+  const room: DeviceRoom | null = client.first_party
+    ? await loadDeviceRoom(supabase, { orgId, limits: entitlements.limits, deviceId: deviceId ?? null })
+    : null;
+  const full = Boolean(room?.full);
   const deviceName = device?.name || t("oauth-device-unnamed");
 
   // The revalidation is the one moment a member who has been away is looking:
@@ -226,6 +240,18 @@ export default async function AuthorizePage({
         />
       ))}
 
+      {flag("error") === "revoke" ? (
+        <Alert severity="warning" className="neutral bg-background-paper/60!">
+          {t("devices-revoke-failed")}
+        </Alert>
+      ) : flag("freed") && !full ? (
+        <Alert severity="success" className="neutral bg-background-paper/60!">
+          {t("device-limit-freed")}
+        </Alert>
+      ) : null}
+
+      <DeviceLimitSection room={room} action={freeDeviceSlot} hidden={hiddenFields} />
+
       <Divider />
 
       <Box className="flex flex-col gap-1">
@@ -260,12 +286,18 @@ export default async function AuthorizePage({
       ) : null}
 
       <Box className="flex flex-col gap-2">
-        <Box component="form" action={approveAuthorization}>
-          {hiddenFields}
-          <Button type="submit" variant="contained" fullWidth>
-            {revalidating ? t("oauth-revalidate-approve") : t("oauth-authorize-approve")}
-          </Button>
-        </Box>
+        {full ? (
+          <Typography variant="body2" className="text-text-secondary text-center">
+            {t("device-limit-approve-hint")}
+          </Typography>
+        ) : (
+          <Box component="form" action={approveAuthorization}>
+            {hiddenFields}
+            <Button type="submit" variant="contained" fullWidth>
+              {revalidating ? t("oauth-revalidate-approve") : t("oauth-authorize-approve")}
+            </Button>
+          </Box>
+        )}
         <Box component="form" action={denyAuthorization}>
           {hiddenFields}
           <Button type="submit" color="grey" variant="text" fullWidth>

@@ -918,7 +918,7 @@
     "device-limit-full": "Your account is at its plan's limit of {limit, plural, one {# machine} other {# machines}}. To connect this one, disconnect one now:",
     "device-limit-unnamed": "Unnamed machine",
     "device-limit-seen": "last used {date}",
-    "device-limit-note": "The disconnected machine stops receiving updates. The tools already installed on it keep working.",
+    "device-limit-note": "The disconnected machine stops receiving updates. The apps already installed on it keep working.",
     "device-limit-approve-hint": "Disconnect a machine above to approve this one.",
     "device-limit-freed": "Machine disconnected. Now just approve.",
     "revalidate-page-title": "Revalidate this machine",

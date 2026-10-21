@@ -18,20 +18,20 @@ import {
 } from "@mui/material";
 
 import { ConsentError, ConsentShell } from "@/components/cli/consent-shell";
+import DeviceLimitSection from "@/components/cli/device-limit-section";
 import NiBook from "@/icons/nexture/ni-book";
 import NiChartLine from "@/icons/nexture/ni-chart-line";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiDownloadCloud from "@/icons/nexture/ni-download-cloud";
 import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiUser from "@/icons/nexture/ni-user";
-import { type DevicesOverview, loadDevices } from "@/lib/member/devices";
+import { type DeviceRoom, loadDeviceRoom } from "@/lib/member/device-room";
 import { formatUserCode, normalizeUserCode } from "@/lib/oauth/device-code";
 import { type OauthScope, resolveRequestedScopes, SCOPE_LABEL_KEYS } from "@/lib/oauth/scopes";
 import { findPendingDeviceCode } from "@/lib/oauth/server";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/server";
 import { createServiceClient } from "@flyee/auth/service";
-import { limitOf } from "@flyee/billing/entitlements";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -49,8 +49,6 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  * machine, and the member had to approve a second code. A machine that is
  * already connected and asks again takes no new place.
  */
-
-const OS_NAME: Record<string, string> = { windows: "Windows", macos: "macOS", linux: "Linux" };
 
 const SCOPE_ICONS: Record<OauthScope, React.ReactNode> = {
   "profile:read": <NiUser size="medium" className="text-primary-ink" />,
@@ -206,19 +204,16 @@ export default async function ActivatePage({
   const formatted = formatUserCode(code);
 
   // The machines already connected, read with the member's session. At the limit, and unless
-  // this very machine is one of them, the approval waits for a free place.
+  // this very machine is one of them, the approval waits for a free place (lib/member/device-room.ts).
   const orgId = (membership?.org_id as string | undefined) ?? null;
-  let devices: DevicesOverview | null = null;
+  let room: DeviceRoom | null = null;
   if (orgId) {
     const { data: entitlements } = await supabase.rpc("org_entitlements", { target_org: orgId });
-    const limit = entitlements?.active ? limitOf(entitlements.limits ?? {}, "devices") : 0;
-    devices = await loadDevices(supabase, { orgId, limit }).catch(() => null);
+    if (entitlements?.active) {
+      room = await loadDeviceRoom(supabase, { orgId, limits: entitlements.limits, deviceId: pending.deviceId });
+    }
   }
-  const connected = (devices?.devices ?? []).filter((device) => !device.revokedAt);
-  const reconnecting = Boolean(pending.deviceId && connected.some((device) => device.deviceId === pending.deviceId));
-  const full = devices !== null && devices.limit > 0 && connected.length >= devices.limit && !reconnecting;
-  const locale = await getLocale();
-  const day = (value: string) => new Date(value).toLocaleDateString(locale, { day: "numeric", month: "long" });
+  const full = Boolean(room?.full);
 
   return (
     <ConsentShell>
@@ -256,47 +251,11 @@ export default async function ActivatePage({
         </Alert>
       ) : null}
 
-      {full && devices ? (
-        <Box className="flex flex-col gap-3">
-          <Alert severity="warning" className="neutral bg-background-paper/60!">
-            {t("device-limit-full", { limit: devices.limit })}
-          </Alert>
-          <List disablePadding className="flex flex-col gap-2">
-            {connected.map((device) => (
-              <ListItem
-                key={device.id}
-                disableGutters
-                className="border-grey-100 rounded-lg border px-3 py-2"
-                secondaryAction={
-                  <Box component="form" action={freeDeviceSlot}>
-                    <input type="hidden" name="user_code" value={code} />
-                    <input type="hidden" name="device" value={device.id} />
-                    <Button type="submit" size="small" variant="text" color="grey">
-                      {t("devices-revoke")}
-                    </Button>
-                  </Box>
-                }
-              >
-                <ListItemIcon>
-                  <NiLaptop size="medium" className="text-primary-ink" />
-                </ListItemIcon>
-                <ListItemText
-                  primary={device.name || t("device-limit-unnamed")}
-                  secondary={[
-                    device.os ? (OS_NAME[device.os] ?? t("devices-os-other")) : null,
-                    t("device-limit-seen", { date: day(device.lastSeenAt) }),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                />
-              </ListItem>
-            ))}
-          </List>
-          <Typography variant="body2" className="text-text-secondary">
-            {t("device-limit-note")}
-          </Typography>
-        </Box>
-      ) : null}
+      <DeviceLimitSection
+        room={room}
+        action={freeDeviceSlot}
+        hidden={<input type="hidden" name="user_code" value={code} />}
+      />
 
       <Divider />
 
