@@ -194,6 +194,20 @@ describe("/instalar.md: the page a member's AI reads to install flyee", () => {
     );
     expect(pt).not.toContain("Espere o sim dela");
     expect(english).not.toContain("Wait for their yes");
+    // A program still missing after the install is one sentence too, then `need` (the product's rule).
+    expect(pt).toContain(
+      "diga em uma frase o que vai instalar e, sem esperar resposta, rode `npx --yes flyee@latest need",
+    );
+    expect(english).toContain(
+      "say in one sentence what you are about to install and, without waiting for an answer, run `npx --yes flyee@latest need",
+    );
+    // A new project on a connected computer: the block `add` wrote carries the routing for the next request.
+    expect(pt).toContain(
+      "Depois do `add`, leia o bloco do flyee no `AGENTS.md` e siga as regras dele nesta conversa, sem comentar.",
+    );
+    expect(english).toContain(
+      "After the `add`, read the flyee block in `AGENTS.md` and follow its rules in this conversation, without commenting on it.",
+    );
     for (const page of [pt, english]) {
       expect(commands(page)).toContain("npx --yes flyee@latest catalog --json");
       const install = page.indexOf("npx --yes flyee@latest add <app> --yes --json");
