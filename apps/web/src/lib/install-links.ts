@@ -55,7 +55,7 @@ export function cloudSessionUrl(prompt: string): string {
  * types it (docs/PRODUCT.md, 2026-10-08): a screen shows it beside the
  * sentence as a reference, for whoever wants to know what the AI will run.
  * /instalar.md names the same commands with the flags only an AI needs
- * (`npx --yes`, `--json`, `--dry-run`, `--yes`); lib/install-guide.test.ts
+ * (`npx --yes`, `--json`, `--yes`, `--browser`); lib/install-guide.test.ts
  * holds the two together.
  */
 export const REFERENCE_COMMAND = {

@@ -5,9 +5,9 @@ import type { CatalogLocale } from "@/lib/catalog/links";
  * reads to install flyee (docs/PRODUCT.md, decisions of 2026-10-06 and
  * 2026-10-08: the member never uses the terminal, the AI runs every command).
  * The member pastes one sentence into the conversation and the AI follows this
- * page: it says what will happen, asks for the member's confirmation, runs the
- * login the member approves in the browser, checks the result, installs the
- * app that was asked for and goes on in the same conversation, reading the
+ * page: it says what will happen, runs the login the member approves in the
+ * browser, checks the result, installs the app the request calls for and goes
+ * on in the same conversation, reading the
  * files flyee just wrote (the product's request of 2026-10-20, item 5: a new
  * conversation was a step the member does not need).
  *
@@ -23,8 +23,11 @@ import type { CatalogLocale } from "@/lib/catalog/links";
  *    the approval, a device code lives 10) or installs a program;
  *  - the notice BEFORE the login: a command in the foreground holds the AI's
  *    turn, so "tell them the browser opened" could only be said too late;
- *  - `add` twice, `--dry-run` to read what the app declares and `--yes` to
- *    install: without a terminal the CLI answers its own question with "no";
+ *  - `add` with `--yes`, after one plain sentence: without a terminal the CLI
+ *    answers its own question with "no", and the request is already the yes
+ *    (the operator's decision of 2026-10-21, relayed by the product);
+ *  - `catalog --json`, which changes nothing, to pick the app a job calls for
+ *    when the project has no flyee block in its `AGENTS.md` yet;
  *  - `doctor` after an install, whose `programs` and `credentials` say, app
  *    by app, what is still missing;
  *  - `key set --browser`, which never asks for the key on the terminal and
@@ -71,14 +74,14 @@ const PT_BR = (links: InstallGuideLinks): string[] => [
   "**Fale simples.** Fale com a pessoa em poucas frases, só sobre o que ela precisa fazer ou decidir e o resultado. Esta página é para você: não repita a ela comandos, arquivos, pastas, campos do JSON, versões ou o que você leu e conferiu, a menos que ela pergunte.",
   "",
   "1. A pessoa não usa o terminal: você roda todos os comandos. Ela só confirma na conversa, aprova a conexão no navegador e cola chaves numa página que o flyee abre no navegador dela.",
-  "2. O pedido de instalação já é o sim: diga em uma frase o que vai fazer e siga. Pergunte só onde esta página pede um sim: o Node.js, um app com o que ele pede, o commit na nuvem.",
+  "2. O pedido de instalação já é o sim: diga em uma frase o que vai fazer e siga. Pergunte só onde esta página pede um sim: o Node.js, o commit na nuvem.",
   "3. Rode os comandos na pasta do projeto em que ela quer usar os apps, escritos como estão aqui, mesmo quando uma mensagem do instalador escrever um deles de outro jeito. O `--yes` logo depois de `npx` baixa o instalador sem perguntar: sem ele, um terminal interativo fica esperando uma resposta. O `flyee@latest` pega sempre o instalador mais novo. No PowerShell do Windows, se o `npx` for recusado porque a execução de scripts está desativada, escreva `npx.cmd` no lugar dele, sem mudar essa configuração.",
   "4. Confira o Node.js com `node --version`. O flyee pede a versão 20 ou mais nova.",
   "   - Não há Node.js neste computador: diga isso à pessoa e, com o sim dela, instale a versão LTS pelo gerenciador de pacotes do sistema, com tempo limite de 10 minutos. Avise que o sistema pode pedir uma permissão numa janela. Se não houver gerenciador, ou se ele só tiver uma versão mais antiga que a 20, indique o instalador de https://nodejs.org e pare até ela avisar. Depois confira de novo. Se o comando ainda não aparecer, peça para ela fechar e abrir de novo o programa em que vocês conversam e repetir o pedido.",
   "   - Há um Node.js mais antigo: diga à pessoa a versão que encontrou, a que o flyee pede e que outro projeto deste computador pode depender da antiga. Só com o sim dela, atualize do mesmo jeito que esse Node.js foi instalado, e confira de novo. Sem o sim, pare.",
   "5. Rode `npx --yes flyee@latest doctor --json`, que não muda nada. No resultado, `connected` diz se este computador guarda uma conexão com a conta, e `adapters`, se os arquivos do flyee estão neste projeto:",
   '   - `connected` é `true` e todos os itens de `adapters` são `true`: o flyee já está aqui. Pule os passos e faça o que a pessoa pediu, como está em "Depois de instalar". Se ela pediu só para instalar o flyee, diga que ele já está instalado e pare.',
-  "   - `connected` é `true` e algum item de `adapters` é `false`: o computador já está conectado e este projeto é novo. Se a pessoa pediu um app, pule os passos e instale o app, que isso escreve os arquivos do projeto. Se pediu só o flyee, siga os passos.",
+  "   - `connected` é `true` e algum item de `adapters` é `false`: o computador já está conectado e este projeto é novo. Se a pessoa pediu um app, ou algo que um app faz, pule os passos e instale o app, que isso escreve os arquivos do projeto. Se pediu só o flyee, siga os passos.",
   "   - `connected` é `false`: siga os passos.",
   "",
   "## Claude Code na nuvem",
@@ -101,7 +104,7 @@ const PT_BR = (links: InstallGuideLinks): string[] => [
   "   - Com navegador: avise a pessoa de que o navegador vai abrir na página do FlyeeClub, para ela aprovar a conexão deste computador. Sem esperar resposta, rode `npx --yes flyee@latest login`, com tempo limite de 5 minutos, e espere o comando terminar. Só ela aprova.",
   "   - Sem navegador, ou com a pessoa longe da tela deste computador, como numa sessão SSH, num servidor ou num contêiner: rode `npx --yes flyee@latest login --device` de um jeito que deixe você ler a saída enquanto ele espera, por até 10 minutos (em segundo plano, se a sua ferramenta permitir). Passe à pessoa o endereço e o código que ele mostrar e continue lendo a saída até o comando terminar.",
   '2. Rode `npx --yes flyee@latest doctor --json` de novo. Está tudo certo quando `connected` é `true`, `platform.reachable` é `true` e todos os itens de `adapters` são `true`. Se algum deles vier `false`, veja "Quando algo não sai como esperado".',
-  '3. Se a pessoa pediu um app, instale agora, nesta mesma conversa, como está em "Depois de instalar".',
+  '3. Se a pessoa pediu um app, ou algo que um app faz, instale agora, nesta mesma conversa, como está em "Depois de instalar".',
   "4. Leia agora o bloco do flyee no `AGENTS.md` do projeto, que o login acabou de escrever, e siga nesta mesma conversa. Diga em uma frase que o flyee está pronto e o que ela pode pedir agora.",
   "",
   "## Depois de instalar",
@@ -109,13 +112,12 @@ const PT_BR = (links: InstallGuideLinks): string[] => [
   "Faça só o que a pessoa pediu. Os comandos valem nesta conversa e nas próximas, em que a skill `flyee` do projeto traz os mesmos. Todos respondem em JSON, menos o login, que mostra o endereço enquanto espera.",
   "",
   "- Instalar um app:",
-  "   1. Rode `npx --yes flyee@latest add <app> --dry-run --json`, que não instala nada. Escreva o nome como a pessoa deu: um prefixo com dois pontos faz parte dele, não tire nem traduza. O nome de cada app está na página dele, em " +
+  "   1. Escolha o app. Um nome que a pessoa deu vale como ela deu: um prefixo com dois pontos faz parte dele, não tire nem traduza. O nome de cada app está na página dele, em " +
     links.store +
-    ".",
-  "   2. Diga à pessoa, em uma frase, as permissões, as chaves e os programas que o app usa. Em `programs`, `present` diz se cada programa já está no computador: diga quais serão instalados. Espere o sim dela.",
-  "   3. Rode `npx --yes flyee@latest add <app> --yes --json`, com tempo limite de 10 minutos. O `--yes` do fim confirma a instalação: sem ele, nada é instalado. O comando instala também os programas que faltam.",
-  "   4. Rode `npx --yes flyee@latest doctor --json`. Todos os itens de `adapters` devem vir `true`: se algum vier `false`, faça o login do passo 1, que escreve os arquivos. Em `programs` e em `credentials`, o campo `slug` diz de qual app é cada linha, e o resultado da instalação diz quais apps entraram. Nas linhas deles, um programa com `present` em `false` e uma chave com `set` em `false` são o que ainda falta: cuide só desses, como está nos dois itens abaixo.",
-  "   5. Para usar o app, leia o `SKILL.md` dele em `.flyee/modules/<app>/skills/<skill>/SKILL.md` e siga nesta mesma conversa: a pessoa já pode pedir o que o app faz.",
+    ". Se ela pediu um trabalho e não um app, escolha o app que faz esse trabalho pela lista do catálogo no bloco do flyee no `AGENTS.md` do projeto, ou por `npx --yes flyee@latest catalog --json`, que não muda nada.",
+  '   2. Diga em uma frase simples qual app vai instalar e o que ele faz, como "Vou instalar o app X, que faz Y", e, sem esperar resposta, rode `npx --yes flyee@latest add <app> --yes --json`, com tempo limite de 10 minutos. Não liste permissões nem arquivos: fale de uma chave ou de um programa só quando a pessoa tiver de agir. O `--yes` do fim confirma a instalação: sem ele, nada é instalado. O comando instala também os programas que faltam.',
+  "   3. Rode `npx --yes flyee@latest doctor --json`. Todos os itens de `adapters` devem vir `true`: se algum vier `false`, faça o login do passo 1, que escreve os arquivos. Em `programs` e em `credentials`, o campo `slug` diz de qual app é cada linha, e o resultado da instalação diz quais apps entraram. Nas linhas deles, um programa com `present` em `false` e uma chave com `set` em `false` são o que ainda falta: cuide só desses, como está nos dois itens abaixo.",
+  "   4. Para usar o app, leia o `SKILL.md` dele em `.flyee/modules/<app>/skills/<skill>/SKILL.md`, uma pasta por skill, e siga nesta mesma conversa: a pessoa já pode pedir o que o app faz.",
   "- Uma chave de outro serviço que falta, uma de cada vez: avise a pessoa de que uma página vai abrir no navegador dela e rode `npx --yes flyee@latest key set <NOME> --browser --json`. O comando volta na hora, e a página fica aberta por 15 minutos para ela colar a chave. Quando ela disser que salvou, confira com `npx --yes flyee@latest key list --json`. Nunca peça a chave na conversa. Se ela colar uma chave na conversa, não use: diga para ela trocar essa chave no serviço que a emitiu e colar a nova na página, que você abre de novo com o mesmo comando. Se ela ainda não tem a chave, diga qual ficou faltando e siga: o app avisa quando precisar dela. Sem navegador neste computador, ou com a pessoa longe da tela dele, pare e diga isso a ela.",
   "- Um programa do sistema que continua faltando, como o ffmpeg: diga à pessoa o que vai instalar e, com o sim dela, rode `npx --yes flyee@latest need <programa> --yes --json`, com tempo limite de 10 minutos. Se o resultado trouxer `needs_member`, é o único passo que cabe à pessoa, como uma senha de administrador: mostre só esse passo e, quando ela disser que fez, rode o comando de novo.",
   "- Atualizar os apps: `npx --yes flyee@latest update --json`, com tempo limite de 10 minutos. Se vieram versões novas, leia de novo o bloco do flyee no `AGENTS.md` e o `SKILL.md` de cada app atualizado, porque a versão que você leu antes ficou para trás, e siga nesta mesma conversa.",
@@ -149,14 +151,14 @@ const EN = (links: InstallGuideLinks): string[] => [
   "**Keep it simple.** Talk to the person in a few sentences, only about what they need to do or decide and the result. This page is for you: do not repeat to them commands, files, folders, JSON fields, versions or what you read and checked, unless they ask.",
   "",
   "1. The person does not use the terminal: you run every command. They only confirm in the conversation, approve the connection in the browser and paste keys into a page that flyee opens in their browser.",
-  "2. The request to install is already the yes: say in one sentence what you are about to do and go on. Ask only where this page asks for a yes: Node.js, an app with what it asks for, the commit in the cloud.",
+  "2. The request to install is already the yes: say in one sentence what you are about to do and go on. Ask only where this page asks for a yes: Node.js, the commit in the cloud.",
   "3. Run the commands in the folder of the project where they want to use the apps, written as they are here, even when a message of the installer writes one of them another way. The `--yes` right after `npx` downloads the installer without asking: without it, an interactive terminal waits for an answer. `flyee@latest` always gets the newest installer. On Windows PowerShell, if `npx` is refused because running scripts is disabled, write `npx.cmd` in its place, without changing that setting.",
   "4. Check Node.js with `node --version`. flyee needs version 20 or newer.",
   "   - There is no Node.js on this computer: tell the person and, with their yes, install the LTS version through the system's package manager, with a time limit of 10 minutes. Tell them the system may ask for permission in a window. If there is no package manager, or it only has a version older than 20, point them to the installer at https://nodejs.org and stop until they tell you. Then check again. If the command still does not show up, ask them to close and reopen the program you are talking in and to repeat the request.",
   "   - There is an older Node.js: tell the person the version you found, the one flyee needs, and that another project on this computer may depend on the old one. Only with their yes, update it the same way that Node.js was installed, and check again. Without their yes, stop.",
   "5. Run `npx --yes flyee@latest doctor --json`, which changes nothing. In the result, `connected` says whether this computer holds a connection to the account, and `adapters` whether flyee's files are in this project:",
   '   - `connected` is `true` and every item of `adapters` is `true`: flyee is already here. Skip the steps and do what the person asked, as described in "After installing". If they only asked to install flyee, tell them it is already installed and stop.',
-  "   - `connected` is `true` and an item of `adapters` is `false`: the computer is already connected and this project is new. If the person asked for an app, skip the steps and install the app, which writes the project's files. If they only asked for flyee, follow the steps.",
+  "   - `connected` is `true` and an item of `adapters` is `false`: the computer is already connected and this project is new. If the person asked for an app, or for something an app does, skip the steps and install the app, which writes the project's files. If they only asked for flyee, follow the steps.",
   "   - `connected` is `false`: follow the steps.",
   "",
   "## Claude Code in the cloud",
@@ -179,7 +181,7 @@ const EN = (links: InstallGuideLinks): string[] => [
   "   - With a browser: tell the person the browser is about to open on the FlyeeClub page, for them to approve this computer's connection. Without waiting for an answer, run `npx --yes flyee@latest login`, with a time limit of 5 minutes, and wait for the command to finish. Only they approve it.",
   "   - With no browser, or with the person away from this computer's screen, as in an SSH session, on a server or in a container: run `npx --yes flyee@latest login --device` in a way that lets you read the output while it waits, for up to 10 minutes (in the background, if your tool allows it). Give the person the address and the code it shows and keep reading the output until the command finishes.",
   '2. Run `npx --yes flyee@latest doctor --json` again. All is well when `connected` is `true`, `platform.reachable` is `true` and every item of `adapters` is `true`. If one of them comes as `false`, see "When something does not go as expected".',
-  '3. If the person asked for an app, install it now, in this same conversation, as described in "After installing".',
+  '3. If the person asked for an app, or for something an app does, install it now, in this same conversation, as described in "After installing".',
   "4. Read now the flyee block in the project's `AGENTS.md`, which the login just wrote, and go on in this same conversation. Say in one sentence that flyee is ready and what they can ask for now.",
   "",
   "## After installing",
@@ -187,13 +189,12 @@ const EN = (links: InstallGuideLinks): string[] => [
   "Do only what the person asked. The commands work in this conversation and in the next ones, where the project's `flyee` skill carries the same ones. All of them answer in JSON, except the login, which shows the address while it waits.",
   "",
   "- Install an app:",
-  "   1. Run `npx --yes flyee@latest add <app> --dry-run --json`, which installs nothing. Write the name as the person gave it: a prefix with a colon is part of it, do not drop it or translate it. The name of each app is on its page, at " +
+  "   1. Choose the app. A name the person gave is used as they gave it: a prefix with a colon is part of it, do not drop it or translate it. The name of each app is on its page, at " +
     links.store +
-    ".",
-  "   2. Tell the person, in one sentence, the permissions, the keys and the programs the app uses. In `programs`, `present` says whether each program is already on the computer: say which ones will be installed. Wait for their yes.",
-  "   3. Run `npx --yes flyee@latest add <app> --yes --json`, with a time limit of 10 minutes. The `--yes` at the end confirms the install: without it, nothing is installed. The command also installs the programs that are missing.",
-  "   4. Run `npx --yes flyee@latest doctor --json`. Every item of `adapters` should come as `true`: if one comes as `false`, do the login of step 1, which writes the files. In `programs` and in `credentials`, the field `slug` says which app each line belongs to, and the result of the install says which apps came in. In their lines, a program with `present` as `false` and a key with `set` as `false` are what is still missing: take care of those only, as described in the two items below.",
-  "   5. To use the app, read its `SKILL.md` at `.flyee/modules/<app>/skills/<skill>/SKILL.md` and go on in this same conversation: the person can already ask for what the app does.",
+    ". If they asked for a job and not for an app, choose the app that does that job from the catalog list in the flyee block of the project's `AGENTS.md`, or from `npx --yes flyee@latest catalog --json`, which changes nothing.",
+  '   2. Say in one plain sentence which app you are about to install and what it does, like "I am installing the app X, which does Y", and, without waiting for an answer, run `npx --yes flyee@latest add <app> --yes --json`, with a time limit of 10 minutes. Do not list permissions or files: mention a key or a program only when the person has to act. The `--yes` at the end confirms the install: without it, nothing is installed. The command also installs the programs that are missing.',
+  "   3. Run `npx --yes flyee@latest doctor --json`. Every item of `adapters` should come as `true`: if one comes as `false`, do the login of step 1, which writes the files. In `programs` and in `credentials`, the field `slug` says which app each line belongs to, and the result of the install says which apps came in. In their lines, a program with `present` as `false` and a key with `set` as `false` are what is still missing: take care of those only, as described in the two items below.",
+  "   4. To use the app, read its `SKILL.md` at `.flyee/modules/<app>/skills/<skill>/SKILL.md`, one folder per skill, and go on in this same conversation: the person can already ask for what the app does.",
   "- A key of another service that is missing, one at a time: tell the person a page is about to open in their browser and run `npx --yes flyee@latest key set <NAME> --browser --json`. The command returns at once, and the page stays open for 15 minutes for them to paste the key. When they say it is saved, check with `npx --yes flyee@latest key list --json`. Never ask for the key in the conversation. If they paste a key into the conversation, do not use it: tell them to replace that key at the service that issued it and to paste the new one into the page, which you open again with the same command. If they do not have the key yet, say which one is still missing and move on: the app says so when it needs it. With no browser on this computer, or with the person away from its screen, stop and tell them so.",
   "- A system program that is still missing, such as ffmpeg: tell the person what you are about to install and, with their yes, run `npx --yes flyee@latest need <program> --yes --json`, with a time limit of 10 minutes. If the result brings `needs_member`, it is the one step that is theirs to take, such as an administrator password: show only that step and, when they say it is done, run the command again.",
   "- Update the apps: `npx --yes flyee@latest update --json`, with a time limit of 10 minutes. If new versions came, read again the flyee block in `AGENTS.md` and the `SKILL.md` of each updated app, because the version you read before is now behind, and go on in this same conversation.",
