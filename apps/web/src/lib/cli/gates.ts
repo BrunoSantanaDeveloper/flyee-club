@@ -84,10 +84,11 @@ export type CliSpec = {
   /** Refuse an inactive workspace (default true). */
   requireActive?: boolean;
   /**
-   * Let a revoked device through to the executor. Only the registration
-   * endpoint: a machine the member disconnected comes back through a NEW
-   * login, and `register_member_device` revives it when the token family
-   * differs (and refuses it when it does not).
+   * Let a revoked device through to the executor, whatever its token family.
+   * Only the registration endpoint: a machine the member disconnected comes
+   * back through a NEW login, and `register_member_device` revives it when the
+   * token family differs (and refuses it when it does not). Elsewhere a newer
+   * family passes as a machine not registered yet, and the old one is refused.
    */
   allowRevokedDevice?: boolean;
 };
@@ -302,8 +303,14 @@ export async function runCliRequest(
   if (deviceHeader) {
     device = await deps.findDevice(service, auth.userId, deviceHeader);
     if (device?.revokedAt && !spec.allowRevokedDevice) {
-      await trail("denied_device");
-      return cliError("device_revoked", 403, locale);
+      // The row keeps the token family it had when it was disconnected, and that family stays refused.
+      // A newer one comes from a new login the member approved: until POST /api/cli/installs revives
+      // the row (register_member_device, the same rule), the machine is simply not registered yet.
+      if (!auth.familyId || auth.familyId === device.tokenFamilyId) {
+        await trail("denied_device");
+        return cliError("device_revoked", 403, locale);
+      }
+      device = null;
     }
   }
   if (spec.device === "required") {

@@ -49,15 +49,15 @@ function harness(overrides: Partial<CliDeps> = {}) {
   const spec: CliSpec = { endpoint: "catalog", scope: "catalog:read", device: "required" };
   const run = (
     headers: Record<string, string>,
-    outcome: CliOutcome | (() => Promise<CliOutcome>) = { ok: true, body: { fine: true } },
+    outcome: CliOutcome | ((context: { device: unknown }) => Promise<CliOutcome>) = { ok: true, body: { fine: true } },
     specOverride: Partial<CliSpec> = {},
   ) =>
     runCliRequest(
       new Request("https://flyee.club/api/cli/catalog", { headers }),
       { ...spec, ...specOverride },
-      async () => {
+      async (context) => {
         executed.push("ran");
-        return typeof outcome === "function" ? outcome() : outcome;
+        return typeof outcome === "function" ? outcome(context) : outcome;
       },
       deps,
     );
@@ -150,13 +150,42 @@ describe("runCliRequest", () => {
         name: null,
         revokedAt: "2026-09-30T00:00:00Z",
         lastUpdateAt: null,
-        tokenFamilyId: null,
+        tokenFamilyId: "family-1",
       }),
     });
     const response = await revoked.run(AUTHORIZED);
     expect(response.status).toBe(403);
     expect((await response.json()).error).toBe("device_revoked");
     expect(revoked.trail.map((row) => row.status)).toEqual(["denied_device"]);
+  });
+
+  it("lets a disconnected machine back through a new login, as a machine not registered yet", async () => {
+    // The operator's case of 2026-10-22: every CLI asks /me right after the login, before /installs.
+    const reconnected = harness({
+      findDevice: async (_service, _user, deviceId) => ({
+        id: "d1",
+        deviceId,
+        name: "Laptop",
+        revokedAt: "2026-10-22T00:00:00Z",
+        lastUpdateAt: null,
+        tokenFamilyId: "family-0",
+      }),
+    });
+    let seen: unknown = "unset";
+    const me = await reconnected.run(
+      AUTHORIZED,
+      async (context) => {
+        seen = context.device;
+        return { ok: true, body: { fine: true } };
+      },
+      { endpoint: "me", device: "optional" },
+    );
+    expect(me.status).toBe(200);
+    // The executor sees no device: the row comes back only through POST /api/cli/installs.
+    expect(seen).toBeNull();
+    // Before it is revived, a package endpoint answers as for any machine not registered yet.
+    const catalog = await reconnected.run(AUTHORIZED);
+    expect((await catalog.json()).error).toBe("device_unknown");
   });
 
   it("lets an optional-device endpoint run without the header, but never for a revoked device", async () => {

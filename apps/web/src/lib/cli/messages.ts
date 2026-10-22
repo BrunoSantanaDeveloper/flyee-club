@@ -56,8 +56,8 @@ const MESSAGES: Record<CliErrorCode, Record<CliLocale, string>> = {
     en: "This machine is not registered to your account yet. Run `npx flyee login` to register it.",
   },
   device_revoked: {
-    "pt-BR": "Este computador foi desconectado da sua conta. Rode `npx flyee login` para conectá-lo de novo.",
-    en: "This machine was disconnected from your account. Run `npx flyee login` to connect it again.",
+    "pt-BR": "Este computador foi desconectado da sua conta. Um login novo o conecta de novo.",
+    en: "This machine was disconnected from your account. A new login connects it again.",
   },
   device_mismatch: {
     "pt-BR": "Esta sessão pertence a outro computador. Rode `npx flyee login` neste.",
