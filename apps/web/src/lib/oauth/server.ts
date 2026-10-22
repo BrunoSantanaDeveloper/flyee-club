@@ -558,7 +558,7 @@ export async function exchangeDeviceCode(
     case "consumed":
       return { ok: false, error: "invalid_grant", description: "This device code was already used." };
     case "expired":
-      return { ok: false, error: "expired_token", description: "The code expired. Run `npx flyee login` again." };
+      return { ok: false, error: "expired_token", description: "The code expired. A new login gives a new one." };
     case "denied":
       return { ok: false, error: "access_denied", description: "The member denied the request." };
     case "slow_down":

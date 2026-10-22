@@ -32,12 +32,12 @@ export type CliErrorCode = (typeof CLI_ERROR_CODES)[number];
 
 const MESSAGES: Record<CliErrorCode, Record<CliLocale, string>> = {
   invalid_token: {
-    "pt-BR": "Sua sessão na CLI expirou ou foi encerrada. Rode `npx flyee login` para entrar de novo.",
-    en: "Your CLI session expired or was signed out. Run `npx flyee login` to sign in again.",
+    "pt-BR": "A conexão deste computador precisa ser renovada. Um login novo resolve.",
+    en: "This machine's connection needs renewing. A new login does it.",
   },
   insufficient_scope: {
-    "pt-BR": "Esta conexão não tem a permissão necessária. Rode `npx flyee login` e aprove todas as permissões.",
-    en: "This connection lacks the permission needed. Run `npx flyee login` and approve every permission.",
+    "pt-BR": "Este login não tem todas as permissões que o flyee usa. Um login novo, aprovando tudo, resolve.",
+    en: "This login lacks some permissions flyee uses. A new login, approving all of them, fixes it.",
   },
   not_entitled: {
     "pt-BR": "Sua conta não tem um plano ativo. Veja as opções no painel.",
@@ -52,16 +52,16 @@ const MESSAGES: Record<CliErrorCode, Record<CliLocale, string>> = {
     en: "This call must name the machine (X-Flyee-Device header). Update the CLI.",
   },
   device_unknown: {
-    "pt-BR": "Este computador ainda não está registrado na sua conta. Rode `npx flyee login` para registrá-lo.",
-    en: "This machine is not registered to your account yet. Run `npx flyee login` to register it.",
+    "pt-BR": "Este computador ainda não está registrado na sua conta. O flyee o registra e tenta de novo.",
+    en: "This machine is not registered on your account yet. flyee registers it and tries again.",
   },
   device_revoked: {
     "pt-BR": "Este computador foi desconectado da sua conta. Um login novo o conecta de novo.",
     en: "This machine was disconnected from your account. A new login connects it again.",
   },
   device_mismatch: {
-    "pt-BR": "Esta sessão pertence a outro computador. Rode `npx flyee login` neste.",
-    en: "This session belongs to another machine. Run `npx flyee login` on this one.",
+    "pt-BR": "Esta conexão pertence a outro computador. Um login novo neste computador resolve.",
+    en: "This connection belongs to another machine. A new login on this machine fixes it.",
   },
   device_limit_reached: {
     "pt-BR":
