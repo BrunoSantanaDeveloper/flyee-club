@@ -4,8 +4,9 @@ import AiPricesAdmin from "./components/ai-prices-admin";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { Alert, Breadcrumbs, Card, CardContent, Grid, Typography } from "@mui/material";
+import { Alert, Box, Breadcrumbs, Card, CardContent, Grid, Typography } from "@mui/material";
 
+import InfoHint from "@/components/product/info-hint";
 import { isSupabaseConfigured } from "@flyee/auth";
 import { createClient } from "@flyee/auth/client";
 
@@ -67,9 +68,16 @@ export default function AdminAi() {
         <Grid size={12}>
           <Card component="section">
             <CardContent className="flex flex-col gap-3">
-              <Typography variant="h6" component="h2" className="mb-0">
-                Custo dos modelos
-              </Typography>
+              <Box className="flex flex-row items-center gap-1">
+                <Typography variant="h6" component="h2" className="mb-0">
+                  Custo dos modelos
+                </Typography>
+                <InfoHint
+                  label="Quanto cada modelo cobra por milhão de tokens, na moeda da tabela do provedor (dólar, no caso dos nossos). Um modelo sem preço entra no livro como sem preço, e os consoles dizem quantas são."
+                  placement="bottom-start"
+                  className="self-center"
+                />
+              </Box>
               <AiPricesAdmin />
             </CardContent>
           </Card>

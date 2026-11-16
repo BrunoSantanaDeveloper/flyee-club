@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
-import { Alert, Box, Button, Chip, FormControl, Grid, InputLabel, MenuItem, Select, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, FormControl, Grid, InputLabel, MenuItem, Select } from "@mui/material";
 
 import EmptyState from "@/components/product/empty-state";
 import ModuleTile from "@/components/product/module-tile";
 import PageHeader from "@/components/product/page-header";
-import NiCatalog from "@/icons/nexture/ni-catalog";
-import NiFilter from "@/icons/nexture/ni-filter";
+import SectionTitle from "@/components/product/section-title";
+import IllustrationDocumentation from "@/icons/illustrations/illustration-documentation";
+import IllustrationLaunch from "@/icons/illustrations/illustration-launch";
 import type { loadCatalog } from "@/lib/catalog/read";
 import type { PlannedApp } from "@/lib/member/community";
 import { aiToolName, MODULE_TYPES } from "@/lib/member/labels";
@@ -108,14 +109,7 @@ export default function ModulesView({ state }: { state: ModulesState }) {
   const comingSoon =
     planned.length > 0 ? (
       <Box component="section" aria-labelledby="modules-soon-title" className="flex flex-col gap-3">
-        <Box className="flex flex-col gap-1">
-          <Typography id="modules-soon-title" variant="h5" component="h2" className="mb-0">
-            {t("modules-soon-title")}
-          </Typography>
-          <Typography variant="body2" className="text-text-secondary">
-            {t("modules-soon-body")}
-          </Typography>
-        </Box>
+        <SectionTitle id="modules-soon-title" title={t("modules-soon-title")} description={t("modules-soon-body")} />
         <Grid container spacing={3}>
           {planned.map((app) => {
             const trailInfo = app.trail ? state.trails.find((item) => item.slug === app.trail) : undefined;
@@ -143,7 +137,7 @@ export default function ModulesView({ state }: { state: ModulesState }) {
       <Box className="flex flex-col gap-6">
         {header}
         <EmptyState
-          icon={<NiCatalog size="large" />}
+          illustration={<IllustrationLaunch />}
           title={t("modules-empty-title")}
           description={t("modules-empty-body")}
           action={{ label: t("modules-empty-cta"), href: "/roadmap" }}
@@ -231,7 +225,7 @@ export default function ModulesView({ state }: { state: ModulesState }) {
 
       {visible.length === 0 ? (
         <EmptyState
-          icon={<NiFilter size="large" />}
+          illustration={<IllustrationDocumentation />}
           title={t("modules-filtered-empty-title")}
           description={t("modules-filtered-empty-body")}
           action={

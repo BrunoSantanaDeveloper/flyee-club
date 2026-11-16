@@ -27,8 +27,9 @@ import {
 
 import DialogHeader from "@/components/product/dialog-header";
 import EmptyState from "@/components/product/empty-state";
+import InfoHint from "@/components/product/info-hint";
 import PageHeader from "@/components/product/page-header";
-import NiFlag from "@/icons/nexture/ni-flag";
+import IllustrationLaunch from "@/icons/illustrations/illustration-launch";
 import NiPlus from "@/icons/nexture/ni-plus";
 import { type Localized, textOf } from "@/lib/admin/catalog";
 import { formatNumber } from "@/lib/admin/format";
@@ -273,13 +274,16 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
         <Grid size={12}>
           <Card component="section" aria-labelledby="roadmap-leaders-title">
             <CardContent className="flex flex-col gap-2">
-              <Typography id="roadmap-leaders-title" variant="subtitle1" component="h2" className="mb-0">
-                Mais votado do mês
-              </Typography>
-              <Typography variant="body2" className="text-text-secondary">
-                O mais votado de cada mês entra em produção: na virada do mês, planeje o líder do mês anterior. Conta os
-                votos dados no mês, entre as ideias abertas.
-              </Typography>
+              <Box className="flex flex-row items-center gap-1">
+                <Typography id="roadmap-leaders-title" variant="subtitle1" component="h2" className="mb-0">
+                  Mais votado do mês
+                </Typography>
+                <InfoHint
+                  label="O mais votado de cada mês entra em produção: na virada do mês, planeje o líder do mês anterior. Conta os votos dados no mês, entre as ideias abertas."
+                  placement="bottom-start"
+                  className="self-center"
+                />
+              </Box>
               {leaders.map(({ label, leader }) => {
                 const item = state.items.find((entry) => entry.id === leader.itemId);
                 return (
@@ -314,7 +318,7 @@ export default function RoadmapAdminView({ state }: { state: RoadmapAdminState }
       <Grid size={12}>
         {state.items.length === 0 ? (
           <EmptyState
-            icon={<NiFlag size="large" />}
+            illustration={<IllustrationLaunch />}
             title="O roadmap está vazio"
             description="Proponha as primeiras ideias de ferramenta. Assinantes votam no painel, e os votos dizem o que construir primeiro."
             action={{ label: "Propor a primeira ideia", onClick: () => setEditing("new") }}

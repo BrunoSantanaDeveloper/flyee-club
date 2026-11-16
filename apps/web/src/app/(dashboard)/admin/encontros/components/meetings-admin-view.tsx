@@ -10,7 +10,7 @@ import { Alert, Box, Button, Card, CardActionArea, CardContent, Grid, Typography
 import EmptyState from "@/components/product/empty-state";
 import PageHeader from "@/components/product/page-header";
 import { type StatusTone } from "@/components/product/status-chip";
-import NiCalendar from "@/icons/nexture/ni-calendar";
+import IllustrationPlatforms from "@/icons/illustrations/illustration-platforms";
 import NiPlus from "@/icons/nexture/ni-plus";
 import { textOf } from "@/lib/admin/catalog";
 import { formatDateTime, formatNumber } from "@/lib/admin/format";
@@ -96,7 +96,7 @@ export default function MeetingsAdminView({ state }: { state: MeetingsAdminState
       <Grid size={12}>
         {state.meetings.length === 0 ? (
           <EmptyState
-            icon={<NiCalendar size="large" />}
+            illustration={<IllustrationPlatforms />}
             title="Nenhum encontro ainda"
             description="Crie o primeiro: escreva a página, marque a data, cole o link da sala e abra as inscrições. Assinantes se inscrevem pelo painel."
             action={{ label: "Criar o primeiro encontro", onClick: () => setCreating(true) }}

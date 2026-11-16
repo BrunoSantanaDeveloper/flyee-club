@@ -10,7 +10,7 @@ import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 import ConfirmActionDialog from "@/components/product/confirm-action-dialog";
 import EmptyState from "@/components/product/empty-state";
 import StatusChip from "@/components/product/status-chip";
-import NiUploadCloud from "@/icons/nexture/ni-upload-cloud";
+import IllustrationLaunch from "@/icons/illustrations/illustration-launch";
 import { type AdminVersion, textOf } from "@/lib/admin/catalog";
 import { formatBytes, formatDate, formatNumber } from "@/lib/admin/format";
 import { AI_TOOL_LABEL, labelOf, PERMISSION_KIND_LABEL, VERSION_STATUS_LABEL } from "@/lib/admin/labels";
@@ -87,7 +87,9 @@ export default function VersionsList({
   if (versions.length === 0) {
     return (
       <EmptyState
-        icon={<NiUploadCloud size="large" />}
+        layout="row"
+        titleAs="h3"
+        illustration={<IllustrationLaunch />}
         title="Nenhuma versão enviada"
         description="Envie o primeiro pacote acima. Ele entra como rascunho; depois de publicado, aparece para quem tem acesso e a ferramenta pode ir para o catálogo."
       />

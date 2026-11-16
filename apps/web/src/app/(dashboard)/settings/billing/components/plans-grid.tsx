@@ -26,6 +26,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import InfoHint from "@/components/product/info-hint";
 import { COOKIE_KEYS } from "@/constants";
 import NiCheck from "@/icons/nexture/ni-check";
 import { accessTermParts } from "@/lib/access-term";
@@ -232,13 +233,15 @@ export default function PlansGrid({
       <Card component="section">
         <CardContent className="flex flex-col gap-4">
           <Box className="flex flex-wrap items-start justify-between gap-3">
-            <Box>
-              <Typography variant="h5" component="h2" className="card-title">
+            <Box className="card-title flex flex-row items-center gap-1">
+              <Typography variant="h5" component="h2" className="mb-0">
                 {offerPlan ? t("billing-offer-title") : t("billing-plans-title")}
               </Typography>
-              <Typography variant="body2" className="text-text-secondary">
-                {offerPlan ? t("billing-offer-body") : t("billing-plans-body")}
-              </Typography>
+              <InfoHint
+                label={offerPlan ? t("billing-offer-body") : t("billing-plans-body")}
+                placement="bottom-start"
+                className="self-center"
+              />
             </Box>
             <Button variant="text" color="grey" size="small" onClick={() => onCurrencyChange(OTHER_CURRENCY[currency])}>
               {t("billing-currency-switch", {

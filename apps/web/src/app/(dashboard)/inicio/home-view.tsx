@@ -6,9 +6,11 @@ import { Fragment } from "react";
 
 import { Alert, Box, Button, Card, CardContent, Grid, Typography } from "@mui/material";
 
+import InfoHint from "@/components/product/info-hint";
 import InstallPathBlock from "@/components/product/install-path-block";
 import OnboardingChecklistCard from "@/components/product/onboarding-checklist-card";
 import PageHeader from "@/components/product/page-header";
+import SectionTitle from "@/components/product/section-title";
 import { TILE_TONE } from "@/components/product/tile-tone";
 import UpsellCard from "@/components/product/upsell-card";
 import UsageMeter from "@/components/product/usage-meter";
@@ -136,14 +138,10 @@ export default function HomeView({ state }: { state: HomeState }) {
                 <NiBadge size="large" />
               </Box>
               <CardContent className="flex flex-1 flex-col gap-3">
-                <Box className="flex flex-col gap-1">
-                  <Typography variant="subtitle1" component="h2" className="mb-0">
-                    {t("home-tier-title", { tier: t(TIER_LABEL[state.tier]) })}
-                  </Typography>
-                  <Typography variant="body2" className="text-text-secondary">
-                    {t("home-tier-body")}
-                  </Typography>
-                </Box>
+                {/* The list under the title is what the access includes: no line says it again. */}
+                <Typography variant="subtitle1" component="h2" className="mb-0">
+                  {t("home-tier-title", { tier: t(TIER_LABEL[state.tier]) })}
+                </Typography>
                 <Box component="ul" className="m-0 flex list-none flex-col gap-1.5 p-0">
                   {state.features.map((feature) => (
                     <Box component="li" key={feature} className="flex flex-row items-start gap-2">
@@ -182,10 +180,8 @@ export default function HomeView({ state }: { state: HomeState }) {
                 <Typography variant="subtitle1" component="h2" className="mb-0">
                   {t("home-install-title")}
                 </Typography>
+                <InfoHint label={t("home-install-body")} placement="bottom-start" className="self-center" />
               </Box>
-              <Typography variant="body2" className="text-text-secondary">
-                {t("home-install-body")}
-              </Typography>
               <InstallPathBlock locale={state.locale} cloudHosts={state.cloudHosts} />
               {devices === null ? (
                 <Typography variant="body2" className="text-text-secondary">
@@ -247,14 +243,12 @@ export default function HomeView({ state }: { state: HomeState }) {
 
       {state.services.length > 0 ? (
         <Box component="section" aria-labelledby="home-services-title" className="flex flex-col gap-3">
-          <Box className="flex flex-col gap-1">
-            <Typography id="home-services-title" variant="subtitle1" component="h2" className="mb-0">
-              {t("home-services-title")}
-            </Typography>
-            <Typography variant="body2" className="text-text-secondary">
-              {t("home-services-body")}
-            </Typography>
-          </Box>
+          <SectionTitle
+            id="home-services-title"
+            variant="subtitle1"
+            title={t("home-services-title")}
+            description={t("home-services-body")}
+          />
           <Grid container spacing={4}>
             {state.services.map((service) => (
               <Grid key={service.offer} size={{ xs: 12, lg: 4 }}>

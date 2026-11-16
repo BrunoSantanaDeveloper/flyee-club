@@ -19,6 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import InfoHint from "@/components/product/info-hint";
 import { setClientLocale } from "@/i18n/locale";
 import { updateProfile } from "@/lib/member/actions";
 import { AI_TOOL_OPTIONS, aiToolName, SEGMENT_OPTIONS } from "@/lib/member/labels";
@@ -103,13 +104,11 @@ export default function MemberCard() {
     <Grid size={12}>
       <Card>
         <CardContent className="flex flex-col gap-5">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-row items-center gap-1">
             <Typography variant="h5" component="h2" className="mb-0">
               {t("settings-member-title")}
             </Typography>
-            <Typography variant="body2" className="text-text-secondary">
-              {t("settings-member-body")}
-            </Typography>
+            <InfoHint label={t("settings-member-body")} placement="bottom-start" className="self-center" />
           </div>
 
           {!initial ? (

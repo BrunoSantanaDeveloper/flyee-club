@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Alert, Button, FormControlLabel, Radio, RadioGroup, TextField, Typography } from "@mui/material";
 
 import { CnpjField } from "@/components/product/fields";
+import InfoHint from "@/components/product/info-hint";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@flyee/auth/client";
 import { isValidCnpj, onlyDigits } from "@flyee/fields";
@@ -63,12 +64,16 @@ export function LaunchAdmin() {
 
   return (
     <div className="flex max-w-xl flex-col gap-4">
-      <Typography variant="h6" component="h2">
-        Lançamento do site
-      </Typography>
-      <Typography variant="body1" className="text-text-secondary">
-        Para onde levam os botões principais do site público. Login e cadastro continuam acessíveis nos dois estados.
-      </Typography>
+      <div className="flex flex-row items-center gap-1">
+        <Typography variant="h6" component="h2" className="mb-0">
+          Lançamento do site
+        </Typography>
+        <InfoHint
+          label="Para onde levam os botões principais do site público. Login e cadastro continuam acessíveis nos dois estados."
+          placement="bottom-start"
+          className="self-center"
+        />
+      </div>
       <RadioGroup
         value={stage}
         onChange={(event) => {

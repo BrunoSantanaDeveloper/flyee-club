@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Box, Card, CardContent, Chip, Grid, Typography } from "@mui/material";
 
 import { describeAgent } from "@/app/(dashboard)/admin/audit/components/access-events-admin";
+import InfoHint from "@/components/product/info-hint";
 import { createClient } from "@flyee/auth/client";
 
 type AccessRow = {
@@ -54,12 +55,12 @@ export default function RecentActivityCard() {
     <Grid size={12}>
       <Card component="section">
         <CardContent className="flex flex-col gap-4">
-          <Typography variant="h5" component="h2" className="card-title">
-            {t("security-recent-title")}
-          </Typography>
-          <Typography variant="body1" className="text-text-secondary">
-            {t("security-recent-body")}
-          </Typography>
+          <Box className="card-title flex flex-row items-center gap-1">
+            <Typography variant="h5" component="h2" className="mb-0">
+              {t("security-recent-title")}
+            </Typography>
+            <InfoHint label={t("security-recent-body")} placement="bottom-start" className="self-center" />
+          </Box>
           {loaded && !rows.length && (
             <Typography variant="body2" className="text-text-secondary">
               {t("security-recent-empty")}

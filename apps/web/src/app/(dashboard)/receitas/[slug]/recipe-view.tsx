@@ -78,7 +78,7 @@ export default function RecipeView({ slug, state }: { slug: string; state: Recip
 
   return (
     <Box className="flex flex-col gap-6">
-      <PageHeader title={name} crumbs={crumbs(name)} description={recipe.summary ?? undefined} />
+      <PageHeader title={name} crumbs={crumbs(name)} detail={recipe.summary} />
 
       <Card>
         <CardContent className="flex flex-col gap-2">

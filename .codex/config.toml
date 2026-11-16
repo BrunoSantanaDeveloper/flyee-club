@@ -1,3 +1,8 @@
+# Codex reads AGENTS.md only up to this many bytes (32 KiB by default). The
+# rules come first and the project state last (scripts/sync-agent-harness.mjs);
+# 64 KiB takes the root CLAUDE.md rules, apps/web/CLAUDE.md and .claude/rules.
+project_doc_max_bytes = 65536
+
 [features]
 hooks = true
 

@@ -17,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import InfoHint from "@/components/product/info-hint";
 import { createClient } from "@flyee/auth/client";
 
 type Factor = { id: string; friendly_name?: string | null; status: string };
@@ -103,12 +104,12 @@ export default function TwoFactorCard() {
     <Grid size={12}>
       <Card component="section">
         <CardContent className="flex flex-col gap-4">
-          <Typography variant="h5" component="h2" className="card-title">
-            {t("security-two-factor-title")}
-          </Typography>
-          <Typography variant="body1" className="text-text-secondary">
-            {t("security-two-factor-body")}
-          </Typography>
+          <Box className="card-title flex flex-row items-center gap-1">
+            <Typography variant="h5" component="h2" className="mb-0">
+              {t("security-two-factor-title")}
+            </Typography>
+            <InfoHint label={t("security-two-factor-body")} placement="bottom-start" className="self-center" />
+          </Box>
 
           {verifiedFactors.map((factor) => (
             <Box key={factor.id} className="flex flex-row items-center gap-2">

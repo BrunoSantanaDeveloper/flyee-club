@@ -61,14 +61,10 @@ export default function EmailsCard() {
     <Grid size={12}>
       <Card component="section" aria-labelledby="settings-emails-title">
         <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <Typography id="settings-emails-title" variant="h5" component="h2" className="mb-0">
-              {t("settings-emails-title")}
-            </Typography>
-            <Typography variant="body2" className="text-text-secondary">
-              {t("settings-emails-body")}
-            </Typography>
-          </div>
+          {/* "E-mails" says what the card is: no line under it says it again. */}
+          <Typography id="settings-emails-title" variant="h5" component="h2" className="mb-0">
+            {t("settings-emails-title")}
+          </Typography>
 
           {receives === null ? (
             <Skeleton variant="rounded" height={56} />

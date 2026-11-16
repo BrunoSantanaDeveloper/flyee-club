@@ -26,10 +26,11 @@ import {
 import DialogHeader from "@/components/product/dialog-header";
 import EmptyState from "@/components/product/empty-state";
 import { QuickActionTile } from "@/components/product/home-tiles";
+import InfoHint from "@/components/product/info-hint";
 import PageHeader from "@/components/product/page-header";
 import StatusChip, { type StatusTone } from "@/components/product/status-chip";
 import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
-import NiFlag from "@/icons/nexture/ni-flag";
+import IllustrationLaunch from "@/icons/illustrations/illustration-launch";
 import NiHeart from "@/icons/nexture/ni-heart";
 import NiPlus from "@/icons/nexture/ni-plus";
 import { castRoadmapVote, proposeRoadmapItem, withdrawRoadmapVote } from "@/lib/member/actions";
@@ -138,7 +139,7 @@ export default function RoadmapView({ state }: { state: RoadmapState }) {
       <Box className="flex flex-col gap-6">
         {header}
         <EmptyState
-          icon={<NiFlag size="large" />}
+          illustration={<IllustrationLaunch />}
           title={t("roadmap-empty-title")}
           description={t("roadmap-empty-body")}
           action={{ label: t("roadmap-propose"), onClick: propose }}
@@ -172,25 +173,36 @@ export default function RoadmapView({ state }: { state: RoadmapState }) {
         />
       ) : null}
 
-      <Grid container spacing={3}>
-        {COLUMNS.map((column) => {
-          const items = visible.filter((item) => item.status === column.status);
-          return (
-            <Grid key={column.status} size={{ xs: 12, md: 6, xl: 3 }} className="flex flex-col gap-3">
-              <Typography variant="subtitle1" component="h2" className="mb-0">
-                {t(column.label)} <span className="text-text-secondary">({items.length})</span>
-              </Typography>
-              {items.length === 0 ? (
-                <Typography variant="body2" className="text-text-secondary">
-                  {t("roadmap-column-empty")}
+      {/* With nothing published yet (only the member's own proposals, below), one drawing says so instead of a
+          row of columns that each say "nothing here". */}
+      {visible.length === 0 ? (
+        <EmptyState
+          layout="row"
+          illustration={<IllustrationLaunch />}
+          title={t("roadmap-empty-title")}
+          description={t("roadmap-empty-body")}
+        />
+      ) : (
+        <Grid container spacing={3}>
+          {COLUMNS.map((column) => {
+            const items = visible.filter((item) => item.status === column.status);
+            return (
+              <Grid key={column.status} size={{ xs: 12, md: 6, xl: 3 }} className="flex flex-col gap-3">
+                <Typography variant="subtitle1" component="h2" className="mb-0">
+                  {t(column.label)} <span className="text-text-secondary">({items.length})</span>
                 </Typography>
-              ) : (
-                items.map((item) => <RoadmapCard key={item.id} item={item} canVote={state.canVote} />)
-              )}
-            </Grid>
-          );
-        })}
-      </Grid>
+                {items.length === 0 ? (
+                  <Typography variant="body2" className="text-text-secondary">
+                    {t("roadmap-column-empty")}
+                  </Typography>
+                ) : (
+                  items.map((item) => <RoadmapCard key={item.id} item={item} canVote={state.canVote} />)
+                )}
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
 
       {mine.length > 0 ? (
         <Box component="section" aria-labelledby="roadmap-mine-title" className="flex flex-col gap-3">
@@ -226,13 +238,11 @@ export default function RoadmapView({ state }: { state: RoadmapState }) {
 
       <Card component="section" aria-labelledby="roadmap-custom-title">
         <CardContent className="flex flex-col gap-3">
-          <Box className="flex flex-col gap-1">
+          <Box className="flex flex-row items-center gap-1">
             <Typography id="roadmap-custom-title" variant="subtitle1" component="h2" className="mb-0">
               {t("roadmap-custom-title")}
             </Typography>
-            <Typography variant="body2" className="text-text-secondary">
-              {t("roadmap-custom-body")}
-            </Typography>
+            <InfoHint label={t("roadmap-custom-body")} placement="bottom-start" className="self-center" />
           </Box>
           <Box className="flex flex-row flex-wrap items-center gap-2">
             <Button variant="contained" startIcon={<NiPlus size="medium" />} onClick={propose}>

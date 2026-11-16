@@ -13,7 +13,7 @@ import EmptyState from "@/components/product/empty-state";
 import PageHeader from "@/components/product/page-header";
 import ProductMarkdown from "@/components/product/product-markdown";
 import { TILE_TONE } from "@/components/product/tile-tone";
-import NiBell from "@/icons/nexture/ni-bell";
+import IllustrationEmail from "@/icons/illustrations/illustration-email";
 import NiSparkle from "@/icons/nexture/ni-sparkle";
 import type { NewsItem } from "@/lib/member/news";
 import { cn } from "@/lib/utils";
@@ -71,7 +71,7 @@ export default function NewsView({ state }: { state: NewsState }) {
       {header}
       {state.items.length === 0 ? (
         <EmptyState
-          icon={<NiBell size="large" />}
+          illustration={<IllustrationEmail />}
           title={t("news-empty-title")}
           description={t("news-empty-body")}
           action={{ label: t("news-empty-cta"), href: "/modulos" }}

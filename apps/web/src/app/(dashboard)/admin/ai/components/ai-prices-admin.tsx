@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { Alert, Box, Button, Chip, IconButton, TextField, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, IconButton, TextField, Tooltip } from "@mui/material";
 
 import EmptyState from "@/components/product/empty-state";
+import IllustrationAnalytics from "@/icons/illustrations/illustration-analytics";
 import NiBinEmpty from "@/icons/nexture/ni-bin-empty";
-import NiMoney from "@/icons/nexture/ni-money";
 import NiPlus from "@/icons/nexture/ni-plus";
 import NiRefresh from "@/icons/nexture/ni-refresh";
 import { recordAudit } from "@/lib/audit";
@@ -210,12 +210,7 @@ export default function AiPricesAdmin() {
 
   return (
     <Box className="flex flex-col gap-4">
-      <Typography variant="body1" className="text-text-secondary">
-        Quanto cada modelo cobra, por milhão de tokens, na moeda da tabela do provedor (dólar, no caso dos nossos).
-        Enquanto um modelo não tiver preço aqui, as chamadas dele entram no livro como <strong>sem preço</strong> — e os
-        consoles dizem quantas são, em vez de mostrarem um mês barato.
-      </Typography>
-
+      {/* What the table is sits behind the "i" beside the card's title (page.tsx). */}
       {missing.length > 0 && (
         <Alert severity="warning" className="neutral bg-background-paper/60!">
           Já gastamos com {missing.length === 1 ? "um modelo sem preço" : "modelos sem preço"}:{" "}
@@ -303,7 +298,10 @@ export default function AiPricesAdmin() {
 
         {rows.length === 0 && !loading && (
           <EmptyState
-            icon={<NiMoney size="large" />}
+            layout="row"
+            framed={false}
+            titleAs="h3"
+            illustration={<IllustrationAnalytics />}
             title="Nenhum preço cadastrado"
             description="Enquanto esta tabela estiver vazia, todo custo de IA aparece como zero — nas contas, no dossiê e no resumo do mês. Um preço por modelo já faz os números existirem."
             action={{

@@ -141,11 +141,8 @@ export default function ModuleView({ slug, state }: { slug: string; state: Modul
 
   return (
     <Box className="flex flex-col gap-6">
-      <PageHeader
-        title={module.name ?? slug}
-        crumbs={crumbs(module.name ?? slug)}
-        description={module.summary ?? undefined}
-      />
+      {/* What the app does is the record's own data, so it stays in sight under the title. */}
+      <PageHeader title={module.name ?? slug} crumbs={crumbs(module.name ?? slug)} detail={module.summary} />
 
       <Grid container spacing={4}>
         <Grid size={{ xs: 12, lg: 8 }} className="flex flex-col gap-4">

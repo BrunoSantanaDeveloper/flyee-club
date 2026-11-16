@@ -23,7 +23,8 @@ import { type GridColDef, type GridRenderCellParams } from "@mui/x-data-grid";
 
 import DataTable from "@/components/data-grid/data-table";
 import EmptyState from "@/components/product/empty-state";
-import NiTicket from "@/icons/nexture/ni-ticket";
+import InfoHint from "@/components/product/info-hint";
+import IllustrationAccess from "@/icons/illustrations/illustration-access";
 import { createClient } from "@flyee/auth/client";
 
 type GrantRow = {
@@ -276,12 +277,13 @@ export default function GrantsAdmin() {
 
   return (
     <Box className="flex flex-col gap-4">
-      <Box className="flex flex-col gap-1">
+      <Box className="flex flex-row items-center gap-1">
         <Typography variant="subtitle1">Kits e cortesias</Typography>
-        <Typography variant="body2" className="text-text-secondary">
-          Direitos que não vêm de assinatura: o kit comprado em pagamento único e as cortesias que você concede. Um kit
-          reembolsado é revogado sozinho pelo webhook do provedor.
-        </Typography>
+        <InfoHint
+          label="Direitos que não vêm de assinatura: o kit comprado em pagamento único e as cortesias que você concede. Um kit reembolsado é revogado sozinho pelo webhook do provedor."
+          placement="bottom-start"
+          className="self-center"
+        />
       </Box>
 
       {error && (
@@ -341,7 +343,8 @@ export default function GrantsAdmin() {
           loading={!loaded}
           noRowsOverlay={
             <EmptyState
-              icon={<NiTicket size="medium" />}
+              layout="row"
+              illustration={<IllustrationAccess />}
               title="Nenhum kit ou cortesia ainda"
               description="Os kits aparecem aqui quando o pagamento único é confirmado; as cortesias, quando você concede uma acima."
               className="border-none"

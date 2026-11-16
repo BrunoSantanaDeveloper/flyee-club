@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Alert, Button, TextField, Typography } from "@mui/material";
 
+import InfoHint from "@/components/product/info-hint";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@flyee/auth/client";
 
@@ -65,12 +66,19 @@ export default function SupportAdmin() {
 
   return (
     <div className="flex max-w-xl flex-col gap-4">
-      <Typography variant="h6" component="h2">
-        Suporte rápido
-      </Typography>
+      <div className="flex flex-row items-center gap-1">
+        <Typography variant="h6" component="h2" className="mb-0">
+          Suporte rápido
+        </Typography>
+        <InfoHint
+          label="Canais do botão flutuante de suporte rápido, no site público e na área logada. Deixe os dois em branco para esconder o widget."
+          placement="bottom-start"
+          className="self-center"
+        />
+      </div>
+      {/* What is typed here is shown to anybody: read before acting, so it stays in sight. */}
       <Typography variant="body1" className="text-text-secondary">
-        Canais do botão flutuante de suporte rápido (site público + área logada). Deixe os dois em branco para esconder
-        o widget. Esses valores são públicos.
+        Esses valores são públicos.
       </Typography>
 
       <TextField

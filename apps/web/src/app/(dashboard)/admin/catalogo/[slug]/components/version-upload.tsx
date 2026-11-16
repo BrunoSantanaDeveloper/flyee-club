@@ -4,6 +4,7 @@ import { useId, useRef, useState } from "react";
 
 import { Alert, Box, Button, Card, CardContent, LinearProgress, Typography } from "@mui/material";
 
+import InfoHint from "@/components/product/info-hint";
 import NiUploadCloud from "@/icons/nexture/ni-upload-cloud";
 import { formatBytes } from "@/lib/admin/format";
 import { createClient } from "@flyee/auth/client";
@@ -106,14 +107,15 @@ export default function VersionUpload({
   return (
     <Card component="section" aria-labelledby={`${inputId}-title`}>
       <CardContent className="flex flex-col gap-4">
-        <Box className="flex flex-col gap-1">
+        <Box className="flex flex-row items-center gap-1">
           <Typography id={`${inputId}-title`} variant="h5" component="h2" className="mb-0">
             Enviar uma versão
           </Typography>
-          <Typography variant="body2" className="text-text-secondary max-w-3xl">
-            O ZIP precisa do flyee.module.json na raiz, com o mesmo slug, trilha e tipo desta ferramenta e uma versão
-            nova. A versão entra como rascunho: confira o checksum e as permissões antes de publicar.
-          </Typography>
+          <InfoHint
+            label="O ZIP precisa do flyee.module.json na raiz, com o mesmo slug, trilha e tipo desta ferramenta e uma versão nova. A versão entra como rascunho: confira o checksum e as permissões antes de publicar."
+            placement="bottom-start"
+            className="self-center"
+          />
         </Box>
         <Box className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <input

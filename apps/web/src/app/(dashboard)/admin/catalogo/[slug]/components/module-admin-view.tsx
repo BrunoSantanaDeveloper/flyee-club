@@ -127,7 +127,7 @@ export default function ModuleAdminView({ state, slug }: { state: ModuleAdminSta
         <PageHeader
           title={textOf(module.name, module.slug)}
           crumbs={crumbs}
-          description={textOf(module.summary, "Sem resumo ainda.")}
+          detail={textOf(module.summary, "Sem resumo ainda.")}
           action={
             <Button variant="outlined" color="grey" onClick={() => setEditing(true)}>
               Editar dados

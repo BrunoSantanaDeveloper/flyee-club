@@ -15,14 +15,20 @@
     {
       "name": "EmptyState",
       "from": "@/components/product/empty-state",
-      "props": "icon, title, badge?, description?, action?, secondaryAction?, className?",
-      "use": "Every zero-data view: icon + why it is empty + the ONE next action. Never a bare 'no data'. An area whose content is still being made passes badge (the translated \"Em breve\"), which renders as a StatusChip above the title."
+      "props": "icon, illustration? (an @/icons/illustrations/* element), title, badge?, description?, action?, secondaryAction?, className?, titleAs?, layout? (stack | row), framed?",
+      "use": "Every zero-data view: icon + why it is empty + the ONE next action. Never a bare 'no data'. An area whose content is still being made passes badge (the translated \"Em breve\"), which renders as a StatusChip above the title. Inside a card whose title is the h2, pass titleAs=\"h3\". A section or list with nothing in it is never left as empty space (the owner, 2026-11-09): give it an `illustration` (the template's line drawings in @/icons/illustrations, in the secondary hue), `layout=\"row\"` for a short band (a section across the page, a table's empty overlay) and `framed={false}` inside a card. Pick the drawing by the subject, one per region of a screen: launch for the first item (the catalog, the roadmap, a first version), documentation for papers, records and a search with no result, platforms for machines, meetings and video, email for news and messages, experiment for recipes, accounts for people, access for rights and sign-ins, storage for backups, analytics for numbers and prices, configure for \"nothing to do\". A state of permission (a guide closed to the plan), of a record that does not exist or of a read that failed keeps its icon."
     },
     {
       "name": "PageHeader",
       "from": "@/components/product/page-header",
-      "props": "title, crumbs[{label,href?}], description?, action?",
-      "use": "The title block of every member screen: the page's ONE <h1>, breadcrumbs back to the home, one sentence on what the screen is for, at most one action. Never hand-write an h1 + Breadcrumbs pair again."
+      "props": "title, crumbs[{label,href?}], description? (behind the i), detail? (a line of state or data), chip?, action?",
+      "use": "The title block of every member screen: the page's ONE <h1>, breadcrumbs back to the home, at most one action. What the screen is for goes behind the \"i\" beside the title (`description`, 200 characters at most, kept by lib/i18n/hint-budget.test.ts), never a paragraph read on every visit (the owner, 2026-11-09); `detail` is one line in sight only for state or data that tells the page apart (what an app does, what a meeting is about); `chip` says where the page's subject stands beside its title. Never hand-write an h1 + Breadcrumbs pair again."
+    },
+    {
+      "name": "SectionTitle",
+      "from": "@/components/product/section-title",
+      "props": "id, title, description? (behind the i), chip?, action?, as? (h2 | h3 | h4), variant? (h5 | h6 | subtitle1 | subtitle2: subtitle2 with as h3 for a section inside a card)",
+      "use": "The heading of a section of a page that is not a card (a row of tiles, a group of cards, a table): its title, what it is behind the \"i\" beside it, where it stands (a StatusChip) and its own action at the right. Never an h2 with a paragraph under it (the owner, 2026-11-09). `variant` keeps the heading style of the screen's other sections (the member home's subtitle1, the catalog's h5). A card's head is CardTitle (template); until it is packaged, a card puts an InfoHint beside its own title."
     },
     {
       "name": "UsageMeter",
@@ -51,8 +57,8 @@
     {
       "name": "QuickActionTile",
       "from": "@/components/product/home-tiles",
-      "props": "href, icon, tone, title, description",
-      "use": "A shortcut: full-height tinted icon column (w-16) + title + one-line description. Four across, never two columns."
+      "props": "href, icon, tone, title, description?",
+      "use": "A shortcut: full-height tinted icon column (w-16) + title. Four across, never two columns. A tile is its icon and its name (the owner, 2026-11-09): a line under it only when it says a state (the month's leader and its votes), never one that repeats the name in other words."
     },
     {
       "name": "ModuleTile",
@@ -99,8 +105,8 @@
     {
       "name": "InfoHint",
       "from": "@/components/product/info-hint",
-      "props": "label/title",
-      "use": "A definition attached to a number. A bare Tooltip on a non-focusable Box disappears on touch and for keyboards — use this instead."
+      "props": "label, placement?, className?",
+      "use": "What a title, a number or a chip is, behind an \"i\" a person opens when they want (a bare Tooltip on a non-focusable Box disappears on touch and for keyboards; this is a real button). 200 characters at most, kept by lib/i18n/hint-budget.test.ts. PageHeader and SectionTitle draw it themselves from their `description`; a card head (CardTitle is still a template) puts it beside its own title, with placement=\"bottom-start\" and className=\"self-center\". Never for what must be read before acting (a consequence, a legal note, personal data, values that become public, the instructions a layperson needs on a page of their own): that stays in sight."
     },
     {
       "name": "StatusChip",
@@ -170,6 +176,31 @@
       "name": "Timeline de atividade",
       "props": "@mui/lab Timeline + TimelineDot variant=outlined + subtitle2/body2 + relative time",
       "use": "'What happened recently' when the order IS the meaning. Recover the shape from the recent-records card in `git show \"ab2e84d:apps/web/src/app/(dashboard)/inicio/page.tsx\"`."
+    },
+    {
+      "name": "CardTitle (cabeça de card)",
+      "props": "id, icon, tone? (TileTone), title, description? (behind the i), detail? (a line in sight), chip? (a StatusChip), actions? (QuickActions), as? (h2 | h3)",
+      "use": "The head of a card a person works through: the icon of what the card is on its family's TILE_TONE tint, the title, and on the right where the card stands (a StatusChip) and what it keeps one click away (QuickActions). What the card is for goes behind the \"i\" beside the title (`description`, about 200 characters at most), never a paragraph under it; `detail` is the one line in sight, only for state or data that tells the card apart (how many a list shows) or for what must be read before acting (a consequence). Until it is built, a card puts an InfoHint beside its own title. A person tells the cards apart, and sees which one asks for something, before reading any of them. A card that leads with a bare heading reads like every other card. Packaged in the ONE project (C:\\AppsProjects\\one, built on this same template): port it from its apps/web/src/components/product/card-title.tsx."
+    },
+    {
+      "name": "StateLine (linha de estado)",
+      "props": "tone (done | waiting | attention | failed | info), children, status?, action?, icon?, emphasis?",
+      "use": "Where ONE thing stands, in a sentence, with an icon in the colour of its state: done (success, a check), waiting (the warning hue, a clock: under way, nobody needs to act; never the primary yellow), attention (accent-3, an exclamation: a person should look or act), failed (error, kept for a failure), info (grey, only said). The words keep the text colours, so the state reads from them too. `status` is the state in its own words at the end of the line, so the states of a list line up on the right and stay on the line on a phone; `action` is the one thing the line still asks for, beside it; `emphasis` boxes the line on its tint when it is the card's answer ('Nada mais a enviar'). Things listed with their states are StateLines, never plain sentences. Packaged in the ONE project (C:\\AppsProjects\\one, built on this same template): port it from its apps/web/src/components/product/state-line.tsx."
+    },
+    {
+      "name": "QuickActions (ações de um clique)",
+      "props": "label, actions[{key, label, icon?, onClick, disabled?}], icon?, text?, align? (left | right)",
+      "use": "What a card keeps out of sight, one click away: a request already fulfilled that may be made again (another copy, a new link), or what a person seldom needs. An icon button with its name on hover (with `text`, words beside the icon) opening a menu, each action with its icon. What the card asks for now stays a button of its own, in view, on the line it is about: never hide in here the only way to do the card's pending job, nor a right the person must find in plain sight (withdrawing a consent, deleting their data), nor a Pro feature, which is offered on its own click (UpgradePrompt). Packaged in the ONE project (C:\\AppsProjects\\one, built on this same template): port it from its apps/web/src/components/product/quick-actions.tsx."
+    },
+    {
+      "name": "OutcomeDialog (desfecho de um ato)",
+      "props": "open, tone? (done | info), title, lines[{key, icon, text}], closeLabel, onClose",
+      "use": "What an act a person just did changed, said whole and in front of them: an answer that binds them (a consent given or taken back), a decision others will act on. A large icon on its tint, the title in the person's words, one consequence a line with its icon, and one button ('Entendi'). An Alert or a toast at the top of the page is read past: an act whose consequences the person must understand is confirmed here. Not for the routine save of a form (the field's own state says it) nor for the beat between setup steps (StepCelebrationDialog). Packaged in the ONE project (C:\\AppsProjects\\one, built on this same template): port it from its apps/web/src/components/product/outcome-dialog.tsx."
+    },
+    {
+      "name": "ProgressSteps / ProgressNow / ProgressBar / ProgressCounts / ProgressList (andamento)",
+      "props": "ProgressSteps(steps[{key,label,state: done|current|next|stopped,when?,icon}], label, stateWords, working?, href?) · ProgressNow(tone: progress|done|stopped, lead, text, extra?, action?, working?) · ProgressBar(steps, reached, state: progress|done|stopped, label) · ProgressCounts(steps[{key,label,icon,count,href,countLabel}], label) · ProgressList(rows[{key,href,title,detail?,step,steps,reached,state,label}], label)",
+      "use": "Where something stands along its way. ProgressSteps draws its steps in order, each with its icon: done (primary tint), under way (the warning hue, never red), still to come (outline), with the day each began, across from md and one under the other on a phone; the step under way turns only while the product works there now (`working`, default true), and a step may link to the card where it is done (`href`). ProgressNow says under it, in a sentence, what happens now and who it is with, with the one action the reader may take, and shows a clock in place of the spinner while the way waits for somebody (`working={false}`). ProgressBar is the same way in small for a row of a list; ProgressCounts shows how many things are at each step, each step a link to its list; ProgressList is the latest few things along their way, one line each with the step in words and its ProgressBar, each a link to it, for a home where the whole list is one click further. A timeline tells every event; this tells the few that mark the way. Packaged in the ONE project (C:\\AppsProjects\\one, built on this same template): port it from its apps/web/src/components/product/progress-steps.tsx."
     }
   ],
   "traps": [

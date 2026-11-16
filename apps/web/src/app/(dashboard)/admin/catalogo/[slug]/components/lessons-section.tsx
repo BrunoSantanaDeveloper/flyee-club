@@ -9,8 +9,9 @@ import { Alert, Box, Button, Card, CardContent, Dialog, DialogActions, DialogCon
 
 import DialogHeader from "@/components/product/dialog-header";
 import EmptyState from "@/components/product/empty-state";
+import InfoHint from "@/components/product/info-hint";
 import StatusChip from "@/components/product/status-chip";
-import NiPlay from "@/icons/nexture/ni-play";
+import IllustrationPlatforms from "@/icons/illustrations/illustration-platforms";
 import NiPlus from "@/icons/nexture/ni-plus";
 import type { AdminLesson } from "@/lib/admin/catalog";
 import { labelOf, LESSON_DEPTH_LABEL, LOCALE_LABEL } from "@/lib/admin/labels";
@@ -159,14 +160,17 @@ export default function LessonsSection({
     <Card component="section" aria-labelledby="lessons-title">
       <CardContent className="flex flex-col gap-4">
         <Box className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <Box className="flex flex-col">
+          <Box className="flex flex-row items-center gap-1">
             <Typography id="lessons-title" variant="h5" component="h2" className="mb-0">
               Vídeos dos guias
             </Typography>
-            <Typography variant="body2" className="text-text-secondary">
-              Um vídeo por profundidade e idioma, mostrado dentro do guia. O texto do guia vem no pacote de cada versão
-              (guides/&lt;idioma&gt;/&lt;profundidade&gt;.md), e a lista de versões diz quais guias cada uma traz.
-            </Typography>
+            <InfoHint
+              label={
+                "Um vídeo por profundidade e idioma, mostrado dentro do guia. O texto do guia vem no pacote de cada versão (guides/<idioma>/<profundidade>.md)."
+              }
+              placement="bottom-start"
+              className="self-center"
+            />
           </Box>
           <Button
             variant="outlined"
@@ -180,7 +184,9 @@ export default function LessonsSection({
 
         {lessons.length === 0 ? (
           <EmptyState
-            icon={<NiPlay size="large" />}
+            framed={false}
+            titleAs="h3"
+            illustration={<IllustrationPlatforms />}
             title="Nenhum vídeo ainda"
             description="O vídeo é opcional: o guia escrito vem no pacote. Um vídeo curto de uso, no topo do guia, mostra em poucos minutos como o app entra no dia a dia."
             action={{ label: "Criar o vídeo de uso", onClick: () => setEditing("new") }}

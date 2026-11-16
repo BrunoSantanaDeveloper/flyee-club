@@ -23,7 +23,8 @@ import CatalogIcon from "@/components/product/catalog-icon";
 import DialogHeader from "@/components/product/dialog-header";
 import EmptyState from "@/components/product/empty-state";
 import StatusChip from "@/components/product/status-chip";
-import NiListSquare from "@/icons/nexture/ni-list-square";
+import IllustrationDocumentation from "@/icons/illustrations/illustration-documentation";
+import IllustrationExperiment from "@/icons/illustrations/illustration-experiment";
 import NiPen from "@/icons/nexture/ni-pen";
 import NiPlus from "@/icons/nexture/ni-plus";
 import {
@@ -93,7 +94,8 @@ export function RecipesTab({
 
       {recipes.length === 0 ? (
         <EmptyState
-          icon={<NiListSquare size="large" />}
+          framed={false}
+          illustration={<IllustrationExperiment />}
           title="Nenhuma receita ainda"
           description={
             modules.length < 2
@@ -466,7 +468,8 @@ export function StoreCategoriesTab({
       </Box>
       {categories.length === 0 ? (
         <EmptyState
-          icon={<NiListSquare size="large" />}
+          framed={false}
+          illustration={<IllustrationDocumentation />}
           title="Nenhuma categoria na loja"
           description="Sem categorias, a loja pública mostra só Todos. Crie a primeira para os visitantes filtrarem os apps."
           action={{ label: "Criar a primeira categoria", onClick: () => setEditing("new") }}

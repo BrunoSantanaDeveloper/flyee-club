@@ -8,7 +8,7 @@ import { Alert, Box, Button, Card, CardContent, Tab, Tabs, Typography } from "@m
 import EmptyState from "@/components/product/empty-state";
 import ProductMarkdown from "@/components/product/product-markdown";
 import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
-import NiBook from "@/icons/nexture/ni-book";
+import IllustrationDocumentation from "@/icons/illustrations/illustration-documentation";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiLock from "@/icons/nexture/ni-lock";
 import NiPlay from "@/icons/nexture/ni-play";
@@ -85,7 +85,8 @@ export default function GuidePanel({
       <Card>
         <CardContent>
           <EmptyState
-            icon={<NiBook size="large" />}
+            framed={false}
+            illustration={<IllustrationDocumentation />}
             badge={t("soon")}
             title={t("module-guide-empty-title")}
             description={t("module-guide-empty-body")}
@@ -155,13 +156,17 @@ export default function GuidePanel({
 
         {tab.soon ? (
           <EmptyState
-            icon={<NiBook size="large" />}
+            framed={false}
+            titleAs="h3"
+            illustration={<IllustrationDocumentation />}
             badge={t("soon")}
             title={t("module-guide-soon-title")}
             description={t("module-guide-soon-body")}
           />
         ) : locked ? (
+          // Closed to this plan: a state of permission keeps its icon, with the one way to open it.
           <EmptyState
+            titleAs="h3"
             icon={<NiLock size="large" />}
             title={advanced ? t("module-lesson-locked-advanced") : t("module-lesson-locked")}
             description={advanced ? t("module-lesson-locked-advanced-body") : t("module-lesson-locked-body")}

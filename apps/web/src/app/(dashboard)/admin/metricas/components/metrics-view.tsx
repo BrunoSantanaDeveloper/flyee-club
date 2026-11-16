@@ -7,11 +7,14 @@ import { Alert, Box, Button, Card, CardContent, Grid, Tab, Tabs, Typography } fr
 
 import ComparisonTable, { type ComparisonRow } from "@/components/product/comparison-table";
 import EmptyState from "@/components/product/empty-state";
+import InfoHint from "@/components/product/info-hint";
 import MetricBars from "@/components/product/metric-bars";
 import PageHeader from "@/components/product/page-header";
 import StatusChip, { type StatusTone } from "@/components/product/status-chip";
 import TrendSparkline from "@/components/product/trend-sparkline";
-import NiChartLine from "@/icons/nexture/ni-chart-line";
+import IllustrationAccess from "@/icons/illustrations/illustration-access";
+import IllustrationAnalytics from "@/icons/illustrations/illustration-analytics";
+import IllustrationPerformance from "@/icons/illustrations/illustration-performance";
 import NiRefresh from "@/icons/nexture/ni-refresh";
 import { formatDateTime, formatNumber, formatPercent, formatWeek } from "@/lib/admin/format";
 import { labelOf, SEGMENT_LABEL } from "@/lib/admin/labels";
@@ -164,18 +167,19 @@ export default function MetricsView({ state }: { state: MetricsState }) {
             <Grid container spacing={5}>
               <Grid size={{ xs: 12, lg: 7 }} className="flex flex-col gap-2">
                 <Box className="flex flex-row flex-wrap items-center gap-2">
-                  <Typography id="focus-title" variant="h5" component="h2" className="mb-0">
-                    Regra de foco
-                  </Typography>
+                  <Box className="flex flex-row items-center gap-1">
+                    <Typography id="focus-title" variant="h5" component="h2" className="mb-0">
+                      Regra de foco
+                    </Typography>
+                    <InfoHint
+                      label={`Indicador até a regra ser decidida: lidera o segmento que vence a compra do kit, a ativação em 7 dias e o uso semanal por ${FOCUS_WEEKS} semanas completas seguidas, entre os com ${FOCUS_MIN_PEOPLE} contas com acesso ou mais.`}
+                      placement="bottom-start"
+                      className="self-center"
+                    />
+                  </Box>
                   <StatusChip label={STATUS_CHIP[focus.status].label} tone={STATUS_CHIP[focus.status].tone} />
                 </Box>
                 <Typography variant="body1">{focusSentence(focus)}</Typography>
-                <Typography variant="body2" className="text-text-secondary">
-                  Proposta do documento de produto, usada como indicador até a regra ser decidida: um segmento lidera
-                  compra do kit, ativação em 7 dias e uso semanal por {FOCUS_WEEKS} semanas completas seguidas,
-                  comparando só segmentos com pelo menos {FOCUS_MIN_PEOPLE} contas com acesso. “Outro” e quem não
-                  respondeu ficam de fora. A semana em andamento não entra.
-                </Typography>
               </Grid>
               <Grid size={{ xs: 12, lg: 5 }}>
                 <Typography variant="subtitle2" component="h3" className="mb-3">
@@ -243,11 +247,19 @@ export default function MetricsView({ state }: { state: MetricsState }) {
         <Card component="section" aria-labelledby="weekly-title">
           <CardContent className="flex flex-col gap-5">
             <Box className="flex flex-col gap-1">
-              <Typography id="weekly-title" variant="h5" component="h2" className="mb-0">
-                Semana a semana
-              </Typography>
+              <Box className="flex flex-row items-center gap-1">
+                <Typography id="weekly-title" variant="h5" component="h2" className="mb-0">
+                  Semana a semana
+                </Typography>
+                <InfoHint
+                  label="Semanas de segunda a domingo, no horário de Brasília."
+                  placement="bottom-start"
+                  className="self-center"
+                />
+              </Box>
+              {/* When the numbers were read is state, so it stays in sight. */}
               <Typography variant="body2" className="text-text-secondary">
-                Semanas de segunda a domingo, no horário de Brasília. Gerado em {formatDateTime(state.generatedAt)}.
+                Gerado em {formatDateTime(state.generatedAt)}.
               </Typography>
             </Box>
 
@@ -269,7 +281,10 @@ export default function MetricsView({ state }: { state: MetricsState }) {
 
             {!anyActivity ? (
               <EmptyState
-                icon={<NiChartLine size="large" />}
+                layout="row"
+                framed={false}
+                titleAs="h3"
+                illustration={<IllustrationAnalytics />}
                 title="Nenhuma compra, acesso ou uso nestas semanas"
                 description="As linhas se enchem a partir da primeira venda do kit e da primeira ferramenta executada pela CLI. Até lá, a lista de espera é o que há para acompanhar."
                 action={{ label: "Ver a lista de espera", href: "/admin/leads" }}
@@ -307,18 +322,22 @@ export default function MetricsView({ state }: { state: MetricsState }) {
       <Grid size={12}>
         <Card component="section" aria-labelledby="doors-title">
           <CardContent className="flex flex-col gap-4">
-            <Box className="flex flex-col gap-1">
+            <Box className="flex flex-row items-center gap-1">
               <Typography id="doors-title" variant="h5" component="h2" className="mb-0">
                 Portas de entrada
               </Typography>
-              <Typography variant="body2" className="text-text-secondary max-w-3xl">
-                Visitas às páginas públicas e compras do kit nas últimas {matrix.weeks.length} semanas, por porta. Uma
-                compra conta para a porta do primeiro contato da conta; quem chegou sem marcação entra como “direto”.
-              </Typography>
+              <InfoHint
+                label={`Visitas às páginas públicas e compras do kit nas últimas ${matrix.weeks.length} semanas, por porta. A compra conta para a porta do primeiro contato; quem chegou sem marcação entra como “direto”.`}
+                placement="bottom-start"
+                className="self-center"
+              />
             </Box>
             {doors.length === 0 ? (
               <EmptyState
-                icon={<NiChartLine size="large" />}
+                layout="row"
+                framed={false}
+                titleAs="h3"
+                illustration={<IllustrationAccess />}
                 title="Nenhuma visita registrada"
                 description="As visitas às páginas públicas são contadas por dia e por porta de entrada. Elas aparecem aqui assim que o site estiver no ar."
               />
@@ -349,19 +368,22 @@ export default function MetricsView({ state }: { state: MetricsState }) {
       <Grid size={12}>
         <Card component="section" aria-labelledby="pro-features-title">
           <CardContent className="flex flex-col gap-4">
-            <Box className="flex flex-col gap-1">
+            <Box className="flex flex-row items-center gap-1">
               <Typography id="pro-features-title" variant="h5" component="h2" className="mb-0">
                 Qual recurso vende o FlyeeClub Pro
               </Typography>
-              <Typography variant="body2" className="text-text-secondary max-w-3xl">
-                O Pro é oferecido no clique num recurso dele. Nos últimos {PRO_FEATURE_DAYS} dias, por recurso: as
-                contas que abriram o aviso, as que clicaram para assinar o Pro e as que assinaram em até 14 dias depois
-                desse clique. Cada conta conta uma vez por coluna.
-              </Typography>
+              <InfoHint
+                label={`Nos últimos ${PRO_FEATURE_DAYS} dias, por recurso do Pro: as contas que abriram o aviso, as que clicaram para assinar e as que assinaram em até 14 dias. Cada conta conta uma vez por coluna.`}
+                placement="bottom-start"
+                className="self-center"
+              />
             </Box>
             {!anyPrompt ? (
               <EmptyState
-                icon={<NiChartLine size="large" />}
+                layout="row"
+                framed={false}
+                titleAs="h3"
+                illustration={<IllustrationPerformance />}
                 title="Nenhum aviso aberto ainda"
                 description="O aviso abre quando um integrante sem o FlyeeClub Pro clica num recurso dele. Os números aparecem aqui a partir do primeiro."
               />

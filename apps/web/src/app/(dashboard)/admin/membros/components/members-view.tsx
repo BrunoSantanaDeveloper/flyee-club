@@ -14,6 +14,9 @@ import { StatTile } from "@/components/product/home-tiles";
 import PageHeader from "@/components/product/page-header";
 import StatusChip from "@/components/product/status-chip";
 import type { TileTone } from "@/components/product/tile-tone";
+import IllustrationAccounts from "@/icons/illustrations/illustration-accounts";
+import IllustrationConfigure from "@/icons/illustrations/illustration-configure";
+import IllustrationDocumentation from "@/icons/illustrations/illustration-documentation";
 import NiCalendar from "@/icons/nexture/ni-calendar";
 import NiClock from "@/icons/nexture/ni-clock";
 import NiCoin from "@/icons/nexture/ni-coin";
@@ -307,7 +310,7 @@ export default function MembersView({
     <PageHeader
       title="Membros"
       crumbs={CRUMBS}
-      description="Quem está no clube, em que degrau, com que computadores conectados e o que pede atenção. Abra uma conta para ver tudo o que a plataforma sabe dela."
+      description="Quem está no clube, em que degrau, com que computadores conectados e o que pede atenção."
       action={
         <Button variant="outlined" color="grey" startIcon={<NiRefresh size="medium" />} onClick={refresh}>
           Atualizar
@@ -420,14 +423,16 @@ export default function MembersView({
             {tab === "accounts" ? (
               members.length === 0 ? (
                 <EmptyState
-                  icon={<NiUsers size="large" />}
+                  framed={false}
+                  illustration={<IllustrationAccounts />}
                   title="Nenhuma conta ainda"
                   description="Toda pessoa que cria uma conta aparece aqui, com o degrau, os computadores conectados e o uso. Enquanto o site está em lista de espera, quem se inscreve fica em Leads."
                   action={{ label: "Ver a lista de espera", href: "/admin/leads" }}
                 />
               ) : visible.length === 0 ? (
                 <EmptyState
-                  icon={<NiUsers size="large" />}
+                  framed={false}
+                  illustration={<IllustrationAccounts />}
                   title={`Nenhuma conta em “${activeFilter?.label ?? "este filtro"}”`}
                   description={activeFilter?.hint ?? "Nenhuma conta corresponde a este filtro agora."}
                   action={{ label: "Ver todas as contas", onClick: () => setFilter("accounts") }}
@@ -445,7 +450,8 @@ export default function MembersView({
                   labels={{ search: "Buscar por nome, e-mail, segmento ou campanha" }}
                   noResultsOverlay={
                     <EmptyState
-                      icon={<NiUsers size="large" />}
+                      layout="row"
+                      illustration={<IllustrationDocumentation />}
                       title="Nenhuma conta corresponde à busca"
                       description={`Nada encontrado para “${query}” ${filter === "accounts" ? "entre todas as contas" : `no filtro “${activeFilter?.label}”`}. Quem criou a conta e ficou sem workspace está na outra aba.`}
                     />
@@ -454,7 +460,8 @@ export default function MembersView({
               )
             ) : ready.people.people.length === 0 ? (
               <EmptyState
-                icon={<NiUsers size="large" />}
+                framed={false}
+                illustration={<IllustrationConfigure />}
                 title="Ninguém sem workspace"
                 description="O cadastro cria o workspace pessoal de cada conta. Se alguém aparecer aqui, o workspace foi removido ou a criação falhou: é uma exceção que merece um olhar."
               />
@@ -474,7 +481,11 @@ export default function MembersView({
                   enableExport={false}
                   labels={{ search: "Buscar por nome ou e-mail" }}
                   noResultsOverlay={
-                    <EmptyState icon={<NiUsers size="large" />} title="Nenhuma pessoa corresponde à busca" />
+                    <EmptyState
+                      layout="row"
+                      illustration={<IllustrationDocumentation />}
+                      title="Nenhuma pessoa corresponde à busca"
+                    />
                   }
                 />
               </Box>

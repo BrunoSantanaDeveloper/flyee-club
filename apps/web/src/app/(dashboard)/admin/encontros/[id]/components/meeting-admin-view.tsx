@@ -14,11 +14,13 @@ import DataTable from "@/components/data-grid/data-table";
 import ComparisonTable from "@/components/product/comparison-table";
 import ConfirmActionDialog from "@/components/product/confirm-action-dialog";
 import EmptyState from "@/components/product/empty-state";
+import InfoHint from "@/components/product/info-hint";
 import MetricBars from "@/components/product/metric-bars";
 import PageHeader from "@/components/product/page-header";
 import StatusChip from "@/components/product/status-chip";
+import IllustrationAccounts from "@/icons/illustrations/illustration-accounts";
+import IllustrationDocumentation from "@/icons/illustrations/illustration-documentation";
 import NiCalendar from "@/icons/nexture/ni-calendar";
-import NiUsers from "@/icons/nexture/ni-users";
 import { textOf } from "@/lib/admin/catalog";
 import { formatDateTime, formatNumber, formatPercent, ratio } from "@/lib/admin/format";
 import { labelOf, MEETING_PROVIDER_LABEL, MEETING_STATE_LABEL, SEGMENT_LABEL } from "@/lib/admin/labels";
@@ -223,7 +225,7 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
         <PageHeader
           title={textOf(meeting.title, meeting.slug)}
           crumbs={crumbs}
-          description={textOf(meeting.description, "Sem descrição ainda.")}
+          detail={textOf(meeting.description, "Sem descrição ainda.")}
           action={
             <Button variant="outlined" color="grey" onClick={() => setEditing(true)}>
               Editar página e links
@@ -292,9 +294,16 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
 
         <Card component="section" aria-labelledby="meeting-results-title">
           <CardContent className="flex flex-col gap-4">
-            <Typography id="meeting-results-title" variant="h6" component="h2" className="mb-0">
-              Resultado
-            </Typography>
+            <Box className="flex flex-row items-center gap-1">
+              <Typography id="meeting-results-title" variant="h6" component="h2" className="mb-0">
+                Resultado
+              </Typography>
+              <InfoHint
+                label="“Entrar” é o clique que abre a sala pela plataforma. Quanto tempo cada pessoa ficou, a plataforma não sabe: a sala é de outra ferramenta."
+                placement="bottom-start"
+                className="self-center"
+              />
+            </Box>
             <MetricBars
               spacing="dense"
               total={Math.max(results.registered, 1)}
@@ -311,18 +320,21 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
                 },
               ]}
             />
-            <Typography variant="body2" className="text-text-secondary">
-              “Entrar” é o clique que abre a sala pela plataforma. Quanto tempo cada pessoa ficou, a plataforma não
-              sabe: a sala é de outra ferramenta.
-            </Typography>
           </CardContent>
         </Card>
 
         <Card component="section" aria-labelledby="meeting-emails-title">
           <CardContent className="flex flex-col gap-4">
-            <Typography id="meeting-emails-title" variant="h6" component="h2" className="mb-0">
-              E-mails
-            </Typography>
+            <Box className="flex flex-row items-center gap-1">
+              <Typography id="meeting-emails-title" variant="h6" component="h2" className="mb-0">
+                E-mails
+              </Typography>
+              <InfoHint
+                label="Quantas pessoas inscritas já receberam cada mensagem. Cada uma vai uma vez por pessoa, no idioma e no fuso dela, na hora indicada. “Enviar agora” escreve só para quem não recebeu."
+                placement="bottom-start"
+                className="self-center"
+              />
+            </Box>
             <MetricBars
               spacing="dense"
               total={results.registered}
@@ -356,11 +368,6 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
                 };
               })}
             />
-            <Typography variant="body2" className="text-text-secondary">
-              O número é quantas pessoas inscritas já receberam cada mensagem. Cada uma vai uma só vez por pessoa, no
-              idioma e no fuso de quem recebe, e sai sozinha na hora indicada. “Enviar agora” escreve só para quem ainda
-              não recebeu.
-            </Typography>
           </CardContent>
         </Card>
       </Grid>
@@ -401,7 +408,9 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
             </Typography>
             {registrants.length === 0 ? (
               <EmptyState
-                icon={<NiUsers size="large" />}
+                framed={false}
+                titleAs="h3"
+                illustration={<IllustrationAccounts />}
                 title="Nenhuma inscrição ainda"
                 description={
                   meeting.state === "rascunho"
@@ -417,7 +426,13 @@ export default function MeetingAdminView({ state, id }: { state: MeetingAdminSta
                 pageSize={25}
                 pageSizeOptions={[25, 50, 100]}
                 labels={{ search: "Buscar por nome ou e-mail" }}
-                noResultsOverlay={<EmptyState icon={<NiUsers size="large" />} title="Ninguém corresponde à busca" />}
+                noResultsOverlay={
+                  <EmptyState
+                    layout="row"
+                    illustration={<IllustrationDocumentation />}
+                    title="Ninguém corresponde à busca"
+                  />
+                }
               />
             )}
           </CardContent>

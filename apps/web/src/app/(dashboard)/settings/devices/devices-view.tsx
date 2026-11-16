@@ -25,9 +25,11 @@ import {
 
 import AskAiBlock from "@/components/product/ask-ai-block";
 import EmptyState from "@/components/product/empty-state";
+import InfoHint from "@/components/product/info-hint";
 import PageHeader from "@/components/product/page-header";
 import { useUpgradePrompt } from "@/components/product/upgrade-prompt";
 import UsageMeter from "@/components/product/usage-meter";
+import IllustrationPlatforms from "@/icons/illustrations/illustration-platforms";
 import NiCloud from "@/icons/nexture/ni-cloud";
 import NiLaptop from "@/icons/nexture/ni-laptop";
 import NiListCircle from "@/icons/nexture/ni-list-circle";
@@ -146,7 +148,7 @@ export default function DevicesView({ state }: { state: DevicesState }) {
       return (
         <Grid size={12}>
           <EmptyState
-            icon={<NiLaptop size="large" />}
+            illustration={<IllustrationPlatforms />}
             title={t("devices-empty-title")}
             description={t("devices-empty-body")}
             action={{ label: t("devices-empty-cta"), href: "/inicio#instalar" }}
@@ -271,12 +273,12 @@ export default function DevicesView({ state }: { state: DevicesState }) {
         <Grid size={12}>
           <Card>
             <CardContent className="flex flex-col gap-2">
-              <Typography variant="subtitle1" component="h2" className="mb-0">
-                {t("devices-reconnect-title")}
-              </Typography>
-              <Typography variant="body2" className="text-text-secondary">
-                {t("devices-reconnect-body")}
-              </Typography>
+              <Box className="flex flex-row items-center gap-1">
+                <Typography variant="subtitle1" component="h2" className="mb-0">
+                  {t("devices-reconnect-title")}
+                </Typography>
+                <InfoHint label={t("devices-reconnect-body")} placement="bottom-start" className="self-center" />
+              </Box>
               <AskAiBlock
                 label={t("ask-ai-label")}
                 prompt={t("ask-ai-reconnect", { url: installGuideUrl(locale) })}

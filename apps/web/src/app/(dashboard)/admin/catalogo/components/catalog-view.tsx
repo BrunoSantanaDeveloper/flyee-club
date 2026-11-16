@@ -14,6 +14,8 @@ import EmptyState from "@/components/product/empty-state";
 import { StatTile } from "@/components/product/home-tiles";
 import PageHeader from "@/components/product/page-header";
 import StatusChip from "@/components/product/status-chip";
+import IllustrationDocumentation from "@/icons/illustrations/illustration-documentation";
+import IllustrationLaunch from "@/icons/illustrations/illustration-launch";
 import NiArchive from "@/icons/nexture/ni-archive";
 import NiCatalog from "@/icons/nexture/ni-catalog";
 import NiCheckSquare from "@/icons/nexture/ni-check-square";
@@ -301,14 +303,16 @@ export default function CatalogView({ state }: { state: CatalogState }) {
             {tab === "modules" ? (
               modules.length === 0 ? (
                 <EmptyState
-                  icon={<NiCatalog size="large" />}
+                  framed={false}
+                  illustration={<IllustrationLaunch />}
                   title="O catálogo ainda está vazio"
                   description="Cadastre a primeira ferramenta, envie o pacote ZIP com o flyee.module.json e publique a versão: ela aparece no painel e na CLI."
                   action={{ label: "Cadastrar a primeira ferramenta", onClick: () => setCreating(true) }}
                 />
               ) : visible.length === 0 ? (
                 <EmptyState
-                  icon={<NiCatalog size="large" />}
+                  framed={false}
+                  illustration={<IllustrationDocumentation />}
                   title={`Nenhuma ferramenta em “${activeFilter.label}”`}
                   description={activeFilter.hint}
                   action={{ label: "Ver todas", onClick: () => setFilter("all") }}
@@ -325,7 +329,8 @@ export default function CatalogView({ state }: { state: CatalogState }) {
                   labels={{ search: "Buscar por nome ou slug" }}
                   noResultsOverlay={
                     <EmptyState
-                      icon={<NiCatalog size="large" />}
+                      layout="row"
+                      illustration={<IllustrationDocumentation />}
                       title="Nenhuma ferramenta corresponde à busca"
                       description={`Nada encontrado para “${query}”.`}
                     />

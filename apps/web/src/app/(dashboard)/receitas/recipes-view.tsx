@@ -10,7 +10,7 @@ import CatalogIcon from "@/components/product/catalog-icon";
 import EmptyState from "@/components/product/empty-state";
 import PageHeader from "@/components/product/page-header";
 import { TILE_TONE } from "@/components/product/tile-tone";
-import NiListSquare from "@/icons/nexture/ni-list-square";
+import IllustrationExperiment from "@/icons/illustrations/illustration-experiment";
 import { cn } from "@/lib/utils";
 
 export type RecipeSummary = {
@@ -73,7 +73,7 @@ export default function RecipesView({ state }: { state: RecipesState }) {
 
       {state.recipes.length === 0 ? (
         <EmptyState
-          icon={<NiListSquare size="large" />}
+          illustration={<IllustrationExperiment />}
           badge={t("soon")}
           title={t("recipes-empty-title")}
           description={t("recipes-empty-body")}

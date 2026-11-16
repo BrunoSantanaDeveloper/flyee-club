@@ -27,10 +27,15 @@ for (const route of routes) {
   for (const [width, height] of viewports) {
     for (const dark of [false, true]) {
       const page = await browser.newPage({ viewport: { width, height } });
-      // Theme mode defaults to "system", and the ThemeProvider re-resolves the
-      // <html> classes on hydration — injecting the class directly gets undone.
-      // Emulating the OS color scheme is the supported way to render dark.
-      if (dark) await page.emulateMedia({ colorScheme: "dark" });
+      // Theme mode defaults to "light" (DEFAULTS.themeMode in src/config.ts), and
+      // the <head> script of app/layout.tsx follows the OS color scheme only for a
+      // stored "system", so emulateMedia alone renders light. Store "dark" under
+      // LOCAL_STORAGE_KEYS.themeMode (src/constants.ts: "-theme-mode" without a
+      // NEXT_PUBLIC_STORAGE_PREFIX) before the page loads.
+      if (dark) {
+        const key = `${process.env.NEXT_PUBLIC_STORAGE_PREFIX ?? ""}-theme-mode`;
+        await page.addInitScript((k) => localStorage.setItem(k, JSON.stringify("dark")), key);
+      }
       await page.goto(BASE + route, { waitUntil: "networkidle" });
       // Scroll the full page in steps so every reveal fires, then return to top.
       await page.evaluate(async () => {

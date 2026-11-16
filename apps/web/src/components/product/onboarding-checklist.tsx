@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 
 import ActivationProgress from "@/components/product/activation-progress";
+import InfoHint from "@/components/product/info-hint";
 import NiCheck from "@/icons/nexture/ni-check";
 import NiChevronRightSmall from "@/icons/nexture/ni-chevron-right-small";
 import NiCompass from "@/icons/nexture/ni-compass";
@@ -51,13 +52,11 @@ export default function OnboardingChecklist({
             >
               <NiCompass />
             </span>
-            <Box>
+            <Box className="flex flex-row items-center gap-1">
               <Typography variant="h5" component="h2" className="card-title mb-0">
                 {title ?? t("checklistTitle")}
               </Typography>
-              <Typography variant="body2" className="text-text-secondary">
-                {t("checklistSubtitle")}
-              </Typography>
+              <InfoHint label={t("checklistSubtitle")} placement="bottom-start" className="self-center" />
             </Box>
           </Box>
           <Box className="flex flex-row items-center gap-2">

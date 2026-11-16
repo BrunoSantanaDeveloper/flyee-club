@@ -8,7 +8,7 @@ import { Alert, Box, Button, Grid, Typography } from "@mui/material";
 
 import EmptyState from "@/components/product/empty-state";
 import PageHeader from "@/components/product/page-header";
-import NiCalendar from "@/icons/nexture/ni-calendar";
+import IllustrationPlatforms from "@/icons/illustrations/illustration-platforms";
 import type { MemberMeeting } from "@/lib/member/community";
 
 export type MeetingsState =
@@ -61,7 +61,7 @@ export default function MeetingsView({ state }: { state: MeetingsState }) {
       <Box className="flex flex-col gap-6">
         {header}
         <EmptyState
-          icon={<NiCalendar size="large" />}
+          illustration={<IllustrationPlatforms />}
           badge={t("soon")}
           title={t("meetings-empty-title")}
           description={t("meetings-empty-body")}
@@ -79,9 +79,14 @@ export default function MeetingsView({ state }: { state: MeetingsState }) {
           {t("meetings-upcoming")}
         </Typography>
         {state.upcoming.length === 0 ? (
-          <Typography variant="body1" className="text-text-secondary">
-            {t("meetings-upcoming-none")}
-          </Typography>
+          // A section with nothing in it takes a drawing, never one grey line over the archive below.
+          <EmptyState
+            layout="row"
+            titleAs="h3"
+            illustration={<IllustrationPlatforms />}
+            title={t("meetings-upcoming-none")}
+            description={t("meetings-upcoming-none-body")}
+          />
         ) : (
           <Grid container spacing={3}>
             {state.upcoming.map((meeting) => (
